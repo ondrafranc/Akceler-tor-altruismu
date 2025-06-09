@@ -1,0 +1,128 @@
+{
+  "welcome_messages": [
+    "Your compassion is a superpower. Let's channel it into meaningful action. 💪",
+    "The world needs your unique contribution. You're already making a difference by caring this much. 🌟",
+    "Small actions, when multiplied by millions of people, can transform the world. - Howard Zinn",
+    "You don't have to save the world all at once. Just start where you are, with what you have. 🌱"
+  ],
+  "assessment_encouragement": [
+    "There's no wrong answer here - this is about discovering your unique path to impact.",
+    "You're taking time to be intentional about helping. That thoughtfulness already sets you apart.",
+    "Every value you select represents someone who will benefit from your care.",
+    "Your resources - whatever they are - can create meaningful change when used strategically."
+  ],
+  "emotional_state_responses": {
+    "overwhelmed": [
+      "It's completely normal to feel overwhelmed. The problems are big, but so is human capacity for good.",
+      "You're not alone in feeling this way. Millions of caring people feel overwhelmed, and that's exactly why tools like this exist.",
+      "Your overwhelm shows how deeply you care. Let's transform that caring into manageable, effective action.",
+      "The goal isn't to solve everything - it's to find your sustainable way to contribute to solutions."
+    ],
+    "frustrated": [
+      "That frustration is fuel. It shows you're ready for real change, not just thoughts and prayers.",
+      "Channel that energy! Some of history's greatest movements started with people who were fed up.",
+      "Your frustration means you see through the surface to the real issues. That clarity is powerful.",
+      "Let's turn that frustration into strategic action that actually moves the needle."
+    ],
+    "hopeful": [
+      "Your hope is contagious and exactly what the world needs right now.",
+      "Hope combined with action is unstoppable. You're already ahead of the game.",
+      "That optimism will carry you through challenges and inspire others to join you.",
+      "Hope is a choice and a practice. Thank you for choosing it, even when it's hard."
+    ],
+    "guilty": [
+      "Guilt shows your values are intact, but action is more helpful than guilt.",
+      "You can't help everyone, but you can help someone. That's enough.",
+      "The fact that you care this much means you're already more engaged than most people.",
+      "Replace 'I should do more' with 'I will do what I can sustainably.' That's real wisdom."
+    ],
+    "motivated": [
+      "That energy is gold! Let's make sure it's directed where it can create maximum impact.",
+      "Your motivation is a gift to the world. We'll help you use it strategically.",
+      "Stay fired up! And let's build systems to keep that motivation sustainable long-term.",
+      "You're ready to move mountains. Let's start with the right shovel for your strength."
+    ],
+    "uncertain": [
+      "Not knowing where to start is the most honest response to complex problems.",
+      "Uncertainty is the beginning of wisdom. You're asking the right questions.",
+      "Every expert was once a beginner. Every movement started with someone unsure but willing.",
+      "The fact that you're here, seeking direction, means you're already on the path."
+    ]
+  },
+  "action_completion_celebrations": [
+    "🎉 Amazing! You just made the world a little bit better!",
+    "🌟 Look at you go! That action will ripple out in ways you might never even know.",
+    "✨ You're officially part of the solution now. How does it feel?",
+    "🚀 You did it! Every small action builds momentum for bigger changes.",
+    "💚 The world is literally better because you took that action. Thank you.",
+    "🔥 You're on fire! That's the kind of action that creates real change.",
+    "🌈 Beautiful work! You've just proven that individuals can make a difference.",
+    "⭐ You're a change-maker now. Wear that badge with pride!"
+  ],
+  "milestone_messages": {
+    "first_action": "🏆 First Action Complete! You've crossed from intention to impact. This is how change happens.",
+    "first_week": "📅 One Week Strong! You're building a habit of helping. That consistency matters more than you know.",
+    "first_month": "🗓️ One Month Milestone! You've proven that sustainable altruism is possible. You're an inspiration!",
+    "five_actions": "🎯 Five Actions Done! You're developing expertise in making a difference. Others are learning from your example.",
+    "ten_hours": "⏰ Ten Hours Contributed! That's two full workdays of making the world better. Incredible impact!",
+    "first_donation": "💝 First Donation Complete! Your generosity is literally changing lives. Thank you for stepping up.",
+    "referral_milestone": "👥 Community Builder! You've inspired others to join the cause. Leadership looks good on you!"
+  },
+  "progress_encouragement": [
+    "Every action you take proves that individuals can create change.",
+    "You're not just helping others - you're becoming the person you want to be.",
+    "Your consistency in helping is building a better world, one action at a time.",
+    "Other people see your example and get inspired to act. You're a leader.",
+    "The problems are big, but so are you when you're actively working on solutions."
+  ],
+  "community_impact_messages": [
+    "Together, our community has planted {trees_planted} trees this month! 🌳",
+    "Our collective action has supported {students_helped} students in their education! 📚",
+    "We've contributed {volunteer_hours} volunteer hours to causes that matter! ⏰",
+    "As a community, we've donated ${total_donated} to effective charities! 💰",
+    "Our advocacy efforts have reached {people_reached} people with important messages! 📢"
+  ],
+  "reflection_prompts": [
+    "What surprised you most about taking action?",
+    "How did helping others make you feel?",
+    "What impact are you most proud of so far?",
+    "How has your perspective on making a difference changed?",
+    "What would you tell someone who feels too small to make an impact?"
+  ],
+  "inspirational_quotes": [
+    "Be the change you wish to see in the world. - Mahatma Gandhi",
+    "The best way to find yourself is to lose yourself in the service of others. - Mahatma Gandhi",
+    "We make a living by what we get, but we make a life by what we give. - Winston Churchill",
+    "No act of kindness, no matter how small, is ever wasted. - Aesop",
+    "The meaning of life is to find your gift. The purpose of life is to give it away. - Pablo Picasso",
+    "We rise by lifting others. - Robert Ingersoll",
+    "In a gentle way, you can shake the world. - Mahatma Gandhi",
+    "What you do makes a difference, and you have to decide what kind of difference you want to make. - Jane Goodall"
+  ],
+  "success_stories": [
+    {
+      "name": "Sarah M.",
+      "story": "Started with $5 tree donations, now coordinates her company's entire sustainability program",
+      "impact": "Led to 500+ employee climate actions",
+      "timeframe": "6 months"
+    },
+    {
+      "name": "Marcus T.",
+      "story": "Began tutoring one child online, inspired to become a full-time teacher",
+      "impact": "Now impacts 30 students daily",
+      "timeframe": "1 year"
+    },
+    {
+      "name": "Elena R.",
+      "story": "Organized one neighborhood potluck, built lasting community connections",
+      "impact": "Monthly gatherings now include 50+ households",
+      "timeframe": "8 months"
+    },
+    {
+      "name": "Jamie L.",
+      "story": "Started with mental health donation, became peer support group facilitator",
+      "impact": "Helps 20 people develop coping strategies weekly",
+      "timeframe": "10 months"
+    }
+  ]
+} 
