@@ -20,22 +20,24 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Enhanced CSS for beautiful, warm styling
+# Enhanced CSS for beautiful, warm styling with mobile responsiveness
 st.markdown("""
 <style>
     .main-header {
-        font-size: 2.5rem;
+        font-size: clamp(1.8rem, 5vw, 2.5rem);
         color: #2E8B57;
         text-align: center;
         margin-bottom: 1rem;
         text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        animation: fadeInDown 0.8s ease-out;
     }
     .sub-header {
-        font-size: 1.2rem;
+        font-size: clamp(1rem, 3vw, 1.2rem);
         color: #708090;
         text-align: center;
         margin-bottom: 2rem;
         font-style: italic;
+        animation: fadeIn 1s ease-out 0.3s both;
     }
     .cause-card {
         border: 2px solid #90EE90;
@@ -44,6 +46,13 @@ st.markdown("""
         margin: 1rem 0;
         background: linear-gradient(135deg, #F0FFF0 0%, #E6F3E6 100%);
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .cause-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        border-color: #32CD32;
     }
     .action-card {
         border: 1px solid #B0E0E6;
@@ -51,52 +60,131 @@ st.markdown("""
         padding: 1rem;
         margin: 0.5rem 0;
         background-color: #F8FFFF;
-        transition: transform 0.2s;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
     }
     .action-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        border-color: #87CEEB;
+    }
+    .action-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        transition: left 0.5s;
+    }
+    .action-card:hover::before {
+        left: 100%;
     }
     .progress-text {
         font-size: 0.9rem;
         color: #556B2F;
         text-align: center;
+        animation: fadeIn 0.5s ease-in;
     }
     .celebration {
-        background: linear-gradient(90deg, #FFD700, #FFA500, #FFD700);
+        background: linear-gradient(45deg, #FFD700, #FFA500, #FF6347, #FFD700);
+        background-size: 400% 400%;
         color: white;
-        padding: 1rem;
-        border-radius: 10px;
+        padding: 1.5rem;
+        border-radius: 15px;
         text-align: center;
         font-weight: bold;
-        animation: pulse 2s infinite;
+        animation: rainbowGlow 2s ease-in-out infinite, bounceIn 0.8s;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
     }
-    @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-        100% { transform: scale(1); }
+    @keyframes rainbowGlow {
+        0%, 100% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+    }
+    @keyframes bounceIn {
+        0%, 20%, 40%, 60%, 80% { transform: translateY(0); }
+        10% { transform: translateY(-10px); }
+        30% { transform: translateY(-5px); }
+        50% { transform: translateY(-3px); }
+        70% { transform: translateY(-2px); }
+    }
+    @keyframes fadeInDown {
+        from { opacity: 0; transform: translateY(-30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
     }
     .quote-box {
-        background-color: #F5F5DC;
+        background: linear-gradient(135deg, #F5F5DC 0%, #E6E6DA 100%);
         border-left: 4px solid #32CD32;
         padding: 1rem;
         margin: 1rem 0;
         font-style: italic;
-        border-radius: 5px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s ease;
+    }
+    .quote-box:hover {
+        transform: scale(1.02);
     }
     .impact-metric {
         text-align: center;
-        padding: 1rem;
+        padding: 1.5rem;
         background: linear-gradient(135deg, #E8F5E8 0%, #D4F4D4 100%);
-        border-radius: 10px;
+        border-radius: 15px;
         margin: 0.5rem 0;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        border: 1px solid #C0E6C0;
+    }
+    .impact-metric:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.15);
     }
     .success-story {
-        background-color: #FFF8DC;
-        border-radius: 10px;
-        padding: 1rem;
+        background: linear-gradient(135deg, #FFF8DC 0%, #F5F5DC 100%);
+        border-radius: 12px;
+        padding: 1.5rem;
         margin: 1rem 0;
         border: 1px solid #DDD;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        transition: transform 0.2s ease;
+    }
+    .success-story:hover {
+        transform: scale(1.02);
+        box-shadow: 0 5px 12px rgba(0,0,0,0.15);
+    }
+    
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+        .cause-card, .action-card, .impact-metric {
+            padding: 1rem;
+            margin: 0.5rem 0;
+        }
+        .celebration {
+            padding: 1rem;
+            font-size: 0.9rem;
+        }
+    }
+    
+    /* Button enhancements */
+    .stButton > button {
+        transition: all 0.3s ease !important;
+        border-radius: 8px !important;
+    }
+    .stButton > button:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+    }
+    
+    /* Progress bar styling */
+    .stProgress > div > div {
+        background: linear-gradient(90deg, #32CD32, #90EE90) !important;
+        border-radius: 10px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -118,7 +206,7 @@ if 'total_impact' not in st.session_state:
 def load_causes_data():
     """Load causes data from JSON file"""
     try:
-        with open('data/causes/causes.json', 'r') as f:
+        with open('data/causes/causes.json', 'r', encoding='utf-8') as f:
             data = json.load(f)
             return data.get('causes', {})
     except FileNotFoundError:
@@ -129,7 +217,7 @@ def load_causes_data():
 def load_actions_data():
     """Load actions data from JSON file"""
     try:
-        with open('data/causes/actions.json', 'r') as f:
+        with open('data/causes/actions.json', 'r', encoding='utf-8') as f:
             data = json.load(f)
             return data.get('actions', {})
     except FileNotFoundError:
@@ -140,7 +228,7 @@ def load_actions_data():
 def load_encouragement_data():
     """Load encouragement messages from JSON file"""
     try:
-        with open('data/content/encouragement_messages.json', 'r') as f:
+        with open('data/content/encouragement_messages.json', 'r', encoding='utf-8') as f:
             return json.load(f)
     except FileNotFoundError:
         return {"welcome_messages": ["Welcome to Altruism Accelerator!"]}
@@ -225,14 +313,36 @@ def get_matching_actions(cause_id: str, user_profile: Dict) -> List[Dict]:
     
     return matching_actions
 
-def celebrate_action_completion(action_title: str):
-    """Show celebration for completed action"""
+def celebrate_action_completion(action_title: str, cause_type: str = ""):
+    """Enhanced celebration for completed action with personalized messages"""
     encouragement_data = load_encouragement_data()
     celebrations = encouragement_data.get("action_completion_celebrations", [])
-    message = random.choice(celebrations) if celebrations else "🎉 Great job!"
+    
+    # Get a personalized celebration message
+    if celebrations:
+        base_message = random.choice(celebrations)
+        # Customize message with action title
+        message = base_message.replace("{action}", action_title).replace("{cause}", cause_type)
+    else:
+        message = f"🎉 Amazing work completing '{action_title}'!"
     
     st.markdown(f'<div class="celebration">{message}</div>', unsafe_allow_html=True)
     st.balloons()
+    
+    # Add extra encouragement for milestones
+    total_actions = st.session_state.total_impact['actions'] + 1
+    if total_actions in [1, 5, 10, 25]:
+        milestone_messages = encouragement_data.get("milestone_messages", {})
+        if total_actions == 1:
+            milestone_msg = milestone_messages.get("first_action", "🏆 You've taken your first step!")
+        elif total_actions == 5:
+            milestone_msg = milestone_messages.get("five_actions", "🌟 Five actions! You're building momentum!")
+        elif total_actions == 10:
+            milestone_msg = milestone_messages.get("ten_actions", "🚀 Ten actions! You're becoming a change-maker!")
+        else:
+            milestone_msg = "🎊 You're on fire! 25 actions and counting!"
+        
+        st.success(milestone_msg)
 
 def show_random_quote():
     """Display an inspirational quote"""
@@ -266,10 +376,20 @@ def main():
         st.sidebar.markdown("### Your Impact")
         st.sidebar.metric("Actions", st.session_state.total_impact['actions'])
     
-    # Random encouragement in sidebar
-    if random.random() < 0.3:  # 30% chance to show encouragement
-        encouragement = get_random_encouragement("progress_encouragement")
-        st.sidebar.info(encouragement)
+    # Contextual encouragement in sidebar
+    if random.random() < 0.4:  # 40% chance to show encouragement
+        if st.session_state.total_impact['actions'] == 0:
+            encouragement = get_random_encouragement("welcome_messages")
+        elif st.session_state.total_impact['actions'] < 3:
+            encouragement = get_random_encouragement("progress_encouragement")
+        else:
+            encouragement = get_random_encouragement("community_impact_messages")
+        st.sidebar.info(f"💚 {encouragement}")
+    
+    # Show inspiring quote occasionally
+    if random.random() < 0.2:  # 20% chance
+        quote = get_random_encouragement("inspirational_quotes")
+        st.sidebar.markdown(f'<div style="font-style: italic; padding: 10px; background-color: #f0fff0; border-radius: 5px; border-left: 3px solid #32CD32; margin: 10px 0;"><small>"{quote}"</small></div>', unsafe_allow_html=True)
     
     pages = {
         "🏠 Welcome": show_welcome_page,
@@ -321,8 +441,9 @@ def show_welcome_page():
         
         st.markdown("---")
         
-        # Show success story occasionally
-        if random.random() < 0.4:  # 40% chance
+        # Show success story occasionally to inspire action
+        if random.random() < 0.5:  # 50% chance for inspiration
+            st.markdown("### 💫 Real Impact Stories")
             show_success_story()
         
         col_a, col_b = st.columns(2)
@@ -531,13 +652,30 @@ def show_recommendations_step():
                             st.session_state.total_impact['time'] += requirements.get('time_minutes', 0)
                             st.session_state.total_impact['money'] += requirements.get('cost_usd', 0)
                             
-                            # Show celebration
-                            celebrate_action_completion(action.get('title', 'this action'))
+                            # Show enhanced celebration
+                            cause_title = cause_info.get('title', 'this cause')
+                            celebrate_action_completion(action.get('title', 'this action'), cause_title)
                             
                             # Show action URL if available
                             org_website = action.get('organization', {}).get('website')
                             if org_website and org_website != '#':
                                 st.markdown(f"🔗 [Take Action Now]({org_website})")
+                                st.info("✨ Click the link above to complete your action!")
+                            
+                            # Show next steps suggestion
+                            st.markdown("#### 🎯 What's Next?")
+                            col_a, col_b, col_c = st.columns(3)
+                            with col_a:
+                                if st.button("🔄 Try Another Action", key=f"another_{action.get('id')}"):
+                                    st.rerun()
+                            with col_b:
+                                if st.button("📊 See My Impact", key=f"impact_{action.get('id')}"):
+                                    st.session_state.selected_page = "📊 My Impact"
+                                    st.rerun()
+                            with col_c:
+                                if st.button("⚡ Quick Actions", key=f"quick_{action.get('id')}"):
+                                    st.session_state.selected_page = "⚡ Quick Actions"
+                                    st.rerun()
             else:
                 st.info("No actions currently match your constraints, but we're always adding more!")
             
@@ -599,12 +737,25 @@ def show_quick_actions_page():
                     st.markdown(f"💰 ${requirements.get('cost_usd', 0)}")
                 with col3:
                     if st.button("Do This Now", key=f"quick_{action.get('id', 'unknown')}"):
-                        celebrate_action_completion(action.get('title', 'this action'))
+                        # Enhanced celebration with cause context
+                        cause_name = action.get('cause_id', 'helping others').replace('_', ' ').title()
+                        celebrate_action_completion(action.get('title', 'this action'), cause_name)
                         
                         # Update metrics
                         st.session_state.total_impact['actions'] += 1
                         st.session_state.total_impact['time'] += requirements.get('time_minutes', 0)
                         st.session_state.total_impact['money'] += requirements.get('cost_usd', 0)
+                        
+                        # Show action link if available
+                        org_website = action.get('organization', {}).get('website')
+                        if org_website and org_website != '#':
+                            st.markdown(f"🔗 [Complete This Action]({org_website})")
+                            st.success("Ready to make an impact? Click the link above!")
+                        
+                        # Encourage continued engagement
+                        st.markdown("🌟 **Keep the momentum going!**")
+                        if st.button("Find More Quick Actions", key=f"more_quick_{action.get('id')}"):
+                            st.rerun()
     else:
         st.warning("No quick actions found for your criteria. Try adjusting your filters!")
 
@@ -660,11 +811,23 @@ def show_impact_page():
     for msg in random.sample(community_messages, 2):
         st.info(msg)
     
-    # Growth suggestions
-    st.markdown("### 🚀 Keep Growing")
-    if st.button("Plan Next Actions", type="primary"):
-        st.success("Let's find your next meaningful action!")
-        st.rerun()
+    # Growth suggestions with encouraging context
+    st.markdown("### 🚀 Keep Growing Your Impact")
+    
+    if total_actions == 0:
+        st.info("🌱 Ready to take your first step? Every journey begins with a single action.")
+    elif total_actions < 3:
+        st.info("🌿 You're building great momentum! Consistency creates lasting change.")
+    else:
+        st.info("🌳 You're becoming a true changemaker! Your actions inspire others.")
+    
+    col_grow1, col_grow2 = st.columns(2)
+    with col_grow1:
+        if st.button("🎯 Find My Next Action", type="primary"):
+            st.success("Let's find your next meaningful action!")
+    with col_grow2:
+        if st.button("⚡ Quick Impact Now"):
+            st.rerun()
 
 def show_causes_page():
     """Enhanced causes exploration"""

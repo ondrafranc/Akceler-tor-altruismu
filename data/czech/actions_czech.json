@@ -1,0 +1,484 @@
+{
+  "actions": {
+    "charita_mesicni_dar": {
+      "id": "charita_mesicni_dar",
+      "title": "Měsíční dar pro Charitu ČR",
+      "description": "Nastavte pravidelný měsíční příspěvek 200 Kč pro Charitu České republiky. Pomáháte seniorům, rodinám v nouzi a lidem bez domova.",
+      "cause_id": "mistni_komunita",
+      "type": "donation",
+      "commitment_type": "recurring",
+      "requirements": {
+        "time_minutes": 5,
+        "cost_usd": 8,
+        "skills": [],
+        "location": "any",
+        "age_minimum": 15
+      },
+      "impact": {
+        "direct_beneficiaries": 3,
+        "metric_description": "Lidé, kterým pomůže vaš měsíční dar",
+        "measurement_unit": "people_helped",
+        "measurement_quantity": 3,
+        "verification_method": "organization_tracked"
+      },
+      "user_experience": {
+        "complexity": "low",
+        "emotional_reward": "concrete_progress",
+        "social_aspect": "individual",
+        "immediate_feedback": true,
+        "progress_tracking": true
+      },
+      "organization": {
+        "name": "Charita Česká republika",
+        "website": "https://www.charita.cz",
+        "charity_rating": "A",
+        "transparency_score": 95
+      },
+      "next_steps": [
+        "nastavit_pravidelny_dar",
+        "sledovat_vysledky_pomoci",
+        "sdílet_s_přáteli"
+      ]
+    },
+    "dobrovolnik_registrace": {
+      "id": "dobrovolnik_registrace",
+      "title": "Registrace na Dobrovolník.cz",
+      "description": "Zaregistrujte se na největší platformě pro dobrovolnictví v ČR. Najdete příležitosti ve vašem městě.",
+      "cause_id": "mistni_komunita",
+      "type": "volunteer",
+      "commitment_type": "one_time",
+      "requirements": {
+        "time_minutes": 10,
+        "cost_usd": 0,
+        "skills": [],
+        "location": "any",
+        "age_minimum": 15
+      },
+      "impact": {
+        "direct_beneficiaries": 1,
+        "metric_description": "Spojení s místními organizacemi",
+        "measurement_unit": "connections",
+        "measurement_quantity": 1,
+        "verification_method": "self_reported"
+      },
+      "user_experience": {
+        "complexity": "low",
+        "emotional_reward": "future_opportunities",
+        "social_aspect": "platform",
+        "immediate_feedback": false,
+        "progress_tracking": false
+      },
+      "organization": {
+        "name": "Hestia - Národní dobrovolnické centrum",
+        "website": "https://www.dobrovolnik.cz",
+        "charity_rating": "A",
+        "transparency_score": 90
+      },
+      "next_steps": [
+        "vyplnit_podrobny_profil",
+        "vybrat_oblasti_zajmu",
+        "najit_prvni_prilezitost"
+      ]
+    },
+    "domov_senioru_navsteva": {
+      "id": "domov_senioru_navsteva",
+      "title": "Pravidelné návštěvy v domově seniorů",
+      "description": "Trávte 2 hodiny týdně návštěvami seniorů. Povidání, společné aktivity nebo jen poslouchání jejich příběhů.",
+      "cause_id": "mistni_komunita",
+      "type": "volunteer",
+      "commitment_type": "ongoing",
+      "requirements": {
+        "time_minutes": 120,
+        "cost_usd": 0,
+        "skills": ["communication", "patience"],
+        "location": "local",
+        "age_minimum": 16
+      },
+      "impact": {
+        "direct_beneficiaries": 3,
+        "metric_description": "Senioři, které pravidelně navštěvujete",
+        "measurement_unit": "seniors_visited",
+        "measurement_quantity": 3,
+        "verification_method": "organization_tracked"
+      },
+      "user_experience": {
+        "complexity": "medium",
+        "emotional_reward": "relationship_building",
+        "social_aspect": "one_on_one",
+        "immediate_feedback": true,
+        "progress_tracking": true
+      },
+      "organization": {
+        "name": "Místní domov seniorů",
+        "website": "https://www.charita.cz",
+        "charity_rating": "A",
+        "transparency_score": 85
+      },
+      "next_steps": [
+        "absolvovat_uvodni_kurz",
+        "poznat_konkretni_seniory",
+        "vytvorit_pravidelny_rozvrh"
+      ]
+    },
+    "ukraine_children_help": {
+      "id": "ukraine_children_help",
+      "title": "Pomoc ukrajinským dětem",
+      "description": "Doučování českého jazyka nebo matematiky pro ukrajinské děti. Online nebo osobně, 1 hodina týdně.",
+      "cause_id": "vzdelavani",
+      "type": "volunteer",
+      "commitment_type": "ongoing",
+      "requirements": {
+        "time_minutes": 60,
+        "cost_usd": 0,
+        "skills": ["communication", "patience", "basic_czech"],
+        "location": "any",
+        "age_minimum": 16
+      },
+      "impact": {
+        "direct_beneficiaries": 1,
+        "metric_description": "Ukrajinské dítě, kterému pomáháte s integrací",
+        "measurement_unit": "children_helped",
+        "measurement_quantity": 1,
+        "verification_method": "organization_tracked"
+      },
+      "user_experience": {
+        "complexity": "medium",
+        "emotional_reward": "meaningful_impact",
+        "social_aspect": "one_on_one",
+        "immediate_feedback": true,
+        "progress_tracking": true
+      },
+      "organization": {
+        "name": "Charita Česká republika",
+        "website": "https://www.charita.cz/pomoc-ukrajine",
+        "charity_rating": "A",
+        "transparency_score": 95
+      },
+      "next_steps": [
+        "kontaktovat_koordinatora",
+        "absolvovat_kratky_kurz",
+        "poznat_svého_studenta"
+      ]
+    },
+    "plasty_domacnost": {
+      "id": "plasty_domacnost",
+      "title": "Měsíc bez plastů",
+      "description": "Snižte plasty ve vaší domácnosti o 50%. Praktický průvodce změnami, které skutečně fungují.",
+      "cause_id": "zivotni_prostredi",
+      "type": "personal_action",
+      "commitment_type": "one_time",
+      "requirements": {
+        "time_minutes": 30,
+        "cost_usd": 0,
+        "skills": [],
+        "location": "home",
+        "age_minimum": 12
+      },
+      "impact": {
+        "direct_beneficiaries": 1,
+        "metric_description": "Snížení plastového odpadu v kg za měsíc",
+        "measurement_unit": "kg_plastic_reduced",
+        "measurement_quantity": 5,
+        "verification_method": "self_reported"
+      },
+      "user_experience": {
+        "complexity": "medium",
+        "emotional_reward": "personal_agency",
+        "social_aspect": "individual",
+        "immediate_feedback": false,
+        "progress_tracking": true
+      },
+      "organization": {
+        "name": "Hnutí DUHA",
+        "website": "https://www.hnutiduha.cz/plastový-měsíc",
+        "charity_rating": "A",
+        "transparency_score": 90
+      },
+      "next_steps": [
+        "stahnut_prakticky_pruvodce",
+        "sledovat_pokrok_týdně",
+        "inspirovat_rodinu_přátele"
+      ]
+    },
+    "food_bank_tridicka": {
+      "id": "food_bank_tridicka",
+      "title": "Třídění potravin v Potravinové bance",
+      "description": "4 hodiny měsíčně pomáháte třídit a balit potraviny pro potřebné rodiny. Praktická pomoc, která má okamžitý dopad.",
+      "cause_id": "mistni_komunita",
+      "type": "volunteer",
+      "commitment_type": "recurring",
+      "requirements": {
+        "time_minutes": 240,
+        "cost_usd": 0,
+        "skills": [],
+        "location": "local",
+        "age_minimum": 16
+      },
+      "impact": {
+        "direct_beneficiaries": 20,
+        "metric_description": "Rodin, které pomůže vaše práce za měsíc",
+        "measurement_unit": "families_helped",
+        "measurement_quantity": 20,
+        "verification_method": "organization_tracked"
+      },
+      "user_experience": {
+        "complexity": "low",
+        "emotional_reward": "concrete_progress",
+        "social_aspect": "group",
+        "immediate_feedback": true,
+        "progress_tracking": true
+      },
+      "organization": {
+        "name": "Potravinová banka",
+        "website": "https://www.potravinovabanka.cz",
+        "charity_rating": "A+",
+        "transparency_score": 95
+      },
+      "next_steps": [
+        "registrovat_se_jako_dobrovolník",
+        "absolvovat_uvodni_školení",
+        "naplánovat_pravidelné_směny"
+      ]
+    },
+    "krkonoše_čistka": {
+      "id": "krkonoše_čistka",
+      "title": "Úklid Krkonoš",
+      "description": "Sobotní akce úklidu lesa v Krkonoších. Společně s dalšími dobrovolníky pomozte ochránit naši nejkrásnější přírodu.",
+      "cause_id": "zivotni_prostredi",
+      "type": "volunteer",
+      "commitment_type": "one_time",
+      "requirements": {
+        "time_minutes": 360,
+        "cost_usd": 5,
+        "skills": [],
+        "location": "krkonoše",
+        "age_minimum": 14
+      },
+      "impact": {
+        "direct_beneficiaries": 1000,
+        "metric_description": "Návštěvníci, kteří využijí vyčištěné území",
+        "measurement_unit": "people_benefiting",
+        "measurement_quantity": 1000,
+        "verification_method": "environmental_monitoring"
+      },
+      "user_experience": {
+        "complexity": "medium",
+        "emotional_reward": "community_building",
+        "social_aspect": "group",
+        "immediate_feedback": true,
+        "progress_tracking": false
+      },
+      "organization": {
+        "name": "Správa Krkonošského národního parku",
+        "website": "https://www.krnap.cz",
+        "charity_rating": "A",
+        "transparency_score": 88
+      },
+      "next_steps": [
+        "registrovat_se_na_akci",
+        "připravit_vhodné_oblečení",
+        "pozvat_přátele_rodinu"
+      ]
+    },
+    "skoladoucovani_matematik": {
+      "id": "skoladoucovani_matematik",
+      "title": "Doučování matematiky online",
+      "description": "1 hodina týdně doučování dítěte z chudší rodiny přes internet. Pomáháte zvyšovat jejich šance na lepší budoucnost.",
+      "cause_id": "vzdelavani",
+      "type": "volunteer",
+      "commitment_type": "ongoing",
+      "requirements": {
+        "time_minutes": 60,
+        "cost_usd": 0,
+        "skills": ["mathematics", "communication", "patience"],
+        "location": "any",
+        "age_minimum": 16
+      },
+      "impact": {
+        "direct_beneficiaries": 1,
+        "metric_description": "Dítě, kterému pomáháte se vzděláním",
+        "measurement_unit": "students_helped",
+        "measurement_quantity": 1,
+        "verification_method": "organization_tracked"
+      },
+      "user_experience": {
+        "complexity": "medium",
+        "emotional_reward": "meaningful_impact",
+        "social_aspect": "one_on_one",
+        "immediate_feedback": true,
+        "progress_tracking": true
+      },
+      "organization": {
+        "name": "Škola doučování",
+        "website": "https://www.skoladoucovani.cz",
+        "charity_rating": "A",
+        "transparency_score": 92
+      },
+      "next_steps": [
+        "vyplnit_profil_doučovatele",
+        "absolvovat_online_kurz",
+        "poznat_svého_studenta"
+      ]
+    },
+    "linka_bezpeci_kurz": {
+      "id": "linka_bezpeci_kurz",
+      "title": "Kurz krizové intervence",
+      "description": "3denní kurz přípravy na pomoc lidem v krizových situacích. Po kurzu můžete pomáhat na lince důvěry.",
+      "cause_id": "zdravi_socialni_pece",
+      "type": "volunteer",
+      "commitment_type": "ongoing",
+      "requirements": {
+        "time_minutes": 1440,
+        "cost_usd": 0,
+        "skills": ["communication", "empathy", "emotional_stability"],
+        "location": "local",
+        "age_minimum": 20
+      },
+      "impact": {
+        "direct_beneficiaries": 50,
+        "metric_description": "Lidé v krizi, kterým pomůžete za rok",
+        "measurement_unit": "crisis_calls_handled",
+        "measurement_quantity": 50,
+        "verification_method": "organization_tracked"
+      },
+      "user_experience": {
+        "complexity": "high",
+        "emotional_reward": "life_changing_impact",
+        "social_aspect": "one_on_one",
+        "immediate_feedback": true,
+        "progress_tracking": true
+      },
+      "organization": {
+        "name": "Linka bezpečí",
+        "website": "https://www.linkabezpeci.cz",
+        "charity_rating": "A+",
+        "transparency_score": 95
+      },
+      "next_steps": [
+        "prihlasit_se_na_kurz",
+        "absolvovat_psychologické_posouzení",
+        "začít_pomáhat_na_lince"
+      ]
+    },
+    "neziskovka_web": {
+      "id": "neziskovka_web",
+      "title": "Webové stránky pro charitu",
+      "description": "Vytvořte moderní webové stránky pro místní neziskovou organizaci. Využijte své IT dovednosti k pomoci.",
+      "cause_id": "technologie_pro_dobro",
+      "type": "volunteer",
+      "commitment_type": "one_time",
+      "requirements": {
+        "time_minutes": 1200,
+        "cost_usd": 0,
+        "skills": ["web_development", "design", "communication"],
+        "location": "any",
+        "age_minimum": 16
+      },
+      "impact": {
+        "direct_beneficiaries": 1,
+        "metric_description": "Organizace s lepší online prezentací",
+        "measurement_unit": "organizations_helped",
+        "measurement_quantity": 1,
+        "verification_method": "organization_feedback"
+      },
+      "user_experience": {
+        "complexity": "high",
+        "emotional_reward": "skill_utilization",
+        "social_aspect": "collaboration",
+        "immediate_feedback": false,
+        "progress_tracking": true
+      },
+      "organization": {
+        "name": "Místní nezisková organizace",
+        "website": "https://www.itpomaha.cz",
+        "charity_rating": "A",
+        "transparency_score": 80
+      },
+      "next_steps": [
+        "kontaktovat_IT_pomáhá",
+        "vybrat_konkrétní_organizaci",
+        "naplánovat_projekt"
+      ]
+    },
+    "adra_rychla_pomoc": {
+      "id": "adra_rychla_pomoc",
+      "title": "Příspěvek 300 Kč pro ADRU",
+      "description": "Jednorázový dar pro Adventistickou agenturu pro pomoc a rozvoj. Podpoříte jejich humanitární projekty.",
+      "cause_id": "mistni_komunita",
+      "type": "donation",
+      "commitment_type": "one_time",
+      "requirements": {
+        "time_minutes": 3,
+        "cost_usd": 12,
+        "skills": [],
+        "location": "any",
+        "age_minimum": 15
+      },
+      "impact": {
+        "direct_beneficiaries": 5,
+        "metric_description": "Lidé, kterým pomůže váš dar",
+        "measurement_unit": "people_helped",
+        "measurement_quantity": 5,
+        "verification_method": "organization_tracked"
+      },
+      "user_experience": {
+        "complexity": "low",
+        "emotional_reward": "immediate_impact",
+        "social_aspect": "individual",
+        "immediate_feedback": true,
+        "progress_tracking": false
+      },
+      "organization": {
+        "name": "ADRA",
+        "website": "https://www.adra.cz",
+        "charity_rating": "A",
+        "transparency_score": 92
+      },
+      "next_steps": [
+        "sdílet_na_sociálních_sítích",
+        "zvážit_pravidelný_dar",
+        "informovat_se_o_projektech"
+      ]
+    },
+    "senior_digitalni_gramotnost": {
+      "id": "senior_digitalni_gramotnost",
+      "title": "Počítače pro seniory",
+      "description": "Učte seniory základy práce s počítačem a internetem. 2 hodiny týdně v místní knihovně nebo komunitním centru.",
+      "cause_id": "vzdelavani",
+      "type": "volunteer",
+      "commitment_type": "ongoing",
+      "requirements": {
+        "time_minutes": 120,
+        "cost_usd": 0,
+        "skills": ["computer_basics", "patience", "communication"],
+        "location": "local",
+        "age_minimum": 16
+      },
+      "impact": {
+        "direct_beneficiaries": 6,
+        "metric_description": "Senioři, které naučíte základy PC",
+        "measurement_unit": "seniors_taught",
+        "measurement_quantity": 6,
+        "verification_method": "organization_tracked"
+      },
+      "user_experience": {
+        "complexity": "medium",
+        "emotional_reward": "skill_sharing",
+        "social_aspect": "group",
+        "immediate_feedback": true,
+        "progress_tracking": true
+      },
+      "organization": {
+        "name": "Místní knihovna",
+        "website": "https://www.czechitas.cz",
+        "charity_rating": "A",
+        "transparency_score": 85
+      },
+      "next_steps": [
+        "kontaktovat_místní_knihovnu",
+        "připravit_jednoduché_lekce",
+        "získat_skupinu_seniorů"
+      ]
+    }
+  }
+} 

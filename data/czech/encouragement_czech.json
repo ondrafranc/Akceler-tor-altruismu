@@ -1,0 +1,167 @@
+{
+  "welcome_messages": [
+    "Najdi praktický způsob, jak pomoct – krok za krokem.",
+    "Každý malý krok pomáhá. Začneme tam, kde se cítíš připraven/a.",
+    "Není potřeba měnit svět najednou. Stačí začít tam, kde jsi.",
+    "Tvoje starosti o druhé jsou cenné. Pomohu ti je proměnit v konkrétní akce."
+  ],
+  "assessment_encouragement": [
+    "Není špatná ani správná odpověď – jde o to najít cestu, která bude fungovat pro tebe.",
+    "To, že si bereš čas na rozmyšlení, je už samo o sobě důležité.",
+    "Každá hodnota, kterou si vybereš, představuje lidi, kterým můžeš pomoct.",
+    "Tvoje možnosti – ať jsou jakékoliv – mohou vytvořit smysluplnou změnu."
+  ],
+  "emotional_state_responses": {
+    "overwhelmed": [
+      "Je normální cítit se zahlcen/a. Problémy jsou veliké, ale lidská schopnost pomáhat také.",
+      "Nejsi v tom sám/sama. Miliony lidí se cítí stejně, a proto nástroje jako tento existují.",
+      "Že se cítíš zahlcen/a, ukazuje, jak moc ti na věcech záleží. Pojďme tu starost proměnit v užitečnou akci.",
+      "Nejde o to všechno vyřešit – jde o to najít udržitelný způsob, jak přispět k řešení."
+    ],
+    "frustrated": [
+      "Ta frustrace je energie. Ukazuje, že jsi připraven/a na skutečnou změnu.",
+      "Využij tu energii! Největší změny v historii začaly lidmi, kteří měli dost.",
+      "Tvoje frustrace znamená, že vidíš za povrch k skutečným problémům. Ta jasnost je cenná.",
+      "Pojďme tu frustraci proměnit ve strategickou akci, která skutečně něco změní."
+    ],
+    "hopeful": [
+      "Tvoje naděje je nakažlivá a svět ji právě teď potřebuje.",
+      "Naděje spojená s akcí je nezastavitelná. Už máš náskok.",
+      "Ten optimismus tě ponese přes výzvy a inspiruje ostatní, aby se přidali.",
+      "Naděje je volba a cvičení. Děkuji, že si ji vybíráš, i když je to těžké."
+    ],
+    "guilty": [
+      "Pocit viny ukazuje, že tvoje hodnoty jsou v pořádku, ale akce je užitečnější než vina.",
+      "Nemůžeš pomoct všem, ale můžeš pomoct někomu. To stačí.",
+      "To, že ti na tom takhle záleží, znamená, že jsi víc angažován/a než většina lidí.",
+      "Místo 'měl/a bych dělat víc' zkus 'udělám, co zvládnu udržitelně.' To je skutečná moudrost."
+    ],
+    "motivated": [
+      "Ta energie je zlatá! Pojďme se ujistit, že je směřována tam, kde může mít největší dopad.",
+      "Tvoje motivace je dar pro svět. Pomůžeme ti ji využít strategicky.",
+      "Zůstaň nabitý/á! A pojďme vybudovat systémy, které tu motivaci udrží dlouhodobě.",
+      "Jsi připraven/a hýbat horami. Začneme správným nástrojem pro tvou sílu."
+    ],
+    "uncertain": [
+      "Nevědět, kde začít, je nejupřímnější reakce na složité problémy.",
+      "Nejistota je začátek moudrosti. Kladneš si správné otázky.",
+      "Každý expert byl kdysi začátečník. Každé hnutí začalo někým nejistým, ale ochotným.",
+      "To, že jsi tady a hledáš směr, znamená, že jsi už na cestě."
+    ]
+  },
+  "action_completion_celebrations": [
+    "Výborně! Právě jsi udělal/a něco praktického pro zlepšení světa.",
+    "Dobře! Tahle akce bude mít dopad způsoby, o kterých možná nikdy nebudeš vědět.",
+    "Má to smysl. Teď jsi oficiálně součástí řešení.",
+    "Povedlo se! Každá malá akce vytváří momentum pro větší změny.",
+    "Svět je díky tvé akci doslova lepší. Děkuji.",
+    "Jdeš na to dobře! Takhle se vytváří skutečná změna.",
+    "Pěkná práce! Právě jsi dokázal/a, že jednotlivci mohou dělat rozdíl.",
+    "Teď jsi součástí změny. Nosi tuto roli s hrdostí."
+  ],
+  "milestone_messages": {
+    "first_action": "První akce hotová! Přešel/a jsi od úmyslu k dopadu. Takhle změna funguje.",
+    "first_week": "Týden v řadě! Vytváříš návyk pomáhání. Ta konzistence má význam víc, než si myslíš.",
+    "first_month": "Měsíc! Dokázal/a jsi, že udržitelný altruismus je možný. Jsi inspirací!",
+    "five_actions": "Pět akcí hotovo! Rozvíjíš expertízu v tom, jak dělat rozdíl. Ostatní se od tebe učí.",
+    "ten_hours": "Deset hodin přispěno! To jsou dva celé pracovní dny na zlepšování světa. Neuvěřitelný dopad!",
+    "first_donation": "První dar hotov! Tvoje štědrost doslova mění životy. Děkuji, že ses postavil/a.",
+    "referral_milestone": "Komunitní budovatel! Inspiroval/a jsi ostatní, aby se přidali. Vůdcovství ti sluší!"
+  },
+  "progress_encouragement": [
+    "Každá akce, kterou uděláš, dokazuje, že jednotlivci mohou vytvářet změnu.",
+    "Nepomáháš jen ostatním – stáváš se člověkem, kterým chceš být.",
+    "Tvoje konzistence v pomáhání buduje lepší svět, akci za akcí.",
+    "Ostatní lidé vidí tvůj příklad a inspiruje je to k akci. Jsi vůdce.",
+    "Problémy jsou veliké, ale ty taky, když aktivně pracuješ na řešeních."
+  ],
+  "community_impact_messages": [
+    "Naše komunita zasadila tento měsíc {trees_planted} stromů! 🌳",
+    "Naše společná akce podpořila {students_helped} studentů v jejich vzdělání! 📚",
+    "Přispěli jsme {volunteer_hours} dobrovolnických hodin pro důležité věci! ⏰",
+    "Jako komunita jsme darovali {total_donated} Kč efektivním charitám! 💰",
+    "Naše obhajování dosáhlo {people_reached} lidí s důležitými zprávami! 📢"
+  ],
+  "reflection_prompts": [
+    "Co tě na té akci nejvíc překvapilo?",
+    "Jak ses cítil/a, když jsi pomáhal/a ostatním?",
+    "Na jaký dopad jsi zatím nejhrdější?",
+    "Jak se změnil tvůj pohled na to, jak dělat rozdíl?",
+    "Co bys řekl/a někomu, kdo si myslí, že je příliš malý na to, aby něco změnil?"
+  ],
+  "inspirational_quotes": [
+    "Buď změnou, kterou chceš ve světě vidět. - Mahátma Gándhí",
+    "Nejlepší způsob, jak najít sebe sama, je ztratit se ve službě ostatním. - Mahátma Gándhí",
+    "Žijeme z toho, co dostáváme, ale život tvoříme z toho, co dáváme. - Winston Churchill",
+    "Žádný skutek laskavosti, ať sebemenší, není nikdy zmařen. - Aesop",
+    "Smysl života je najít svůj dar. Účel života je ho dát dál. - Pablo Picasso",
+    "Rosteme tím, že pozvedáme ostatní. - Robert Ingersoll",
+    "Jemným způsobem můžeš otřást světem. - Mahátma Gándhí",
+    "To, co děláš, má význam, a musíš se rozhodnout, jaký druh rozdílu chceš dělat. - Jane Goodall"
+  ],
+  "success_stories": [
+    {
+      "name": "Petra K.",
+      "story": "Začala s dary 200 Kč pro stromy, teď koordinuje celý program udržitelnosti své firmy",
+      "impact": "Vedla k 500+ klimatickým akcím zaměstnanců",
+      "timeframe": "6 měsíců"
+    },
+    {
+      "name": "Tomáš H.",
+      "story": "Začal doučováním jednoho dítěte online, inspirovalo ho to stát se učitelem na plný úvazek",
+      "impact": "Teď ovlivňuje 30 studentů denně",
+      "timeframe": "1 rok"
+    },
+    {
+      "name": "Marie N.",
+      "story": "Zorganizovala jeden sousedský večírek, vybudovala trvalé komunitní spojení",
+      "impact": "Měsíční setkání teď zahrnuje 50+ domácností",
+      "timeframe": "8 měsíců"
+    },
+    {
+      "name": "Jan S.",
+      "story": "Začal s darem na duševní zdraví, stal se vedoucím podpůrné skupiny",
+      "impact": "Pomáhá 20 lidem týdně rozvíjet strategie zvládání",
+      "timeframe": "10 měsíců"
+    }
+  ],
+  "czech_seasonal_messages": {
+    "spring": [
+      "Jaro je čas nových začátků. Jakou změnu zasadíš ty?",
+      "Jako příroda se probouzí, můžeme se probudit i my k akci.",
+      "Jarní úklid nemusí být jen doma – co takhle úklid komunity?"
+    ],
+    "summer": [
+      "Letní energie je perfektní pro komunitní akce.",
+      "Teplé dny jsou ideální pro setkávání a budování vztahů.",
+      "Využij letní dovolenou i k pomoci – i malý čas má význam."
+    ],
+    "autumn": [
+      "Podzim je čas sklizně – co můžeš sklidit ze své pomoci?",
+      "Jak se připravujeme na zimu, nezapomeňme na ty, kdo potřebují teplo.",
+      "Podzimní melancholie? Transformuj ji v užitečnou akci."
+    ],
+    "winter": [
+      "Zima je čas solidarity. Kdo ve tvém okolí potřebuje podporu?",
+      "Dlouhé zimní večery jsou ideální pro online dobrovolnictví.",
+      "Zimní pohoda může být ještě teplejší, když pomáháš druhým."
+    ]
+  },
+  "regional_encouragement": {
+    "praha": [
+      "V Praze je tolik příležitostí pomoci – od Karlína po Smíchov.",
+      "Hlavní město má hlavní roli v pomoci. Přidáš se?",
+      "Praha má srdce pro pomoc. Ukažme to!"
+    ],
+    "brno": [
+      "Brno má tradici solidarity. Pokračujme v ní.",
+      "Moravské srdce bije pro pomoc druhým.",
+      "V Brně se nejen dobře žije, ale i dobře pomáhá."
+    ],
+    "ostrava": [
+      "Ostravská poctivost se projevuje i v pomoci druhým.",
+      "Síla Moravskoslezska je v solidaritě lidí.",
+      "Ostrava má tradici vzájemné výpomoci – buď její součástí."
+    ]
+  }
+} 
