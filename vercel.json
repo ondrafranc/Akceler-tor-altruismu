@@ -1,0 +1,11 @@
+{
+  "buildCommand": "cd akcelerator-landing-page && npm ci && npm run build",
+  "outputDirectory": "akcelerator-landing-page/.svelte-kit/output/client",
+  "installCommand": "cd akcelerator-landing-page && npm ci",
+  "framework": null,
+  "functions": {
+    "akcelerator-landing-page/.svelte-kit/output/server/index.js": {
+      "runtime": "nodejs18.x"
+    }
+  }
+} 
