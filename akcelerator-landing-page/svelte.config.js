@@ -4,8 +4,7 @@ import adapter from '@sveltejs/adapter-vercel';
 const config = {
 	kit: {
 		adapter: adapter({
-			runtime: 'nodejs20.x',
-			memory: 1024
+			runtime: 'nodejs20.x'
 		})
 	}
 };
