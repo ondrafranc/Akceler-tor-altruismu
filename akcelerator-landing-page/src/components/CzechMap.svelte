@@ -100,8 +100,8 @@
     }
   }
   
-  function launchRegionalApp(region) {
-    const url = `http://localhost:8501?lang=czech&region=${region}`;
+  function openRegionalApp(region) {
+    const url = `https://akcelerator-altruismu.streamlit.app?lang=czech&region=${region}`;
     window.open(url, '_blank');
   }
   
@@ -238,7 +238,7 @@
             
             <button 
               class="czech-button-primary mt-4"
-              on:click={() => launchRegionalApp(selectedRegion)}
+              on:click={() => openRegionalApp(selectedRegion)}
             >
               {content[currentLanguage].viewActions}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

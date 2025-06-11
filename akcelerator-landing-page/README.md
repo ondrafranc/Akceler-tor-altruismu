@@ -26,30 +26,140 @@ Transform the moment of empathetic overwhelm into practical Czech solidarity thr
 ## 🚀 Quick Start
 
 ### Prerequisites
-```bash
-node --version  # >=18.0.0
-npm --version   # >=8.0.0
-```
+- Node.js 18+ 
+- npm or yarn
+- Git
 
-### Installation
+### Local Development
+
+1. **Clone and Setup:**
 ```bash
-# Clone and navigate
+git clone <your-repo-url>
 cd akcelerator-landing-page
-
-# Install dependencies
 npm install
-
-# Start development server
-npm run dev
-
-# Open browser
-http://localhost:5173
 ```
 
-### Connecting to Streamlit Backend
-1. Ensure your Streamlit app is running on `http://localhost:8501`
-2. The landing page will automatically fetch real-time data
-3. CTA buttons will launch the Streamlit app with proper parameters
+2. **Start Development Server:**
+```bash
+npm run dev
+```
+The app will be available at `http://localhost:5173`
+
+3. **Build for Production:**
+```bash
+npm run build
+npm run preview
+```
+
+## 📦 Deploy to Vercel
+
+### Method 1: GitHub Integration (Recommended)
+
+1. **Push to GitHub:**
+```bash
+git add .
+git commit -m "Ready for deployment"
+git push origin main
+```
+
+2. **Connect to Vercel:**
+   - Go to [vercel.com](https://vercel.com)
+   - Sign in with GitHub
+   - Click "New Project"
+   - Import your repository
+   - Vercel will auto-detect SvelteKit settings
+
+3. **Deploy:**
+   - Click "Deploy" 
+   - Vercel will build and deploy automatically
+   - Your app will be live at `https://your-project.vercel.app`
+
+### Method 2: Vercel CLI
+
+1. **Install Vercel CLI:**
+```bash
+npm i -g vercel
+```
+
+2. **Deploy:**
+```bash
+vercel
+# Follow the prompts to configure your project
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+For production deployment, set these in Vercel Dashboard:
+
+```
+STREAMLIT_BASE_URL=https://akcelerator-altruismu.streamlit.app
+```
+
+### Vercel Settings
+The project includes optimized `vercel.json` and SvelteKit adapter configuration:
+
+- **Framework:** SvelteKit (auto-detected)
+- **Build Command:** `npm run build`
+- **Output Directory:** `.svelte-kit/output/client` (handled by adapter)
+- **Node.js Runtime:** 18.x
+
+### ✅ **Deployment Ready**
+- TypeScript configuration issues resolved
+- All dependencies properly configured
+- Build process tested and working
+- Vercel adapter correctly configured
+- No quiz remnants or broken links
+
+## 🔗 Integration
+
+### Streamlit Backend
+- Production app: `https://akcelerator-altruismu.streamlit.app`
+- The landing page CTA button opens the Streamlit app in a new tab
+- Includes error handling and fallback dialogs
+
+### Features
+- ✅ Responsive Czech-themed design
+- ✅ Interactive regional map
+- ✅ Solidarity garden visualization
+- ✅ Seamless Streamlit integration
+- ✅ Loading states and error handling
+- ✅ Accessibility features
+- ✅ Modern animations with GSAP
+
+## 🛠 Development Commands
+
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production  
+npm run preview      # Preview production build
+npm run lint         # Run linter
+```
+
+## 📁 Project Structure
+
+```
+akcelerator-landing-page/
+├── src/
+│   ├── components/
+│   │   ├── Hero.svelte              # Hero section with parallax
+│   │   ├── SolidarityGarden.svelte  # Interactive p5.js garden
+│   │   ├── CzechMap.svelte          # Regional SVG map
+│   │   └── CTASection.svelte        # Final call-to-action
+│   ├── lib/
+│   │   ├── animations.js            # GSAP utilities
+│   │   ├── streamlit-integration.js # Backend connection
+│   │   └── czech-data.js            # Czech content data
+│   ├── styles/
+│   │   └── czech-theme.css          # Custom CSS variables
+│   └── routes/
+│       ├── +layout.svelte           # Global layout
+│       └── +page.svelte             # Main landing page
+├── static/
+│   ├── images/                      # Czech imagery assets
+│   └── fonts/                       # Typography files
+└── package.json
+```
 
 ---
 
@@ -92,7 +202,6 @@ akcelerator-landing-page/
 │   │   ├── Hero.svelte              # Hero section with parallax
 │   │   ├── SolidarityGarden.svelte  # Interactive p5.js garden
 │   │   ├── CzechMap.svelte          # Regional SVG map
-
 │   │   └── CTASection.svelte        # Final call-to-action
 │   ├── lib/
 │   │   ├── animations.js            # GSAP utilities
@@ -204,28 +313,6 @@ const url = generateDeepLink('quick-actions', {
 
 ---
 
-## 🚀 Deployment
-
-### Production Build
-```bash
-npm run build
-npm run preview
-```
-
-### Deployment Options
-1. **Vercel** (recommended for SvelteKit)
-2. **Netlify** (static generation)
-3. **Czech hosting** (O2, WEDOS for local data residency)
-
-### Environment Variables
-```bash
-STREAMLIT_BASE_URL=http://localhost:8501
-ANALYTICS_ID=GA_MEASUREMENT_ID
-CZECH_API_KEY=your_key_here
-```
-
----
-
 ## 🧪 Testing & Quality
 
 ### Testing Strategy
@@ -327,3 +414,8 @@ MIT License - Built with ❤️ for the Czech community
 **Vývojáři**: Made by developers who understand both cutting-edge web technology and deep Czech cultural values.
 
 **Vision**: Transform Silicon Valley optimism into Czech practical wisdom, creating a uniquely authentic platform for meaningful social action. 
+
+---
+
+**Ready for Production ✅**
+This project is configured for zero-config deployment on Vercel. 

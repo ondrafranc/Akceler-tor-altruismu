@@ -51,7 +51,9 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-The app will open in your browser at `http://localhost:8501`
+Visit the live application at: https://akcelerator-altruismu.streamlit.app
+
+For local development, the app will open at `http://localhost:8501`
 
 ## 🏗️ Architecture Overview
 

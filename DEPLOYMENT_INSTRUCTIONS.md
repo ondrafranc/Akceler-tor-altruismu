@@ -22,12 +22,10 @@
    - Set environment variables if needed
    - Configure secrets if using external APIs
 
-6. **Deploy**: Click "Deploy!"
-
-### 3. Expected Deployment URL
-Your app will be deployed to:
+6. **Deploy**: Click "Deploy!" and wait for completion
+7. **Access**: Your app will be available at:
 ```
-https://YOUR_APP_NAME.streamlit.app
+https://akcelerator-altruismu.streamlit.app
 ```
 
 ### 4. Post-Deployment

@@ -31,11 +31,11 @@ def install_requirements():
         return False
 
 def run_app():
-    """Launch the Streamlit app"""
-    print("\n🌱 Launching Altruism Accelerator...")
-    print("📖 Opening in your browser at: http://localhost:8501")
-    print("🛑 Press Ctrl+C to stop the server")
-    print("\n" + "="*50)
+    """Run the Streamlit app"""
+    print("🚀 Starting Altruism Accelerator...")
+    print("📖 Local development: http://localhost:8501")
+    print("🌐 Production app: https://akcelerator-altruismu.streamlit.app")
+    print("⭐ Launching local version...")
     
     try:
         subprocess.run([sys.executable, "-m", "streamlit", "run", "app.py"])

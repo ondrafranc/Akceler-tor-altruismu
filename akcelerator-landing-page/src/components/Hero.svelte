@@ -47,8 +47,8 @@
   function launchAccelerator() {
     // Smooth transition to Streamlit app
     const url = currentLanguage === 'czech' ? 
-      'http://localhost:8501?lang=czech' : 
-      'http://localhost:8501?lang=english';
+      'https://akcelerator-altruismu.streamlit.app?lang=czech' : 
+      'https://akcelerator-altruismu.streamlit.app?lang=english';
     
     // Add loading state animation
     gsap.to(ctaButtons, {

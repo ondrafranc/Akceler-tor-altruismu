@@ -1,9 +1,9 @@
 import { c as create_ssr_component, a as add_attribute, e as escape, d as each, v as validate_component } from "../../chunks/ssr.js";
-import { c as currentLanguage$4 } from "../../chunks/animations.js";
+import { c as currentLanguage$3 } from "../../chunks/animations.js";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger.js";
 const Hero_svelte_svelte_type_style_lang = "";
-const css$5 = {
+const css$4 = {
   code: ".language-flag.svelte-1hl5d6t{background:rgba(255, 255, 255, 0.9);border:2px solid transparent;border-radius:50%;width:48px;height:48px;font-size:1.5rem;cursor:pointer;transition:all var(--timing-medium) var(--ease-gentle);margin:0 4px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0, 0, 0, 0.1)}.language-flag.svelte-1hl5d6t:hover{transform:scale(1.1);box-shadow:0 4px 16px rgba(0, 0, 0, 0.15)}.language-flag.active.svelte-1hl5d6t{border-color:var(--czech-forest);background:rgba(255, 255, 255, 1);transform:scale(1.05)}.scroll-indicator.svelte-1hl5d6t{animation:svelte-1hl5d6t-bounceGentle 2s ease-in-out infinite}@keyframes svelte-1hl5d6t-bounceGentle{0%,20%,50%,80%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}60%{transform:translateY(-4px)}}.floating-particle.svelte-1hl5d6t{animation:svelte-1hl5d6t-float 3s ease-in-out infinite}@keyframes svelte-1hl5d6t-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}@media(max-width: 768px){.language-flag.svelte-1hl5d6t{width:40px;height:40px;font-size:1.2rem}.flex.svelte-1hl5d6t{flex-direction:column;align-items:center}.gap-4.svelte-1hl5d6t{gap:1rem}}",
   map: null
 };
@@ -33,78 +33,46 @@ const Hero = create_ssr_component(($$result, $$props, $$bindings, slots) => {
       scrollText: "Scroll down to discover"
     }
   };
-  $$result.css.add(css$5);
+  $$result.css.add(css$4);
   return `<section class="parallax-container czech-flex-center"${add_attribute("this", heroContainer, 0)}> <div class="parallax-forest"${add_attribute("this", parallaxForest, 0)}></div>  <div class="floating-particle svelte-1hl5d6t" style="position: absolute; top: 20%; left: 10%; width: 4px; height: 4px; background: var(--czech-forest-light); border-radius: 50%; opacity: 0.6;"></div> <div class="floating-particle svelte-1hl5d6t" style="position: absolute; top: 30%; right: 15%; width: 3px; height: 3px; background: var(--copper-detail); border-radius: 50%; opacity: 0.4;"></div> <div class="floating-particle svelte-1hl5d6t" style="position: absolute; top: 60%; left: 20%; width: 5px; height: 5px; background: var(--moravian-earth); border-radius: 50%; opacity: 0.5;"></div> <div class="floating-particle svelte-1hl5d6t" style="position: absolute; top: 40%; right: 25%; width: 3px; height: 3px; background: var(--czech-forest); border-radius: 50%; opacity: 0.7;"></div>  <div class="absolute top-4 right-4 z-10"${add_attribute("this", languageSelector, 0)}><button class="${"language-flag " + escape("active", true) + " svelte-1hl5d6t"}" title="Čeština">🇨🇿</button> <button class="${"language-flag " + escape("", true) + " svelte-1hl5d6t"}" title="English">🇺🇸</button></div>  <div class="czech-container czech-text-center relative z-10"><h1 class="czech-heading-xl mb-6"${add_attribute("this", mainHeading, 0)}>${escape(content[currentLanguage2].heading)}</h1> <p class="czech-body-large mb-4 max-w-2xl mx-auto"${add_attribute("this", subHeading, 0)}>${escape(content[currentLanguage2].subheading)}</p> <p class="czech-body mb-8 max-w-xl mx-auto opacity-80">${escape(content[currentLanguage2].description)}</p>  <div class="flex gap-4 justify-center flex-wrap svelte-1hl5d6t"${add_attribute("this", ctaButtons, 0)}><button class="czech-button-primary"><span>${escape(content[currentLanguage2].ctaPrimary)}</span> <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"></path></svg></button> <button class="czech-button-secondary">${escape(content[currentLanguage2].ctaSecondary)}</button></div>  <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 czech-text-center"><p class="czech-body text-sm opacity-60 mb-2">${escape(content[currentLanguage2].scrollText)}</p> <div class="scroll-indicator svelte-1hl5d6t" data-svelte-h="svelte-j9xrzi"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--czech-forest)" stroke-width="2"><path d="M7 13l3 3 7-7M7 6l3 3 7-7"></path></svg></div></div></div> </section>`;
 });
 const SolidarityGarden_svelte_svelte_type_style_lang = "";
-const css$4 = {
-  code: ".garden-wrapper.svelte-1qorb3z{position:relative;max-width:800px;margin:0 auto;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(46, 93, 49, 0.15);background:var(--warm-stone)}.garden-canvas.svelte-1qorb3z{width:100%;height:400px;cursor:crosshair;position:relative}.action-legend.svelte-1qorb3z{display:flex;justify-content:space-around;padding:1rem;background:rgba(255, 255, 255, 0.9);border-top:1px solid var(--subtle-border)}.legend-item.svelte-1qorb3z{display:flex;align-items:center;gap:0.5rem;font-size:0.9rem;color:var(--text-secondary)}.legend-icon.svelte-1qorb3z{font-size:1.2rem}.community-stats.svelte-1qorb3z{text-align:center;margin:2rem 0}.stat-circle.svelte-1qorb3z{display:inline-block;background:var(--bg-accent);border:3px solid var(--czech-forest-light);border-radius:50%;width:120px;height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto 1rem}.stat-number.svelte-1qorb3z{font-size:2rem;font-weight:600;color:var(--czech-forest)}.stat-label.svelte-1qorb3z{font-size:0.8rem;color:var(--text-secondary);text-align:center;line-height:1.2}.personal-contribution.svelte-1qorb3z{background:var(--quiet-celebration);padding:0.75rem 1.5rem;border-radius:8px;display:inline-block;margin-top:1rem}.havel-quote.svelte-1qorb3z{background:var(--bg-accent);border-left:4px solid var(--copper-detail);padding:1.5rem;border-radius:8px;text-align:center;margin-top:3rem;max-width:600px;margin-left:auto;margin-right:auto}.seed-celebration{position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);background:var(--bg-primary);border:2px solid var(--czech-forest-light);border-radius:12px;padding:1rem;text-align:center;box-shadow:0 8px 24px rgba(46, 93, 49, 0.2);z-index:10;pointer-events:none}.celebration-content{font-weight:500;color:var(--czech-forest)}@media(max-width: 768px){.garden-canvas.svelte-1qorb3z{height:300px}.action-legend.svelte-1qorb3z{flex-wrap:wrap;gap:0.5rem}.legend-item.svelte-1qorb3z{font-size:0.8rem}.stat-circle.svelte-1qorb3z{width:100px;height:100px}.stat-number.svelte-1qorb3z{font-size:1.5rem}.havel-quote.svelte-1qorb3z{padding:1rem;margin-top:2rem}}@media(max-width: 900px){.garden-wrapper.svelte-1qorb3z{max-width:100%}}",
+const css$3 = {
+  code: ".garden-wrapper.svelte-3pzjdk{position:relative;max-width:800px;margin:0 auto;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(46, 93, 49, 0.1);background:var(--warm-stone)}.garden-placeholder.svelte-3pzjdk{min-height:400px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg, var(--bg-accent) 0%, var(--bohemian-mist) 100%);border:2px dashed var(--subtle-border)}.placeholder-content.svelte-3pzjdk{text-align:center;padding:3rem 2rem;max-width:500px}.placeholder-icon.svelte-3pzjdk{font-size:4rem;margin-bottom:1rem;opacity:0.7}.placeholder-title.svelte-3pzjdk{font-size:1.5rem;color:var(--czech-forest);margin-bottom:1rem;font-weight:500}.placeholder-description.svelte-3pzjdk{color:var(--text-secondary);margin-bottom:2rem;line-height:1.6}.community-stats.svelte-3pzjdk{text-align:center;margin:2rem 0}.stat-circle.svelte-3pzjdk{display:inline-block;background:var(--bg-accent);border:3px solid var(--czech-forest-light);border-radius:50%;width:120px;height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto 1rem}.stat-number.svelte-3pzjdk{font-size:2rem;font-weight:600;color:var(--czech-forest)}.stat-label.svelte-3pzjdk{font-size:0.8rem;color:var(--text-secondary);text-align:center;line-height:1.2}.havel-quote.svelte-3pzjdk{background:var(--bg-accent);border-left:4px solid var(--copper-detail);padding:1.5rem;border-radius:8px;text-align:center;margin-top:3rem;max-width:600px;margin-left:auto;margin-right:auto}@media(max-width: 768px){.garden-placeholder.svelte-3pzjdk{min-height:300px}.placeholder-content.svelte-3pzjdk{padding:2rem 1rem}.stat-circle.svelte-3pzjdk{width:100px;height:100px}.stat-number.svelte-3pzjdk{font-size:1.5rem}.havel-quote.svelte-3pzjdk{padding:1rem;margin-top:2rem}}@media(max-width: 900px){.garden-wrapper.svelte-3pzjdk{max-width:100%}}",
   map: null
 };
-let currentLanguage$3 = "czech";
+let totalCommunityActions = 247;
+let currentLanguage$2 = "czech";
 const SolidarityGarden = create_ssr_component(($$result, $$props, $$bindings, slots) => {
   gsap.registerPlugin(ScrollTrigger);
   let gardenContainer;
-  let gardenCanvas;
-  let totalCommunityActions = 247;
-  const actionTypes = {
-    tree: {
-      name: "Pomoc seniorům",
-      color: "#4A7C59",
-      growth: "🌳",
-      impact: "lidé pomoženi",
-      icon: "💚"
-    },
-    flower: {
-      name: "Vzdělávání dětí",
-      color: "#B08D57",
-      growth: "🌻",
-      impact: "děti doučovány",
-      icon: "📚"
-    },
-    herb: {
-      name: "Ochrana přírody",
-      color: "#8B7355",
-      growth: "🌿",
-      impact: "akce realizovány",
-      icon: "🌍"
-    },
-    mushroom: {
-      name: "Krizová pomoc",
-      color: "#2E5D31",
-      growth: "🍄",
-      impact: "lidé podpořeni",
-      icon: "💚"
-    }
-  };
   const content = {
     czech: {
-      title: "Zasaď semínko pomoci",
-      subtitle: "Každé kliknutí představuje skutečnou akci solidarity",
-      instruction: "Klikni na půdu a sleduj, jak roste tvá pomoc",
-      counter: "lidí zasadilo semínko tento týden",
-      celebration: "Krásně! Tvé semínko pomoci roste!"
+      title: "Zahrada solidarity",
+      subtitle: "Interaktivní vizualizace vaší pomoci",
+      comingSoon: "Již brzy...",
+      description: "Zde si budete moci vizuálně sledovat dopad vaší pomoci na komunitu.",
+      counter: "lidí pomohlo tento týden"
     },
     english: {
-      title: "Plant a Seed of Help",
-      subtitle: "Every click represents real solidarity action",
-      instruction: "Click on the soil and watch your help grow",
-      counter: "people planted seeds this week",
-      celebration: "Beautiful! Your seed of help is growing!"
+      title: "Solidarity Garden",
+      subtitle: "Interactive visualization of your help",
+      comingSoon: "Coming soon...",
+      description: "Here you'll be able to visually track the impact of your help on the community.",
+      counter: "people helped this week"
     }
   };
-  $$result.css.add(css$4);
-  return `<section id="solidarity-garden" class="czech-section"${add_attribute("this", gardenContainer, 0)}><div class="czech-container"> <div class="czech-text-center mb-12"><h2 class="czech-heading-lg mb-4">${escape(content[currentLanguage$3].title)}</h2> <p class="czech-body-large mb-2 max-w-2xl mx-auto">${escape(content[currentLanguage$3].subtitle)}</p> <p class="czech-body opacity-70">${escape(content[currentLanguage$3].instruction)}</p></div>  <div class="garden-wrapper svelte-1qorb3z"><div class="garden-canvas svelte-1qorb3z"${add_attribute("this", gardenCanvas, 0)}></div>  <div class="action-legend svelte-1qorb3z">${each(Object.entries(actionTypes), ([key, action]) => {
-    return `<div class="legend-item svelte-1qorb3z"><span class="legend-icon svelte-1qorb3z">${escape(action.icon)}</span> <span class="legend-text">${escape(action.name)}</span> </div>`;
-  })}</div></div>  <div class="community-stats svelte-1qorb3z"><div class="stat-circle svelte-1qorb3z"><div class="stat-number svelte-1qorb3z">${escape(totalCommunityActions)}</div> <div class="stat-label svelte-1qorb3z">${escape(content[currentLanguage$3].counter)}</div></div> ${``}</div>  <div class="havel-quote svelte-1qorb3z" data-svelte-h="svelte-1cgsf46"><blockquote class="czech-body italic">&quot;Naděje není přesvědčení, že něco dopadne dobře, ale jistota, že má něco smysl, 
-        bez ohledu na to, jak to dopadne.&quot;</blockquote> <cite class="text-sm opacity-70">— Václav Havel</cite></div></div> </section>`;
+  $$result.css.add(css$3);
+  return `<section id="solidarity-garden" class="czech-section"${add_attribute("this", gardenContainer, 0)}><div class="czech-container"><div class="czech-text-center mb-12"><h2 class="czech-heading-lg mb-4">${escape(content[currentLanguage$2].title)}</h2> <p class="czech-body-large mb-6 max-w-2xl mx-auto">${escape(content[currentLanguage$2].subtitle)}</p></div>  <div class="garden-wrapper svelte-3pzjdk"><div class="garden-placeholder svelte-3pzjdk"><div class="placeholder-content svelte-3pzjdk"><div class="placeholder-icon svelte-3pzjdk" data-svelte-h="svelte-10hqxw1">🌱</div> <h3 class="placeholder-title svelte-3pzjdk">${escape(content[currentLanguage$2].comingSoon)}</h3> <p class="placeholder-description svelte-3pzjdk">${escape(content[currentLanguage$2].description)}</p>  <div class="community-stats svelte-3pzjdk"><div class="stat-circle svelte-3pzjdk"><div class="stat-number svelte-3pzjdk">${escape(totalCommunityActions)}</div> <div class="stat-label svelte-3pzjdk">${escape(content[currentLanguage$2].counter)}</div></div></div>  <div class="havel-quote svelte-3pzjdk"><p class="czech-body italic">${escape(
+    '"Naděje není přesvědčení, že se něco povede, ale jistota, že má smysl." - Václav Havel'
+  )}</p></div></div></div></div></div> </section>`;
 });
 const CzechMap_svelte_svelte_type_style_lang = "";
-const css$3 = {
+const css$2 = {
   code: ".map-container.svelte-jwly34.svelte-jwly34{display:grid;grid-template-columns:1fr 1fr;gap:3rem;max-width:1000px;margin:0 auto;align-items:start}.czech-map-svg.svelte-jwly34.svelte-jwly34{position:relative}.country-outline.svelte-jwly34.svelte-jwly34{transition:all var(--timing-medium) var(--ease-gentle)}.country-outline.svelte-jwly34.svelte-jwly34:hover{fill:var(--warm-stone)}.regional-pulse.svelte-jwly34.svelte-jwly34{cursor:pointer;transition:all var(--timing-medium) var(--ease-gentle);filter:drop-shadow(0 2px 4px rgba(0,0,0,0.2))}.regional-pulse.svelte-jwly34.svelte-jwly34:hover{transform:scale(1.2);filter:drop-shadow(0 4px 8px rgba(0,0,0,0.3))}.regional-pulse.svelte-jwly34.svelte-jwly34:focus{outline:3px solid var(--copper-detail);outline-offset:2px}.region-label.svelte-jwly34.svelte-jwly34{pointer-events:none;font-family:'Inter', sans-serif}.solidarity-network.svelte-jwly34.svelte-jwly34{animation:svelte-jwly34-networkPulse 4s ease-in-out infinite}@keyframes svelte-jwly34-networkPulse{0%,100%{opacity:0.2}50%{opacity:0.5}}.region-info.svelte-jwly34.svelte-jwly34{background:var(--bg-primary);border:1px solid var(--subtle-border);border-radius:16px;padding:2rem;box-shadow:0 8px 32px rgba(46, 93, 49, 0.1)}.info-header.svelte-jwly34.svelte-jwly34{border-bottom:1px solid var(--subtle-border);padding-bottom:1.5rem;margin-bottom:1.5rem}.stat-badge.svelte-jwly34.svelte-jwly34{background:var(--quiet-celebration);padding:0.5rem 1rem;border-radius:20px;font-size:0.9rem;font-weight:500;color:var(--czech-forest)}.action-list.svelte-jwly34.svelte-jwly34{list-style:none;padding:0;margin:0}.action-item.svelte-jwly34.svelte-jwly34{display:flex;align-items:center;gap:0.75rem;padding:0.5rem 0;font-size:0.95rem;color:var(--text-secondary)}.action-bullet.svelte-jwly34.svelte-jwly34{width:8px;height:8px;border-radius:50%;flex-shrink:0}.map-placeholder.svelte-jwly34.svelte-jwly34{background:var(--bg-secondary);border:2px dashed var(--subtle-border);border-radius:16px;padding:3rem 2rem;text-align:center;height:300px;display:flex;align-items:center;justify-content:center}.pulse-demo.svelte-jwly34.svelte-jwly34{display:flex;gap:1rem;justify-content:center;margin-bottom:1rem}.demo-pulse.svelte-jwly34.svelte-jwly34{width:16px;height:16px;border-radius:50%;animation:svelte-jwly34-demoPulse 2s ease-in-out infinite}@keyframes svelte-jwly34-demoPulse{0%,100%{transform:scale(1);opacity:0.6}50%{transform:scale(1.2);opacity:1}}.historical-context.svelte-jwly34.svelte-jwly34{display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:1.5rem;margin-top:4rem}.context-card.svelte-jwly34.svelte-jwly34{display:flex;align-items:start;gap:1rem;background:var(--bg-accent);padding:1.5rem;border-radius:12px;border:1px solid var(--subtle-border);transition:all var(--timing-medium) var(--ease-gentle)}.context-card.svelte-jwly34.svelte-jwly34:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(46, 93, 49, 0.1)}.context-icon.svelte-jwly34.svelte-jwly34{font-size:2rem;flex-shrink:0}.context-text.svelte-jwly34 h4.svelte-jwly34{margin-bottom:0.5rem;color:var(--czech-forest)}@media(max-width: 768px){.map-container.svelte-jwly34.svelte-jwly34{grid-template-columns:1fr;gap:2rem}.region-info.svelte-jwly34.svelte-jwly34{padding:1.5rem}.map-placeholder.svelte-jwly34.svelte-jwly34{height:200px;padding:2rem 1rem}.historical-context.svelte-jwly34.svelte-jwly34{grid-template-columns:1fr;margin-top:2rem}.context-card.svelte-jwly34.svelte-jwly34{padding:1rem}.regional-pulse.svelte-jwly34.svelte-jwly34{r:10}.region-label.svelte-jwly34.svelte-jwly34{font-size:12px}}@media(max-width: 1024px) and (min-width: 769px){.map-container.svelte-jwly34.svelte-jwly34{gap:2rem}}",
   map: null
 };
-let currentLanguage$2 = "czech";
+let currentLanguage$1 = "czech";
 const CzechMap = create_ssr_component(($$result, $$props, $$bindings, slots) => {
   gsap.registerPlugin(ScrollTrigger);
   let mapContainer;
@@ -162,212 +130,10 @@ const CzechMap = create_ssr_component(($$result, $$props, $$bindings, slots) => 
       viewActions: "View Actions"
     }
   };
-  $$result.css.add(css$3);
-  return `<section id="czech-map" class="czech-section"${add_attribute("this", mapContainer, 0)}><div class="czech-container"> <div class="czech-text-center mb-12"><h2 class="czech-heading-lg mb-4">${escape(content[currentLanguage$2].title)}</h2> <p class="czech-body-large mb-2 max-w-2xl mx-auto">${escape(content[currentLanguage$2].subtitle)}</p> <p class="czech-body opacity-70">${escape(content[currentLanguage$2].selectRegion)}</p></div>  <div class="map-container svelte-jwly34"> <div class="czech-map-svg svelte-jwly34"><svg viewBox="0 0 800 500" class="w-full h-auto"><path d="M120,200 L180,150 L250,140 L320,160 L380,150 L450,170 L520,160 L580,180 L620,220 L600,280 L550,320 L480,340 L420,350 L360,340 L300,330 L240,320 L180,300 L140,260 Z" fill="var(--bohemian-mist)" stroke="var(--czech-forest-light)" stroke-width="2" class="country-outline svelte-jwly34"></path>${each(Object.entries(regions), ([key, region]) => {
+  $$result.css.add(css$2);
+  return `<section id="czech-map" class="czech-section"${add_attribute("this", mapContainer, 0)}><div class="czech-container"> <div class="czech-text-center mb-12"><h2 class="czech-heading-lg mb-4">${escape(content[currentLanguage$1].title)}</h2> <p class="czech-body-large mb-2 max-w-2xl mx-auto">${escape(content[currentLanguage$1].subtitle)}</p> <p class="czech-body opacity-70">${escape(content[currentLanguage$1].selectRegion)}</p></div>  <div class="map-container svelte-jwly34"> <div class="czech-map-svg svelte-jwly34"><svg viewBox="0 0 800 500" class="w-full h-auto"><path d="M120,200 L180,150 L250,140 L320,160 L380,150 L450,170 L520,160 L580,180 L620,220 L600,280 L550,320 L480,340 L420,350 L360,340 L300,330 L240,320 L180,300 L140,260 Z" fill="var(--bohemian-mist)" stroke="var(--czech-forest-light)" stroke-width="2" class="country-outline svelte-jwly34"></path>${each(Object.entries(regions), ([key, region]) => {
     return `<circle${add_attribute("cx", region.x, 0)}${add_attribute("cy", region.y, 0)} r="12"${add_attribute("fill", region.color, 0)} class="regional-pulse svelte-jwly34"${add_attribute("data-region", key, 0)} tabindex="0" role="button"${add_attribute("aria-label", `Select ${region.name}`, 0)}></circle>  <text${add_attribute("x", region.x, 0)}${add_attribute("y", region.y + 25, 0)} text-anchor="middle" class="region-label svelte-jwly34" fill="var(--text-primary)" font-size="14" font-weight="500">${escape(region.name)}</text>`;
   })}<g class="solidarity-network svelte-jwly34" opacity="0.3"><line x1="340" y1="180" x2="380" y2="260" stroke="var(--czech-forest-light)" stroke-width="1" stroke-dasharray="5,5"></line><line x1="380" y1="260" x2="450" y2="200" stroke="var(--czech-forest-light)" stroke-width="1" stroke-dasharray="5,5"></line><line x1="340" y1="180" x2="450" y2="200" stroke="var(--czech-forest-light)" stroke-width="1" stroke-dasharray="5,5"></line></g></svg></div>  ${`<div class="map-placeholder svelte-jwly34" data-svelte-h="svelte-9ve3ef"><div class="placeholder-content"><div class="pulse-demo svelte-jwly34"><div class="demo-pulse svelte-jwly34" style="background-color: var(--czech-forest);"></div> <div class="demo-pulse svelte-jwly34" style="background-color: var(--copper-detail); animation-delay: 0.5s;"></div> <div class="demo-pulse svelte-jwly34" style="background-color: var(--moravian-earth); animation-delay: 1s;"></div></div> <p class="czech-body opacity-70 mt-4">Klikni na kterékoli město na mapě</p></div></div>`}</div>  <div class="historical-context svelte-jwly34" data-svelte-h="svelte-1d3n03q"><div class="context-card svelte-jwly34"><div class="context-icon svelte-jwly34">🏘️</div> <div class="context-text svelte-jwly34"><h4 class="czech-body font-semibold svelte-jwly34">Tradice pomoci sousedům</h4> <p class="text-sm opacity-80">Od moravských brigád po pražské sokolstvo - Čechům pomoc není cizí</p></div></div> <div class="context-card svelte-jwly34"><div class="context-icon svelte-jwly34">🤝</div> <div class="context-text svelte-jwly34"><h4 class="czech-body font-semibold svelte-jwly34">Moderní solidarita</h4> <p class="text-sm opacity-80">Tech komunity, studentské organizace a občanské iniciativy spojují síly</p></div></div> <div class="context-card svelte-jwly34"><div class="context-icon svelte-jwly34">💪</div> <div class="context-text svelte-jwly34"><h4 class="czech-body font-semibold svelte-jwly34">Praktický přístup</h4> <p class="text-sm opacity-80">Méně řečí, více činů - český způsob dělání dobra</p></div></div></div></div> </section>`;
-});
-const AltruismQuiz_svelte_svelte_type_style_lang = "";
-const css$2 = {
-  code: ".quiz-container.svelte-1gkay9d{max-width:600px;margin:0 auto;background:var(--bg-primary);border-radius:16px;padding:2rem;box-shadow:0 8px 32px rgba(46, 93, 49, 0.1);border:1px solid var(--subtle-border)}.quiz-intro.svelte-1gkay9d{text-align:center}.czech-types.svelte-1gkay9d{display:grid;grid-template-columns:repeat(2, 1fr);gap:1rem;margin-bottom:2rem}.type-preview.svelte-1gkay9d{background:var(--bg-accent);padding:1rem;border-radius:8px;font-weight:500;color:var(--czech-forest)}.quiz-start-button.svelte-1gkay9d{font-size:1.1rem;padding:1rem 2rem}.question-progress.svelte-1gkay9d{margin-bottom:2rem}.progress-bar.svelte-1gkay9d{background:var(--subtle-border);height:6px;border-radius:3px;overflow:hidden;margin-bottom:0.5rem}.progress-fill.svelte-1gkay9d{background:var(--czech-forest);height:100%;transition:width var(--timing-medium) var(--ease-gentle)}.progress-text.svelte-1gkay9d{text-align:center;font-size:0.9rem;color:var(--text-secondary);margin:0}.question-title.svelte-1gkay9d{color:var(--czech-forest);text-align:center;margin-bottom:2rem;font-size:1.3rem}.answer-options.svelte-1gkay9d{display:flex;flex-direction:column;gap:1rem}.answer-button.svelte-1gkay9d{background:var(--bg-secondary);border:2px solid var(--subtle-border);border-radius:8px;padding:1rem;text-align:left;cursor:pointer;transition:all var(--timing-medium) var(--ease-gentle);font-weight:500;color:var(--text-primary)}.answer-button.svelte-1gkay9d:hover{border-color:var(--czech-forest);background:var(--bohemian-mist);transform:translateY(-1px)}.quiz-result.svelte-1gkay9d{text-align:center}.result-title.svelte-1gkay9d{font-size:2rem;color:var(--czech-forest);margin-bottom:1rem}.result-description.svelte-1gkay9d{font-size:1.1rem;color:var(--text-secondary);margin-bottom:2rem;line-height:1.6}.actions-title.svelte-1gkay9d{color:var(--czech-forest);margin-bottom:1rem;font-size:1.1rem}.action-list.svelte-1gkay9d{list-style:none;padding:0;margin:0 0 2rem 0;text-align:left}.action-item.svelte-1gkay9d{display:flex;align-items:center;gap:0.75rem;padding:0.5rem 0;color:var(--text-secondary)}.action-bullet.svelte-1gkay9d{color:var(--czech-forest);font-weight:bold}@media(max-width: 768px){.quiz-container.svelte-1gkay9d{padding:1.5rem;margin:0 1rem}.czech-types.svelte-1gkay9d{grid-template-columns:1fr}.answer-button.svelte-1gkay9d{padding:0.75rem}.result-title.svelte-1gkay9d{font-size:1.5rem}}",
-  map: null
-};
-let currentLanguage$1 = "czech";
-const AltruismQuiz = create_ssr_component(($$result, $$props, $$bindings, slots) => {
-  gsap.registerPlugin(ScrollTrigger);
-  let quizContainer;
-  let currentQuestion = 0;
-  let answers = {};
-  const quizData = {
-    czech: {
-      title: "Jaký typ altruisty jsi?",
-      subtitle: "Rychlý test ti pomůže najít perfektní způsob pomoci",
-      startButton: "Začít test",
-      nextButton: "Další",
-      resultButton: "Zobrazit výsledek",
-      launchButton: "Spustit akcelerátor",
-      questions: [
-        {
-          question: "Jak nejlépe pracuješ?",
-          answers: [
-            {
-              text: "Ruce v hlíně, prakticky",
-              type: "praktik"
-            },
-            {
-              text: "Učím a vedu ostatní",
-              type: "mentor"
-            },
-            {
-              text: "Organizujem a koordinujem",
-              type: "organizator"
-            },
-            {
-              text: "Finančně podporujem",
-              type: "darca"
-            }
-          ]
-        },
-        {
-          question: "Co tě nejvíc motivuje?",
-          answers: [
-            {
-              text: "Vidět okamžité výsledky",
-              type: "praktik"
-            },
-            {
-              text: "Vidět růst v lidech",
-              type: "mentor"
-            },
-            {
-              text: "Vybudovat něco trvalého",
-              type: "organizator"
-            },
-            {
-              text: "Maximalizovat dopad",
-              type: "darca"
-            }
-          ]
-        },
-        {
-          question: "Kolik času můžeš věnovat?",
-          answers: [
-            { text: "Pár hodin týdně", type: "praktik" },
-            {
-              text: "Pravidelně, dlouhodobě",
-              type: "mentor"
-            },
-            {
-              text: "Intenzivně při projektech",
-              type: "organizator"
-            },
-            {
-              text: "Minimálně, ale finančně",
-              type: "darca"
-            }
-          ]
-        }
-      ],
-      results: {
-        praktik: {
-          title: "🔨 Praktik",
-          description: "Nejlépe ti vyhovuje přímá, hmatatelná pomoc. Preferuješ vidět okamžité výsledky své práce.",
-          actions: ["Pomoc v jídelně", "Úklid přírody", "Práce na zahradě"]
-        },
-        mentor: {
-          title: "👨‍🏫 Mentor",
-          description: "Máš talent učit a inspirovat ostatní. Tvá síla je v předávání znalostí a zkušeností.",
-          actions: ["Doučování", "Mentoring", "Kurzy pro seniory"]
-        },
-        organizator: {
-          title: "📋 Organizátor",
-          description: "Dokážeš koordinovat lidi a projekty. Přirozený lídr, který spojuje týmy.",
-          actions: ["Vedení projektů", "Fundraising", "Komunitní akce"]
-        },
-        darca: {
-          title: "💝 Dárce",
-          description: "Tvůj největší přínos je finanční podpora. Inteligentně investuješ do největšího dopadu.",
-          actions: ["Měsíční dary", "Mikropůjčky", "Crowdfunding"]
-        }
-      }
-    },
-    english: {
-      title: "What type of Czech altruist are you?",
-      subtitle: "Quick test to find your perfect way to help",
-      startButton: "Start test",
-      nextButton: "Next",
-      resultButton: "Show result",
-      launchButton: "Launch accelerator",
-      questions: [
-        {
-          question: "How do you work best?",
-          answers: [
-            {
-              text: "Hands-on, practically",
-              type: "praktik"
-            },
-            {
-              text: "Teaching and leading others",
-              type: "mentor"
-            },
-            {
-              text: "Organizing and coordinating",
-              type: "organizator"
-            },
-            {
-              text: "Supporting financially",
-              type: "darca"
-            }
-          ]
-        },
-        {
-          question: "What motivates you most?",
-          answers: [
-            {
-              text: "Seeing immediate results",
-              type: "praktik"
-            },
-            {
-              text: "Seeing growth in people",
-              type: "mentor"
-            },
-            {
-              text: "Building something lasting",
-              type: "organizator"
-            },
-            { text: "Maximizing impact", type: "darca" }
-          ]
-        },
-        {
-          question: "How much time can you dedicate?",
-          answers: [
-            {
-              text: "A few hours weekly",
-              type: "praktik"
-            },
-            {
-              text: "Regularly, long-term",
-              type: "mentor"
-            },
-            {
-              text: "Intensively during projects",
-              type: "organizator"
-            },
-            {
-              text: "Minimally, but financially",
-              type: "darca"
-            }
-          ]
-        }
-      ],
-      results: {
-        praktik: {
-          title: "🔨 Hands-on Helper",
-          description: "Direct, tangible help suits you best. You prefer to see immediate results of your work.",
-          actions: ["Soup kitchen help", "Nature cleanup", "Garden work"]
-        },
-        mentor: {
-          title: "👨‍🏫 Mentor",
-          description: "You have a talent for teaching and inspiring others. Your strength is sharing knowledge.",
-          actions: ["Tutoring", "Mentoring", "Senior courses"]
-        },
-        organizator: {
-          title: "📋 Organizer",
-          description: "You can coordinate people and projects. Natural leader who brings teams together.",
-          actions: ["Project leadership", "Fundraising", "Community events"]
-        },
-        darca: {
-          title: "💝 Donor",
-          description: "Your greatest contribution is financial support. You intelligently invest for maximum impact.",
-          actions: ["Monthly donations", "Microloans", "Crowdfunding"]
-        }
-      }
-    }
-  };
-  $$result.css.add(css$2);
-  return `<section id="altruism-quiz" class="czech-section"${add_attribute("this", quizContainer, 0)}><div class="czech-container"> <div class="czech-text-center mb-12"><h2 class="czech-heading-lg mb-4">${escape(quizData[currentLanguage$1].title)}</h2> <p class="czech-body-large mb-6 max-w-2xl mx-auto">${escape(quizData[currentLanguage$1].subtitle)}</p></div>  <div class="quiz-container svelte-1gkay9d">${Object.keys(answers).length === 0 ? ` <div class="quiz-intro svelte-1gkay9d"><div class="intro-visual" data-svelte-h="svelte-g9gw8t"><div class="czech-types svelte-1gkay9d"><div class="type-preview svelte-1gkay9d">🔨 Praktik</div> <div class="type-preview svelte-1gkay9d">👨‍🏫 Mentor</div> <div class="type-preview svelte-1gkay9d">📋 Organizátor</div> <div class="type-preview svelte-1gkay9d">💝 Dárce</div></div></div> <button class="czech-button-primary quiz-start-button svelte-1gkay9d">${escape(quizData[currentLanguage$1].startButton)}</button></div>` : `${` <div class="quiz-question"><div class="question-progress svelte-1gkay9d"><div class="progress-bar svelte-1gkay9d"><div class="progress-fill svelte-1gkay9d" style="${"width: " + escape((currentQuestion + 1) / quizData[currentLanguage$1].questions.length * 100, true) + "%"}"></div></div> <p class="progress-text svelte-1gkay9d">${escape(currentQuestion + 1)} z ${escape(quizData[currentLanguage$1].questions.length)}</p></div> <h3 class="question-title svelte-1gkay9d">${escape(quizData[currentLanguage$1].questions[currentQuestion].question)}</h3> <div class="answer-options svelte-1gkay9d">${each(quizData[currentLanguage$1].questions[currentQuestion].answers, (answer) => {
-    return `<button class="answer-button svelte-1gkay9d">${escape(answer.text)} </button>`;
-  })}</div></div>`}`}</div></div> </section>`;
 });
 const CTASection_svelte_svelte_type_style_lang = "";
 const css$1 = {
@@ -420,7 +186,7 @@ const css = {
 };
 const Page = create_ssr_component(($$result, $$props, $$bindings, slots) => {
   let language = "czech";
-  currentLanguage$4.subscribe((value) => {
+  currentLanguage$3.subscribe((value) => {
     language = value;
   });
   const content = {
@@ -429,14 +195,12 @@ const Page = create_ssr_component(($$result, $$props, $$bindings, slots) => {
         home: "Domů",
         how: "Jak to funguje",
         regions: "Regiony",
-        quiz: "Rychlý test",
         launch: "Spustit akcelerátor"
       },
       sections: {
         story: "Příběh solidarity",
         garden: "Zahrada solidarity",
         map: "Pomoc napříč Českem",
-        quiz: "Najdi svou cestu",
         cta: "Začni pomáhat"
       }
     },
@@ -445,20 +209,18 @@ const Page = create_ssr_component(($$result, $$props, $$bindings, slots) => {
         home: "Home",
         how: "How it works",
         regions: "Regions",
-        quiz: "Quick test",
         launch: "Launch accelerator"
       },
       sections: {
         story: "Story of solidarity",
         garden: "Solidarity garden",
         map: "Help across Czechia",
-        quiz: "Find your path",
         cta: "Start helping"
       }
     }
   };
   $$result.css.add(css);
-  return ` <nav class="czech-nav svelte-8jvaqq"><div class="nav-container svelte-8jvaqq"> <div class="nav-logo svelte-8jvaqq"><div class="logo-icon svelte-8jvaqq" data-svelte-h="svelte-a96uxz">🤝</div> <span class="logo-text">${escape(language === "czech" ? "Akcelerátor altruismu" : "Altruism Accelerator")}</span></div>  <div class="nav-links svelte-8jvaqq"><a href="#hero" class="nav-link svelte-8jvaqq" data-section="hero">${escape(content[language].nav.home)}</a> <a href="#solidarity-garden" class="nav-link svelte-8jvaqq" data-section="solidarity-garden">${escape(content[language].sections.garden)}</a> <a href="#czech-map" class="nav-link svelte-8jvaqq" data-section="czech-map">${escape(content[language].sections.map)}</a> <a href="#altruism-quiz" class="nav-link svelte-8jvaqq" data-section="altruism-quiz">${escape(content[language].sections.quiz)}</a></div>  <div class="nav-actions svelte-8jvaqq"><div class="language-selector svelte-8jvaqq"><button class="${"lang-button " + escape(language === "czech" ? "active" : "", true) + " svelte-8jvaqq"}" aria-label="Česky">🇨🇿</button> <button class="${"lang-button " + escape(language === "english" ? "active" : "", true) + " svelte-8jvaqq"}" aria-label="English">🇺🇸</button></div> <button class="nav-cta svelte-8jvaqq">${escape(content[language].nav.launch)} <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"></path></svg></button></div></div></nav>  <div class="landing-page svelte-8jvaqq"> ${validate_component(Hero, "Hero").$$render($$result, {}, {}, {})}  <section id="story" class="story-section czech-section svelte-8jvaqq"><div class="czech-container"><div class="story-content svelte-8jvaqq"><div class="story-text"><h2 class="czech-heading-lg mb-6">${escape(language === "czech" ? "Od empatie k akci – česky a prakticky" : "From empathy to action – Czech and practical")}</h2> ${language === "czech" ? `<div class="story-paragraphs svelte-8jvaqq" data-svelte-h="svelte-np8txc"><p class="czech-body-large mb-4">Václav Havel říkal: &quot;Naděje není přesvědčení, že se něco povede, 
+  return ` <nav class="czech-nav svelte-8jvaqq"><div class="nav-container svelte-8jvaqq"> <div class="nav-logo svelte-8jvaqq"><div class="logo-icon svelte-8jvaqq" data-svelte-h="svelte-a96uxz">🤝</div> <span class="logo-text">${escape(language === "czech" ? "Akcelerátor altruismu" : "Altruism Accelerator")}</span></div>  <div class="nav-links svelte-8jvaqq"><a href="#hero" class="nav-link svelte-8jvaqq" data-section="hero">${escape(content[language].nav.home)}</a> <a href="#solidarity-garden" class="nav-link svelte-8jvaqq" data-section="solidarity-garden">${escape(content[language].sections.garden)}</a> <a href="#czech-map" class="nav-link svelte-8jvaqq" data-section="czech-map">${escape(content[language].sections.map)}</a></div>  <div class="nav-actions svelte-8jvaqq"><div class="language-selector svelte-8jvaqq"><button class="${"lang-button " + escape(language === "czech" ? "active" : "", true) + " svelte-8jvaqq"}" aria-label="Česky">🇨🇿</button> <button class="${"lang-button " + escape(language === "english" ? "active" : "", true) + " svelte-8jvaqq"}" aria-label="English">🇺🇸</button></div> <button class="nav-cta svelte-8jvaqq">${escape(content[language].nav.launch)} <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"></path></svg></button></div></div></nav>  <div class="landing-page svelte-8jvaqq"> ${validate_component(Hero, "Hero").$$render($$result, {}, {}, {})}  <section id="story" class="story-section czech-section svelte-8jvaqq"><div class="czech-container"><div class="story-content svelte-8jvaqq"><div class="story-text"><h2 class="czech-heading-lg mb-6">${escape(language === "czech" ? "Od empatie k akci – česky a prakticky" : "From empathy to action – Czech and practical")}</h2> ${language === "czech" ? `<div class="story-paragraphs svelte-8jvaqq" data-svelte-h="svelte-np8txc"><p class="czech-body-large mb-4">Václav Havel říkal: &quot;Naděje není přesvědčení, že se něco povede, 
                 ale jistota, že má smysl, bez ohledu na to, jak to dopadne.&quot;</p> <p class="czech-body mb-4">Tato platforma vznikla z poznání, že Češi nechtějí velká gesta a prázdné řeči. 
                 Chceme <strong>praktické kroky</strong>, které skutečně pomáhají.</p> <p class="czech-body mb-6">Od pomoci sousedům po podporu ukrajinských rodin, od doučování dětí 
                 po péči o seniory – každá akce je propojená s důvěryhodnými 
@@ -466,7 +228,7 @@ const Page = create_ssr_component(($$result, $$props, $$bindings, slots) => {
                 but the certainty that something makes sense, regardless of how it turns out.&quot;</p> <p class="czech-body mb-4">This platform was born from understanding that Czechs don&#39;t want grand gestures 
                 and empty words. We want <strong>practical steps</strong> that truly help.</p> <p class="czech-body mb-6">From helping neighbors to supporting Ukrainian families, from tutoring children 
                 to caring for seniors – every action is connected with trustworthy 
-                Czech organizations.</p></div>`} <div class="story-stats svelte-8jvaqq"><div class="stat-item svelte-8jvaqq"><div class="stat-number svelte-8jvaqq" data-svelte-h="svelte-nzwmfo">247</div> <div class="stat-label svelte-8jvaqq">${escape(language === "czech" ? "akcí tento týden" : "actions this week")}</div></div> <div class="stat-item svelte-8jvaqq"><div class="stat-number svelte-8jvaqq" data-svelte-h="svelte-g4bb93">1,834</div> <div class="stat-label svelte-8jvaqq">${escape(language === "czech" ? "aktivních lidí" : "active helpers")}</div></div> <div class="stat-item svelte-8jvaqq"><div class="stat-number svelte-8jvaqq" data-svelte-h="svelte-put88">12</div> <div class="stat-label svelte-8jvaqq">${escape(language === "czech" ? "regionů" : "regions")}</div></div></div></div> <div class="story-visual"><div class="visual-elements svelte-8jvaqq"><div class="element element-1 svelte-8jvaqq"><div class="element-icon svelte-8jvaqq" data-svelte-h="svelte-1uxqtms">🤝</div> <p class="element-text svelte-8jvaqq">${escape(language === "czech" ? "Soused pomáhá sousedovi" : "Neighbor helps neighbor")}</p></div> <div class="element element-2 svelte-8jvaqq"><div class="element-icon svelte-8jvaqq" data-svelte-h="svelte-x26xhe">🌱</div> <p class="element-text svelte-8jvaqq">${escape(language === "czech" ? "Malé kroky, velký dopad" : "Small steps, big impact")}</p></div> <div class="element element-3 svelte-8jvaqq"><div class="element-icon svelte-8jvaqq" data-svelte-h="svelte-1o2krzy">💚</div> <p class="element-text svelte-8jvaqq">${escape(language === "czech" ? "Praktická solidarita" : "Practical solidarity")}</p></div></div></div></div></div></section>  ${validate_component(SolidarityGarden, "SolidarityGarden").$$render($$result, {}, {}, {})}  ${validate_component(CzechMap, "CzechMap").$$render($$result, {}, {}, {})}  ${validate_component(AltruismQuiz, "AltruismQuiz").$$render($$result, {}, {}, {})}  ${validate_component(CTASection, "CTASection").$$render($$result, {}, {}, {})}  <footer class="czech-footer svelte-8jvaqq"><div class="czech-container"><div class="footer-content svelte-8jvaqq"><div class="footer-main"><div class="footer-logo svelte-8jvaqq" data-svelte-h="svelte-4jde00"><div class="logo-icon svelte-8jvaqq">🤝</div> <span class="logo-text">Akcelerátor altruismu</span></div> <p class="footer-description svelte-8jvaqq">${escape(language === "czech" ? "Praktická cesta od empatie k akci. Pomáháme tisícům Čechů najít svou cestu k smysluplné pomoci." : "Practical path from empathy to action. Helping thousands of Czechs find their way to meaningful help.")}</p></div> <div class="footer-links svelte-8jvaqq"><div class="footer-section"><h4 class="footer-title svelte-8jvaqq">${escape(language === "czech" ? "Platforma" : "Platform")}</h4> <ul class="footer-list svelte-8jvaqq"><li class="svelte-8jvaqq"><a href="#how-it-works" class="svelte-8jvaqq">${escape(language === "czech" ? "Jak to funguje" : "How it works")}</a></li> <li class="svelte-8jvaqq"><a href="#privacy" class="svelte-8jvaqq">${escape(language === "czech" ? "Soukromí" : "Privacy")}</a></li> <li class="svelte-8jvaqq"><a href="#about" class="svelte-8jvaqq">${escape(language === "czech" ? "O projektu" : "About")}</a></li></ul></div> <div class="footer-section"><h4 class="footer-title svelte-8jvaqq">${escape(language === "czech" ? "Pomoc" : "Help")}</h4> <ul class="footer-list svelte-8jvaqq"><li class="svelte-8jvaqq" data-svelte-h="svelte-lpk1xi"><a href="#faq" class="svelte-8jvaqq">FAQ</a></li> <li class="svelte-8jvaqq"><a href="#contact" class="svelte-8jvaqq">${escape(language === "czech" ? "Kontakt" : "Contact")}</a></li> <li class="svelte-8jvaqq"><a href="#support" class="svelte-8jvaqq">${escape(language === "czech" ? "Podpora" : "Support")}</a></li></ul></div> <div class="footer-section"><h4 class="footer-title svelte-8jvaqq">${escape(language === "czech" ? "Partneři" : "Partners")}</h4> <ul class="footer-list svelte-8jvaqq" data-svelte-h="svelte-nf87zv"><li class="svelte-8jvaqq"><a href="https://charita.cz" target="_blank" rel="noopener" class="svelte-8jvaqq">Charita ČR</a></li> <li class="svelte-8jvaqq"><a href="https://dobrovolnik.cz" target="_blank" rel="noopener" class="svelte-8jvaqq">Dobrovolník.cz</a></li> <li class="svelte-8jvaqq"><a href="https://adra.cz" target="_blank" rel="noopener" class="svelte-8jvaqq">ADRA</a></li></ul></div></div></div> <div class="footer-bottom svelte-8jvaqq"><p class="footer-copyright svelte-8jvaqq">© 2024 Akcelerátor altruismu. 
+                Czech organizations.</p></div>`} <div class="story-stats svelte-8jvaqq"><div class="stat-item svelte-8jvaqq"><div class="stat-number svelte-8jvaqq" data-svelte-h="svelte-nzwmfo">247</div> <div class="stat-label svelte-8jvaqq">${escape(language === "czech" ? "akcí tento týden" : "actions this week")}</div></div> <div class="stat-item svelte-8jvaqq"><div class="stat-number svelte-8jvaqq" data-svelte-h="svelte-g4bb93">1,834</div> <div class="stat-label svelte-8jvaqq">${escape(language === "czech" ? "aktivních lidí" : "active helpers")}</div></div> <div class="stat-item svelte-8jvaqq"><div class="stat-number svelte-8jvaqq" data-svelte-h="svelte-put88">12</div> <div class="stat-label svelte-8jvaqq">${escape(language === "czech" ? "regionů" : "regions")}</div></div></div></div> <div class="story-visual"><div class="visual-elements svelte-8jvaqq"><div class="element element-1 svelte-8jvaqq"><div class="element-icon svelte-8jvaqq" data-svelte-h="svelte-1uxqtms">🤝</div> <p class="element-text svelte-8jvaqq">${escape(language === "czech" ? "Soused pomáhá sousedovi" : "Neighbor helps neighbor")}</p></div> <div class="element element-2 svelte-8jvaqq"><div class="element-icon svelte-8jvaqq" data-svelte-h="svelte-x26xhe">🌱</div> <p class="element-text svelte-8jvaqq">${escape(language === "czech" ? "Malé kroky, velký dopad" : "Small steps, big impact")}</p></div> <div class="element element-3 svelte-8jvaqq"><div class="element-icon svelte-8jvaqq" data-svelte-h="svelte-1o2krzy">💚</div> <p class="element-text svelte-8jvaqq">${escape(language === "czech" ? "Praktická solidarita" : "Practical solidarity")}</p></div></div></div></div></div></section>  ${validate_component(SolidarityGarden, "SolidarityGarden").$$render($$result, {}, {}, {})}  ${validate_component(CzechMap, "CzechMap").$$render($$result, {}, {}, {})}  ${validate_component(CTASection, "CTASection").$$render($$result, {}, {}, {})}  <footer class="czech-footer svelte-8jvaqq"><div class="czech-container"><div class="footer-content svelte-8jvaqq"><div class="footer-main"><div class="footer-logo svelte-8jvaqq" data-svelte-h="svelte-4jde00"><div class="logo-icon svelte-8jvaqq">🤝</div> <span class="logo-text">Akcelerátor altruismu</span></div> <p class="footer-description svelte-8jvaqq">${escape(language === "czech" ? "Praktická cesta od empatie k akci. Pomáháme tisícům Čechů najít svou cestu k smysluplné pomoci." : "Practical path from empathy to action. Helping thousands of Czechs find their way to meaningful help.")}</p></div> <div class="footer-links svelte-8jvaqq"><div class="footer-section"><h4 class="footer-title svelte-8jvaqq">${escape(language === "czech" ? "Platforma" : "Platform")}</h4> <ul class="footer-list svelte-8jvaqq"><li class="svelte-8jvaqq"><a href="#how-it-works" class="svelte-8jvaqq">${escape(language === "czech" ? "Jak to funguje" : "How it works")}</a></li> <li class="svelte-8jvaqq"><a href="#privacy" class="svelte-8jvaqq">${escape(language === "czech" ? "Soukromí" : "Privacy")}</a></li> <li class="svelte-8jvaqq"><a href="#about" class="svelte-8jvaqq">${escape(language === "czech" ? "O projektu" : "About")}</a></li></ul></div> <div class="footer-section"><h4 class="footer-title svelte-8jvaqq">${escape(language === "czech" ? "Pomoc" : "Help")}</h4> <ul class="footer-list svelte-8jvaqq"><li class="svelte-8jvaqq" data-svelte-h="svelte-lpk1xi"><a href="#faq" class="svelte-8jvaqq">FAQ</a></li> <li class="svelte-8jvaqq"><a href="#contact" class="svelte-8jvaqq">${escape(language === "czech" ? "Kontakt" : "Contact")}</a></li> <li class="svelte-8jvaqq"><a href="#support" class="svelte-8jvaqq">${escape(language === "czech" ? "Podpora" : "Support")}</a></li></ul></div> <div class="footer-section"><h4 class="footer-title svelte-8jvaqq">${escape(language === "czech" ? "Partneři" : "Partners")}</h4> <ul class="footer-list svelte-8jvaqq" data-svelte-h="svelte-nf87zv"><li class="svelte-8jvaqq"><a href="https://charita.cz" target="_blank" rel="noopener" class="svelte-8jvaqq">Charita ČR</a></li> <li class="svelte-8jvaqq"><a href="https://dobrovolnik.cz" target="_blank" rel="noopener" class="svelte-8jvaqq">Dobrovolník.cz</a></li> <li class="svelte-8jvaqq"><a href="https://adra.cz" target="_blank" rel="noopener" class="svelte-8jvaqq">ADRA</a></li></ul></div></div></div> <div class="footer-bottom svelte-8jvaqq"><p class="footer-copyright svelte-8jvaqq">© 2024 Akcelerátor altruismu. 
           ${escape(language === "czech" ? "Vytvořeno s láskou pro českou komunitu." : "Made with love for the Czech community.")}</p> <div class="footer-meta svelte-8jvaqq"><a href="#privacy" class="svelte-8jvaqq">${escape(language === "czech" ? "Ochrana soukromí" : "Privacy Policy")}</a> <span class="divider svelte-8jvaqq" data-svelte-h="svelte-fhej52">•</span> <a href="#terms" class="svelte-8jvaqq">${escape(language === "czech" ? "Podmínky" : "Terms")}</a></div></div></div></footer> </div>`;
 });
 export {

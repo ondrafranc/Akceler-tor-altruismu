@@ -26,7 +26,7 @@
 ### 2. Update Frontend URL
 After deployment, update this line in `akcelerator-landing-page/src/lib/streamlit-integration.js`:
 ```javascript
-const STREAMLIT_BASE_URL = 'https://YOUR-ACTUAL-URL.streamlit.app';
+const STREAMLIT_BASE_URL = 'https://akcelerator-altruismu.streamlit.app';
 ```
 
 ### 3. Test Integration
@@ -36,12 +36,30 @@ const STREAMLIT_BASE_URL = 'https://YOUR-ACTUAL-URL.streamlit.app';
 
 ## 📋 Expected Result:
 - **Landing page**: `localhost:5174` (already working)
-- **Streamlit app**: `https://YOUR-URL.streamlit.app`
+- **Streamlit app**: `https://akcelerator-altruismu.streamlit.app`
 - **Full flow**: Landing page CTA → Opens Streamlit app in new tab
 
 ## 🔧 Troubleshooting:
 - If data files not found: Check file paths in repository
 - If imports fail: Verify all dependencies in `requirements.txt`
 - If styling breaks: Check `.streamlit/config.toml` theme settings
+
+## Frontend Integration Configuration
+
+Update `akcelerator-landing-page/src/lib/streamlit-integration.js`:
+
+```javascript
+const STREAMLIT_BASE_URL = 'https://akcelerator-altruismu.streamlit.app';
+```
+
+## Deployment Status
+
+**Status**: ✅ READY FOR DEPLOYMENT
+
+- **Frontend**: Czech SvelteKit landing page with clean CTA integration
+- **Backend**: `app_czech_enhanced.py` optimized for Czech users
+- **Integration**: Robust error handling and fallback mechanisms
+- **Configuration**: `.streamlit/config.toml` with Czech theme
+- **Streamlit app**: `https://akcelerator-altruismu.streamlit.app`
 
 The application is now ready for production deployment! 🇨🇿 

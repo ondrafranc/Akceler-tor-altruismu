@@ -3,8 +3,11 @@
  * Handles communication with the Czech Altruism Accelerator Streamlit backend
  */
 
-// Update this URL after deployment
-const STREAMLIT_BASE_URL = 'https://akcelerator-altruismus.streamlit.app';
+// Streamlit integration utilities for Czech Altruism Accelerator
+// ================================================================
+
+// Configuration
+const STREAMLIT_BASE_URL = 'https://akcelerator-altruismu.streamlit.app';
 const API_ENDPOINTS = {
   stats: '/api/stats',
   actions: '/api/recent-actions',
