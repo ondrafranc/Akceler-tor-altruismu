@@ -2,7 +2,7 @@
 
 export const index = 1;
 let component_cache;
-export const component = async () => component_cache ??= (await import('../entries/fallbacks/error.svelte.js')).default;
-export const imports = ["_app/immutable/nodes/1.5cce8c7a.js","_app/immutable/chunks/scheduler.e108d1fd.js","_app/immutable/chunks/index.18a0b267.js","_app/immutable/chunks/singletons.b1f16e93.js","_app/immutable/chunks/index.0378bb41.js"];
-export const stylesheets = [];
+export const component = async () => component_cache ??= (await import('../entries/pages/_error.svelte.js')).default;
+export const imports = ["_app/immutable/nodes/1.b0d36f4b.js","_app/immutable/chunks/scheduler.b732239f.js","_app/immutable/chunks/index.0f456b86.js","_app/immutable/chunks/paths.eb5c1c5e.js"];
+export const stylesheets = ["_app/immutable/assets/1.4290aee4.css"];
 export const fonts = [];
