@@ -298,7 +298,7 @@
   left: 0;
   width: 120%;
   height: 120%;
-  background-image: url('/czech-forest-subtle.jpg');
+  background: linear-gradient(135deg, #E8F2E8 0%, #D4E7D4 100%);
   background-size: cover;
   background-position: center;
   opacity: 0.3;

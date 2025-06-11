@@ -18,7 +18,7 @@
 
 ### Journey 1: From Overwhelm to Clarity (15-20 minutes)
 1. **Welcome & Emotional Check-in**: "How are you feeling about the world today?"
-2. **Values Assessment**: Quick quiz to identify core values and motivations
+2. **Values Assessment**: Interactive assessment to identify core values and motivations
 3. **Resource Inventory**: What do you have? (time, money, skills, connections)
 4. **Cause Exploration**: Personalized cause recommendations based on values + resources
 5. **Action Selection**: Choose 1-3 specific, actionable next steps

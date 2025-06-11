@@ -27,6 +27,6 @@
     "p5": "^1.7.0",
     "framer-motion": "^10.16.4",
     "@tailwindcss/typography": "^0.5.9",
-    "lucide-svelte": "^0.263.1"
+    "lucide-svelte": "^0.514.0"
   }
 } 

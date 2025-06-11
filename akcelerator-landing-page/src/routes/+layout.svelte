@@ -1,11 +1,8 @@
 <script>
   import { onMount } from 'svelte';
-  import { writable } from 'svelte/store';
+  import { currentLanguage } from '../lib/stores.js';
   import { initScrollAnimations, cleanupAnimations } from '../lib/animations.js';
   import '../styles/czech-theme.css';
-  
-  // Global language store
-  export const currentLanguage = writable('czech');
   
   // SEO and meta tags
   const siteData = {

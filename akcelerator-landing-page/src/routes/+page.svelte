@@ -1,10 +1,10 @@
 <script>
   import { onMount } from 'svelte';
-  import { currentLanguage } from './+layout.svelte';
+  import { currentLanguage } from '../lib/stores.js';
   import Hero from '../components/Hero.svelte';
   import SolidarityGarden from '../components/SolidarityGarden.svelte';
   import CzechMap from '../components/CzechMap.svelte';
-  import AltruismQuiz from '../components/AltruismQuiz.svelte';
+  
   import CTASection from '../components/CTASection.svelte';
   import { launchStreamlitApp } from '../lib/streamlit-integration.js';
   import { initScrollAnimations } from '../lib/animations.js';
@@ -22,14 +22,12 @@
         home: "Domů",
         how: "Jak to funguje",
         regions: "Regiony",
-        quiz: "Rychlý test",
         launch: "Spustit akcelerátor"
       },
       sections: {
         story: "Příběh solidarity",
         garden: "Zahrada solidarity",
         map: "Pomoc napříč Českem",
-        quiz: "Najdi svou cestu",
         cta: "Začni pomáhat"
       }
     },
@@ -38,14 +36,12 @@
         home: "Home",
         how: "How it works",
         regions: "Regions", 
-        quiz: "Quick test",
         launch: "Launch accelerator"
       },
       sections: {
         story: "Story of solidarity",
         garden: "Solidarity garden",
         map: "Help across Czechia",
-        quiz: "Find your path",
         cta: "Start helping"
       }
     }
@@ -108,9 +104,7 @@
       <a href="#czech-map" class="nav-link" data-section="czech-map">
         {content[language].sections.map}
       </a>
-      <a href="#altruism-quiz" class="nav-link" data-section="altruism-quiz">
-        {content[language].sections.quiz}
-      </a>
+
     </div>
     
     <!-- Language Selector & CTA -->
@@ -249,8 +243,7 @@
   <!-- Czech Map Section -->
   <CzechMap />
   
-  <!-- Altruism Quiz Section -->
-  <AltruismQuiz />
+  
   
   <!-- Final CTA Section -->
   <CTASection />

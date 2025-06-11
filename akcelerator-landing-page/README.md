@@ -7,7 +7,7 @@ An extraordinary, culturally intelligent landing page for the Czech Altruism Acc
 Transform the moment of empathetic overwhelm into practical Czech solidarity through:
 - **Visual Storytelling**: From overwhelm to purposeful action
 - **Cultural Authenticity**: Czech pragmatism, humility, and community solidarity  
-- **Interactive Experience**: Solidarity garden, regional map, altruism quiz
+- **Interactive Experience**: Solidarity garden, regional map
 - **Seamless Integration**: Smooth transition to Streamlit application
 
 ---
@@ -92,7 +92,7 @@ akcelerator-landing-page/
 │   │   ├── Hero.svelte              # Hero section with parallax
 │   │   ├── SolidarityGarden.svelte  # Interactive p5.js garden
 │   │   ├── CzechMap.svelte          # Regional SVG map
-│   │   ├── AltruismQuiz.svelte      # Czech altruism type quiz
+
 │   │   └── CTASection.svelte        # Final call-to-action
 │   ├── lib/
 │   │   ├── animations.js            # GSAP utilities
@@ -119,14 +119,7 @@ Interactive visualization where users plant virtual seeds representing real Czec
 ### 2. **Regional Pulse Map**
 SVG-based Czech Republic map with interactive regions (Prague, Brno, Ostrava). Clicking reveals local initiatives and launches region-specific Streamlit experience.
 
-### 3. **Czech Altruism Type Quiz**
-Quick personality assessment determining Czech altruism style:
-- **Praktik**: Hands-on helper
-- **Mentor**: Teaching supporter  
-- **Organizátor**: Community coordinator
-- **Dárce**: Financial contributor
-
-### 4. **Cultural Storytelling**
+### 3. **Cultural Storytelling**
 Scroll-based narrative incorporating:
 - Václav Havel's philosophy of "living in truth"
 - Czech traditions of neighbor helping neighbor
@@ -265,7 +258,7 @@ npm run test:czech
 
 ### Czech Market Insights
 - Monitor regional preferences
-- Track quiz completion rates
+
 - Measure garden interaction depth
 - Analyze seasonal usage patterns
 

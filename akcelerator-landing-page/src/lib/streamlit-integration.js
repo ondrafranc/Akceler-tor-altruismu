@@ -3,12 +3,14 @@
  * Handles communication with the Czech Altruism Accelerator Streamlit backend
  */
 
-const STREAMLIT_BASE_URL = 'http://localhost:8501';
+// Update this URL after deployment
+const STREAMLIT_BASE_URL = 'https://akcelerator-altruismus.streamlit.app';
 const API_ENDPOINTS = {
   stats: '/api/stats',
   actions: '/api/recent-actions',
   users: '/api/user-count'
 };
+const FALLBACK_MESSAGE = 'Aplikace se načítá... Pokud se nic nestane, zkuste to za chvíli znovu.';
 
 // Fetch real-time data from Streamlit backend
 export async function fetchStreamlitData() {
@@ -68,8 +70,22 @@ export async function fetchStreamlitData() {
   }
 }
 
-// Launch Streamlit app with specific parameters
-export function launchStreamlitApp(params = {}) {
+// Health check function
+export async function checkStreamlitHealth() {
+  try {
+    const response = await fetch(`${STREAMLIT_BASE_URL}/_stcore/health`, {
+      method: 'GET',
+      mode: 'no-cors' // Since we can't control CORS on Streamlit Cloud
+    });
+    return true; // If no error thrown, assume it's working
+  } catch (error) {
+    console.warn('Streamlit health check failed:', error);
+    return false;
+  }
+}
+
+// Enhanced launch function with error handling
+export async function launchStreamlitApp(params = {}) {
   const {
     language = 'czech',
     region = null,
@@ -80,24 +96,97 @@ export function launchStreamlitApp(params = {}) {
   // Build URL with parameters
   const urlParams = new URLSearchParams({
     lang: language,
-    source: source
+    source: source,
+    utm_source: 'landing-page',
+    utm_medium: 'cta-button'
   });
   
-  if (region) urlParams.append('region', region);
-  if (action) urlParams.append('action', action);
+  if (region) urlParams.set('region', region);
+  if (action) urlParams.set('action', action);
   
-  const streamlitUrl = `${STREAMLIT_BASE_URL}?${urlParams.toString()}`;
+  const fullUrl = `${STREAMLIT_BASE_URL}?${urlParams.toString()}`;
   
-  // Open in new tab with focus
-  const newWindow = window.open(streamlitUrl, '_blank');
-  if (newWindow) {
-    newWindow.focus();
+  try {
+    // Track the launch attempt
+    trackStreamlitLaunch(params);
+    
+    // Show loading state briefly
+    const loadingElement = showLoadingState();
+    
+    // Check if Streamlit is healthy (optional)
+    const isHealthy = await checkStreamlitHealth();
+    if (!isHealthy) {
+      console.warn('Streamlit app may not be available');
+    }
+    
+    // Open the app in a new tab
+    const newWindow = window.open(fullUrl, '_blank', 'noopener,noreferrer');
+    
+    // Clean up loading state
+    setTimeout(() => {
+      if (loadingElement) loadingElement.remove();
+    }, 1000);
+    
+    // Handle popup blocker
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      throw new Error('Popup blocked');
+    }
+    
+    return { success: true, url: fullUrl };
+    
+  } catch (error) {
+    console.error('Failed to launch Streamlit app:', error);
+    
+    // Fallback: show direct link
+    showFallbackDialog(fullUrl);
+    
+    return { success: false, error: error.message, url: fullUrl };
   }
+}
+
+// Show loading state
+function showLoadingState() {
+  const loadingDiv = document.createElement('div');
+  loadingDiv.className = 'streamlit-loading';
+  loadingDiv.innerHTML = `
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">${FALLBACK_MESSAGE}</p>
+    </div>
+  `;
+  document.body.appendChild(loadingDiv);
+  return loadingDiv;
+}
+
+// Show fallback dialog if opening fails
+function showFallbackDialog(url) {
+  const fallbackDiv = document.createElement('div');
+  fallbackDiv.className = 'czech-celebration';
+  fallbackDiv.innerHTML = `
+    <div class="celebration-content">
+      <div class="celebration-icon">🚀</div>
+      <p class="celebration-text">
+        Otevřít akcelerátor altruismu
+      </p>
+      <a href="${url}" target="_blank" rel="noopener noreferrer" 
+         class="czech-button-primary" 
+         style="margin-top: 1rem; text-decoration: none;">
+        Kliknout zde
+      </a>
+      <button onclick="this.parentElement.parentElement.remove()" 
+              style="margin-top: 0.5rem; background: transparent; border: none; color: var(--text-secondary); cursor: pointer;">
+        ✕ Zavřít
+      </button>
+    </div>
+  `;
+  document.body.appendChild(fallbackDiv);
   
-  // Track the launch (analytics)
-  trackStreamlitLaunch(params);
-  
-  return streamlitUrl;
+  // Auto-remove after 10 seconds
+  setTimeout(() => {
+    if (fallbackDiv.parentElement) {
+      fallbackDiv.remove();
+    }
+  }, 10000);
 }
 
 // Embed Streamlit app in iframe (alternative to new tab)
@@ -114,12 +203,12 @@ export function embedStreamlitApp(container, params = {}) {
     embedded: 'true'
   });
   
-  if (region) urlParams.append('region', region);
+  if (region) urlParams.set('region', region);
   
   const iframe = document.createElement('iframe');
   iframe.src = `${STREAMLIT_BASE_URL}?${urlParams.toString()}`;
-  iframe.width = width;
-  iframe.height = height;
+  iframe.style.width = width;
+  iframe.style.height = height;
   iframe.style.border = 'none';
   iframe.style.borderRadius = '12px';
   iframe.style.boxShadow = '0 8px 32px rgba(46, 93, 49, 0.15)';
@@ -136,28 +225,19 @@ export async function postActionCompletion(actionData) {
   try {
     const payload = {
       action_id: actionData.id,
-      action_type: actionData.type,
       user_id: actionData.userId || 'anonymous',
-      timestamp: new Date().toISOString(),
-      source: 'landing-page',
-      language: actionData.language || 'czech'
+      completed_at: new Date().toISOString(),
+      source: 'landing-page'
     };
     
-    // In real implementation, would POST to Streamlit API
+    // In production, this would post to Streamlit's backend
+    // For now, just log the completion
     console.log('Action completed:', payload);
     
-    // Simulate API response
-    return {
-      success: true,
-      message: 'Akce úspěšně zaznamenána',
-      impact: actionData.impact || {}
-    };
+    return { success: true };
   } catch (error) {
-    console.error('Error posting action completion:', error);
-    return {
-      success: false,
-      message: 'Chyba při zaznamenávání akce'
-    };
+    console.error('Failed to post action completion:', error);
+    return { success: false, error: error.message };
   }
 }
 
@@ -166,30 +246,30 @@ export function subscribeToUpdates(callback) {
   // Simulate real-time updates with WebSocket-like behavior
   const interval = setInterval(async () => {
     try {
-      const data = await fetchStreamlitData();
-      callback(data);
+      // In production, this would connect to Streamlit's WebSocket
+      const updates = await fetchStreamlitData();
+      callback(updates);
     } catch (error) {
-      console.error('Error in real-time update:', error);
+      console.error('Failed to fetch updates:', error);
     }
-  }, 30000); // Update every 30 seconds
+  }, 30000); // Check every 30 seconds
   
-  // Return cleanup function
   return () => clearInterval(interval);
 }
 
 // Track user interactions for analytics
 function trackStreamlitLaunch(params) {
   try {
-    // In real implementation, would send to analytics service
+    // Log the launch attempt
     const event = {
-      event: 'streamlit_launch',
+      type: 'streamlit_launch',
       timestamp: new Date().toISOString(),
       params: params,
       user_agent: navigator.userAgent,
       referrer: document.referrer
     };
     
-    console.log('Analytics event:', event);
+    console.log('Tracking event:', event);
     
     // Could integrate with Google Analytics, Mixpanel, etc.
     if (typeof gtag !== 'undefined') {
@@ -200,22 +280,7 @@ function trackStreamlitLaunch(params) {
       });
     }
   } catch (error) {
-    console.error('Error tracking launch:', error);
-  }
-}
-
-// Check if Streamlit app is available
-export async function checkStreamlitHealth() {
-  try {
-    const response = await fetch(`${STREAMLIT_BASE_URL}/health`, {
-      method: 'GET',
-      timeout: 5000
-    });
-    
-    return response.ok;
-  } catch (error) {
-    console.warn('Streamlit health check failed:', error);
-    return false;
+    console.error('Failed to track launch:', error);
   }
 }
 
@@ -226,7 +291,7 @@ export function generateDeepLink(section, params = {}) {
     section: section
   };
   
-  // Add additional parameters
+  // Add any additional parameters
   Object.keys(params).forEach(key => {
     if (key !== 'language') {
       baseParams[key] = params[key];
@@ -239,17 +304,7 @@ export function generateDeepLink(section, params = {}) {
 
 // Czech-specific utility functions
 export const czechStreamlitUtils = {
-  // Map quiz results to Streamlit entry points
-  mapQuizToEntry: (quizResult) => {
-    const entryMap = {
-      'praktik': 'quick-actions',
-      'mentor': 'assessment?focus=teaching',
-      'organizator': 'causes?type=community',
-      'darca': 'quick-actions?type=donation'
-    };
-    
-    return entryMap[quizResult] || 'assessment';
-  },
+
   
   // Format Czech action data for Streamlit
   formatActionData: (action) => ({
