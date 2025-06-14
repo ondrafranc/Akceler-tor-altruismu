@@ -526,7 +526,7 @@
     color: var(--czech-forest);
   }
   
-  /* Sparkle animation */
+  /* Sparkle animation - Applied dynamically via JavaScript (see createSparkles function) */
   .sparkle {
     animation: sparkle-fade 2s ease-out forwards;
   }

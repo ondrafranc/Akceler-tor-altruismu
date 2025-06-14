@@ -93,7 +93,7 @@
 </script>
 
 <div class="immediate-help" class:expanded={isExpanded}>
-  <div class="help-header" on:click={toggleHelp} on:keydown={(e) => e.key === 'Enter' && toggleHelp()}>
+  <div class="help-header" role="button" tabindex="0" on:click={toggleHelp} on:keydown={(e) => e.key === 'Enter' && toggleHelp()}>
     <div class="help-icon">🆘</div>
     <div class="help-text">
       <h4>{helpResources[language].title}</h4>

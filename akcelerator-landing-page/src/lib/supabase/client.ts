@@ -33,11 +33,15 @@ export async function sendFeedback(data: FeedbackData): Promise<FeedbackResponse
     try {
         // Check if Supabase is properly configured
         if (supabaseUrl === 'https://your-project.supabase.co' || supabaseKey === 'your-anon-key') {
-            console.warn('Supabase not configured - feedback would be sent here');
-            // Return success for demo purposes
+            console.warn('Supabase not configured - environment variables missing');
+            console.info('To enable feedback storage, create .env file with:');
+            console.info('PUBLIC_SUPABASE_URL=https://your-project.supabase.co');
+            console.info('PUBLIC_SUPABASE_ANON_KEY=your-anon-key');
+            
+            // Return success for demo purposes but indicate demo mode
             return {
                 success: true,
-                message: 'Feedback received (demo mode - Supabase not configured)'
+                message: 'Feedback received (demo mode - check console for setup info)'
             };
         }
 
@@ -84,17 +88,43 @@ export async function sendFeedback(data: FeedbackData): Promise<FeedbackResponse
 }
 
 /**
- * Test Supabase connection (optional utility)
+ * Test Supabase connection and configuration
  */
-export async function testSupabaseConnection(): Promise<boolean> {
+export async function testSupabaseConnection(): Promise<{ connected: boolean; configured: boolean; message: string }> {
+    const configured = supabaseUrl !== 'https://your-project.supabase.co' && supabaseKey !== 'your-anon-key';
+    
+    if (!configured) {
+        return {
+            connected: false,
+            configured: false,
+            message: 'Environment variables not configured. Create .env file with PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY'
+        };
+    }
+    
     try {
         const { error } = await supabase
             .from('feedback')
             .select('id')
             .limit(1);
         
-        return !error;
-    } catch {
-        return false;
+        if (error) {
+            return {
+                connected: false,
+                configured: true,
+                message: `Supabase connection failed: ${error.message}`
+            };
+        }
+        
+        return {
+            connected: true,
+            configured: true,
+            message: 'Supabase connection successful'
+        };
+    } catch (err) {
+        return {
+            connected: false,
+            configured: true,
+            message: `Network error: ${err instanceof Error ? err.message : 'Unknown error'}`
+        };
     }
 } 
