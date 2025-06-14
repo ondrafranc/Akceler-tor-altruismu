@@ -75,11 +75,22 @@
   }
   
   onMount(() => {
-    // GSAP timeline for hero animations
-    const tl = gsap.timeline();
+    // Small delay to ensure DOM elements are properly bound
+    setTimeout(() => {
+      // Ensure elements are available before animating
+      if (!mainHeading || !subHeading || !ctaButtons) {
+        console.warn('Hero elements not ready for animation');
+        return;
+      }
+
+      // GSAP timeline for hero animations
+      const tl = gsap.timeline();
     
     // Parallax setup
     gsap.set(parallaxForest, { y: 0 });
+    
+    // Ensure buttons are visible initially (fallback)
+    gsap.set(ctaButtons.children, { opacity: 1, y: 0 });
     
     // Initial animations
     tl.from(mainHeading, {
@@ -99,7 +110,11 @@
       y: 20,
       duration: 0.6,
       stagger: 0.1,
-      ease: "power2.out"
+      ease: "power2.out",
+      onComplete: () => {
+        // Ensure buttons are fully visible after animation
+        gsap.set(ctaButtons.children, { opacity: 1, y: 0 });
+      }
     }, "-=0.2");
     
     // Parallax scroll effect
@@ -130,6 +145,7 @@
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
+    }, 100); // End setTimeout
   });
 </script>
 
@@ -223,6 +239,13 @@
     }
   }
   
+  /* Ensure buttons are always visible (fallback) */
+  :global(.czech-button-primary),
+  :global(.czech-button-secondary) {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+  }
+
   /* Mobile optimizations */
   @media (max-width: 768px) {
     .flex {

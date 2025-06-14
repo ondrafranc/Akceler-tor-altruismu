@@ -29,8 +29,15 @@ export const supabase = createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_K
  */
 export async function sendFeedback(data) {
     try {
+        console.log('🔄 Sending feedback:', { 
+            textLength: data.text?.length, 
+            emotion: data.emotion, 
+            rating: data.rating 
+        });
+
         // Validate input
         if (!data.text?.trim()) {
+            console.error('❌ Validation failed: No feedback text');
             return {
                 success: false,
                 error: 'Feedback text is required'
@@ -45,6 +52,8 @@ export async function sendFeedback(data) {
             created_at: new Date().toISOString()
         };
 
+        console.log('📤 Prepared feedback data:', feedbackData);
+
         console.log('Sending feedback to Supabase:', { 
             url: PUBLIC_SUPABASE_URL, 
             dataLength: feedbackData.text.length 
@@ -57,10 +66,16 @@ export async function sendFeedback(data) {
             .select();
 
         if (error) {
-            console.error('Supabase feedback error:', error);
+            console.error('❌ Supabase feedback error:', {
+                message: error.message,
+                details: error.details,
+                hint: error.hint,
+                code: error.code,
+                fullError: error
+            });
             return {
                 success: false,
-                error: 'Failed to submit feedback. Please try again.'
+                error: `Database error: ${error.message || 'Failed to submit feedback. Please try again.'}`
             };
         }
 
@@ -72,10 +87,15 @@ export async function sendFeedback(data) {
         };
 
     } catch (err) {
-        console.error('Feedback submission error:', err);
+        console.error('❌ Feedback submission error:', {
+            message: err.message,
+            stack: err.stack,
+            name: err.name,
+            fullError: err
+        });
         return {
             success: false,
-            error: 'Network error. Please check your connection and try again.'
+            error: `Network error: ${err.message || 'Please check your connection and try again.'}`
         };
     }
 }
