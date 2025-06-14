@@ -50,16 +50,21 @@
       'https://akcelerator-altruismu.streamlit.app?lang=czech' : 
       'https://akcelerator-altruismu.streamlit.app?lang=english';
     
-    // Add loading state animation
-    gsap.to(ctaButtons, {
-      scale: 0.95,
-      duration: 0.1,
-      yoyo: true,
-      repeat: 1,
-      onComplete: () => {
-        window.open(url, '_blank');
-      }
-    });
+    // Add loading state animation (only on client)
+    if (typeof window !== 'undefined' && gsap && ctaButtons) {
+      gsap.to(ctaButtons, {
+        scale: 0.95,
+        duration: 0.1,
+        yoyo: true,
+        repeat: 1,
+        onComplete: () => {
+          window.open(url, '_blank');
+        }
+      });
+    } else if (typeof window !== 'undefined') {
+      // Fallback if GSAP not available
+      window.open(url, '_blank');
+    }
   }
   
   onMount(() => {

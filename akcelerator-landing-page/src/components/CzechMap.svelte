@@ -72,37 +72,41 @@
   function selectRegion(regionKey) {
     selectedRegion = regionKey;
     
-    // Animate selection
-    const pulseElements = document.querySelectorAll('.regional-pulse');
-    pulseElements.forEach(el => {
-      if (el.dataset.region === regionKey) {
-        gsap.to(el, {
-          scale: 1.3,
-          duration: 0.3,
-          ease: "back.out(1.7)"
-        });
-      } else {
-        gsap.to(el, {
-          scale: 1,
-          duration: 0.3,
-          ease: "power2.out"
-        });
+    // Animate selection (only on client)
+    if (typeof document !== 'undefined' && gsap) {
+      const pulseElements = document.querySelectorAll('.regional-pulse');
+      pulseElements.forEach(el => {
+        if (el.dataset.region === regionKey) {
+          gsap.to(el, {
+            scale: 1.3,
+            duration: 0.3,
+            ease: "back.out(1.7)"
+          });
+        } else {
+          gsap.to(el, {
+            scale: 1,
+            duration: 0.3,
+            ease: "power2.out"
+          });
+        }
+      });
+      
+      // Animate info panel
+      const infoPanel = document.querySelector('.region-info');
+      if (infoPanel) {
+        gsap.fromTo(infoPanel, 
+          { opacity: 0, y: 20 },
+          { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }
+        );
       }
-    });
-    
-    // Animate info panel
-    const infoPanel = document.querySelector('.region-info');
-    if (infoPanel) {
-      gsap.fromTo(infoPanel, 
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }
-      );
     }
   }
   
   function openRegionalApp(region) {
     const url = `https://akcelerator-altruismu.streamlit.app?lang=czech&region=${region}`;
-    window.open(url, '_blank');
+    if (typeof window !== 'undefined') {
+      window.open(url, '_blank');
+    }
   }
   
   onMount(() => {

@@ -183,7 +183,7 @@ streamlit run app.py
 - **Page views tracked with @vercel/analytics** (automatic in production)
 - **All builds validated through Vercel auto-deploy**, not `npm run dev`
 - **All sensitive .env values injected via Vercel dashboard**
-- **Story content managed via JSON files** in `src/data/`
+- **Story content managed via JSON files** in `static/` (moved for SSR compatibility)
 - **Accessibility testing done via keyboard navigation and screen readers**
 - **Mobile-first responsive design** with breakpoint testing
 
@@ -202,8 +202,6 @@ PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 │   │   │   ├── SolidarityGarden.svelte  # Interactive story garden
 │   │   │   ├── StoryModal.svelte        # Story display modal
 │   │   │   └── FeedbackModal.svelte     # Anonymous feedback
-│   │   ├── data/
-│   │   │   └── success_stories.json     # Czech altruism stories
 │   │   ├── lib/
 │   │   │   └── supabase/
 │   │   │       └── client.ts            # Database configuration
@@ -211,6 +209,7 @@ PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 │   │       ├── +layout.svelte           # App layout with analytics
 │   │       └── +page.svelte             # Main landing page
 │   ├── static/                          # Static assets
+│   │   └── success_stories.json         # Czech altruism stories (SSR-safe)
 │   └── vercel.json                      # Deployment configuration
 ├── streamlit-app/                   # Streamlit Backend Engine
 │   ├── app.py                       # Main Streamlit application

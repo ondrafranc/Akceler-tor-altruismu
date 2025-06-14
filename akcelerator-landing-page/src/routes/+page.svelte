@@ -51,19 +51,23 @@
   function switchLanguage(newLang) {
     currentLanguage.set(newLang);
     
-    // Update URL without reload
-    const url = new URL(window.location);
-    url.searchParams.set('lang', newLang);
-    window.history.replaceState({}, '', url);
+    // Update URL without reload (only on client)
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location);
+      url.searchParams.set('lang', newLang);
+      window.history.replaceState({}, '', url);
+    }
   }
   
   function scrollToSection(sectionId) {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'start'
-      });
+    if (typeof document !== 'undefined') {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
     }
   }
   

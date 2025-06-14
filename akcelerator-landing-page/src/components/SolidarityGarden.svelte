@@ -3,7 +3,6 @@
   import { gsap } from 'gsap';
   import { ScrollTrigger } from 'gsap/ScrollTrigger';
   import StoryModal from './StoryModal.svelte';
-  import successStories from '../data/success_stories.json';
   
   gsap.registerPlugin(ScrollTrigger);
   
@@ -22,8 +21,17 @@
   let isStoryModalOpen = false;
   let currentStory = null;
   
-  // Get current season for dynamic theming
+  // No more direct JSON import - we'll fetch it
+  let successStories = [];
+  let isLoading = true;
+  
+  // Get current season based on date (only on client)
   function getCurrentSeason() {
+    if (typeof window === 'undefined') {
+      // Default for SSR
+      return 'spring';
+    }
+    
     const month = new Date().getMonth();
     if (month >= 2 && month <= 4) return 'spring';
     if (month >= 5 && month <= 7) return 'summer';
@@ -31,7 +39,7 @@
     return 'winter';
   }
   
-  const currentSeason = getCurrentSeason();
+  let currentSeason = 'spring';
   
   const content = {
     czech: {
@@ -66,6 +74,32 @@
     }
   };
   
+  // Load success stories from static folder
+  async function loadSuccessStories() {
+    try {
+      const response = await fetch('/success_stories.json');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      successStories = data;
+    } catch (error) {
+      console.warn('Could not load success stories:', error);
+      // Provide fallback stories
+      successStories = [
+        {
+          name: "Marie K.",
+          location: "Praha",
+          action: "Organizuje komunitní zahradničení",
+          impact: "Spojila 50+ sousedů",
+          season: ["spring", "summer"]
+        }
+      ];
+    } finally {
+      isLoading = false;
+    }
+  }
+  
   // Interactive garden functions
   function plantSeed() {
     plantedSeeds++;
@@ -99,36 +133,24 @@
   }
   
   function createSparkles(element) {
-    const sparkles = ['✨', '🌟', '💫'];
-    for (let i = 0; i < 3; i++) {
+    if (typeof document === 'undefined') return;
+    
+    for (let i = 0; i < 5; i++) {
       const sparkle = document.createElement('div');
-      sparkle.innerHTML = sparkles[Math.floor(Math.random() * sparkles.length)];
+      sparkle.innerHTML = '✨';
       sparkle.className = 'sparkle';
       sparkle.style.position = 'absolute';
-      sparkle.style.fontSize = '1.2rem';
+      sparkle.style.left = Math.random() * 40 - 20 + 'px';
+      sparkle.style.top = Math.random() * 40 - 20 + 'px';
       sparkle.style.pointerEvents = 'none';
+      sparkle.style.zIndex = '1000';
       
-      const container = document.querySelector(element);
+      const container = element.closest('.garden-floor') || element.parentElement;
       if (container) {
         container.appendChild(sparkle);
         
-        gsap.fromTo(sparkle, 
-          { 
-            x: 0, 
-            y: 0, 
-            scale: 0, 
-            opacity: 1 
-          },
-          {
-            x: (Math.random() - 0.5) * 60,
-            y: -50 + (Math.random() * 20),
-            scale: 1,
-            opacity: 0,
-            duration: 2,
-            ease: "power2.out",
-            onComplete: () => sparkle.remove()
-          }
-        );
+        // Remove sparkle after animation
+        setTimeout(() => sparkle.remove(), 2000);
       }
     }
   }
@@ -149,35 +171,61 @@
   
   // Show success story when garden element is clicked
   function showSuccessStory(element) {
-    // Filter stories by current season or get random story
-    const seasonalStories = successStories.filter(story => story.season === currentSeason);
-    const storiesToShow = seasonalStories.length > 0 ? seasonalStories : successStories;
+    if (isLoading || !successStories.length) {
+      console.log('Stories not yet loaded or empty');
+      return;
+    }
+    
+    // Filter stories by current season
+    const seasonalStories = successStories.filter(story => 
+      story.season && story.season.includes(currentSeason)
+    );
+    
+    // Fall back to all stories if no seasonal matches
+    const availableStories = seasonalStories.length > 0 ? seasonalStories : successStories;
+    
+    if (availableStories.length === 0) {
+      console.log('No stories available');
+      return;
+    }
     
     // Get random story
-    const randomStory = storiesToShow[Math.floor(Math.random() * storiesToShow.length)];
-    currentStory = randomStory;
+    const randomIndex = Math.floor(Math.random() * availableStories.length);
+    currentStory = availableStories[randomIndex];
+    
+    // Show modal
     isStoryModalOpen = true;
     
-    // Add special growth animation to clicked element
-    gsap.to(element, {
-      scale: 1.3,
-      duration: 0.5,
-      ease: "back.out(1.7)",
-      yoyo: true,
-      repeat: 1,
-      onComplete: () => {
-        // Add sparkle effect
-        createSparkles(element);
-      }
-    });
+    // Add visual feedback - sparkle effect (only on client)
+    if (typeof window !== 'undefined') {
+      createSparkles(element);
+      growthAnimation(element);
+    }
   }
   
+  // Close story modal
   function closeStoryModal() {
     isStoryModalOpen = false;
     currentStory = null;
   }
   
-  onMount(() => {
+  // Growth animation for clicked element
+  function growthAnimation(element) {
+    if (typeof window === 'undefined' || !gsap) return;
+    
+    gsap.fromTo(element, 
+      { scale: 1 }, 
+      { 
+        scale: 1.3, 
+        duration: 0.2, 
+        ease: "back.out(1.7)",
+        yoyo: true,
+        repeat: 1
+      }
+    );
+  }
+  
+  onMount(async () => {
     // Main container animation
     gsap.fromTo(gardenContainer,
       { opacity: 0, y: 30 },
@@ -193,6 +241,12 @@
         }
       }
     );
+    
+    // Set current season
+    currentSeason = getCurrentSeason();
+    
+    // Load success stories
+    await loadSuccessStories();
     
     // Animate garden elements in sequence
     gsap.fromTo('.garden-element',

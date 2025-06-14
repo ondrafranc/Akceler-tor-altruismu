@@ -60,8 +60,10 @@ const StoryModal = create_ssr_component(($$result, $$props, $$bindings, slots) =
     }
   }
   onDestroy(() => {
-    document.removeEventListener("keydown", handleKeydown);
-    document.body.style.overflow = "";
+    if (typeof document !== "undefined") {
+      document.removeEventListener("keydown", handleKeydown);
+      document.body.style.overflow = "";
+    }
   });
   if ($$props.isOpen === void 0 && $$bindings.isOpen && isOpen !== void 0)
     $$bindings.isOpen(isOpen);
@@ -69,18 +71,20 @@ const StoryModal = create_ssr_component(($$result, $$props, $$bindings, slots) =
     $$bindings.story(story);
   $$result.css.add(css$6);
   {
-    if (isOpen && modalElement) {
+    if (isOpen && modalElement && typeof document !== "undefined") {
       previouslyFocused = document.activeElement;
       modalElement.focus();
     }
   }
   {
-    if (isOpen) {
-      document.addEventListener("keydown", handleKeydown);
-      document.body.style.overflow = "hidden";
-    } else {
-      document.removeEventListener("keydown", handleKeydown);
-      document.body.style.overflow = "";
+    if (typeof document !== "undefined") {
+      if (isOpen) {
+        document.addEventListener("keydown", handleKeydown);
+        document.body.style.overflow = "hidden";
+      } else {
+        document.removeEventListener("keydown", handleKeydown);
+        document.body.style.overflow = "";
+      }
     }
   }
   return ` ${isOpen && story ? `<div class="modal-overlay svelte-1a2i4ly" role="dialog" aria-modal="true" aria-labelledby="story-title" tabindex="-1"${add_attribute("this", modalElement, 0)}><div class="modal-content svelte-1a2i4ly" role="document"> <div class="modal-header svelte-1a2i4ly"><div class="story-icon svelte-1a2i4ly">${escape(story.icon)}</div> <button class="modal-close svelte-1a2i4ly" aria-label="Zavřít příběh" type="button" data-svelte-h="svelte-1t6rk7d">✕</button></div>  <div class="modal-body svelte-1a2i4ly"><h2 id="story-title" class="story-title svelte-1a2i4ly">${escape(story.name)}</h2> <div class="story-location svelte-1a2i4ly">📍 ${escape(story.location)}</div> <div class="story-action svelte-1a2i4ly"><h3 class="svelte-1a2i4ly" data-svelte-h="svelte-jlw5cp">Co udělal/a:</h3> <p class="svelte-1a2i4ly">${escape(story.action)}</p></div> <div class="story-impact svelte-1a2i4ly"><h3 class="svelte-1a2i4ly" data-svelte-h="svelte-fhmlmx">Jaký to mělo dopad:</h3> <p class="impact-text svelte-1a2i4ly">${escape(story.impact)}</p></div> <div class="story-inspiration svelte-1a2i4ly" data-svelte-h="svelte-1yikskz"><p class="inspiration-text svelte-1a2i4ly">✨ <strong>I ty můžeš udělat rozdíl!</strong> Každá malá akce má svůj význam.</p></div> <div class="modal-actions svelte-1a2i4ly"><button class="primary-button svelte-1a2i4ly" data-svelte-h="svelte-oc7u2u">Inspiruj mě k akci! 🌱</button></div></div></div></div>` : ``}`;
@@ -91,16 +95,6 @@ const css$5 = {
   map: null
 };
 let currentLanguage$2 = "czech";
-function getCurrentSeason() {
-  const month = (/* @__PURE__ */ new Date()).getMonth();
-  if (month >= 2 && month <= 4)
-    return "spring";
-  if (month >= 5 && month <= 7)
-    return "summer";
-  if (month >= 8 && month <= 10)
-    return "autumn";
-  return "winter";
-}
 const SolidarityGarden = create_ssr_component(($$result, $$props, $$bindings, slots) => {
   gsap.registerPlugin(ScrollTrigger);
   let gardenContainer;
@@ -109,7 +103,7 @@ const SolidarityGarden = create_ssr_component(($$result, $$props, $$bindings, sl
   let communityFlowers = 0;
   let isStoryModalOpen = false;
   let currentStory = null;
-  const currentSeason = getCurrentSeason();
+  let currentSeason = "spring";
   const content = {
     czech: {
       title: "Zahrada solidarity",
@@ -145,7 +139,7 @@ const SolidarityGarden = create_ssr_component(($$result, $$props, $$bindings, sl
   $$result.css.add(css$5);
   return `<section id="solidarity-garden" class="czech-section"${add_attribute("this", gardenContainer, 0)}><div class="czech-container"><div class="czech-text-center mb-12"><h2 class="czech-heading-lg mb-4">${escape(content[currentLanguage$2].title)}</h2> <p class="czech-body-large mb-6 max-w-2xl mx-auto">${escape(content[currentLanguage$2].subtitle)}</p></div>  <div class="${[
     "garden-wrapper svelte-1tmqal5",
-    (currentSeason === "spring" ? "spring" : "") + " " + (currentSeason === "summer" ? "summer" : "") + " " + (currentSeason === "autumn" ? "autumn" : "") + " " + (currentSeason === "winter" ? "winter" : "")
+    "spring   "
   ].join(" ").trim()}"> <div class="seasonal-header svelte-1tmqal5"><span class="season-indicator svelte-1tmqal5">${escape(content[currentLanguage$2].seasonInfo[currentSeason])}</span></div> <div class="garden-canvas svelte-1tmqal5"> <div class="garden-background svelte-1tmqal5" data-svelte-h="svelte-1p5fyaq"><div class="hills svelte-1tmqal5"></div> <div class="sky svelte-1tmqal5"></div></div>  <div class="garden-floor svelte-1tmqal5"> <div class="garden-element tree interactive-element floating-element story-trigger svelte-1tmqal5" title="Klikněte pro inspirativní příběh" role="button" tabindex="0" data-svelte-h="svelte-1kor13r">🌳</div> <div class="garden-element tree interactive-element floating-element story-trigger svelte-1tmqal5" title="Klikněte pro inspirativní příběh" role="button" tabindex="0" data-svelte-h="svelte-vuau1s">🌲</div>  <div class="garden-element flower interactive-element floating-element seed-1 story-trigger svelte-1tmqal5" title="Klikněte pro inspirativní příběh" role="button" tabindex="0" data-svelte-h="svelte-1eftaxu">🌸</div> <div class="garden-element flower interactive-element floating-element seed-2 story-trigger svelte-1tmqal5" title="Klikněte pro inspirativní příběh" role="button" tabindex="0" data-svelte-h="svelte-1df39cf">🌺</div> <div class="garden-element flower interactive-element floating-element seed-3 story-trigger svelte-1tmqal5" title="Klikněte pro inspirativní příběh" role="button" tabindex="0" data-svelte-h="svelte-1c43y1n">🌻</div>  <div class="garden-element sprout interactive-element floating-element story-trigger svelte-1tmqal5" title="Klikněte pro inspirativní příběh" role="button" tabindex="0" data-svelte-h="svelte-1eyygy">🌱</div> <div class="garden-element sprout interactive-element floating-element story-trigger svelte-1tmqal5" title="Klikněte pro inspirativní příběh" role="button" tabindex="0" data-svelte-h="svelte-1g0n9l0">🌿</div></div>  <div class="garden-controls svelte-1tmqal5"><button class="czech-button-secondary interactive-element svelte-1tmqal5">🌱 ${escape(content[currentLanguage$2].plantSeed)}</button> <button class="czech-button-secondary interactive-element svelte-1tmqal5">💧 ${escape(content[currentLanguage$2].waterPlant)}</button></div>  <div class="community-garden-stats svelte-1tmqal5"><div class="stat-plant svelte-1tmqal5"><div class="plant-icon svelte-1tmqal5" data-svelte-h="svelte-2lxhln">🌳</div> <div class="stat-number svelte-1tmqal5">${escape(totalCommunityActions)}</div> <div class="stat-label svelte-1tmqal5">${escape(content[currentLanguage$2].counter)}</div></div> <div class="stat-plant svelte-1tmqal5"><div class="plant-icon svelte-1tmqal5" data-svelte-h="svelte-1xdyt2">🌸</div> <div class="stat-number svelte-1tmqal5">${escape(plantedSeeds + communityFlowers)}</div> <div class="stat-label svelte-1tmqal5">${escape(
     "zasazených semínek"
   )}</div></div> <div class="stat-plant svelte-1tmqal5"><div class="plant-icon svelte-1tmqal5" data-svelte-h="svelte-10dscil">💚</div> <div class="stat-number svelte-1tmqal5">${escape(Math.floor(totalCommunityActions / 10))}</div> <div class="stat-label svelte-1tmqal5">${escape(

@@ -32,29 +32,33 @@
     
     // Handle focus management
     onMount(() => {
-        if (isOpen) {
+        if (isOpen && typeof document !== 'undefined') {
             previouslyFocused = document.activeElement;
             modalElement?.focus();
         }
     });
     
-    $: if (isOpen && modalElement) {
+    $: if (isOpen && modalElement && typeof document !== 'undefined') {
         previouslyFocused = document.activeElement;
         modalElement.focus();
     }
     
-    // Add/remove event listeners
-    $: if (isOpen) {
-        document.addEventListener('keydown', handleKeydown);
-        document.body.style.overflow = 'hidden';
-    } else {
-        document.removeEventListener('keydown', handleKeydown);
-        document.body.style.overflow = '';
+    // Add/remove event listeners (only on client)
+    $: if (typeof document !== 'undefined') {
+        if (isOpen) {
+            document.addEventListener('keydown', handleKeydown);
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.removeEventListener('keydown', handleKeydown);
+            document.body.style.overflow = '';
+        }
     }
     
     onDestroy(() => {
-        document.removeEventListener('keydown', handleKeydown);
-        document.body.style.overflow = '';
+        if (typeof document !== 'undefined') {
+            document.removeEventListener('keydown', handleKeydown);
+            document.body.style.overflow = '';
+        }
     });
 </script>
 

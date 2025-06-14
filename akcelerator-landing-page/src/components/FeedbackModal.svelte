@@ -41,14 +41,18 @@
     };
 
     function openModal() {
-        previouslyFocused = document.activeElement;
+        if (typeof document !== 'undefined') {
+            previouslyFocused = document.activeElement;
+        }
         isOpen = true;
         
-        // Focus management after modal opens
-        requestAnimationFrame(() => {
-            const firstInput = modalElement?.querySelector('textarea, input, button');
-            firstInput?.focus();
-        });
+        // Focus management after modal opens (only on client)
+        if (typeof requestAnimationFrame !== 'undefined') {
+            requestAnimationFrame(() => {
+                const firstInput = modalElement?.querySelector('textarea, input, button');
+                firstInput?.focus();
+            });
+        }
     }
 
     function closeModal() {
