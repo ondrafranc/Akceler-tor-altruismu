@@ -3,12 +3,13 @@
   import { gsap } from 'gsap';
   import { ScrollTrigger } from 'gsap/ScrollTrigger';
   import StoryModal from './StoryModal.svelte';
+  import { currentLanguage } from '../lib/stores.js';
   
   gsap.registerPlugin(ScrollTrigger);
   
   let gardenContainer;
   let totalCommunityActions = 247;
-  let currentLanguage = 'czech';
+  let language = 'czech';
   let gardenElements = [];
   let seasonalBackground = '';
   
@@ -16,6 +17,11 @@
   let plantedSeeds = 0;
   let grownTrees = 0;
   let communityFlowers = 0;
+  
+  // Subscribe to language changes
+  currentLanguage.subscribe(value => {
+    language = value;
+  });
   
   // Story modal state
   let isStoryModalOpen = false;
@@ -43,13 +49,15 @@
   
   const content = {
     czech: {
-      title: "Zahrada solidarity",
-      subtitle: "Interaktivní vizualizace naší společné pomoci",
-      description: "Každá vaše akce zde zaseje semínko naděje. Kliknutím na rostliny objevíte skutečné příběhy české solidarity a laskavosti.",
+      title: "Zahrada inspirativních příběhů",
+      subtitle: "Objevte skutečné příběhy naděje a solidarity",
+      description: "Každá rostlina v této zahradě představuje skutečný příběh pomoce. Kliknutím na rostliny objevíte, jak lidé kolem nás mění svět k lepšímu.",
+      callToAction: "🌱 Klikněte na rostliny a objevte příběhy naděje",
       counter: "lidí pomohlo tento týden",
       plantSeed: "Zasadit semínko",
       waterPlant: "Zalít rostlinu",
       watchGrow: "Sledovat růst",
+      storyPrompt: "Klikněte pro inspirativní příběh",
       seasonInfo: {
         spring: "🌸 Jarní obnova - čas nových začátků",
         summer: "☀️ Letní energie - čas akcí",
@@ -58,13 +66,15 @@
       }
     },
     english: {
-      title: "Solidarity Garden",
-      subtitle: "Interactive visualization of our collective help",
-      description: "Every action you take plants a seed of hope here. Click on garden elements to watch our community grow.",
+      title: "Garden of Inspiring Stories",
+      subtitle: "Discover real stories of hope and solidarity",
+      description: "Every plant in this garden represents a real story of help. Click on the plants to discover how people around us are changing the world for the better.",
+      callToAction: "🌱 Click on plants to discover stories of hope",
       counter: "people helped this week",
       plantSeed: "Plant a seed",
       waterPlant: "Water plant",
       watchGrow: "Watch grow",
+      storyPrompt: "Click for inspiring story",
       seasonInfo: {
         spring: "🌸 Spring renewal - time for new beginnings",
         summer: "☀️ Summer energy - time for action", 
@@ -289,11 +299,20 @@
   <div class="czech-container">
     <div class="czech-text-center mb-12">
       <h2 class="czech-heading-lg mb-4">
-        {content[currentLanguage].title}
+        {content[language].title}
       </h2>
       <p class="czech-body-large mb-6 max-w-2xl mx-auto">
-        {content[currentLanguage].subtitle}
+        {content[language].subtitle}
       </p>
+      <p class="czech-body mb-6 max-w-3xl mx-auto">
+        {content[language].description}
+      </p>
+      <!-- Clear Call-to-Action -->
+      <div class="story-cta-banner">
+        <p class="czech-body-large font-semibold text-czech-forest">
+          {content[language].callToAction}
+        </p>
+      </div>
     </div>
     
     <!-- Interactive Garden -->
@@ -305,7 +324,7 @@
       <!-- Seasonal Header -->
       <div class="seasonal-header">
         <span class="season-indicator">
-          {content[currentLanguage].seasonInfo[currentSeason]}
+          {content[language].seasonInfo[currentSeason]}
         </span>
       </div>
       
@@ -320,64 +339,71 @@
         <div class="garden-floor">
           <!-- Trees (representing major community actions) -->
           <div class="garden-element tree interactive-element floating-element story-trigger" 
-               title="Klikněte pro inspirativní příběh"
+               title={content[language].storyPrompt}
                role="button"
                tabindex="0"
                on:click={(e) => showSuccessStory(e.target)}
                on:keydown={(e) => e.key === 'Enter' && showSuccessStory(e.target)}>
             🌳
+            <div class="story-tooltip">{content[language].storyPrompt}</div>
           </div>
           <div class="garden-element tree interactive-element floating-element story-trigger" 
-               title="Klikněte pro inspirativní příběh"
+               title={content[language].storyPrompt}
                role="button"
                tabindex="0"
                on:click={(e) => showSuccessStory(e.target)}
                on:keydown={(e) => e.key === 'Enter' && showSuccessStory(e.target)}>
             🌲
+            <div class="story-tooltip">{content[language].storyPrompt}</div>
           </div>
           
           <!-- Flowers (representing individual actions) -->
           <div class="garden-element flower interactive-element floating-element seed-1 story-trigger" 
-               title="Klikněte pro inspirativní příběh"
+               title={content[language].storyPrompt}
                role="button"
                tabindex="0"
                on:click={(e) => showSuccessStory(e.target)}
                on:keydown={(e) => e.key === 'Enter' && showSuccessStory(e.target)}>
             🌸
+            <div class="story-tooltip">{content[language].storyPrompt}</div>
           </div>
           <div class="garden-element flower interactive-element floating-element seed-2 story-trigger" 
-               title="Klikněte pro inspirativní příběh"
+               title={content[language].storyPrompt}
                role="button"
                tabindex="0"
                on:click={(e) => showSuccessStory(e.target)}
                on:keydown={(e) => e.key === 'Enter' && showSuccessStory(e.target)}>
             🌺
+            <div class="story-tooltip">{content[language].storyPrompt}</div>
           </div>
           <div class="garden-element flower interactive-element floating-element seed-3 story-trigger" 
-               title="Klikněte pro inspirativní příběh"
+               title={content[language].storyPrompt}
                role="button"
                tabindex="0"
                on:click={(e) => showSuccessStory(e.target)}
                on:keydown={(e) => e.key === 'Enter' && showSuccessStory(e.target)}>
             🌻
+            <div class="story-tooltip">{content[language].storyPrompt}</div>
           </div>
           
           <!-- Growing plants (dynamic content) -->
           <div class="garden-element sprout interactive-element floating-element story-trigger" 
-               title="Klikněte pro inspirativní příběh"
+               title={content[language].storyPrompt}
                role="button"
                tabindex="0"
                on:click={(e) => showSuccessStory(e.target)}
                on:keydown={(e) => e.key === 'Enter' && showSuccessStory(e.target)}>
             🌱
+            <div class="story-tooltip">{content[language].storyPrompt}</div>
           </div>
           <div class="garden-element sprout interactive-element floating-element story-trigger" 
-               title="Klikněte pro inspirativní příběh"
+               title={content[language].storyPrompt}
                role="button"
                tabindex="0"
                on:click={(e) => showSuccessStory(e.target)}
                on:keydown={(e) => e.key === 'Enter' && showSuccessStory(e.target)}>
             🌿
+            <div class="story-tooltip">{content[language].storyPrompt}</div>
           </div>
         </div>
         
@@ -385,11 +411,11 @@
         <div class="garden-controls">
           <button class="czech-button-secondary interactive-element" 
                   on:click={plantSeed}>
-            🌱 {content[currentLanguage].plantSeed}
+            🌱 {content[language].plantSeed}
           </button>
           <button class="czech-button-secondary interactive-element" 
                   on:click={waterGarden}>
-            💧 {content[currentLanguage].waterPlant}
+            💧 {content[language].waterPlant}
           </button>
         </div>
         
@@ -398,14 +424,14 @@
           <div class="stat-plant">
             <div class="plant-icon">🌳</div>
             <div class="stat-number">{totalCommunityActions}</div>
-            <div class="stat-label">{content[currentLanguage].counter}</div>
+            <div class="stat-label">{content[language].counter}</div>
           </div>
           
           <div class="stat-plant">
             <div class="plant-icon">🌸</div>
             <div class="stat-number">{plantedSeeds + communityFlowers}</div>
             <div class="stat-label">
-              {currentLanguage === 'czech' ? 'zasazených semínek' : 'planted seeds'}
+              {language === 'czech' ? 'zasazených semínek' : 'planted seeds'}
             </div>
           </div>
           
@@ -413,7 +439,7 @@
             <div class="plant-icon">💚</div>
             <div class="stat-number">{Math.floor(totalCommunityActions / 10)}</div>
             <div class="stat-label">
-              {currentLanguage === 'czech' ? 'aktivních komunit' : 'active communities'}
+              {language === 'czech' ? 'aktivních komunit' : 'active communities'}
             </div>
           </div>
         </div>
@@ -423,9 +449,9 @@
       <div class="havel-quote enhanced-quote">
         <div class="quote-decoration">🌱</div>
         <p class="czech-body italic">
-          {currentLanguage === 'czech' 
-            ? '"Naděje není přesvědčení, že se něco povede, ale jistota, že má smysl." - Václav Havel'
-            : '"Hope is not the conviction that something will turn out well, but the certainty that something makes sense." - Václav Havel'}
+          {language === 'czech' 
+            ? '"Naděje není to přesvědčení, že něco dobře dopadne, ale jistota, že má něco smysl – bez ohledu na to, jak to dopadne." - Václav Havel'
+            : '"Hope is not the conviction that something will turn out well, but the certainty that something is meaningful – no matter how it turns out." - Václav Havel'}
         </p>
         <div class="quote-decoration">🌱</div>
       </div>
@@ -752,6 +778,70 @@
     .garden-wrapper {
       max-width: 100%;
       border-radius: 16px;
+    }
+  }
+  
+  /* Story-focused enhancements */
+  .story-cta-banner {
+    background: linear-gradient(135deg, rgba(46, 93, 49, 0.1) 0%, rgba(46, 93, 49, 0.05) 100%);
+    border: 2px solid var(--czech-forest-light);
+    border-radius: 12px;
+    padding: 1rem 2rem;
+    margin: 1.5rem auto;
+    max-width: 600px;
+    text-align: center;
+    animation: gentle-pulse 3s ease-in-out infinite;
+  }
+  
+  @keyframes gentle-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+  }
+  
+  .story-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--czech-forest);
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    z-index: 1000;
+    margin-bottom: 8px;
+  }
+  
+  .story-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: var(--czech-forest);
+  }
+  
+  .story-trigger:hover .story-tooltip,
+  .story-trigger:focus .story-tooltip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-4px);
+  }
+  
+  @media (max-width: 768px) {
+    .story-cta-banner {
+      padding: 0.75rem 1rem;
+      margin: 1rem auto;
+      font-size: 0.9rem;
+    }
+    
+    .story-tooltip {
+      font-size: 0.7rem;
+      padding: 0.4rem 0.6rem;
     }
   }
 </style> 

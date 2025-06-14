@@ -2,52 +2,115 @@
   import { onMount } from 'svelte';
   import { gsap } from 'gsap';
   import { ScrollTrigger } from 'gsap/ScrollTrigger';
+  import { currentLanguage } from '../lib/stores.js';
   
   gsap.registerPlugin(ScrollTrigger);
   
   let mapContainer;
   let selectedRegion = null;
-  let currentLanguage = 'czech';
+  let language = 'czech';
+  
+  // Subscribe to language changes
+  currentLanguage.subscribe(value => {
+    language = value;
+  });
   
   const regions = {
     prague: {
-      name: "Praha",
-      title: "Pražská inovace v pomoci",
-      description: "Tech komunita spojuje síly pro sociální změnu",
-      stats: "124 akcí tento měsíc",
-      actions: [
-        "Doučování programování pro děti",
-        "IT podpora pro neziskovky",
-        "Startupové mentorství"
-      ],
+      name: {
+        czech: "Praha",
+        english: "Prague"
+      },
+      title: {
+        czech: "Pražská inovace v pomoci",
+        english: "Prague Innovation in Helping"
+      },
+      description: {
+        czech: "Tech komunita spojuje síly pro sociální změnu",
+        english: "Tech community joins forces for social change"
+      },
+      stats: {
+        czech: "124 akcí tento měsíc",
+        english: "124 actions this month"
+      },
+      actions: {
+        czech: [
+          "Doučování programování pro děti",
+          "IT podpora pro neziskovky",
+          "Startupové mentorství"
+        ],
+        english: [
+          "Programming tutoring for children",
+          "IT support for nonprofits",
+          "Startup mentorship"
+        ]
+      },
       color: "#4A7C59",
       x: 340,
       y: 180
     },
     brno: {
-      name: "Brno",
-      title: "Moravská tradice vzájemnosti",
-      description: "Univerzitní město s bohatou kulturou solidarity",
-      stats: "89 akcí tento měsíc",
-      actions: [
-        "Studentské doučování",
-        "Kulturní akce pro seniory",
-        "Komunitní zahrady"
-      ],
+      name: {
+        czech: "Brno",
+        english: "Brno"
+      },
+      title: {
+        czech: "Moravská tradice vzájemnosti",
+        english: "Moravian Tradition of Solidarity"
+      },
+      description: {
+        czech: "Univerzitní město s bohatou kulturou solidarity",
+        english: "University city with rich culture of solidarity"
+      },
+      stats: {
+        czech: "89 akcí tento měsíc",
+        english: "89 actions this month"
+      },
+      actions: {
+        czech: [
+          "Studentské doučování",
+          "Kulturní akce pro seniory",
+          "Komunitní zahrady"
+        ],
+        english: [
+          "Student tutoring",
+          "Cultural events for seniors",
+          "Community gardens"
+        ]
+      },
       color: "#B08D57",
       x: 380,
       y: 260
     },
     ostrava: {
-      name: "Ostrava",
-      title: "Slezská solidarita",
-      description: "Průmyslové město s velkým srdcem",
-      stats: "67 akcí tento měsíc",
-      actions: [
-        "Podpora horníků v nouzi",
-        "Rekvalifikační kurzy",
-        "Pomoc ukrajinským rodinám"
-      ],
+      name: {
+        czech: "Ostrava",
+        english: "Ostrava"
+      },
+      title: {
+        czech: "Slezská solidarita",
+        english: "Silesian Solidarity"
+      },
+      description: {
+        czech: "Průmyslové město s velkým srdcem",
+        english: "Industrial city with a big heart"
+      },
+      stats: {
+        czech: "67 akcí tento měsíc",
+        english: "67 actions this month"
+      },
+      actions: {
+        czech: [
+          "Podpora horníků v nouzi",
+          "Rekvalifikační kurzy",
+          "Pomoc ukrajinským rodinám"
+        ],
+        english: [
+          "Support for miners in need",
+          "Retraining courses",
+          "Help for Ukrainian families"
+        ]
+      },
       color: "#8B7355",
       x: 450,
       y: 200
@@ -59,13 +122,45 @@
       title: "Pomoc napříč Českem",
       subtitle: "Každý region má svou jedinečnou kulturu solidarity",
       selectRegion: "Klikni na region a poznej místní iniciativy",
-      viewActions: "Zobrazit akce"
+      viewActions: "Zobrazit akce",
+      localInitiatives: "Místní iniciativy:",
+      clickAnyCity: "Klikni na kterékoli město na mapě",
+      historicalContext: {
+        neighborHelp: {
+          title: "Tradice pomoci sousedům",
+          subtitle: "Od moravských brigád po pražské sokolstvo - Čechům pomoc není cizí"
+        },
+        modernSolidarity: {
+          title: "Moderní solidarita",
+          subtitle: "Tech komunity, studentské organizace a občanské iniciativy spojují síly"
+        },
+        practicalApproach: {
+          title: "Praktický přístup",
+          subtitle: "Méně řečí, více činů - český způsob dělání dobra"
+        }
+      }
     },
     english: {
       title: "Help Across Czechia",
       subtitle: "Each region has its unique culture of solidarity",
       selectRegion: "Click on a region to discover local initiatives",
-      viewActions: "View Actions"
+      viewActions: "View Actions",
+      localInitiatives: "Local initiatives:",
+      clickAnyCity: "Click on any city on the map",
+      historicalContext: {
+        neighborHelp: {
+          title: "Tradition of Helping Neighbors",
+          subtitle: "From Moravian brigades to Prague sokol movement - helping is not foreign to Czechs"
+        },
+        modernSolidarity: {
+          title: "Modern Solidarity",
+          subtitle: "Tech communities, student organizations and civic initiatives join forces"
+        },
+        practicalApproach: {
+          title: "Practical Approach",
+          subtitle: "Less talk, more action - the Czech way of doing good"
+        }
+      }
     }
   };
   
@@ -151,13 +246,13 @@
     <!-- Header -->
     <div class="czech-text-center mb-12">
       <h2 class="czech-heading-lg mb-4">
-        {content[currentLanguage].title}
+        {content[language].title}
       </h2>
       <p class="czech-body-large mb-2 max-w-2xl mx-auto">
-        {content[currentLanguage].subtitle}
+        {content[language].subtitle}
       </p>
       <p class="czech-body opacity-70">
-        {content[currentLanguage].selectRegion}
+        {content[language].selectRegion}
       </p>
     </div>
     
@@ -188,7 +283,7 @@
               on:keydown={(e) => e.key === 'Enter' && selectRegion(key)}
               tabindex="0"
               role="button"
-              aria-label={`Select ${region.name}`}
+              aria-label={language === 'czech' ? `Vybrat ${region.name[language]}` : `Select ${region.name[language]}`}
             />
             
             <!-- Region Labels -->
@@ -201,7 +296,7 @@
               font-size="14"
               font-weight="500"
             >
-              {region.name}
+              {region.name[language]}
             </text>
           {/each}
           
@@ -219,20 +314,20 @@
         <div class="region-info">
           <div class="info-header">
             <h3 class="czech-heading-md mb-2">
-              {regions[selectedRegion].title}
+              {regions[selectedRegion].title[language]}
             </h3>
             <p class="czech-body mb-4">
-              {regions[selectedRegion].description}
+              {regions[selectedRegion].description[language]}
             </p>
             <div class="region-stats">
-              <span class="stat-badge">{regions[selectedRegion].stats}</span>
+              <span class="stat-badge">{regions[selectedRegion].stats[language]}</span>
             </div>
           </div>
           
           <div class="regional-actions">
-            <h4 class="czech-body font-semibold mb-3">Místní iniciativy:</h4>
+            <h4 class="czech-body font-semibold mb-3">{content[language].localInitiatives}</h4>
             <ul class="action-list">
-              {#each regions[selectedRegion].actions as action}
+              {#each regions[selectedRegion].actions[language] as action}
                 <li class="action-item">
                   <span class="action-bullet" style="background-color: {regions[selectedRegion].color}"></span>
                   {action}
@@ -244,7 +339,7 @@
               class="czech-button-primary mt-4"
               on:click={() => openRegionalApp(selectedRegion)}
             >
-              {content[currentLanguage].viewActions}
+              {content[language].viewActions}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M5 12h14M12 5l7 7-7 7"/>
               </svg>
@@ -260,7 +355,7 @@
               <div class="demo-pulse" style="background-color: var(--moravian-earth); animation-delay: 1s;"></div>
             </div>
             <p class="czech-body opacity-70 mt-4">
-              Klikni na kterékoli město na mapě
+              {content[language].clickAnyCity}
             </p>
           </div>
         </div>
@@ -272,9 +367,9 @@
       <div class="context-card">
         <div class="context-icon">🏘️</div>
         <div class="context-text">
-          <h4 class="czech-body font-semibold">Tradice pomoci sousedům</h4>
+          <h4 class="czech-body font-semibold">{content[language].historicalContext.neighborHelp.title}</h4>
           <p class="text-sm opacity-80">
-            Od moravských brigád po pražské sokolstvo - Čechům pomoc není cizí
+            {content[language].historicalContext.neighborHelp.subtitle}
           </p>
         </div>
       </div>
@@ -282,9 +377,9 @@
       <div class="context-card">
         <div class="context-icon">🤝</div>
         <div class="context-text">
-          <h4 class="czech-body font-semibold">Moderní solidarita</h4>
+          <h4 class="czech-body font-semibold">{content[language].historicalContext.modernSolidarity.title}</h4>
           <p class="text-sm opacity-80">
-            Tech komunity, studentské organizace a občanské iniciativy spojují síly
+            {content[language].historicalContext.modernSolidarity.subtitle}
           </p>
         </div>
       </div>
@@ -292,9 +387,9 @@
       <div class="context-card">
         <div class="context-icon">💪</div>
         <div class="context-text">
-          <h4 class="czech-body font-semibold">Praktický přístup</h4>
+          <h4 class="czech-body font-semibold">{content[language].historicalContext.practicalApproach.title}</h4>
           <p class="text-sm opacity-80">
-            Méně řečí, více činů - český způsob dělání dobra
+            {content[language].historicalContext.practicalApproach.subtitle}
           </p>
         </div>
       </div>

@@ -1,6 +1,7 @@
 <script>
     import { onMount, createEventDispatcher } from 'svelte';
     import { sendFeedback } from '$lib/supabase/client';
+    import { currentLanguage } from '../lib/stores.js';
 
     const dispatch = createEventDispatcher();
 
@@ -8,6 +9,12 @@
     let isOpen = false;
     let modalElement;
     let previouslyFocused;
+    let language = 'czech';
+
+    // Subscribe to language changes
+    currentLanguage.subscribe(value => {
+        language = value;
+    });
 
     // Form state
     let feedback = '';
@@ -20,24 +27,76 @@
     // Form validation
     $: isFormValid = feedback.trim().length > 0;
 
-    // Emotion options
-    const emotions = [
-        { value: '', label: 'Nejmenované' },
-        { value: 'grateful', label: 'Vděčný/á' },
-        { value: 'hopeful', label: 'Plný/á naděje' },
-        { value: 'inspired', label: 'Inspirovaný/á' },
-        { value: 'neutral', label: 'Neutrální' },
-        { value: 'confused', label: 'Zmatený/á' },
-        { value: 'overwhelmed', label: 'Přetížený/á' }
-    ];
-
-    // Rating descriptions
-    const ratingDescriptions = {
-        1: 'Nepomohlo',
-        2: 'Trochu pomohlo',
-        3: 'Pomohlo',
-        4: 'Hodně pomohlo',
-        5: 'Úplně změnilo můj pohled'
+    // Content translations
+    const content = {
+        czech: {
+            triggerText: "Zpětná vazba",
+            triggerTitle: "Sdělte nám svůj názor",
+            triggerLabel: "Otevřít formulář zpětné vazby",
+            modalTitle: "Vaše zpětná vazba",
+            modalSubtitle: "Pomozte nám vylepšit Akcelerátor altruismu. Vaše zpětná vazba je anonymní a velmi cenná.",
+            feedbackLabel: "Co si myslíte o Akcelerátoru altruismu?",
+            feedbackPlaceholder: "Sdělte nám svůj názor, návrhy na zlepšení, nebo jak vám aplikace pomohla...",
+            emotionLabel: "Jak se právě cítíte?",
+            ratingLabel: "Jak hodnotíte užitečnost aplikace?",
+            optional: "(volitelné)",
+            submitButton: "Odeslat zpětnou vazbu",
+            submitting: "Odesílám...",
+            closeLabel: "Zavřít",
+            closeTitle: "Zavřít (Esc)",
+            successMessage: "Děkujeme za váš podnět! Vaše zpětná vazba je pro nás velmi cenná.",
+            errorMessage: "Nepodařilo se odeslat zpětnou vazbu. Zkuste to prosím později.",
+            emotions: [
+                { value: '', label: 'Nejmenované' },
+                { value: 'grateful', label: 'Vděčný/á' },
+                { value: 'hopeful', label: 'Plný/á naděje' },
+                { value: 'inspired', label: 'Inspirovaný/á' },
+                { value: 'neutral', label: 'Neutrální' },
+                { value: 'confused', label: 'Zmatený/á' },
+                { value: 'overwhelmed', label: 'Přetížený/á' }
+            ],
+            ratings: {
+                1: 'Nepomohlo',
+                2: 'Trochu pomohlo',
+                3: 'Pomohlo',
+                4: 'Hodně pomohlo',
+                5: 'Úplně změnilo můj pohled'
+            }
+        },
+        english: {
+            triggerText: "Feedback",
+            triggerTitle: "Share your thoughts",
+            triggerLabel: "Open feedback form",
+            modalTitle: "Your Feedback",
+            modalSubtitle: "Help us improve Altruism Accelerator. Your feedback is anonymous and very valuable.",
+            feedbackLabel: "What do you think about the Altruism Accelerator?",
+            feedbackPlaceholder: "Share your thoughts, suggestions for improvement, or how the app helped you...",
+            emotionLabel: "How are you feeling right now?",
+            ratingLabel: "How do you rate the usefulness of the app?",
+            optional: "(optional)",
+            submitButton: "Send feedback",
+            submitting: "Sending...",
+            closeLabel: "Close",
+            closeTitle: "Close (Esc)",
+            successMessage: "Thank you for your feedback! Your input is very valuable to us.",
+            errorMessage: "Failed to send feedback. Please try again later.",
+            emotions: [
+                { value: '', label: 'Unspecified' },
+                { value: 'grateful', label: 'Grateful' },
+                { value: 'hopeful', label: 'Hopeful' },
+                { value: 'inspired', label: 'Inspired' },
+                { value: 'neutral', label: 'Neutral' },
+                { value: 'confused', label: 'Confused' },
+                { value: 'overwhelmed', label: 'Overwhelmed' }
+            ],
+            ratings: {
+                1: 'Did not help',
+                2: 'Helped a little',
+                3: 'Helped',
+                4: 'Helped a lot',
+                5: 'Completely changed my perspective'
+            }
+        }
     };
 
     function openModal() {
@@ -101,7 +160,7 @@
 
             if (result.success) {
                 statusType = 'success';
-                statusMessage = 'Děkujeme za váš podnět! Vaše zpětná vazba je pro nás velmi cenná.';
+                statusMessage = content[language].successMessage;
                 
                 // Reset form after successful submission
                 setTimeout(() => {
@@ -110,11 +169,11 @@
                 }, 2000);
             } else {
                 statusType = 'error';
-                statusMessage = result.error || 'Nepodařilo se odeslat zpětnou vazbu. Zkuste to prosím později.';
+                statusMessage = result.error || content[language].errorMessage;
             }
         } catch (error) {
             statusType = 'error';
-            statusMessage = 'Nepodařilo se odeslat zpětnou vazbu. Zkuste to prosím později.';
+            statusMessage = content[language].errorMessage;
             console.error('Feedback submission error:', error);
         } finally {
             isSubmitting = false;
@@ -162,11 +221,11 @@
 <button 
     class="feedback-trigger" 
     on:click={openModal}
-    aria-label="Otevřít formulář zpětné vazby"
-    title="Sdělte nám svůj názor"
+    aria-label={content[language].triggerLabel}
+    title={content[language].triggerTitle}
 >
     <span class="feedback-icon">💬</span>
-    <span class="feedback-text">Zpětná vazba</span>
+    <span class="feedback-text">{content[language].triggerText}</span>
 </button>
 
 <!-- Modal Overlay -->
@@ -187,13 +246,13 @@
             <!-- Modal Header -->
             <div class="modal-header">
                 <h2 id="modal-title" class="modal-title">
-                    💬 Vaše zpětná vazba
+                    💬 {content[language].modalTitle}
                 </h2>
                 <button 
                     class="modal-close" 
                     on:click={closeModal}
-                    aria-label="Zavřít"
-                    title="Zavřít (Esc)"
+                    aria-label={content[language].closeLabel}
+                    title={content[language].closeTitle}
                 >
                     ✕
                 </button>
@@ -202,19 +261,19 @@
             <!-- Modal Body -->
             <div class="modal-body">
                 <p class="modal-subtitle">
-                    Pomozte nám vylepšit Akcelerátor altruismu. Vaše zpětná vazba je anonymní a velmi cenná.
+                    {content[language].modalSubtitle}
                 </p>
 
                 <form class="feedback-form" on:submit|preventDefault={handleSubmit}>
                     <!-- Feedback Text -->
                     <div class="form-group">
                         <label for="feedback-text" class="form-label">
-                            Co si myslíte o Akcelerátoru altruismu?
+                            {content[language].feedbackLabel}
                         </label>
                         <textarea
                             id="feedback-text"
                             bind:value={feedback}
-                            placeholder="Sdělte nám svůj názor, návrhy na zlepšení, nebo jak vám aplikace pomohla..."
+                            placeholder={content[language].feedbackPlaceholder}
                             class="feedback-textarea"
                             rows="4"
                             maxlength="1000"
@@ -228,7 +287,7 @@
                     <!-- Emotion Selection -->
                     <div class="form-group">
                         <label for="emotion-select" class="form-label">
-                            Jak se právě cítíte? <span class="optional">(volitelné)</span>
+                            {content[language].emotionLabel} <span class="optional">{content[language].optional}</span>
                         </label>
                         <select
                             id="emotion-select"
@@ -236,7 +295,7 @@
                             class="emotion-select"
                             disabled={isSubmitting}
                         >
-                            {#each emotions as emotionOption}
+                            {#each content[language].emotions as emotionOption}
                                 <option value={emotionOption.value}>
                                     {emotionOption.label}
                                 </option>
@@ -248,7 +307,7 @@
                     <div class="form-group">
                         <fieldset class="star-rating-fieldset">
                             <legend class="form-label">
-                                Jak hodnotíte užitečnost aplikace? <span class="optional">(volitelné)</span>
+                                {content[language].ratingLabel} <span class="optional">{content[language].optional}</span>
                             </legend>
                             <div class="star-rating">
                                 {#each Array(5) as _, i}
@@ -258,14 +317,14 @@
                                         class:filled={i < rating}
                                         on:click={() => rating = i + 1}
                                         disabled={isSubmitting}
-                                        aria-label={`${i + 1} z 5 hvězd`}
+                                        aria-label={language === 'czech' ? `${i + 1} z 5 hvězd` : `${i + 1} out of 5 stars`}
                                     >
                                         ★
                                     </button>
                                 {/each}
                                 {#if rating > 0}
                                     <span class="rating-label">
-                                        {ratingDescriptions[rating]}
+                                        {content[language].ratings[rating]}
                                     </span>
                                 {/if}
                             </div>
@@ -288,9 +347,9 @@
                         >
                             {#if isSubmitting}
                                 <span class="spinner"></span>
-                                Odesílám...
+                                {content[language].submitting}
                             {:else}
-                                Odeslat zpětnou vazbu
+                                {content[language].submitButton}
                             {/if}
                         </button>
                     </div>
@@ -316,11 +375,13 @@
         cursor: pointer;
         box-shadow: 0 4px 20px rgba(46, 93, 49, 0.3);
         transition: all var(--timing-medium) var(--ease-gentle);
-        z-index: 40;
+        z-index: 50;
         display: flex;
         align-items: center;
         gap: 8px;
         max-width: 200px;
+        opacity: 1;
+        visibility: visible;
     }
 
     .feedback-trigger:hover {
@@ -349,7 +410,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 100;
+        z-index: 200;
         padding: 20px;
         backdrop-filter: blur(4px);
         animation: fadeIn 0.3s ease-out;

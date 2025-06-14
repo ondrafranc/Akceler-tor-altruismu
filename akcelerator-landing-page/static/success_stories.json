@@ -2,8 +2,15 @@
   {
     "id": 1,
     "name": "Anna z Ostravy",
-    "action": "Dobrovolničila v potravinové bance během zimy",
-    "impact": "Pomohla více než 120 rodinám",
+    "nameEn": "Anna from Ostrava",
+    "action": {
+      "czech": "Dobrovolničila v potravinové bance během zimy",
+      "english": "Volunteered at a food bank during winter"
+    },
+    "impact": {
+      "czech": "Pomohla více než 120 rodinám",
+      "english": "Helped more than 120 families"
+    },
     "location": "Ostrava",
     "icon": "🥖",
     "season": "winter"
@@ -11,8 +18,15 @@
   {
     "id": 2,
     "name": "Petr z Brna",
-    "action": "Daroval krev poté, co navštívil tuto stránku",
-    "impact": "Jeho darování zachránilo 3 životy",
+    "nameEn": "Petr from Brno",
+    "action": {
+      "czech": "Daroval krev poté, co navštívil tuto stránku",
+      "english": "Donated blood after visiting this website"
+    },
+    "impact": {
+      "czech": "Jeho darování zachránilo 3 životy",
+      "english": "His donation saved 3 lives"
+    },
     "location": "Brno",
     "icon": "❤️",
     "season": "spring"
@@ -20,8 +34,15 @@
   {
     "id": 3,
     "name": "Marie z Prahy",
-    "action": "Založila komunitní zahradu pro seniory",
-    "impact": "Spojila 50+ lidí v sousedství",
+    "nameEn": "Marie from Prague",
+    "action": {
+      "czech": "Založila komunitní zahradu pro seniory",
+      "english": "Founded community garden for seniors"
+    },
+    "impact": {
+      "czech": "Spojila 50+ lidí v sousedství",
+      "english": "Connected 50+ people in the neighborhood"
+    },
     "location": "Praha",
     "icon": "🌱",
     "season": "summer"
@@ -29,8 +50,15 @@
   {
     "id": 4,
     "name": "Tomáš z Plzně",
-    "action": "Učí děti v azylovém domě programování",
-    "impact": "15 dětí získalo nové dovednosti",
+    "nameEn": "Tomáš from Pilsen",
+    "action": {
+      "czech": "Učí děti v azylovém domě programování",
+      "english": "Teaches programming to children in shelters"
+    },
+    "impact": {
+      "czech": "15 dětí získalo nové dovednosti",
+      "english": "15 children gained new skills"
+    },
     "location": "Plzeň",
     "icon": "💻",
     "season": "autumn"
@@ -38,8 +66,15 @@
   {
     "id": 5,
     "name": "Věra z Českých Budějovic",
-    "action": "Organizuje sbírky zimního oblečení",
-    "impact": "Oblečila více než 200 lidí v nouzi",
+    "nameEn": "Věra from České Budějovice",
+    "action": {
+      "czech": "Organizuje sbírky zimního oblečení",
+      "english": "Organizes winter clothing collections"
+    },
+    "impact": {
+      "czech": "Oblečila více než 200 lidí v nouzi",
+      "english": "Clothed more than 200 people in need"
+    },
     "location": "České Budějovice",
     "icon": "🧥",
     "season": "winter"
@@ -47,8 +82,15 @@
   {
     "id": 6,
     "name": "Jan z Olomouce",
-    "action": "Navštěvuje osamělé seniory každý týden",
-    "impact": "Pomáhá 12 seniorům překonat osamělost",
+    "nameEn": "Jan from Olomouc",
+    "action": {
+      "czech": "Navštěvuje osamělé seniory každý týden",
+      "english": "Visits lonely seniors every week"
+    },
+    "impact": {
+      "czech": "Pomáhá 12 seniorům překonat osamělost",
+      "english": "Helps 12 seniors overcome loneliness"
+    },
     "location": "Olomouc",
     "icon": "👴",
     "season": "spring"
@@ -56,8 +98,15 @@
   {
     "id": 7,
     "name": "Kateřina z Pardubic",
-    "action": "Pečuje o opuštěná zvířata ve volném čase",
-    "impact": "Našla domov pro 30+ zvířat za rok",
+    "nameEn": "Kateřina from Pardubice",
+    "action": {
+      "czech": "Pečuje o opuštěná zvířata ve volném čase",
+      "english": "Cares for abandoned animals in her free time"
+    },
+    "impact": {
+      "czech": "Našla domov pro 30+ zvířat za rok",
+      "english": "Found homes for 30+ animals per year"
+    },
     "location": "Pardubice",
     "icon": "🐕",
     "season": "summer"
@@ -65,8 +114,15 @@
   {
     "id": 8,
     "name": "Lukáš z Hradce Králové",
-    "action": "Vyučuje češtinu pro uprchlíky zdarma",
-    "impact": "Pomohl 25 lidem naučit se základy češtiny",
+    "nameEn": "Lukáš from Hradec Králové",
+    "action": {
+      "czech": "Vyučuje češtinu pro uprchlíky zdarma",
+      "english": "Teaches Czech to refugees for free"
+    },
+    "impact": {
+      "czech": "Pomohl 25 lidem naučit se základy češtiny",
+      "english": "Helped 25 people learn basic Czech"
+    },
     "location": "Hradec Králové",
     "icon": "📚",
     "season": "autumn"

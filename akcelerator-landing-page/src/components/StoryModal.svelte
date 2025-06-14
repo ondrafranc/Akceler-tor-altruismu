@@ -1,5 +1,6 @@
 <script>
     import { createEventDispatcher, onMount, onDestroy } from 'svelte';
+    import { currentLanguage } from '../lib/stores.js';
     
     const dispatch = createEventDispatcher();
     
@@ -9,6 +10,30 @@
     
     let modalElement;
     let previouslyFocused;
+    let language = 'czech';
+    
+    // Subscribe to language changes
+    currentLanguage.subscribe(value => {
+        language = value;
+    });
+    
+    // Content translations
+    const content = {
+        czech: {
+            closeLabel: "Zavřít příběh",
+            whatDid: "Co udělal/a:",
+            impact: "Jaký to mělo dopad:",
+            inspiration: "I ty můžeš udělat rozdíl! Každá malá akce má svůj význam.",
+            ctaButton: "Inspiruj mě k akci!"
+        },
+        english: {
+            closeLabel: "Close story",
+            whatDid: "What they did:",
+            impact: "What impact it had:",
+            inspiration: "You can make a difference too! Every small action has its meaning.",
+            ctaButton: "Inspire me to act!"
+        }
+    };
     
     // Handle escape key and backdrop clicks
     function handleKeydown(event) {
@@ -83,7 +108,7 @@
                 <button 
                     class="modal-close" 
                     on:click={closeModal}
-                    aria-label="Zavřít příběh"
+                    aria-label={content[language].closeLabel}
                     type="button"
                 >
                     ✕
@@ -93,7 +118,7 @@
             <!-- Story Content -->
             <div class="modal-body">
                 <h2 id="story-title" class="story-title">
-                    {story.name}
+                    {language === 'czech' ? story.name : (story.nameEn || story.name)}
                 </h2>
                 
                 <div class="story-location">
@@ -101,18 +126,18 @@
                 </div>
                 
                 <div class="story-action">
-                    <h3>Co udělal/a:</h3>
-                    <p>{story.action}</p>
+                    <h3>{content[language].whatDid}</h3>
+                    <p>{typeof story.action === 'object' ? story.action[language] : story.action}</p>
                 </div>
                 
                 <div class="story-impact">
-                    <h3>Jaký to mělo dopad:</h3>
-                    <p class="impact-text">{story.impact}</p>
+                    <h3>{content[language].impact}</h3>
+                    <p class="impact-text">{typeof story.impact === 'object' ? story.impact[language] : story.impact}</p>
                 </div>
                 
                 <div class="story-inspiration">
                     <p class="inspiration-text">
-                        ✨ <strong>I ty můžeš udělat rozdíl!</strong> Každá malá akce má svůj význam.
+                        ✨ <strong>{content[language].inspiration}</strong>
                     </p>
                 </div>
                 
@@ -121,7 +146,7 @@
                         class="primary-button"
                         on:click={closeModal}
                     >
-                        Inspiruj mě k akci! 🌱
+                        {content[language].ctaButton} 🌱
                     </button>
                 </div>
             </div>

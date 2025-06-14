@@ -1,11 +1,52 @@
-import { c as create_ssr_component, a as add_attribute, e as escape, b as createEventDispatcher, o as onDestroy, v as validate_component, d as each } from "../../chunks/ssr.js";
-import { c as currentLanguage$3 } from "../../chunks/animations.js";
+import { c as create_ssr_component, b as createEventDispatcher, a as add_attribute, e as escape, d as each, v as validate_component, o as onDestroy } from "../../chunks/ssr.js";
+import { c as currentLanguage$1 } from "../../chunks/animations.js";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger.js";
 import { createClient } from "@supabase/supabase-js";
+const LanguageToggle_svelte_svelte_type_style_lang = "";
+const css$8 = {
+  code: ".language-toggle.svelte-1jnozdz.svelte-1jnozdz{position:relative;z-index:1000}.toggle-button.svelte-1jnozdz.svelte-1jnozdz{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255, 255, 255, 0.95);border:1px solid var(--subtle-border);border-radius:8px;cursor:pointer;transition:all var(--timing-medium) var(--ease-gentle);font-size:0.9rem;font-weight:500;color:var(--text-primary);backdrop-filter:blur(8px);box-shadow:0 2px 8px rgba(0, 0, 0, 0.1)}.toggle-button.svelte-1jnozdz.svelte-1jnozdz:hover{background:rgba(255, 255, 255, 1);border-color:var(--czech-forest-light);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0, 0, 0, 0.15)}.toggle-button.svelte-1jnozdz.svelte-1jnozdz:focus{outline:2px solid var(--copper-detail);outline-offset:2px}.current-language.svelte-1jnozdz.svelte-1jnozdz{display:flex;align-items:center;gap:6px}.flag.svelte-1jnozdz.svelte-1jnozdz{font-size:1.1rem}.code.svelte-1jnozdz.svelte-1jnozdz{font-weight:600;color:var(--czech-forest)}.dropdown-arrow.svelte-1jnozdz.svelte-1jnozdz{display:flex;align-items:center;transition:transform var(--timing-medium) var(--ease-gentle);color:var(--text-secondary)}.dropdown-arrow.rotated.svelte-1jnozdz.svelte-1jnozdz{transform:rotate(180deg)}.dropdown-menu.svelte-1jnozdz.svelte-1jnozdz{position:absolute;top:100%;right:0;margin-top:4px;background:white;border:1px solid var(--subtle-border);border-radius:8px;box-shadow:0 8px 24px rgba(0, 0, 0, 0.15);overflow:hidden;min-width:160px;backdrop-filter:blur(8px);animation:svelte-1jnozdz-dropdownAppear 0.2s ease-out}@keyframes svelte-1jnozdz-dropdownAppear{from{opacity:0;transform:translateY(-8px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}.dropdown-option.svelte-1jnozdz.svelte-1jnozdz{display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;background:none;border:none;text-align:left;cursor:pointer;transition:background-color var(--timing-quick) var(--ease-gentle);color:var(--text-primary);font-size:0.9rem}.dropdown-option.svelte-1jnozdz.svelte-1jnozdz:hover{background-color:var(--bg-accent)}.dropdown-option.svelte-1jnozdz.svelte-1jnozdz:focus{background-color:var(--bg-accent);outline:none}.dropdown-option.active.svelte-1jnozdz.svelte-1jnozdz{background-color:var(--bg-accent);color:var(--czech-forest);font-weight:500}.dropdown-option.svelte-1jnozdz .name.svelte-1jnozdz{flex:1}.checkmark.svelte-1jnozdz.svelte-1jnozdz{color:var(--czech-forest);font-weight:bold}@media(max-width: 768px){.toggle-button.svelte-1jnozdz.svelte-1jnozdz{padding:6px 10px;font-size:0.8rem}.dropdown-menu.svelte-1jnozdz.svelte-1jnozdz{min-width:140px}.dropdown-option.svelte-1jnozdz.svelte-1jnozdz{padding:10px 12px;font-size:0.85rem}}@media(prefers-contrast: high){.toggle-button.svelte-1jnozdz.svelte-1jnozdz{border-width:2px}.dropdown-menu.svelte-1jnozdz.svelte-1jnozdz{border-width:2px}}@media(prefers-reduced-motion: reduce){.toggle-button.svelte-1jnozdz.svelte-1jnozdz,.dropdown-arrow.svelte-1jnozdz.svelte-1jnozdz,.dropdown-option.svelte-1jnozdz.svelte-1jnozdz{transition:none}.dropdown-menu.svelte-1jnozdz.svelte-1jnozdz{animation:none}}",
+  map: null
+};
+const LanguageToggle = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+  createEventDispatcher();
+  let language = "czech";
+  let isOpen = false;
+  currentLanguage$1.subscribe((value) => {
+    language = value;
+  });
+  const languages = {
+    czech: {
+      code: "cs",
+      flag: "🇨🇿",
+      name: "Čeština",
+      shortName: "CZ",
+      nativeName: "Čeština"
+    },
+    english: {
+      code: "en",
+      flag: "🇺🇸",
+      name: "English",
+      shortName: "EN",
+      nativeName: "English"
+    }
+  };
+  function handleClickOutside(event) {
+    if (!event.target.closest(".language-toggle")) {
+      isOpen = false;
+    }
+  }
+  if (typeof document !== "undefined") {
+    document.addEventListener("click", handleClickOutside);
+  }
+  $$result.css.add(css$8);
+  return `<div class="${["language-toggle svelte-1jnozdz", isOpen ? "open" : ""].join(" ").trim()}"><button class="toggle-button svelte-1jnozdz" aria-label="Vyberte jazyk / Select language"${add_attribute("aria-expanded", isOpen, 0)} aria-haspopup="listbox"><span class="current-language svelte-1jnozdz"><span class="flag svelte-1jnozdz">${escape(languages[language].flag)}</span> <span class="code svelte-1jnozdz">${escape(languages[language].shortName)}</span></span> <span class="${["dropdown-arrow svelte-1jnozdz", isOpen ? "rotated" : ""].join(" ").trim()}" data-svelte-h="svelte-1qedb0v"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4.5l3 3 3-3"></path></svg></span></button> ${isOpen ? `<div class="dropdown-menu svelte-1jnozdz" role="listbox">${each(Object.entries(languages), ([key, lang]) => {
+    return `<button class="${["dropdown-option svelte-1jnozdz", language === key ? "active" : ""].join(" ").trim()}" role="option"${add_attribute("aria-selected", language === key, 0)}><span class="flag svelte-1jnozdz">${escape(lang.flag)}</span> <span class="name svelte-1jnozdz">${escape(lang.name)}</span> ${language === key ? `<span class="checkmark svelte-1jnozdz" data-svelte-h="svelte-594623">✓</span>` : ``} </button>`;
+  })}</div>` : ``} </div>`;
+});
 const Hero_svelte_svelte_type_style_lang = "";
 const css$7 = {
-  code: ".language-flag.svelte-1hl5d6t{background:rgba(255, 255, 255, 0.9);border:2px solid transparent;border-radius:50%;width:48px;height:48px;font-size:1.5rem;cursor:pointer;transition:all var(--timing-medium) var(--ease-gentle);margin:0 4px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0, 0, 0, 0.1)}.language-flag.svelte-1hl5d6t:hover{transform:scale(1.1);box-shadow:0 4px 16px rgba(0, 0, 0, 0.15)}.language-flag.active.svelte-1hl5d6t{border-color:var(--czech-forest);background:rgba(255, 255, 255, 1);transform:scale(1.05)}.scroll-indicator.svelte-1hl5d6t{animation:svelte-1hl5d6t-bounceGentle 2s ease-in-out infinite}@keyframes svelte-1hl5d6t-bounceGentle{0%,20%,50%,80%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}60%{transform:translateY(-4px)}}.floating-particle.svelte-1hl5d6t{animation:svelte-1hl5d6t-float 3s ease-in-out infinite}@keyframes svelte-1hl5d6t-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}@media(max-width: 768px){.language-flag.svelte-1hl5d6t{width:40px;height:40px;font-size:1.2rem}.flex.svelte-1hl5d6t{flex-direction:column;align-items:center}.gap-4.svelte-1hl5d6t{gap:1rem}}",
+  code: ".scroll-indicator.svelte-z52t3o{animation:svelte-z52t3o-bounceGentle 2s ease-in-out infinite}@keyframes svelte-z52t3o-bounceGentle{0%,20%,50%,80%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}60%{transform:translateY(-4px)}}.floating-particle.svelte-z52t3o{animation:svelte-z52t3o-float 3s ease-in-out infinite}@keyframes svelte-z52t3o-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}@media(max-width: 768px){.flex.svelte-z52t3o{flex-direction:column;align-items:center}.gap-4.svelte-z52t3o{gap:1rem}}",
   map: null
 };
 const Hero = create_ssr_component(($$result, $$props, $$bindings, slots) => {
@@ -14,28 +55,30 @@ const Hero = create_ssr_component(($$result, $$props, $$bindings, slots) => {
   let mainHeading;
   let subHeading;
   let ctaButtons;
-  let languageSelector;
-  let currentLanguage2 = "czech";
+  let language = "czech";
+  currentLanguage$1.subscribe((value) => {
+    language = value;
+  });
   const content = {
     czech: {
       heading: "Cítíš se zahlcen/a všemi problémy kolem?",
       subheading: "Nejsi v tom sám/sama. A existuje cesta vpřed.",
-      description: "Najdi praktický způsob, jak pomoct – krok za krokem",
+      description: "Nalezni praktický způsob, jak udělat rozdíl – krok za krokem, společně",
       ctaPrimary: "Najít svou cestu",
       ctaSecondary: "Rychlá pomoc",
-      scrollText: "Scroll dolů pro více"
+      scrollText: "Pokračuj níže pro více inspirace"
     },
     english: {
       heading: "Feeling overwhelmed by the world's problems?",
       subheading: "You're not alone. And there's a path forward.",
-      description: "Transform empathetic overwhelm into meaningful action",
+      description: "Find practical ways to make a difference – step by step, together",
       ctaPrimary: "Find Your Path",
-      ctaSecondary: "Quick Help",
-      scrollText: "Scroll down to discover"
+      ctaSecondary: "I Need Help Now",
+      scrollText: "Continue below for more inspiration"
     }
   };
   $$result.css.add(css$7);
-  return `<section class="parallax-container czech-flex-center"${add_attribute("this", heroContainer, 0)}> <div class="parallax-forest"${add_attribute("this", parallaxForest, 0)}></div>  <div class="floating-particle svelte-1hl5d6t" style="position: absolute; top: 20%; left: 10%; width: 4px; height: 4px; background: var(--czech-forest-light); border-radius: 50%; opacity: 0.6;"></div> <div class="floating-particle svelte-1hl5d6t" style="position: absolute; top: 30%; right: 15%; width: 3px; height: 3px; background: var(--copper-detail); border-radius: 50%; opacity: 0.4;"></div> <div class="floating-particle svelte-1hl5d6t" style="position: absolute; top: 60%; left: 20%; width: 5px; height: 5px; background: var(--moravian-earth); border-radius: 50%; opacity: 0.5;"></div> <div class="floating-particle svelte-1hl5d6t" style="position: absolute; top: 40%; right: 25%; width: 3px; height: 3px; background: var(--czech-forest); border-radius: 50%; opacity: 0.7;"></div>  <div class="absolute top-4 right-4 z-10"${add_attribute("this", languageSelector, 0)}><button class="${"language-flag " + escape("active", true) + " svelte-1hl5d6t"}" title="Čeština">🇨🇿</button> <button class="${"language-flag " + escape("", true) + " svelte-1hl5d6t"}" title="English">🇺🇸</button></div>  <div class="czech-container czech-text-center relative z-10"><h1 class="czech-heading-xl mb-6"${add_attribute("this", mainHeading, 0)}>${escape(content[currentLanguage2].heading)}</h1> <p class="czech-body-large mb-4 max-w-2xl mx-auto"${add_attribute("this", subHeading, 0)}>${escape(content[currentLanguage2].subheading)}</p> <p class="czech-body mb-8 max-w-xl mx-auto opacity-80">${escape(content[currentLanguage2].description)}</p>  <div class="flex gap-4 justify-center flex-wrap svelte-1hl5d6t"${add_attribute("this", ctaButtons, 0)}><button class="czech-button-primary"><span>${escape(content[currentLanguage2].ctaPrimary)}</span> <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"></path></svg></button> <button class="czech-button-secondary">${escape(content[currentLanguage2].ctaSecondary)}</button></div>  <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 czech-text-center"><p class="czech-body text-sm opacity-60 mb-2">${escape(content[currentLanguage2].scrollText)}</p> <div class="scroll-indicator svelte-1hl5d6t" data-svelte-h="svelte-j9xrzi"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--czech-forest)" stroke-width="2"><path d="M7 13l3 3 7-7M7 6l3 3 7-7"></path></svg></div></div></div> </section>`;
+  return `<section class="parallax-container czech-flex-center"${add_attribute("this", heroContainer, 0)}> <div class="parallax-forest"${add_attribute("this", parallaxForest, 0)}></div>  <div class="floating-particle svelte-z52t3o" style="position: absolute; top: 20%; left: 10%; width: 4px; height: 4px; background: var(--czech-forest-light); border-radius: 50%; opacity: 0.6;"></div> <div class="floating-particle svelte-z52t3o" style="position: absolute; top: 30%; right: 15%; width: 3px; height: 3px; background: var(--copper-detail); border-radius: 50%; opacity: 0.4;"></div> <div class="floating-particle svelte-z52t3o" style="position: absolute; top: 60%; left: 20%; width: 5px; height: 5px; background: var(--moravian-earth); border-radius: 50%; opacity: 0.5;"></div> <div class="floating-particle svelte-z52t3o" style="position: absolute; top: 40%; right: 25%; width: 3px; height: 3px; background: var(--czech-forest); border-radius: 50%; opacity: 0.7;"></div>  <div class="absolute top-4 right-4 z-10">${validate_component(LanguageToggle, "LanguageToggle").$$render($$result, {}, {}, {})}</div>  <div class="czech-container czech-text-center relative z-10"><h1 class="czech-heading-xl mb-6"${add_attribute("this", mainHeading, 0)}>${escape(content[language].heading)}</h1> <p class="czech-body-large mb-4 max-w-2xl mx-auto"${add_attribute("this", subHeading, 0)}>${escape(content[language].subheading)}</p> <p class="czech-body mb-8 max-w-xl mx-auto opacity-80">${escape(content[language].description)}</p>  <div class="flex gap-4 justify-center flex-wrap svelte-z52t3o"${add_attribute("this", ctaButtons, 0)}><button class="czech-button-primary"><span>${escape(content[language].ctaPrimary)}</span> <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"></path></svg></button> <button class="czech-button-secondary">${escape(content[language].ctaSecondary)}</button></div>  <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 czech-text-center"><p class="czech-body text-sm opacity-60 mb-2">${escape(content[language].scrollText)}</p> <div class="scroll-indicator svelte-z52t3o" data-svelte-h="svelte-j9xrzi"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--czech-forest)" stroke-width="2"><path d="M7 13l3 3 7-7M7 6l3 3 7-7"></path></svg></div></div></div> </section>`;
 });
 const StoryModal_svelte_svelte_type_style_lang = "";
 const css$6 = {
@@ -48,6 +91,26 @@ const StoryModal = create_ssr_component(($$result, $$props, $$bindings, slots) =
   let { story = null } = $$props;
   let modalElement;
   let previouslyFocused;
+  let language = "czech";
+  currentLanguage$1.subscribe((value) => {
+    language = value;
+  });
+  const content = {
+    czech: {
+      closeLabel: "Zavřít příběh",
+      whatDid: "Co udělal/a:",
+      impact: "Jaký to mělo dopad:",
+      inspiration: "I ty můžeš udělat rozdíl! Každá malá akce má svůj význam.",
+      ctaButton: "Inspiruj mě k akci!"
+    },
+    english: {
+      closeLabel: "Close story",
+      whatDid: "What they did:",
+      impact: "What impact it had:",
+      inspiration: "You can make a difference too! Every small action has its meaning.",
+      ctaButton: "Inspire me to act!"
+    }
+  };
   function handleKeydown(event) {
     if (event.key === "Escape") {
       closeModal();
@@ -87,32 +150,37 @@ const StoryModal = create_ssr_component(($$result, $$props, $$bindings, slots) =
       }
     }
   }
-  return ` ${isOpen && story ? `<div class="modal-overlay svelte-1a2i4ly" role="dialog" aria-modal="true" aria-labelledby="story-title" tabindex="-1"${add_attribute("this", modalElement, 0)}><div class="modal-content svelte-1a2i4ly" role="document"> <div class="modal-header svelte-1a2i4ly"><div class="story-icon svelte-1a2i4ly">${escape(story.icon)}</div> <button class="modal-close svelte-1a2i4ly" aria-label="Zavřít příběh" type="button" data-svelte-h="svelte-1t6rk7d">✕</button></div>  <div class="modal-body svelte-1a2i4ly"><h2 id="story-title" class="story-title svelte-1a2i4ly">${escape(story.name)}</h2> <div class="story-location svelte-1a2i4ly">📍 ${escape(story.location)}</div> <div class="story-action svelte-1a2i4ly"><h3 class="svelte-1a2i4ly" data-svelte-h="svelte-jlw5cp">Co udělal/a:</h3> <p class="svelte-1a2i4ly">${escape(story.action)}</p></div> <div class="story-impact svelte-1a2i4ly"><h3 class="svelte-1a2i4ly" data-svelte-h="svelte-fhmlmx">Jaký to mělo dopad:</h3> <p class="impact-text svelte-1a2i4ly">${escape(story.impact)}</p></div> <div class="story-inspiration svelte-1a2i4ly" data-svelte-h="svelte-1yikskz"><p class="inspiration-text svelte-1a2i4ly">✨ <strong>I ty můžeš udělat rozdíl!</strong> Každá malá akce má svůj význam.</p></div> <div class="modal-actions svelte-1a2i4ly"><button class="primary-button svelte-1a2i4ly" data-svelte-h="svelte-oc7u2u">Inspiruj mě k akci! 🌱</button></div></div></div></div>` : ``}`;
+  return ` ${isOpen && story ? `<div class="modal-overlay svelte-1a2i4ly" role="dialog" aria-modal="true" aria-labelledby="story-title" tabindex="-1"${add_attribute("this", modalElement, 0)}><div class="modal-content svelte-1a2i4ly" role="document"> <div class="modal-header svelte-1a2i4ly"><div class="story-icon svelte-1a2i4ly">${escape(story.icon)}</div> <button class="modal-close svelte-1a2i4ly"${add_attribute("aria-label", content[language].closeLabel, 0)} type="button">✕</button></div>  <div class="modal-body svelte-1a2i4ly"><h2 id="story-title" class="story-title svelte-1a2i4ly">${escape(language === "czech" ? story.name : story.nameEn || story.name)}</h2> <div class="story-location svelte-1a2i4ly">📍 ${escape(story.location)}</div> <div class="story-action svelte-1a2i4ly"><h3 class="svelte-1a2i4ly">${escape(content[language].whatDid)}</h3> <p class="svelte-1a2i4ly">${escape(typeof story.action === "object" ? story.action[language] : story.action)}</p></div> <div class="story-impact svelte-1a2i4ly"><h3 class="svelte-1a2i4ly">${escape(content[language].impact)}</h3> <p class="impact-text svelte-1a2i4ly">${escape(typeof story.impact === "object" ? story.impact[language] : story.impact)}</p></div> <div class="story-inspiration svelte-1a2i4ly"><p class="inspiration-text svelte-1a2i4ly">✨ <strong>${escape(content[language].inspiration)}</strong></p></div> <div class="modal-actions svelte-1a2i4ly"><button class="primary-button svelte-1a2i4ly">${escape(content[language].ctaButton)} 🌱</button></div></div></div></div>` : ``}`;
 });
 const SolidarityGarden_svelte_svelte_type_style_lang = "";
 const css$5 = {
-  code: ".garden-wrapper.svelte-1tmqal5.svelte-1tmqal5{position:relative;max-width:900px;margin:0 auto;border-radius:20px;overflow:hidden;box-shadow:0 12px 40px rgba(46, 93, 49, 0.15);background:var(--warm-stone);transition:all 0.6s ease}.garden-wrapper.spring.svelte-1tmqal5.svelte-1tmqal5{background:linear-gradient(135deg, #f0f9f0 0%, #e8f5e8 100%)}.garden-wrapper.summer.svelte-1tmqal5.svelte-1tmqal5{background:linear-gradient(135deg, #fff9e6 0%, #f5f0e8 100%)}.garden-wrapper.autumn.svelte-1tmqal5.svelte-1tmqal5{background:linear-gradient(135deg, #faf5f0 0%, #f0e6d6 100%)}.garden-wrapper.winter.svelte-1tmqal5.svelte-1tmqal5{background:linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)}.seasonal-header.svelte-1tmqal5.svelte-1tmqal5{text-align:center;padding:1.5rem 2rem 0;background:rgba(255, 255, 255, 0.7);backdrop-filter:blur(10px)}.season-indicator.svelte-1tmqal5.svelte-1tmqal5{font-size:1.1rem;color:var(--czech-forest);font-weight:500;padding:0.5rem 1rem;background:var(--bg-accent);border-radius:20px;border:1px solid var(--subtle-border)}.garden-canvas.svelte-1tmqal5.svelte-1tmqal5{position:relative;min-height:400px;padding:2rem;overflow:hidden}.garden-background.svelte-1tmqal5.svelte-1tmqal5{position:absolute;top:0;left:0;right:0;bottom:0;z-index:1}.hills.svelte-1tmqal5.svelte-1tmqal5{position:absolute;bottom:0;left:0;right:0;height:60%;background:linear-gradient(180deg, transparent 0%, var(--bohemian-mist) 100%);border-radius:50% 50% 0 0}.sky.svelte-1tmqal5.svelte-1tmqal5{position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(180deg, rgba(173, 216, 230, 0.3) 0%, transparent 100%)}.garden-floor.svelte-1tmqal5.svelte-1tmqal5{position:relative;z-index:2;display:grid;grid-template-columns:repeat(auto-fit, minmax(80px, 1fr));gap:1.5rem;align-items:end;padding:1rem 0;min-height:200px}.garden-element.svelte-1tmqal5.svelte-1tmqal5{font-size:2.5rem;text-align:center;cursor:pointer;transition:all 0.3s ease;filter:drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));transform-origin:bottom center;position:relative}.garden-element.svelte-1tmqal5.svelte-1tmqal5:hover{transform:scale(1.2) translateY(-5px);filter:drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2))}.story-trigger.svelte-1tmqal5.svelte-1tmqal5{position:relative;outline:none}.story-trigger.svelte-1tmqal5.svelte-1tmqal5:focus{outline:2px solid var(--czech-forest);outline-offset:4px}.story-trigger.svelte-1tmqal5.svelte-1tmqal5::after{content:'✨';position:absolute;top:-10px;right:-10px;font-size:1rem;opacity:0;animation:svelte-1tmqal5-sparkle-hint 2s ease-in-out infinite}.story-trigger.svelte-1tmqal5.svelte-1tmqal5:hover::after{opacity:1;animation:svelte-1tmqal5-sparkle-pulse 0.5s ease-in-out infinite}@keyframes svelte-1tmqal5-sparkle-hint{0%,80%,100%{opacity:0}40%{opacity:0.6}}@keyframes svelte-1tmqal5-sparkle-pulse{0%,100%{transform:scale(1);opacity:0.6}50%{transform:scale(1.2);opacity:1}}.tree.svelte-1tmqal5.svelte-1tmqal5{font-size:3rem;grid-row:span 2}.flower.svelte-1tmqal5.svelte-1tmqal5{font-size:2rem;animation:svelte-1tmqal5-gentle-sway 3s ease-in-out infinite}.sprout.svelte-1tmqal5.svelte-1tmqal5{font-size:1.8rem;opacity:0.8}@keyframes svelte-1tmqal5-gentle-sway{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}.garden-controls.svelte-1tmqal5.svelte-1tmqal5{position:relative;z-index:3;display:flex;gap:1rem;justify-content:center;margin:2rem 0;flex-wrap:wrap}.garden-controls.svelte-1tmqal5 button.svelte-1tmqal5{font-size:0.9rem;padding:0.75rem 1.25rem;border-radius:25px;transition:all 0.3s ease}.garden-controls.svelte-1tmqal5 button.svelte-1tmqal5:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(46, 93, 49, 0.3)}.community-garden-stats.svelte-1tmqal5.svelte-1tmqal5{display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:1.5rem;padding:2rem;background:rgba(255, 255, 255, 0.6);backdrop-filter:blur(10px);border-radius:16px 16px 0 0;margin-top:2rem}.stat-plant.svelte-1tmqal5.svelte-1tmqal5{text-align:center;padding:1rem;background:var(--bg-accent);border-radius:12px;border:1px solid var(--subtle-border);transition:all 0.3s ease}.stat-plant.svelte-1tmqal5.svelte-1tmqal5:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(46, 93, 49, 0.15)}.plant-icon.svelte-1tmqal5.svelte-1tmqal5{font-size:2rem;margin-bottom:0.5rem}.stat-number.svelte-1tmqal5.svelte-1tmqal5{font-size:1.8rem;font-weight:600;color:var(--czech-forest);line-height:1;margin-bottom:0.25rem}.stat-label.svelte-1tmqal5.svelte-1tmqal5{font-size:0.85rem;color:var(--text-secondary);font-weight:500}.enhanced-quote.svelte-1tmqal5.svelte-1tmqal5{background:linear-gradient(135deg, var(--bg-accent) 0%, rgba(255, 255, 255, 0.8) 100%);border:none;border-radius:16px;padding:2rem;margin:0;backdrop-filter:blur(10px);display:flex;align-items:center;gap:1rem}.quote-decoration.svelte-1tmqal5.svelte-1tmqal5{font-size:1.5rem;opacity:0.6;color:var(--czech-forest)}@keyframes svelte-1tmqal5-sparkle-fade{0%{opacity:1;transform:scale(0) rotate(0deg)}50%{opacity:1;transform:scale(1) rotate(180deg)}100%{opacity:0;transform:scale(0) rotate(360deg)}}@media(max-width: 768px){.garden-canvas.svelte-1tmqal5.svelte-1tmqal5{padding:1.5rem 1rem;min-height:300px}.garden-floor.svelte-1tmqal5.svelte-1tmqal5{grid-template-columns:repeat(3, 1fr);gap:1rem}.garden-element.svelte-1tmqal5.svelte-1tmqal5{font-size:2rem}.tree.svelte-1tmqal5.svelte-1tmqal5{font-size:2.5rem}.garden-controls.svelte-1tmqal5.svelte-1tmqal5{flex-direction:column;align-items:center}.garden-controls.svelte-1tmqal5 button.svelte-1tmqal5{width:200px}.community-garden-stats.svelte-1tmqal5.svelte-1tmqal5{grid-template-columns:1fr;gap:1rem;padding:1.5rem}.enhanced-quote.svelte-1tmqal5.svelte-1tmqal5{flex-direction:column;text-align:center;padding:1.5rem}}@media(max-width: 900px){.garden-wrapper.svelte-1tmqal5.svelte-1tmqal5{max-width:100%;border-radius:16px}}",
+  code: ".garden-wrapper.svelte-vgo93k.svelte-vgo93k{position:relative;max-width:900px;margin:0 auto;border-radius:20px;overflow:hidden;box-shadow:0 12px 40px rgba(46, 93, 49, 0.15);background:var(--warm-stone);transition:all 0.6s ease}.garden-wrapper.spring.svelte-vgo93k.svelte-vgo93k{background:linear-gradient(135deg, #f0f9f0 0%, #e8f5e8 100%)}.garden-wrapper.summer.svelte-vgo93k.svelte-vgo93k{background:linear-gradient(135deg, #fff9e6 0%, #f5f0e8 100%)}.garden-wrapper.autumn.svelte-vgo93k.svelte-vgo93k{background:linear-gradient(135deg, #faf5f0 0%, #f0e6d6 100%)}.garden-wrapper.winter.svelte-vgo93k.svelte-vgo93k{background:linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)}.seasonal-header.svelte-vgo93k.svelte-vgo93k{text-align:center;padding:1.5rem 2rem 0;background:rgba(255, 255, 255, 0.7);backdrop-filter:blur(10px)}.season-indicator.svelte-vgo93k.svelte-vgo93k{font-size:1.1rem;color:var(--czech-forest);font-weight:500;padding:0.5rem 1rem;background:var(--bg-accent);border-radius:20px;border:1px solid var(--subtle-border)}.garden-canvas.svelte-vgo93k.svelte-vgo93k{position:relative;min-height:400px;padding:2rem;overflow:hidden}.garden-background.svelte-vgo93k.svelte-vgo93k{position:absolute;top:0;left:0;right:0;bottom:0;z-index:1}.hills.svelte-vgo93k.svelte-vgo93k{position:absolute;bottom:0;left:0;right:0;height:60%;background:linear-gradient(180deg, transparent 0%, var(--bohemian-mist) 100%);border-radius:50% 50% 0 0}.sky.svelte-vgo93k.svelte-vgo93k{position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(180deg, rgba(173, 216, 230, 0.3) 0%, transparent 100%)}.garden-floor.svelte-vgo93k.svelte-vgo93k{position:relative;z-index:2;display:grid;grid-template-columns:repeat(auto-fit, minmax(80px, 1fr));gap:1.5rem;align-items:end;padding:1rem 0;min-height:200px}.garden-element.svelte-vgo93k.svelte-vgo93k{font-size:2.5rem;text-align:center;cursor:pointer;transition:all 0.3s ease;filter:drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));transform-origin:bottom center;position:relative}.garden-element.svelte-vgo93k.svelte-vgo93k:hover{transform:scale(1.2) translateY(-5px);filter:drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2))}.story-trigger.svelte-vgo93k.svelte-vgo93k{position:relative;outline:none}.story-trigger.svelte-vgo93k.svelte-vgo93k:focus{outline:2px solid var(--czech-forest);outline-offset:4px}.story-trigger.svelte-vgo93k.svelte-vgo93k::after{content:'✨';position:absolute;top:-10px;right:-10px;font-size:1rem;opacity:0;animation:svelte-vgo93k-sparkle-hint 2s ease-in-out infinite}.story-trigger.svelte-vgo93k.svelte-vgo93k:hover::after{opacity:1;animation:svelte-vgo93k-sparkle-pulse 0.5s ease-in-out infinite}@keyframes svelte-vgo93k-sparkle-hint{0%,80%,100%{opacity:0}40%{opacity:0.6}}@keyframes svelte-vgo93k-sparkle-pulse{0%,100%{transform:scale(1);opacity:0.6}50%{transform:scale(1.2);opacity:1}}.tree.svelte-vgo93k.svelte-vgo93k{font-size:3rem;grid-row:span 2}.flower.svelte-vgo93k.svelte-vgo93k{font-size:2rem;animation:svelte-vgo93k-gentle-sway 3s ease-in-out infinite}.sprout.svelte-vgo93k.svelte-vgo93k{font-size:1.8rem;opacity:0.8}@keyframes svelte-vgo93k-gentle-sway{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}.garden-controls.svelte-vgo93k.svelte-vgo93k{position:relative;z-index:3;display:flex;gap:1rem;justify-content:center;margin:2rem 0;flex-wrap:wrap}.garden-controls.svelte-vgo93k button.svelte-vgo93k{font-size:0.9rem;padding:0.75rem 1.25rem;border-radius:25px;transition:all 0.3s ease}.garden-controls.svelte-vgo93k button.svelte-vgo93k:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(46, 93, 49, 0.3)}.community-garden-stats.svelte-vgo93k.svelte-vgo93k{display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:1.5rem;padding:2rem;background:rgba(255, 255, 255, 0.6);backdrop-filter:blur(10px);border-radius:16px 16px 0 0;margin-top:2rem}.stat-plant.svelte-vgo93k.svelte-vgo93k{text-align:center;padding:1rem;background:var(--bg-accent);border-radius:12px;border:1px solid var(--subtle-border);transition:all 0.3s ease}.stat-plant.svelte-vgo93k.svelte-vgo93k:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(46, 93, 49, 0.15)}.plant-icon.svelte-vgo93k.svelte-vgo93k{font-size:2rem;margin-bottom:0.5rem}.stat-number.svelte-vgo93k.svelte-vgo93k{font-size:1.8rem;font-weight:600;color:var(--czech-forest);line-height:1;margin-bottom:0.25rem}.stat-label.svelte-vgo93k.svelte-vgo93k{font-size:0.85rem;color:var(--text-secondary);font-weight:500}.enhanced-quote.svelte-vgo93k.svelte-vgo93k{background:linear-gradient(135deg, var(--bg-accent) 0%, rgba(255, 255, 255, 0.8) 100%);border:none;border-radius:16px;padding:2rem;margin:0;backdrop-filter:blur(10px);display:flex;align-items:center;gap:1rem}.quote-decoration.svelte-vgo93k.svelte-vgo93k{font-size:1.5rem;opacity:0.6;color:var(--czech-forest)}@keyframes svelte-vgo93k-sparkle-fade{0%{opacity:1;transform:scale(0) rotate(0deg)}50%{opacity:1;transform:scale(1) rotate(180deg)}100%{opacity:0;transform:scale(0) rotate(360deg)}}@media(max-width: 768px){.garden-canvas.svelte-vgo93k.svelte-vgo93k{padding:1.5rem 1rem;min-height:300px}.garden-floor.svelte-vgo93k.svelte-vgo93k{grid-template-columns:repeat(3, 1fr);gap:1rem}.garden-element.svelte-vgo93k.svelte-vgo93k{font-size:2rem}.tree.svelte-vgo93k.svelte-vgo93k{font-size:2.5rem}.garden-controls.svelte-vgo93k.svelte-vgo93k{flex-direction:column;align-items:center}.garden-controls.svelte-vgo93k button.svelte-vgo93k{width:200px}.community-garden-stats.svelte-vgo93k.svelte-vgo93k{grid-template-columns:1fr;gap:1rem;padding:1.5rem}.enhanced-quote.svelte-vgo93k.svelte-vgo93k{flex-direction:column;text-align:center;padding:1.5rem}}@media(max-width: 900px){.garden-wrapper.svelte-vgo93k.svelte-vgo93k{max-width:100%;border-radius:16px}}.story-cta-banner.svelte-vgo93k.svelte-vgo93k{background:linear-gradient(135deg, rgba(46, 93, 49, 0.1) 0%, rgba(46, 93, 49, 0.05) 100%);border:2px solid var(--czech-forest-light);border-radius:12px;padding:1rem 2rem;margin:1.5rem auto;max-width:600px;text-align:center;animation:svelte-vgo93k-gentle-pulse 3s ease-in-out infinite}@keyframes svelte-vgo93k-gentle-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.02)}}.story-tooltip.svelte-vgo93k.svelte-vgo93k{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:var(--czech-forest);color:white;padding:0.5rem 0.75rem;border-radius:6px;font-size:0.75rem;white-space:nowrap;opacity:0;pointer-events:none;transition:all 0.3s ease;z-index:1000;margin-bottom:8px}.story-tooltip.svelte-vgo93k.svelte-vgo93k::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:var(--czech-forest)}.story-trigger.svelte-vgo93k:hover .story-tooltip.svelte-vgo93k,.story-trigger.svelte-vgo93k:focus .story-tooltip.svelte-vgo93k{opacity:1;transform:translateX(-50%) translateY(-4px)}@media(max-width: 768px){.story-cta-banner.svelte-vgo93k.svelte-vgo93k{padding:0.75rem 1rem;margin:1rem auto;font-size:0.9rem}.story-tooltip.svelte-vgo93k.svelte-vgo93k{font-size:0.7rem;padding:0.4rem 0.6rem}}",
   map: null
 };
-let currentLanguage$2 = "czech";
 const SolidarityGarden = create_ssr_component(($$result, $$props, $$bindings, slots) => {
   gsap.registerPlugin(ScrollTrigger);
   let gardenContainer;
   let totalCommunityActions = 247;
+  let language = "czech";
   let plantedSeeds = 0;
   let communityFlowers = 0;
+  currentLanguage$1.subscribe((value) => {
+    language = value;
+  });
   let isStoryModalOpen = false;
   let currentStory = null;
   let currentSeason = "spring";
   const content = {
     czech: {
-      title: "Zahrada solidarity",
-      subtitle: "Interaktivní vizualizace naší společné pomoci",
-      description: "Každá vaše akce zde zaseje semínko naděje. Kliknutím na rostliny objevíte skutečné příběhy české solidarity a laskavosti.",
+      title: "Zahrada inspirativních příběhů",
+      subtitle: "Objevte skutečné příběhy naděje a solidarity",
+      description: "Každá rostlina v této zahradě představuje skutečný příběh pomoce. Kliknutím na rostliny objevíte, jak lidé kolem nás mění svět k lepšímu.",
+      callToAction: "🌱 Klikněte na rostliny a objevte příběhy naděje",
       counter: "lidí pomohlo tento týden",
       plantSeed: "Zasadit semínko",
       waterPlant: "Zalít rostlinu",
       watchGrow: "Sledovat růst",
+      storyPrompt: "Klikněte pro inspirativní příběh",
       seasonInfo: {
         spring: "🌸 Jarní obnova - čas nových začátků",
         summer: "☀️ Letní energie - čas akcí",
@@ -121,13 +189,15 @@ const SolidarityGarden = create_ssr_component(($$result, $$props, $$bindings, sl
       }
     },
     english: {
-      title: "Solidarity Garden",
-      subtitle: "Interactive visualization of our collective help",
-      description: "Every action you take plants a seed of hope here. Click on garden elements to watch our community grow.",
+      title: "Garden of Inspiring Stories",
+      subtitle: "Discover real stories of hope and solidarity",
+      description: "Every plant in this garden represents a real story of help. Click on the plants to discover how people around us are changing the world for the better.",
+      callToAction: "🌱 Click on plants to discover stories of hope",
       counter: "people helped this week",
       plantSeed: "Plant a seed",
       waterPlant: "Water plant",
       watchGrow: "Watch grow",
+      storyPrompt: "Click for inspiring story",
       seasonInfo: {
         spring: "🌸 Spring renewal - time for new beginnings",
         summer: "☀️ Summer energy - time for action",
@@ -137,16 +207,17 @@ const SolidarityGarden = create_ssr_component(($$result, $$props, $$bindings, sl
     }
   };
   $$result.css.add(css$5);
-  return `<section id="solidarity-garden" class="czech-section"${add_attribute("this", gardenContainer, 0)}><div class="czech-container"><div class="czech-text-center mb-12"><h2 class="czech-heading-lg mb-4">${escape(content[currentLanguage$2].title)}</h2> <p class="czech-body-large mb-6 max-w-2xl mx-auto">${escape(content[currentLanguage$2].subtitle)}</p></div>  <div class="${[
-    "garden-wrapper svelte-1tmqal5",
+  return `<section id="solidarity-garden" class="czech-section"${add_attribute("this", gardenContainer, 0)}><div class="czech-container"><div class="czech-text-center mb-12"><h2 class="czech-heading-lg mb-4">${escape(content[language].title)}</h2> <p class="czech-body-large mb-6 max-w-2xl mx-auto">${escape(content[language].subtitle)}</p> <p class="czech-body mb-6 max-w-3xl mx-auto">${escape(content[language].description)}</p>  <div class="story-cta-banner svelte-vgo93k"><p class="czech-body-large font-semibold text-czech-forest">${escape(content[language].callToAction)}</p></div></div>  <div class="${[
+    "garden-wrapper svelte-vgo93k",
     "spring   "
-  ].join(" ").trim()}"> <div class="seasonal-header svelte-1tmqal5"><span class="season-indicator svelte-1tmqal5">${escape(content[currentLanguage$2].seasonInfo[currentSeason])}</span></div> <div class="garden-canvas svelte-1tmqal5"> <div class="garden-background svelte-1tmqal5" data-svelte-h="svelte-1p5fyaq"><div class="hills svelte-1tmqal5"></div> <div class="sky svelte-1tmqal5"></div></div>  <div class="garden-floor svelte-1tmqal5"> <div class="garden-element tree interactive-element floating-element story-trigger svelte-1tmqal5" title="Klikněte pro inspirativní příběh" role="button" tabindex="0" data-svelte-h="svelte-1kor13r">🌳</div> <div class="garden-element tree interactive-element floating-element story-trigger svelte-1tmqal5" title="Klikněte pro inspirativní příběh" role="button" tabindex="0" data-svelte-h="svelte-vuau1s">🌲</div>  <div class="garden-element flower interactive-element floating-element seed-1 story-trigger svelte-1tmqal5" title="Klikněte pro inspirativní příběh" role="button" tabindex="0" data-svelte-h="svelte-1eftaxu">🌸</div> <div class="garden-element flower interactive-element floating-element seed-2 story-trigger svelte-1tmqal5" title="Klikněte pro inspirativní příběh" role="button" tabindex="0" data-svelte-h="svelte-1df39cf">🌺</div> <div class="garden-element flower interactive-element floating-element seed-3 story-trigger svelte-1tmqal5" title="Klikněte pro inspirativní příběh" role="button" tabindex="0" data-svelte-h="svelte-1c43y1n">🌻</div>  <div class="garden-element sprout interactive-element floating-element story-trigger svelte-1tmqal5" title="Klikněte pro inspirativní příběh" role="button" tabindex="0" data-svelte-h="svelte-1eyygy">🌱</div> <div class="garden-element sprout interactive-element floating-element story-trigger svelte-1tmqal5" title="Klikněte pro inspirativní příběh" role="button" tabindex="0" data-svelte-h="svelte-1g0n9l0">🌿</div></div>  <div class="garden-controls svelte-1tmqal5"><button class="czech-button-secondary interactive-element svelte-1tmqal5">🌱 ${escape(content[currentLanguage$2].plantSeed)}</button> <button class="czech-button-secondary interactive-element svelte-1tmqal5">💧 ${escape(content[currentLanguage$2].waterPlant)}</button></div>  <div class="community-garden-stats svelte-1tmqal5"><div class="stat-plant svelte-1tmqal5"><div class="plant-icon svelte-1tmqal5" data-svelte-h="svelte-2lxhln">🌳</div> <div class="stat-number svelte-1tmqal5">${escape(totalCommunityActions)}</div> <div class="stat-label svelte-1tmqal5">${escape(content[currentLanguage$2].counter)}</div></div> <div class="stat-plant svelte-1tmqal5"><div class="plant-icon svelte-1tmqal5" data-svelte-h="svelte-1xdyt2">🌸</div> <div class="stat-number svelte-1tmqal5">${escape(plantedSeeds + communityFlowers)}</div> <div class="stat-label svelte-1tmqal5">${escape(
-    "zasazených semínek"
-  )}</div></div> <div class="stat-plant svelte-1tmqal5"><div class="plant-icon svelte-1tmqal5" data-svelte-h="svelte-10dscil">💚</div> <div class="stat-number svelte-1tmqal5">${escape(Math.floor(totalCommunityActions / 10))}</div> <div class="stat-label svelte-1tmqal5">${escape(
-    "aktivních komunit"
-  )}</div></div></div></div>  <div class="havel-quote enhanced-quote svelte-1tmqal5"><div class="quote-decoration svelte-1tmqal5" data-svelte-h="svelte-2ak0yx">🌱</div> <p class="czech-body italic">${escape(
-    '"Naděje není přesvědčení, že se něco povede, ale jistota, že má smysl." - Václav Havel'
-  )}</p> <div class="quote-decoration svelte-1tmqal5" data-svelte-h="svelte-2ak0yx">🌱</div></div></div></div>  ${validate_component(StoryModal, "StoryModal").$$render(
+  ].join(" ").trim()}"> <div class="seasonal-header svelte-vgo93k"><span class="season-indicator svelte-vgo93k">${escape(content[language].seasonInfo[currentSeason])}</span></div> <div class="garden-canvas svelte-vgo93k"> <div class="garden-background svelte-vgo93k" data-svelte-h="svelte-1p5fyaq"><div class="hills svelte-vgo93k"></div> <div class="sky svelte-vgo93k"></div></div>  <div class="garden-floor svelte-vgo93k"> <div class="garden-element tree interactive-element floating-element story-trigger svelte-vgo93k"${add_attribute("title", content[language].storyPrompt, 0)} role="button" tabindex="0">🌳
+            <div class="story-tooltip svelte-vgo93k">${escape(content[language].storyPrompt)}</div></div> <div class="garden-element tree interactive-element floating-element story-trigger svelte-vgo93k"${add_attribute("title", content[language].storyPrompt, 0)} role="button" tabindex="0">🌲
+            <div class="story-tooltip svelte-vgo93k">${escape(content[language].storyPrompt)}</div></div>  <div class="garden-element flower interactive-element floating-element seed-1 story-trigger svelte-vgo93k"${add_attribute("title", content[language].storyPrompt, 0)} role="button" tabindex="0">🌸
+            <div class="story-tooltip svelte-vgo93k">${escape(content[language].storyPrompt)}</div></div> <div class="garden-element flower interactive-element floating-element seed-2 story-trigger svelte-vgo93k"${add_attribute("title", content[language].storyPrompt, 0)} role="button" tabindex="0">🌺
+            <div class="story-tooltip svelte-vgo93k">${escape(content[language].storyPrompt)}</div></div> <div class="garden-element flower interactive-element floating-element seed-3 story-trigger svelte-vgo93k"${add_attribute("title", content[language].storyPrompt, 0)} role="button" tabindex="0">🌻
+            <div class="story-tooltip svelte-vgo93k">${escape(content[language].storyPrompt)}</div></div>  <div class="garden-element sprout interactive-element floating-element story-trigger svelte-vgo93k"${add_attribute("title", content[language].storyPrompt, 0)} role="button" tabindex="0">🌱
+            <div class="story-tooltip svelte-vgo93k">${escape(content[language].storyPrompt)}</div></div> <div class="garden-element sprout interactive-element floating-element story-trigger svelte-vgo93k"${add_attribute("title", content[language].storyPrompt, 0)} role="button" tabindex="0">🌿
+            <div class="story-tooltip svelte-vgo93k">${escape(content[language].storyPrompt)}</div></div></div>  <div class="garden-controls svelte-vgo93k"><button class="czech-button-secondary interactive-element svelte-vgo93k">🌱 ${escape(content[language].plantSeed)}</button> <button class="czech-button-secondary interactive-element svelte-vgo93k">💧 ${escape(content[language].waterPlant)}</button></div>  <div class="community-garden-stats svelte-vgo93k"><div class="stat-plant svelte-vgo93k"><div class="plant-icon svelte-vgo93k" data-svelte-h="svelte-2lxhln">🌳</div> <div class="stat-number svelte-vgo93k">${escape(totalCommunityActions)}</div> <div class="stat-label svelte-vgo93k">${escape(content[language].counter)}</div></div> <div class="stat-plant svelte-vgo93k"><div class="plant-icon svelte-vgo93k" data-svelte-h="svelte-1xdyt2">🌸</div> <div class="stat-number svelte-vgo93k">${escape(plantedSeeds + communityFlowers)}</div> <div class="stat-label svelte-vgo93k">${escape(language === "czech" ? "zasazených semínek" : "planted seeds")}</div></div> <div class="stat-plant svelte-vgo93k"><div class="plant-icon svelte-vgo93k" data-svelte-h="svelte-10dscil">💚</div> <div class="stat-number svelte-vgo93k">${escape(Math.floor(totalCommunityActions / 10))}</div> <div class="stat-label svelte-vgo93k">${escape(language === "czech" ? "aktivních komunit" : "active communities")}</div></div></div></div>  <div class="havel-quote enhanced-quote svelte-vgo93k"><div class="quote-decoration svelte-vgo93k" data-svelte-h="svelte-2ak0yx">🌱</div> <p class="czech-body italic">${escape(language === "czech" ? '"Naděje není to přesvědčení, že něco dobře dopadne, ale jistota, že má něco smysl – bez ohledu na to, jak to dopadne." - Václav Havel' : '"Hope is not the conviction that something will turn out well, but the certainty that something is meaningful – no matter how it turns out." - Václav Havel')}</p> <div class="quote-decoration svelte-vgo93k" data-svelte-h="svelte-2ak0yx">🌱</div></div></div></div>  ${validate_component(StoryModal, "StoryModal").$$render(
     $$result,
     {
       isOpen: isStoryModalOpen,
@@ -161,45 +232,92 @@ const css$4 = {
   code: ".map-container.svelte-jwly34.svelte-jwly34{display:grid;grid-template-columns:1fr 1fr;gap:3rem;max-width:1000px;margin:0 auto;align-items:start}.czech-map-svg.svelte-jwly34.svelte-jwly34{position:relative}.country-outline.svelte-jwly34.svelte-jwly34{transition:all var(--timing-medium) var(--ease-gentle)}.country-outline.svelte-jwly34.svelte-jwly34:hover{fill:var(--warm-stone)}.regional-pulse.svelte-jwly34.svelte-jwly34{cursor:pointer;transition:all var(--timing-medium) var(--ease-gentle);filter:drop-shadow(0 2px 4px rgba(0,0,0,0.2))}.regional-pulse.svelte-jwly34.svelte-jwly34:hover{transform:scale(1.2);filter:drop-shadow(0 4px 8px rgba(0,0,0,0.3))}.regional-pulse.svelte-jwly34.svelte-jwly34:focus{outline:3px solid var(--copper-detail);outline-offset:2px}.region-label.svelte-jwly34.svelte-jwly34{pointer-events:none;font-family:'Inter', sans-serif}.solidarity-network.svelte-jwly34.svelte-jwly34{animation:svelte-jwly34-networkPulse 4s ease-in-out infinite}@keyframes svelte-jwly34-networkPulse{0%,100%{opacity:0.2}50%{opacity:0.5}}.region-info.svelte-jwly34.svelte-jwly34{background:var(--bg-primary);border:1px solid var(--subtle-border);border-radius:16px;padding:2rem;box-shadow:0 8px 32px rgba(46, 93, 49, 0.1)}.info-header.svelte-jwly34.svelte-jwly34{border-bottom:1px solid var(--subtle-border);padding-bottom:1.5rem;margin-bottom:1.5rem}.stat-badge.svelte-jwly34.svelte-jwly34{background:var(--quiet-celebration);padding:0.5rem 1rem;border-radius:20px;font-size:0.9rem;font-weight:500;color:var(--czech-forest)}.action-list.svelte-jwly34.svelte-jwly34{list-style:none;padding:0;margin:0}.action-item.svelte-jwly34.svelte-jwly34{display:flex;align-items:center;gap:0.75rem;padding:0.5rem 0;font-size:0.95rem;color:var(--text-secondary)}.action-bullet.svelte-jwly34.svelte-jwly34{width:8px;height:8px;border-radius:50%;flex-shrink:0}.map-placeholder.svelte-jwly34.svelte-jwly34{background:var(--bg-secondary);border:2px dashed var(--subtle-border);border-radius:16px;padding:3rem 2rem;text-align:center;height:300px;display:flex;align-items:center;justify-content:center}.pulse-demo.svelte-jwly34.svelte-jwly34{display:flex;gap:1rem;justify-content:center;margin-bottom:1rem}.demo-pulse.svelte-jwly34.svelte-jwly34{width:16px;height:16px;border-radius:50%;animation:svelte-jwly34-demoPulse 2s ease-in-out infinite}@keyframes svelte-jwly34-demoPulse{0%,100%{transform:scale(1);opacity:0.6}50%{transform:scale(1.2);opacity:1}}.historical-context.svelte-jwly34.svelte-jwly34{display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:1.5rem;margin-top:4rem}.context-card.svelte-jwly34.svelte-jwly34{display:flex;align-items:start;gap:1rem;background:var(--bg-accent);padding:1.5rem;border-radius:12px;border:1px solid var(--subtle-border);transition:all var(--timing-medium) var(--ease-gentle)}.context-card.svelte-jwly34.svelte-jwly34:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(46, 93, 49, 0.1)}.context-icon.svelte-jwly34.svelte-jwly34{font-size:2rem;flex-shrink:0}.context-text.svelte-jwly34 h4.svelte-jwly34{margin-bottom:0.5rem;color:var(--czech-forest)}@media(max-width: 768px){.map-container.svelte-jwly34.svelte-jwly34{grid-template-columns:1fr;gap:2rem}.region-info.svelte-jwly34.svelte-jwly34{padding:1.5rem}.map-placeholder.svelte-jwly34.svelte-jwly34{height:200px;padding:2rem 1rem}.historical-context.svelte-jwly34.svelte-jwly34{grid-template-columns:1fr;margin-top:2rem}.context-card.svelte-jwly34.svelte-jwly34{padding:1rem}.regional-pulse.svelte-jwly34.svelte-jwly34{r:10}.region-label.svelte-jwly34.svelte-jwly34{font-size:12px}}@media(max-width: 1024px) and (min-width: 769px){.map-container.svelte-jwly34.svelte-jwly34{gap:2rem}}",
   map: null
 };
-let currentLanguage$1 = "czech";
 const CzechMap = create_ssr_component(($$result, $$props, $$bindings, slots) => {
   gsap.registerPlugin(ScrollTrigger);
   let mapContainer;
+  let language = "czech";
+  currentLanguage$1.subscribe((value) => {
+    language = value;
+  });
   const regions = {
     prague: {
-      name: "Praha",
-      title: "Pražská inovace v pomoci",
-      description: "Tech komunita spojuje síly pro sociální změnu",
-      stats: "124 akcí tento měsíc",
-      actions: [
-        "Doučování programování pro děti",
-        "IT podpora pro neziskovky",
-        "Startupové mentorství"
-      ],
+      name: { czech: "Praha", english: "Prague" },
+      title: {
+        czech: "Pražská inovace v pomoci",
+        english: "Prague Innovation in Helping"
+      },
+      description: {
+        czech: "Tech komunita spojuje síly pro sociální změnu",
+        english: "Tech community joins forces for social change"
+      },
+      stats: {
+        czech: "124 akcí tento měsíc",
+        english: "124 actions this month"
+      },
+      actions: {
+        czech: [
+          "Doučování programování pro děti",
+          "IT podpora pro neziskovky",
+          "Startupové mentorství"
+        ],
+        english: [
+          "Programming tutoring for children",
+          "IT support for nonprofits",
+          "Startup mentorship"
+        ]
+      },
       color: "#4A7C59",
       x: 340,
       y: 180
     },
     brno: {
-      name: "Brno",
-      title: "Moravská tradice vzájemnosti",
-      description: "Univerzitní město s bohatou kulturou solidarity",
-      stats: "89 akcí tento měsíc",
-      actions: ["Studentské doučování", "Kulturní akce pro seniory", "Komunitní zahrady"],
+      name: { czech: "Brno", english: "Brno" },
+      title: {
+        czech: "Moravská tradice vzájemnosti",
+        english: "Moravian Tradition of Solidarity"
+      },
+      description: {
+        czech: "Univerzitní město s bohatou kulturou solidarity",
+        english: "University city with rich culture of solidarity"
+      },
+      stats: {
+        czech: "89 akcí tento měsíc",
+        english: "89 actions this month"
+      },
+      actions: {
+        czech: ["Studentské doučování", "Kulturní akce pro seniory", "Komunitní zahrady"],
+        english: ["Student tutoring", "Cultural events for seniors", "Community gardens"]
+      },
       color: "#B08D57",
       x: 380,
       y: 260
     },
     ostrava: {
-      name: "Ostrava",
-      title: "Slezská solidarita",
-      description: "Průmyslové město s velkým srdcem",
-      stats: "67 akcí tento měsíc",
-      actions: [
-        "Podpora horníků v nouzi",
-        "Rekvalifikační kurzy",
-        "Pomoc ukrajinským rodinám"
-      ],
+      name: { czech: "Ostrava", english: "Ostrava" },
+      title: {
+        czech: "Slezská solidarita",
+        english: "Silesian Solidarity"
+      },
+      description: {
+        czech: "Průmyslové město s velkým srdcem",
+        english: "Industrial city with a big heart"
+      },
+      stats: {
+        czech: "67 akcí tento měsíc",
+        english: "67 actions this month"
+      },
+      actions: {
+        czech: [
+          "Podpora horníků v nouzi",
+          "Rekvalifikační kurzy",
+          "Pomoc ukrajinským rodinám"
+        ],
+        english: [
+          "Support for miners in need",
+          "Retraining courses",
+          "Help for Ukrainian families"
+        ]
+      },
       color: "#8B7355",
       x: 450,
       y: 200
@@ -210,19 +328,55 @@ const CzechMap = create_ssr_component(($$result, $$props, $$bindings, slots) => 
       title: "Pomoc napříč Českem",
       subtitle: "Každý region má svou jedinečnou kulturu solidarity",
       selectRegion: "Klikni na region a poznej místní iniciativy",
-      viewActions: "Zobrazit akce"
+      viewActions: "Zobrazit akce",
+      localInitiatives: "Místní iniciativy:",
+      clickAnyCity: "Klikni na kterékoli město na mapě",
+      historicalContext: {
+        neighborHelp: {
+          title: "Tradice pomoci sousedům",
+          subtitle: "Od moravských brigád po pražské sokolstvo - Čechům pomoc není cizí"
+        },
+        modernSolidarity: {
+          title: "Moderní solidarita",
+          subtitle: "Tech komunity, studentské organizace a občanské iniciativy spojují síly"
+        },
+        practicalApproach: {
+          title: "Praktický přístup",
+          subtitle: "Méně řečí, více činů - český způsob dělání dobra"
+        }
+      }
     },
     english: {
       title: "Help Across Czechia",
       subtitle: "Each region has its unique culture of solidarity",
       selectRegion: "Click on a region to discover local initiatives",
-      viewActions: "View Actions"
+      viewActions: "View Actions",
+      localInitiatives: "Local initiatives:",
+      clickAnyCity: "Click on any city on the map",
+      historicalContext: {
+        neighborHelp: {
+          title: "Tradition of Helping Neighbors",
+          subtitle: "From Moravian brigades to Prague sokol movement - helping is not foreign to Czechs"
+        },
+        modernSolidarity: {
+          title: "Modern Solidarity",
+          subtitle: "Tech communities, student organizations and civic initiatives join forces"
+        },
+        practicalApproach: {
+          title: "Practical Approach",
+          subtitle: "Less talk, more action - the Czech way of doing good"
+        }
+      }
     }
   };
   $$result.css.add(css$4);
-  return `<section id="czech-map" class="czech-section"${add_attribute("this", mapContainer, 0)}><div class="czech-container"> <div class="czech-text-center mb-12"><h2 class="czech-heading-lg mb-4">${escape(content[currentLanguage$1].title)}</h2> <p class="czech-body-large mb-2 max-w-2xl mx-auto">${escape(content[currentLanguage$1].subtitle)}</p> <p class="czech-body opacity-70">${escape(content[currentLanguage$1].selectRegion)}</p></div>  <div class="map-container svelte-jwly34"> <div class="czech-map-svg svelte-jwly34"><svg viewBox="0 0 800 500" class="w-full h-auto"><path d="M120,200 L180,150 L250,140 L320,160 L380,150 L450,170 L520,160 L580,180 L620,220 L600,280 L550,320 L480,340 L420,350 L360,340 L300,330 L240,320 L180,300 L140,260 Z" fill="var(--bohemian-mist)" stroke="var(--czech-forest-light)" stroke-width="2" class="country-outline svelte-jwly34"></path>${each(Object.entries(regions), ([key, region]) => {
-    return `<circle${add_attribute("cx", region.x, 0)}${add_attribute("cy", region.y, 0)} r="12"${add_attribute("fill", region.color, 0)} class="regional-pulse svelte-jwly34"${add_attribute("data-region", key, 0)} tabindex="0" role="button"${add_attribute("aria-label", `Select ${region.name}`, 0)}></circle>  <text${add_attribute("x", region.x, 0)}${add_attribute("y", region.y + 25, 0)} text-anchor="middle" class="region-label svelte-jwly34" fill="var(--text-primary)" font-size="14" font-weight="500">${escape(region.name)}</text>`;
-  })}<g class="solidarity-network svelte-jwly34" opacity="0.3"><line x1="340" y1="180" x2="380" y2="260" stroke="var(--czech-forest-light)" stroke-width="1" stroke-dasharray="5,5"></line><line x1="380" y1="260" x2="450" y2="200" stroke="var(--czech-forest-light)" stroke-width="1" stroke-dasharray="5,5"></line><line x1="340" y1="180" x2="450" y2="200" stroke="var(--czech-forest-light)" stroke-width="1" stroke-dasharray="5,5"></line></g></svg></div>  ${`<div class="map-placeholder svelte-jwly34" data-svelte-h="svelte-9ve3ef"><div class="placeholder-content"><div class="pulse-demo svelte-jwly34"><div class="demo-pulse svelte-jwly34" style="background-color: var(--czech-forest);"></div> <div class="demo-pulse svelte-jwly34" style="background-color: var(--copper-detail); animation-delay: 0.5s;"></div> <div class="demo-pulse svelte-jwly34" style="background-color: var(--moravian-earth); animation-delay: 1s;"></div></div> <p class="czech-body opacity-70 mt-4">Klikni na kterékoli město na mapě</p></div></div>`}</div>  <div class="historical-context svelte-jwly34" data-svelte-h="svelte-1d3n03q"><div class="context-card svelte-jwly34"><div class="context-icon svelte-jwly34">🏘️</div> <div class="context-text svelte-jwly34"><h4 class="czech-body font-semibold svelte-jwly34">Tradice pomoci sousedům</h4> <p class="text-sm opacity-80">Od moravských brigád po pražské sokolstvo - Čechům pomoc není cizí</p></div></div> <div class="context-card svelte-jwly34"><div class="context-icon svelte-jwly34">🤝</div> <div class="context-text svelte-jwly34"><h4 class="czech-body font-semibold svelte-jwly34">Moderní solidarita</h4> <p class="text-sm opacity-80">Tech komunity, studentské organizace a občanské iniciativy spojují síly</p></div></div> <div class="context-card svelte-jwly34"><div class="context-icon svelte-jwly34">💪</div> <div class="context-text svelte-jwly34"><h4 class="czech-body font-semibold svelte-jwly34">Praktický přístup</h4> <p class="text-sm opacity-80">Méně řečí, více činů - český způsob dělání dobra</p></div></div></div></div> </section>`;
+  return `<section id="czech-map" class="czech-section"${add_attribute("this", mapContainer, 0)}><div class="czech-container"> <div class="czech-text-center mb-12"><h2 class="czech-heading-lg mb-4">${escape(content[language].title)}</h2> <p class="czech-body-large mb-2 max-w-2xl mx-auto">${escape(content[language].subtitle)}</p> <p class="czech-body opacity-70">${escape(content[language].selectRegion)}</p></div>  <div class="map-container svelte-jwly34"> <div class="czech-map-svg svelte-jwly34"><svg viewBox="0 0 800 500" class="w-full h-auto"><path d="M120,200 L180,150 L250,140 L320,160 L380,150 L450,170 L520,160 L580,180 L620,220 L600,280 L550,320 L480,340 L420,350 L360,340 L300,330 L240,320 L180,300 L140,260 Z" fill="var(--bohemian-mist)" stroke="var(--czech-forest-light)" stroke-width="2" class="country-outline svelte-jwly34"></path>${each(Object.entries(regions), ([key, region]) => {
+    return `<circle${add_attribute("cx", region.x, 0)}${add_attribute("cy", region.y, 0)} r="12"${add_attribute("fill", region.color, 0)} class="regional-pulse svelte-jwly34"${add_attribute("data-region", key, 0)} tabindex="0" role="button"${add_attribute(
+      "aria-label",
+      language === "czech" ? `Vybrat ${region.name[language]}` : `Select ${region.name[language]}`,
+      0
+    )}></circle>  <text${add_attribute("x", region.x, 0)}${add_attribute("y", region.y + 25, 0)} text-anchor="middle" class="region-label svelte-jwly34" fill="var(--text-primary)" font-size="14" font-weight="500">${escape(region.name[language])}</text>`;
+  })}<g class="solidarity-network svelte-jwly34" opacity="0.3"><line x1="340" y1="180" x2="380" y2="260" stroke="var(--czech-forest-light)" stroke-width="1" stroke-dasharray="5,5"></line><line x1="380" y1="260" x2="450" y2="200" stroke="var(--czech-forest-light)" stroke-width="1" stroke-dasharray="5,5"></line><line x1="340" y1="180" x2="450" y2="200" stroke="var(--czech-forest-light)" stroke-width="1" stroke-dasharray="5,5"></line></g></svg></div>  ${`<div class="map-placeholder svelte-jwly34"><div class="placeholder-content"><div class="pulse-demo svelte-jwly34" data-svelte-h="svelte-1hl3g9o"><div class="demo-pulse svelte-jwly34" style="background-color: var(--czech-forest);"></div> <div class="demo-pulse svelte-jwly34" style="background-color: var(--copper-detail); animation-delay: 0.5s;"></div> <div class="demo-pulse svelte-jwly34" style="background-color: var(--moravian-earth); animation-delay: 1s;"></div></div> <p class="czech-body opacity-70 mt-4">${escape(content[language].clickAnyCity)}</p></div></div>`}</div>  <div class="historical-context svelte-jwly34"><div class="context-card svelte-jwly34"><div class="context-icon svelte-jwly34" data-svelte-h="svelte-1vatxvd">🏘️</div> <div class="context-text svelte-jwly34"><h4 class="czech-body font-semibold svelte-jwly34">${escape(content[language].historicalContext.neighborHelp.title)}</h4> <p class="text-sm opacity-80">${escape(content[language].historicalContext.neighborHelp.subtitle)}</p></div></div> <div class="context-card svelte-jwly34"><div class="context-icon svelte-jwly34" data-svelte-h="svelte-kgjzy9">🤝</div> <div class="context-text svelte-jwly34"><h4 class="czech-body font-semibold svelte-jwly34">${escape(content[language].historicalContext.modernSolidarity.title)}</h4> <p class="text-sm opacity-80">${escape(content[language].historicalContext.modernSolidarity.subtitle)}</p></div></div> <div class="context-card svelte-jwly34"><div class="context-icon svelte-jwly34" data-svelte-h="svelte-14o1c63">💪</div> <div class="context-text svelte-jwly34"><h4 class="czech-body font-semibold svelte-jwly34">${escape(content[language].historicalContext.practicalApproach.title)}</h4> <p class="text-sm opacity-80">${escape(content[language].historicalContext.practicalApproach.subtitle)}</p></div></div></div></div> </section>`;
 });
 const ImmediateHelp_svelte_svelte_type_style_lang = "";
 const css$3 = {
@@ -231,7 +385,7 @@ const css$3 = {
 };
 const ImmediateHelp = create_ssr_component(($$result, $$props, $$bindings, slots) => {
   let language = "czech";
-  currentLanguage$3.subscribe((value) => {
+  currentLanguage$1.subscribe((value) => {
     language = value;
   });
   const helpResources = {
@@ -370,13 +524,96 @@ createClient(supabaseUrl, supabaseKey, {
 });
 const FeedbackModal_svelte_svelte_type_style_lang = "";
 const css$1 = {
-  code: ".feedback-trigger.svelte-5jgn1z{position:fixed;bottom:30px;right:30px;background:linear-gradient(135deg, var(--czech-forest) 0%, var(--czech-forest-light) 100%);color:white;border:none;border-radius:50px;padding:12px 20px;font-weight:500;font-size:0.9rem;cursor:pointer;box-shadow:0 4px 20px rgba(46, 93, 49, 0.3);transition:all var(--timing-medium) var(--ease-gentle);z-index:40;display:flex;align-items:center;gap:8px;max-width:200px}.feedback-trigger.svelte-5jgn1z:hover{transform:translateY(-2px);box-shadow:0 6px 30px rgba(46, 93, 49, 0.4);background:linear-gradient(135deg, var(--czech-forest-light) 0%, var(--czech-forest) 100%)}.feedback-icon.svelte-5jgn1z{font-size:1.2rem;flex-shrink:0}.feedback-text.svelte-5jgn1z{white-space:nowrap}.modal-overlay.svelte-5jgn1z{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0, 0, 0, 0.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;backdrop-filter:blur(4px);animation:svelte-5jgn1z-fadeIn 0.3s ease-out}@keyframes svelte-5jgn1z-fadeIn{from{opacity:0}to{opacity:1}}.modal-content.svelte-5jgn1z{background:white;border-radius:16px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0, 0, 0, 0.3);animation:svelte-5jgn1z-slideIn 0.3s ease-out}@keyframes svelte-5jgn1z-slideIn{from{opacity:0;transform:translateY(-20px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}.modal-header.svelte-5jgn1z{display:flex;align-items:center;justify-content:space-between;padding:24px 24px 0;border-bottom:1px solid var(--subtle-border);margin-bottom:24px}.modal-title.svelte-5jgn1z{font-size:1.5rem;color:var(--czech-forest);margin:0;font-weight:600}.modal-close.svelte-5jgn1z{background:none;border:none;font-size:1.5rem;color:var(--text-secondary);cursor:pointer;padding:8px;border-radius:8px;transition:all var(--timing-quick) var(--ease-gentle)}.modal-close.svelte-5jgn1z:hover{background:var(--bg-accent);color:var(--czech-forest)}.modal-body.svelte-5jgn1z{padding:0 24px 24px}.modal-subtitle.svelte-5jgn1z{color:var(--text-secondary);margin-bottom:24px;line-height:1.6}.feedback-form.svelte-5jgn1z{display:flex;flex-direction:column;gap:20px}.form-group.svelte-5jgn1z{display:flex;flex-direction:column;gap:8px}.form-label.svelte-5jgn1z{font-weight:500;color:var(--text-primary);font-size:0.9rem}.optional.svelte-5jgn1z{color:var(--text-muted);font-weight:400;font-size:0.8rem}.feedback-textarea.svelte-5jgn1z{padding:12px;border:1px solid var(--subtle-border);border-radius:8px;font-family:inherit;font-size:0.9rem;line-height:1.5;resize:vertical;transition:border-color var(--timing-medium) var(--ease-gentle)}.feedback-textarea.svelte-5jgn1z:focus{outline:none;border-color:var(--czech-forest);box-shadow:0 0 0 2px rgba(46, 93, 49, 0.1)}.char-counter.svelte-5jgn1z{font-size:0.8rem;color:var(--text-muted);text-align:right}.emotion-select.svelte-5jgn1z{padding:12px;border:1px solid var(--subtle-border);border-radius:8px;background:white;font-family:inherit;font-size:0.9rem;transition:border-color var(--timing-medium) var(--ease-gentle)}.emotion-select.svelte-5jgn1z:focus{outline:none;border-color:var(--czech-forest);box-shadow:0 0 0 2px rgba(46, 93, 49, 0.1)}.star-rating-fieldset.svelte-5jgn1z{border:none;padding:0;margin:0}.star-rating.svelte-5jgn1z{display:flex;align-items:center;gap:4px;flex-wrap:wrap}.star.svelte-5jgn1z{background:none;border:none;font-size:1.5rem;cursor:pointer;padding:4px;border-radius:4px;transition:all var(--timing-quick) var(--ease-gentle);opacity:0.3;color:#fbbf24}.star.svelte-5jgn1z:hover,.star.filled.svelte-5jgn1z{opacity:1;transform:scale(1.1)}.rating-label.svelte-5jgn1z{font-size:0.85rem;color:var(--text-secondary);margin-left:8px;font-weight:500}.status-message.svelte-5jgn1z{padding:12px;border-radius:8px;font-size:0.9rem;font-weight:500;text-align:center}.status-message.success.svelte-5jgn1z{background:rgba(74, 124, 89, 0.1);color:var(--czech-forest);border:1px solid var(--czech-forest-light)}.status-message.error.svelte-5jgn1z{background:rgba(220, 53, 69, 0.1);color:#dc3545;border:1px solid rgba(220, 53, 69, 0.3)}.submit-button.svelte-5jgn1z{background:linear-gradient(135deg, var(--czech-forest) 0%, var(--czech-forest-light) 100%);color:white;border:none;padding:14px 24px;border-radius:8px;font-weight:500;font-size:0.95rem;cursor:pointer;transition:all var(--timing-medium) var(--ease-gentle);display:flex;align-items:center;justify-content:center;gap:8px}.submit-button.svelte-5jgn1z:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 12px rgba(46, 93, 49, 0.4)}.submit-button.svelte-5jgn1z:disabled{opacity:0.6;cursor:not-allowed;transform:none}.spinner.svelte-5jgn1z{width:16px;height:16px;border:2px solid rgba(255, 255, 255, 0.3);border-radius:50%;border-top-color:white;animation:svelte-5jgn1z-spin 1s ease-in-out infinite}@keyframes svelte-5jgn1z-spin{to{transform:rotate(360deg)}}@media(max-width: 768px){.feedback-trigger.svelte-5jgn1z{bottom:20px;right:20px;padding:10px 16px;font-size:0.8rem}.feedback-text.svelte-5jgn1z{display:none}.modal-content.svelte-5jgn1z{margin:10px;max-height:95vh}.modal-header.svelte-5jgn1z,.modal-body.svelte-5jgn1z{padding:16px}.modal-title.svelte-5jgn1z{font-size:1.3rem}}@media(prefers-contrast: high){.modal-overlay.svelte-5jgn1z{background:rgba(0, 0, 0, 0.8)}.modal-content.svelte-5jgn1z{border:2px solid var(--czech-forest)}}@media(prefers-reduced-motion: reduce){.modal-overlay.svelte-5jgn1z,.modal-content.svelte-5jgn1z,.feedback-trigger.svelte-5jgn1z,.star.svelte-5jgn1z,.submit-button.svelte-5jgn1z{animation:none;transition:none}}",
+  code: ".feedback-trigger.svelte-1rxozzd{position:fixed;bottom:30px;right:30px;background:linear-gradient(135deg, var(--czech-forest) 0%, var(--czech-forest-light) 100%);color:white;border:none;border-radius:50px;padding:12px 20px;font-weight:500;font-size:0.9rem;cursor:pointer;box-shadow:0 4px 20px rgba(46, 93, 49, 0.3);transition:all var(--timing-medium) var(--ease-gentle);z-index:50;display:flex;align-items:center;gap:8px;max-width:200px;opacity:1;visibility:visible}.feedback-trigger.svelte-1rxozzd:hover{transform:translateY(-2px);box-shadow:0 6px 30px rgba(46, 93, 49, 0.4);background:linear-gradient(135deg, var(--czech-forest-light) 0%, var(--czech-forest) 100%)}.feedback-icon.svelte-1rxozzd{font-size:1.2rem;flex-shrink:0}.feedback-text.svelte-1rxozzd{white-space:nowrap}.modal-overlay.svelte-1rxozzd{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0, 0, 0, 0.5);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px;backdrop-filter:blur(4px);animation:svelte-1rxozzd-fadeIn 0.3s ease-out}@keyframes svelte-1rxozzd-fadeIn{from{opacity:0}to{opacity:1}}.modal-content.svelte-1rxozzd{background:white;border-radius:16px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0, 0, 0, 0.3);animation:svelte-1rxozzd-slideIn 0.3s ease-out}@keyframes svelte-1rxozzd-slideIn{from{opacity:0;transform:translateY(-20px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}.modal-header.svelte-1rxozzd{display:flex;align-items:center;justify-content:space-between;padding:24px 24px 0;border-bottom:1px solid var(--subtle-border);margin-bottom:24px}.modal-title.svelte-1rxozzd{font-size:1.5rem;color:var(--czech-forest);margin:0;font-weight:600}.modal-close.svelte-1rxozzd{background:none;border:none;font-size:1.5rem;color:var(--text-secondary);cursor:pointer;padding:8px;border-radius:8px;transition:all var(--timing-quick) var(--ease-gentle)}.modal-close.svelte-1rxozzd:hover{background:var(--bg-accent);color:var(--czech-forest)}.modal-body.svelte-1rxozzd{padding:0 24px 24px}.modal-subtitle.svelte-1rxozzd{color:var(--text-secondary);margin-bottom:24px;line-height:1.6}.feedback-form.svelte-1rxozzd{display:flex;flex-direction:column;gap:20px}.form-group.svelte-1rxozzd{display:flex;flex-direction:column;gap:8px}.form-label.svelte-1rxozzd{font-weight:500;color:var(--text-primary);font-size:0.9rem}.optional.svelte-1rxozzd{color:var(--text-muted);font-weight:400;font-size:0.8rem}.feedback-textarea.svelte-1rxozzd{padding:12px;border:1px solid var(--subtle-border);border-radius:8px;font-family:inherit;font-size:0.9rem;line-height:1.5;resize:vertical;transition:border-color var(--timing-medium) var(--ease-gentle)}.feedback-textarea.svelte-1rxozzd:focus{outline:none;border-color:var(--czech-forest);box-shadow:0 0 0 2px rgba(46, 93, 49, 0.1)}.char-counter.svelte-1rxozzd{font-size:0.8rem;color:var(--text-muted);text-align:right}.emotion-select.svelte-1rxozzd{padding:12px;border:1px solid var(--subtle-border);border-radius:8px;background:white;font-family:inherit;font-size:0.9rem;transition:border-color var(--timing-medium) var(--ease-gentle)}.emotion-select.svelte-1rxozzd:focus{outline:none;border-color:var(--czech-forest);box-shadow:0 0 0 2px rgba(46, 93, 49, 0.1)}.star-rating-fieldset.svelte-1rxozzd{border:none;padding:0;margin:0}.star-rating.svelte-1rxozzd{display:flex;align-items:center;gap:4px;flex-wrap:wrap}.star.svelte-1rxozzd{background:none;border:none;font-size:1.5rem;cursor:pointer;padding:4px;border-radius:4px;transition:all var(--timing-quick) var(--ease-gentle);opacity:0.3;color:#fbbf24}.star.svelte-1rxozzd:hover,.star.filled.svelte-1rxozzd{opacity:1;transform:scale(1.1)}.rating-label.svelte-1rxozzd{font-size:0.85rem;color:var(--text-secondary);margin-left:8px;font-weight:500}.status-message.svelte-1rxozzd{padding:12px;border-radius:8px;font-size:0.9rem;font-weight:500;text-align:center}.status-message.success.svelte-1rxozzd{background:rgba(74, 124, 89, 0.1);color:var(--czech-forest);border:1px solid var(--czech-forest-light)}.status-message.error.svelte-1rxozzd{background:rgba(220, 53, 69, 0.1);color:#dc3545;border:1px solid rgba(220, 53, 69, 0.3)}.submit-button.svelte-1rxozzd{background:linear-gradient(135deg, var(--czech-forest) 0%, var(--czech-forest-light) 100%);color:white;border:none;padding:14px 24px;border-radius:8px;font-weight:500;font-size:0.95rem;cursor:pointer;transition:all var(--timing-medium) var(--ease-gentle);display:flex;align-items:center;justify-content:center;gap:8px}.submit-button.svelte-1rxozzd:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 12px rgba(46, 93, 49, 0.4)}.submit-button.svelte-1rxozzd:disabled{opacity:0.6;cursor:not-allowed;transform:none}.spinner.svelte-1rxozzd{width:16px;height:16px;border:2px solid rgba(255, 255, 255, 0.3);border-radius:50%;border-top-color:white;animation:svelte-1rxozzd-spin 1s ease-in-out infinite}@keyframes svelte-1rxozzd-spin{to{transform:rotate(360deg)}}@media(max-width: 768px){.feedback-trigger.svelte-1rxozzd{bottom:20px;right:20px;padding:10px 16px;font-size:0.8rem}.feedback-text.svelte-1rxozzd{display:none}.modal-content.svelte-1rxozzd{margin:10px;max-height:95vh}.modal-header.svelte-1rxozzd,.modal-body.svelte-1rxozzd{padding:16px}.modal-title.svelte-1rxozzd{font-size:1.3rem}}@media(prefers-contrast: high){.modal-overlay.svelte-1rxozzd{background:rgba(0, 0, 0, 0.8)}.modal-content.svelte-1rxozzd{border:2px solid var(--czech-forest)}}@media(prefers-reduced-motion: reduce){.modal-overlay.svelte-1rxozzd,.modal-content.svelte-1rxozzd,.feedback-trigger.svelte-1rxozzd,.star.svelte-1rxozzd,.submit-button.svelte-1rxozzd{animation:none;transition:none}}",
   map: null
 };
 const FeedbackModal = create_ssr_component(($$result, $$props, $$bindings, slots) => {
   createEventDispatcher();
+  let language = "czech";
+  currentLanguage$1.subscribe((value) => {
+    language = value;
+  });
+  const content = {
+    czech: {
+      triggerText: "Zpětná vazba",
+      triggerTitle: "Sdělte nám svůj názor",
+      triggerLabel: "Otevřít formulář zpětné vazby",
+      modalTitle: "Vaše zpětná vazba",
+      modalSubtitle: "Pomozte nám vylepšit Akcelerátor altruismu. Vaše zpětná vazba je anonymní a velmi cenná.",
+      feedbackLabel: "Co si myslíte o Akcelerátoru altruismu?",
+      feedbackPlaceholder: "Sdělte nám svůj názor, návrhy na zlepšení, nebo jak vám aplikace pomohla...",
+      emotionLabel: "Jak se právě cítíte?",
+      ratingLabel: "Jak hodnotíte užitečnost aplikace?",
+      optional: "(volitelné)",
+      submitButton: "Odeslat zpětnou vazbu",
+      submitting: "Odesílám...",
+      closeLabel: "Zavřít",
+      closeTitle: "Zavřít (Esc)",
+      successMessage: "Děkujeme za váš podnět! Vaše zpětná vazba je pro nás velmi cenná.",
+      errorMessage: "Nepodařilo se odeslat zpětnou vazbu. Zkuste to prosím později.",
+      emotions: [
+        { value: "", label: "Nejmenované" },
+        { value: "grateful", label: "Vděčný/á" },
+        { value: "hopeful", label: "Plný/á naděje" },
+        {
+          value: "inspired",
+          label: "Inspirovaný/á"
+        },
+        { value: "neutral", label: "Neutrální" },
+        { value: "confused", label: "Zmatený/á" },
+        {
+          value: "overwhelmed",
+          label: "Přetížený/á"
+        }
+      ],
+      ratings: {
+        1: "Nepomohlo",
+        2: "Trochu pomohlo",
+        3: "Pomohlo",
+        4: "Hodně pomohlo",
+        5: "Úplně změnilo můj pohled"
+      }
+    },
+    english: {
+      triggerText: "Feedback",
+      triggerTitle: "Share your thoughts",
+      triggerLabel: "Open feedback form",
+      modalTitle: "Your Feedback",
+      modalSubtitle: "Help us improve Altruism Accelerator. Your feedback is anonymous and very valuable.",
+      feedbackLabel: "What do you think about the Altruism Accelerator?",
+      feedbackPlaceholder: "Share your thoughts, suggestions for improvement, or how the app helped you...",
+      emotionLabel: "How are you feeling right now?",
+      ratingLabel: "How do you rate the usefulness of the app?",
+      optional: "(optional)",
+      submitButton: "Send feedback",
+      submitting: "Sending...",
+      closeLabel: "Close",
+      closeTitle: "Close (Esc)",
+      successMessage: "Thank you for your feedback! Your input is very valuable to us.",
+      errorMessage: "Failed to send feedback. Please try again later.",
+      emotions: [
+        { value: "", label: "Unspecified" },
+        { value: "grateful", label: "Grateful" },
+        { value: "hopeful", label: "Hopeful" },
+        { value: "inspired", label: "Inspired" },
+        { value: "neutral", label: "Neutral" },
+        { value: "confused", label: "Confused" },
+        {
+          value: "overwhelmed",
+          label: "Overwhelmed"
+        }
+      ],
+      ratings: {
+        1: "Did not help",
+        2: "Helped a little",
+        3: "Helped",
+        4: "Helped a lot",
+        5: "Completely changed my perspective"
+      }
+    }
+  };
   $$result.css.add(css$1);
-  return `  <button class="feedback-trigger svelte-5jgn1z" aria-label="Otevřít formulář zpětné vazby" title="Sdělte nám svůj názor" data-svelte-h="svelte-1t32p1x"><span class="feedback-icon svelte-5jgn1z">💬</span> <span class="feedback-text svelte-5jgn1z">Zpětná vazba</span></button>  ${``}`;
+  return `  <button class="feedback-trigger svelte-1rxozzd"${add_attribute("aria-label", content[language].triggerLabel, 0)}${add_attribute("title", content[language].triggerTitle, 0)}><span class="feedback-icon svelte-1rxozzd" data-svelte-h="svelte-1gjelm3">💬</span> <span class="feedback-text svelte-1rxozzd">${escape(content[language].triggerText)}</span></button>  ${``}`;
 });
 const _page_svelte_svelte_type_style_lang = "";
 const css = {
@@ -385,7 +622,7 @@ const css = {
 };
 const Page = create_ssr_component(($$result, $$props, $$bindings, slots) => {
   let language = "czech";
-  currentLanguage$3.subscribe((value) => {
+  currentLanguage$1.subscribe((value) => {
     language = value;
   });
   const content = {
