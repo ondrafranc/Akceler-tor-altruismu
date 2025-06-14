@@ -10,6 +10,7 @@
   import LanguageToggle from '../components/LanguageToggle.svelte';
   import { launchStreamlitApp } from '../lib/streamlit-integration.js';
   import { initScrollAnimations } from '../lib/animations.js';
+
   
   /** @type {import('./$types').PageData} */
   export let data;

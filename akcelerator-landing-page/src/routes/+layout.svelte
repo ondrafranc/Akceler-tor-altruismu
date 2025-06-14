@@ -56,10 +56,20 @@
   
   onMount(() => {
     // Initialize Vercel Analytics for production deployment tracking
-    inject();
-    
+    try {
+      inject();
+      console.log('✅ Vercel Analytics initialized');
+    } catch (error) {
+      console.warn('⚠️ Vercel Analytics failed to initialize:', error);
+    }
+
     // Initialize Vercel Speed Insights for performance monitoring
-    injectSpeedInsights();
+    try {
+      injectSpeedInsights();
+      console.log('✅ Vercel Speed Insights initialized');
+    } catch (error) {
+      console.warn('⚠️ Vercel Speed Insights failed to initialize:', error);
+    }
     
     // Initialize animations
     initScrollAnimations();
@@ -93,6 +103,13 @@
     if (typeof performance !== 'undefined' && performance.mark) {
       performance.mark('app_loaded');
     }
+    
+    // Log environment diagnostics for debugging
+    console.log('🔍 Environment Diagnostics:', {
+      isProduction: typeof window !== 'undefined' && window.location.hostname !== 'localhost',
+      hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown',
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
+    });
     
     // Cleanup on destroy
     return () => {

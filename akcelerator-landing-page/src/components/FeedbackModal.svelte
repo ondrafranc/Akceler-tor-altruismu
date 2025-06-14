@@ -363,7 +363,7 @@
     /* Floating Trigger Button */
     .feedback-trigger {
         position: fixed;
-        bottom: 100px; /* Moved higher to avoid conflict with ImmediateHelp */
+        bottom: 140px; /* Increased spacing to avoid overlap with ImmediateHelp */
         right: 30px;
         background: linear-gradient(135deg, var(--czech-forest) 0%, var(--czech-forest-light) 100%);
         color: white;
@@ -375,7 +375,7 @@
         cursor: pointer;
         box-shadow: 0 4px 20px rgba(46, 93, 49, 0.3);
         transition: all var(--timing-medium) var(--ease-gentle);
-        z-index: 50;
+        z-index: 45; /* Lower than modal (200) but higher than help box (40) */
         display: flex;
         align-items: center;
         gap: 8px;
@@ -402,7 +402,7 @@
     /* Mobile Responsiveness */
     @media (max-width: 768px) {
         .feedback-trigger {
-            bottom: 80px; /* Adjusted for mobile */
+            bottom: 120px; /* Adjusted for mobile with proper spacing */
             right: 15px;
             left: auto;
             padding: 10px 16px;
@@ -421,7 +421,7 @@
 
     @media (max-width: 480px) {
         .feedback-trigger {
-            bottom: 70px;
+            bottom: 100px; /* Adequate spacing from ImmediateHelp on small screens */
             right: 10px;
             border-radius: 50%;
             padding: 12px;

@@ -1,13 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
 
-// Validate required environment variables
-if (!PUBLIC_SUPABASE_URL) {
-    throw new Error('Missing env var: PUBLIC_SUPABASE_URL');
-}
+// Diagnostic logging
+console.log('🔧 Supabase Environment Check:', {
+    hasUrl: !!PUBLIC_SUPABASE_URL,
+    hasKey: !!PUBLIC_SUPABASE_ANON_KEY,
+    urlPreview: PUBLIC_SUPABASE_URL ? PUBLIC_SUPABASE_URL.substring(0, 30) + '...' : 'undefined',
+    keyPreview: PUBLIC_SUPABASE_ANON_KEY ? PUBLIC_SUPABASE_ANON_KEY.substring(0, 20) + '...' : 'undefined'
+});
 
-if (!PUBLIC_SUPABASE_ANON_KEY) {
-    throw new Error('Missing env var: PUBLIC_SUPABASE_ANON_KEY');
+// Validate environment variables
+if (!PUBLIC_SUPABASE_URL || !PUBLIC_SUPABASE_ANON_KEY) {
+    console.error('❌ Missing Supabase environment variables:', {
+        PUBLIC_SUPABASE_URL: !!PUBLIC_SUPABASE_URL,
+        PUBLIC_SUPABASE_ANON_KEY: !!PUBLIC_SUPABASE_ANON_KEY
+    });
 }
 
 // Create Supabase client
@@ -15,6 +22,11 @@ export const supabase = createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_K
     auth: {
         persistSession: false, // No authentication needed for anonymous feedback
         autoRefreshToken: false
+    },
+    realtime: {
+        params: {
+            eventsPerSecond: 10
+        }
     }
 });
 
@@ -32,7 +44,8 @@ export async function sendFeedback(data) {
         console.log('🔄 Sending feedback:', { 
             textLength: data.text?.length, 
             emotion: data.emotion, 
-            rating: data.rating 
+            rating: data.rating,
+            timestamp: new Date().toISOString()
         });
 
         // Validate input
@@ -44,6 +57,34 @@ export async function sendFeedback(data) {
             };
         }
 
+        // Validate Supabase configuration
+        if (!PUBLIC_SUPABASE_URL || !PUBLIC_SUPABASE_ANON_KEY) {
+            console.error('❌ Supabase configuration missing');
+            return {
+                success: false,
+                error: 'Database configuration error. Please contact support.'
+            };
+        }
+
+        // Test connection first
+        console.log('🔗 Testing Supabase connection...');
+        const connectionTest = await supabase.from('feedback').select('count').limit(1);
+        
+        if (connectionTest.error) {
+            console.error('❌ Supabase connection failed:', {
+                message: connectionTest.error.message,
+                details: connectionTest.error.details,
+                hint: connectionTest.error.hint,
+                code: connectionTest.error.code
+            });
+            return {
+                success: false,
+                error: `Connection error: ${connectionTest.error.message}`
+            };
+        }
+
+        console.log('✅ Supabase connection successful');
+
         // Sanitize and prepare data
         const feedbackData = {
             text: data.text.trim(),
@@ -52,14 +93,14 @@ export async function sendFeedback(data) {
             created_at: new Date().toISOString()
         };
 
-        console.log('📤 Prepared feedback data:', feedbackData);
-
-        console.log('Sending feedback to Supabase:', { 
-            url: PUBLIC_SUPABASE_URL, 
-            dataLength: feedbackData.text.length 
+        console.log('📝 Inserting feedback data:', {
+            hasText: !!feedbackData.text,
+            textLength: feedbackData.text?.length,
+            emotion: feedbackData.emotion,
+            rating: feedbackData.rating
         });
 
-        // Insert into Supabase
+        // Insert data into Supabase
         const { data: result, error } = await supabase
             .from('feedback')
             .insert([feedbackData])
@@ -79,11 +120,15 @@ export async function sendFeedback(data) {
             };
         }
 
-        console.log('Feedback saved successfully:', result);
-        
+        console.log('✅ Feedback submitted successfully:', {
+            resultCount: result?.length,
+            id: result?.[0]?.id || 'unknown'
+        });
+
         return {
             success: true,
-            message: 'Thank you for your feedback! 🌱'
+            message: 'Feedback submitted successfully!',
+            data: result
         };
 
     } catch (err) {
@@ -102,38 +147,61 @@ export async function sendFeedback(data) {
 
 /**
  * Test Supabase connection and configuration
- * @returns {Promise<{connected: boolean, configured: boolean, message: string}>}
+ * @returns {Promise<{success: boolean, data?: any, error?: string}>}
  */
 export async function testSupabaseConnection() {
     try {
-        console.log('Testing Supabase connection to:', PUBLIC_SUPABASE_URL);
+        console.log('🧪 Testing Supabase connection...');
         
-        const { data, error } = await supabase
-            .from('feedback')
-            .select('count', { count: 'exact', head: true });
-        
-        if (error) {
-            console.error('Supabase connection test failed:', error);
+        // Check environment variables
+        if (!PUBLIC_SUPABASE_URL || !PUBLIC_SUPABASE_ANON_KEY) {
             return {
-                connected: false,
-                configured: true,
-                message: `Connection failed: ${error.message}`
+                success: false,
+                error: 'Missing environment variables'
             };
         }
-        
-        console.log('Supabase connection successful');
-        
+
+        // Test basic connection
+        const { data, error } = await supabase
+            .from('feedback')
+            .select('id, created_at')
+            .limit(5)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('❌ Connection test failed:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+
+        console.log('✅ Connection test successful:', { recordCount: data?.length });
         return {
-            connected: true,
-            configured: true,
-            message: 'Supabase connection successful'
+            success: true,
+            data: data
         };
+
     } catch (err) {
-        console.error('Supabase connection test error:', err);
+        console.error('❌ Connection test error:', err);
         return {
-            connected: false,
-            configured: true,
-            message: `Network error: ${err instanceof Error ? err.message : 'Unknown error'}`
+            success: false,
+            error: err.message
         };
     }
+}
+
+/**
+ * Get diagnostic information about the Supabase configuration
+ * @returns {Object} Diagnostic information
+ */
+export function getDiagnostics() {
+    return {
+        hasUrl: !!PUBLIC_SUPABASE_URL,
+        hasKey: !!PUBLIC_SUPABASE_ANON_KEY,
+        urlValid: PUBLIC_SUPABASE_URL?.includes('supabase.co'),
+        keyValid: PUBLIC_SUPABASE_ANON_KEY?.length > 100,
+        clientCreated: !!supabase,
+        environment: typeof window !== 'undefined' ? 'browser' : 'server'
+    };
 } 

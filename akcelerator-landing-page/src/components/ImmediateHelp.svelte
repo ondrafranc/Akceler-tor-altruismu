@@ -140,7 +140,7 @@
     border: 2px solid var(--copper-detail);
     border-radius: 16px;
     box-shadow: 0 8px 32px rgba(46, 93, 49, 0.15);
-    z-index: 50;
+    z-index: 40; /* Lower than feedback button to ensure proper stacking */
     max-width: 400px;
     transition: all var(--timing-medium) var(--ease-gentle);
     backdrop-filter: blur(8px);
