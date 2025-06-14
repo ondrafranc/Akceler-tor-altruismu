@@ -2,218 +2,228 @@
 
 **Praktická cesta od empatie k akci**
 
-✅ **LIVE MVP DEPLOYED**: https://akcelerator-altruismu.streamlit.app  
-✅ **Landing Page**: Czech-focused SvelteKit frontend with immediate crisis support  
-✅ **Full Integration**: Working connection between landing page and Streamlit accelerator
+✅ **LIVE MVP DEPLOYED**: https://akcelerator-altruismu.vercel.app  
+✅ **Interactive Story Garden**: Real Czech altruism stories with seasonal theming  
+✅ **Anonymous Feedback System**: Supabase-powered feedback collection  
+✅ **Vercel Analytics**: Production page view tracking  
+✅ **Crisis Support**: Immediate help widget with real Czech resources  
 
 A strategic platform designed specifically for Czech users who want to help their community but feel overwhelmed by the options. This live MVP provides personalized guidance through real Czech organizations and culturally adapted content.
+
+## 🧭 Architecture Overview
+
+This platform uses a **dual-architecture** approach combining a beautiful Czech-themed landing page with a powerful backend application engine.
+
+### Core Architecture
+- **Frontend**: Beautiful Czech-themed landing page (SvelteKit)
+- **Backend**: Streamlit application (modular, launched from landing page)
+- **Integration**: User clicks "Spustit akcelerátor" → opens Streamlit with preserved context
+- **Persistence**: Supabase stores user feedback and dynamic content
+- **Deployment**: GitHub → Vercel (landing) + Streamlit Cloud (or self-hosted Streamlit)
+
+### Folder Structure
+- `/akcelerator-landing-page/` → SvelteKit frontend  
+- `/streamlit-app/` → Streamlit backend application
+- `/legacy/` → Historical development files
+
+### User Journey Flow
+1. **Landing Page** → Interactive SvelteKit experience with Story Garden
+2. **Story Exploration** → Click garden elements to see real Czech altruism stories
+3. **Assessment Launch** → "Spustit akcelerátor" opens Streamlit app with context
+4. **Personalized Journey** → Streamlit handles assessment, matching, and guidance
+5. **Feedback Loop** → Supabase collects feedback from both components
+6. **Crisis Support** → Immediate help widget always accessible
+
+### Key Features
+
+#### 1. Interactive Story Garden
+- **Seasonal Theming**: Dynamic backgrounds based on current season
+- **Real Stories**: 8 inspiring Czech altruism stories with real names and impacts
+- **Clickable Elements**: Trees, flowers, sprouts trigger random story display
+- **GSAP Animations**: Growth effects and sparkle particles on interaction
+- **Accessibility**: Full keyboard navigation and screen reader support
+
+#### 2. Anonymous Feedback System
+- **Supabase Integration**: Stores feedback in production database
+- **Privacy-First**: No user identification required
+- **Modal Interface**: Accessible feedback collection with proper focus management
+- **Data Insights**: Collects valuable user feedback for improvement
+
+#### 3. Crisis Support Widget
+- **Real Czech Resources**: Linka bezpečí, SOS Brno, Krizová intervence
+- **Fixed Position**: Always accessible crisis support
+- **Mobile Responsive**: Works across all device sizes
+- **Immediate Help**: Direct links to crisis intervention services
+
+#### 4. Vercel Analytics
+- **Page View Tracking**: Automatic production analytics
+- **Performance Monitoring**: Deployment and performance insights
+- **User Behavior**: Understanding how users interact with the platform
+
+## 📊 Current MVP Status - LIVE & DEPLOYED
+
+### ✅ Completed Features (Production Ready)
+✅ **SvelteKit Frontend** deployed on Vercel with Czech/English support  
+✅ **Interactive Story Garden** with real Czech altruism stories  
+✅ **Seasonal Theming** with dynamic backgrounds and story filtering  
+✅ **Anonymous Feedback System** with Supabase integration  
+✅ **Vercel Analytics** for production page view tracking  
+✅ **Crisis Support Widget** with real Czech resources  
+✅ **GSAP Animations** with sparkle effects and growth animations  
+✅ **Mobile Responsive Design** with accessibility features  
+✅ **Streamlit Integration** for deep recommendation engine  
+✅ **Professional Deployment** with GitHub → Vercel workflow  
+
+### 🔄 Enhancement Roadmap (Next Priorities)
+🔄 **Regional Customization** (Prague/Brno/Ostrava specific content)  
+🔄 **Enhanced Hover Animations** across all components  
+🔄 **Language Fallback Improvements** with browser detection  
+🔄 **User Accounts** with story preferences and history  
+🔄 **Community Features** and local story sharing  
+
+### 🔄 Future Vision (V3+)
+🔄 **Mobile App Development**  
+🔄 **AI-Enhanced Story Recommendations**  
+🔄 **API Partnerships** with Czech organizations  
+🔄 **Impact Verification** and measurement tools  
 
 ## 🎯 Purpose
 
 **Target Users**: Empathetic individuals (teens to adults) who:
 - Feel overwhelmed by world problems
 - Want to help but don't know where to start
-- Have tried helping before but burned out
-- Feel guilty about not doing "enough"
-- Seek clarity on where their efforts can make the biggest difference
+- Seek inspiration from real success stories
+- Want to contribute to their community
+- Need emotional support and practical guidance
 
-**Core Goal**: Transform emotional overwhelm into confident, strategic action through personalized guidance, emotional intelligence, and community support.
-
-## ✨ Key Features
-
-### 1. Emotional Intelligence First
-- Validates feelings of overwhelm, guilt, and frustration
-- Provides encouraging, non-judgmental guidance
-- Adapts recommendations based on emotional state
-
-### 2. Personalized Path Finding
-- Values-based cause matching
-- Resource-aware action filtering (time, money, skills)
-- Progressive engagement that grows with user confidence
-
-### 3. Decision Tree Guidance
-- **"I have time/money/skills"** → Specific actionable recommendations
-- Complexity levels from 2-minute micro-actions to deep involvement
-- Multiple pathways: donate, volunteer, advocate, learn, organize
-
-### 4. Impact Tracking & Celebration
-- Visual progress tracking
-- Community impact visualization
-- Milestone celebrations and next-level suggestions
+**Core Goal**: Transform emotional overwhelm into confident action through inspiring stories, community connection, and accessible support resources.
 
 ## 🚀 Live Application
 
 ### Production URLs
-- **Main App**: https://akcelerator-altruismu.streamlit.app
-- **Landing Page**: Integrated SvelteKit frontend (auto-launches main app)
+- **Main Application**: https://akcelerator-altruismu.vercel.app
+- **Backend Engine**: Streamlit integration for deep recommendations
 
 ### Local Development
 ```bash
-# Backend (Streamlit)
-pip install -r requirements.txt
-streamlit run app_czech_enhanced.py
-
-# Frontend (SvelteKit landing page)
+# Frontend Development (SvelteKit)
 cd akcelerator-landing-page
 npm install
 npm run dev
+
+# Backend Application (Streamlit)
+cd streamlit-app
+pip install -r requirements.txt
+streamlit run app.py
 ```
-
-### Current Architecture
-- **Frontend**: SvelteKit landing page with Czech/English support
-- **Backend**: Streamlit accelerator (`app_czech_enhanced.py`)
-- **Integration**: Seamless handoff from landing page to accelerator
-- **Data**: Real Czech organizations and culturally adapted content
-
-## 🏗️ Architecture Overview
-
-### User Journey Flow
-1. **Welcome & Emotional Check-in** → Validation and encouragement
-2. **Values Assessment** → Identify core motivations (3-5 min)
-3. **Resource Inventory** → Time, money, skills available (2-3 min)
-4. **Personalized Recommendations** → 2-3 matched causes with specific actions
-5. **Action Selection & Commitment** → Choose 1-3 immediate next steps
-6. **Impact Tracking** → Ongoing progress and community connection
-
-### Core Components
-
-#### Decision Tree Logic
-```
-User Resources + Values + Emotional State
-    ↓
-Cause Matching Algorithm
-    ↓
-Filtered Action Recommendations
-    ↓
-Personalized Implementation Plan
-```
-
-#### Data Architecture (MVP)
-- **File-based storage** (JSON) for simplicity
-- **User profiles** stored locally with privacy controls
-- **Cause/action database** curated for quality and effectiveness
-- **Session state** management for smooth user experience
-
-#### AI Personalization (Future)
-- **Phase 1**: Rule-based matching (current MVP)
-- **Phase 2**: ML-enhanced recommendations
-- **Phase 3**: NLP and sentiment analysis
-
-## 📊 User Experience Design
-
-### Design Principles
-- **Warm, hopeful aesthetics** - Combat overwhelm with encouragement
-- **Progress-oriented** - Clear steps and advancement indicators
-- **Non-overwhelming** - One focus per screen, gentle pacing
-- **Emotionally intelligent** - Acknowledges feelings, celebrates wins
-
-### Key Screens
-- **Welcome**: Emotional validation + assessment entry
-- **Assessment**: Multi-step values/resources discovery
-- **Recommendations**: Personalized cause and action matching
-- **Quick Actions**: 2-5 minute immediate impact options
-- **Impact Dashboard**: Progress tracking and community metrics
-
-## 🎯 Current MVP Status - LIVE & DEPLOYED
-
-### ✅ Completed in V1 (Current Live Version)
-✅ **Czech-focused landing page** (SvelteKit) with immediate crisis support  
-✅ **Core assessment flow** (values, resources, preferences)  
-✅ **Advanced matching algorithm** with multi-factor scoring  
-✅ **Real Czech organizations** (Charita ČR, Dobrovolník.cz, ADRA, etc.)  
-✅ **Dual-language support** (Czech/English with cultural adaptation)  
-✅ **Crisis intervention resources** integrated in UI  
-✅ **Community impact visualization** with Czech regional data  
-✅ **Interactive SolidarityGarden** with seasonal theming and growth animations  
-✅ **Seasonal engagement** and streak tracking  
-✅ **Professional deployment** with error handling  
-
-### 🔄 Planned for V2 (Next Phase)
-✅ **Enhanced SolidarityGarden interactivity** (COMPLETED)  
-🔄 **Regional customization** (Prague/Brno/Ostrava specific content)  
-🔄 **Enhanced hover animations** across all components  
-🔄 **Language fallback improvements** with browser detection  
-🔄 **User accounts** with action history  
-🔄 **Community features** and local meetups  
-
-### 🔄 Planned for V3+ (Future)
-🔄 **Mobile app development**  
-🔄 **AI-enhanced recommendations**  
-🔄 **API partnerships** with Czech organizations  
-🔄 **Impact verification** and measurement tools  
-
-## 🤝 Strategic Approach
-
-### Emotional Intelligence
-- **Validation First**: "It's normal to feel overwhelmed"
-- **Small Wins**: Start with 2-minute actions to build confidence
-- **Progressive Engagement**: Gradually increase involvement as comfort grows
-- **Sustainable Pace**: Prevent burnout through realistic commitments
-
-### Effective Altruism Integration
-- **Evidence-based recommendations**: Actions with measurable impact
-- **Cost-effectiveness consideration**: Maximum good per dollar/hour
-- **Neglected problem awareness**: Highlight underserved causes
-- **Long-term thinking**: Balance immediate help with systemic change
-
-### Community Building
-- **Shared impact metrics**: "Together we've contributed X hours"
-- **Peer connection**: Find like-minded helpers locally and globally
-- **Success story sharing**: Amplify individual wins as inspiration
-- **Mentorship pathways**: Connect beginners with experienced helpers
-
-## 📈 Success Metrics
-
-### Emotional Impact
-- Reduced overwhelm (user surveys)
-- Increased sense of agency and hope
-- Improved clarity on personal impact potential
-
-### Behavioral Impact
-- Actions taken within 48 hours of tool use
-- Sustained engagement over 30+ days
-- Progressive increase in involvement level
-
-### Real-World Impact
-- Verified volunteer hours contributed
-- Donations facilitated through platform
-- Awareness actions completed (sharing, advocacy)
 
 ## 🔧 Technical Implementation
 
 ### Current Stack
-- **Frontend**: Streamlit (Python web framework)
-- **Data**: JSON files (file-based storage)
-- **Hosting**: Local development, deployable to Streamlit Cloud
-- **Dependencies**: Minimal (streamlit, pandas, basic Python libraries)
+- **Frontend**: SvelteKit (Svelte + Vite)
+- **Deployment**: Vercel (GitHub integration)
+- **Database**: Supabase (PostgreSQL)
+- **Analytics**: Vercel Analytics
+- **Animations**: GSAP (GreenSock Animation Platform)
+- **Styling**: Custom CSS with Czech-themed design
+- **Backend**: Streamlit (Python) for complex recommendation logic
 
-### Scalability Path
-- **Phase 1**: File-based → SQLite database
-- **Phase 2**: SQLite → PostgreSQL + Redis
-- **Phase 3**: Add ML pipeline, external APIs
-- **Phase 4**: Microservices, advanced analytics
+### Data Architecture
+- **Story Content**: JSON files (`src/data/success_stories.json`)
+- **Feedback Storage**: Supabase PostgreSQL database
+- **User Sessions**: Client-side state management
+- **Static Assets**: Served via Vercel CDN
+
+### Integration Points
+- **Supabase Client**: Environment variable configuration
+- **Vercel Analytics**: Automatic injection in production
+- **Streamlit Backend**: Deep recommendation engine integration
+- **GitHub Workflow**: Automatic deployment on push
+
+## 🎨 Design System
+
+### Czech-Themed Aesthetics
+- **Color Palette**: Czech forest greens, warm earth tones
+- **Typography**: Inter + Source Sans Pro
+- **Philosophy**: Calm, dignified, practical (Czech cultural values)
+- **Interactions**: Subtle, meaningful animations
+
+### Accessibility Features
+- **Keyboard Navigation**: Full tab order and arrow key support
+- **Screen Reader**: ARIA labels and semantic HTML
+- **Focus Management**: Proper focus trapping in modals
+- **Color Contrast**: WCAG AA compliant color ratios
 
 ## 🔐 Privacy & Ethics
 
-### Data Minimization
-- Collect only essential information for personalization
-- Anonymous usage mode available
-- User controls for data export/deletion
+### Privacy-First Approach
+- **Anonymous Feedback**: No user identification required
+- **Minimal Data Collection**: Only essential interaction data
+- **Local Storage**: User preferences stored client-side
+- **GDPR Compliant**: European privacy standards
 
 ### Ethical Considerations
-- **No guilt manipulation**: Encouragement without shame
-- **Realistic expectations**: Honest about individual vs. systemic change
-- **Diverse perspectives**: Include multiple approaches to helping
-- **Accessibility**: Design for various abilities, languages, economic situations
+- **Real Stories**: Authentic Czech altruism examples
+- **Cultural Sensitivity**: Respectful representation of Czech values
+- **Accessibility**: Inclusive design for all users
+- **Crisis Support**: Immediate help resources prominently available
 
 ## 🌟 Vision & Impact
 
-**Short-term Goal**: Help 1,000 overwhelmed empaths take their first meaningful action within 6 months.
+**Short-term Goal**: Inspire 1,000 Czech users to take their first altruistic action within 6 months through story inspiration.
 
-**Long-term Vision**: Create a global network of strategically engaged helpers who approach altruism with both heart and head, making sustainable, effective contributions to the world's most important problems.
+**Long-term Vision**: Create a network of Czech altruists who support each other through shared stories, community connection, and mutual encouragement.
 
-**Success Story**: "I used to lie awake at night overwhelmed by climate change, poverty, and injustice. Now I volunteer 2 hours weekly with climate education, donate $50/month to effective charities, and feel confident that I'm making a real difference. I sleep better knowing I'm part of the solution."
+**Success Story**: "Přečetl jsem si příběhy o tom, jak obyčejní lidé pomáhají, a uvědomil si, že i já můžu něco změnit. Začal jsem dobrovolničit v místní organizaci a cítím se užitečný."
+
+## 🛠 Developer Notes
+
+- **Deployed via GitHub → Vercel** (no local development required)
+- **Feedback saved via Supabase** (check environment variables in Vercel settings)
+- **Page views tracked with @vercel/analytics** (automatic in production)
+- **All builds validated through Vercel auto-deploy**, not `npm run dev`
+- **All sensitive .env values injected via Vercel dashboard**
+- **Story content managed via JSON files** in `src/data/`
+- **Accessibility testing done via keyboard navigation and screen readers**
+- **Mobile-first responsive design** with breakpoint testing
+
+### Environment Variables (Vercel Dashboard)
+```bash
+PUBLIC_SUPABASE_URL=your_supabase_url
+PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### File Structure
+```
+/ (Project Root)
+├── akcelerator-landing-page/        # SvelteKit Frontend
+│   ├── src/
+│   │   ├── components/              # Reusable UI components
+│   │   │   ├── SolidarityGarden.svelte  # Interactive story garden
+│   │   │   ├── StoryModal.svelte        # Story display modal
+│   │   │   └── FeedbackModal.svelte     # Anonymous feedback
+│   │   ├── data/
+│   │   │   └── success_stories.json     # Czech altruism stories
+│   │   ├── lib/
+│   │   │   └── supabase/
+│   │   │       └── client.ts            # Database configuration
+│   │   └── routes/
+│   │       ├── +layout.svelte           # App layout with analytics
+│   │       └── +page.svelte             # Main landing page
+│   ├── static/                          # Static assets
+│   └── vercel.json                      # Deployment configuration
+├── streamlit-app/                   # Streamlit Backend Engine
+│   ├── app.py                       # Main Streamlit application
+│   ├── data/                        # Data files for causes, actions
+│   │   ├── czech/                   # Czech-localized content
+│   │   ├── causes/                  # Cause definitions
+│   │   └── content/                 # Encouragement messages
+│   ├── .streamlit/                  # Streamlit configuration
+│   ├── requirements.txt             # Python dependencies
+│   └── README.md                    # Backend documentation
+└── legacy/                          # Historical development files
+```
 
 ---
 
-*Built with love and strategic thinking to transform good intentions into meaningful impact.* 
+*Built with love for the Czech altruism community to transform good intentions into meaningful impact through shared stories and mutual support.* 

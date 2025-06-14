@@ -6,7 +6,7 @@
   import CzechMap from '../components/CzechMap.svelte';
   import ImmediateHelp from '../components/ImmediateHelp.svelte';
   import CTASection from '../components/CTASection.svelte';
-  import FeedbackForm from '../components/FeedbackForm.svelte';
+  import FeedbackModal from '../components/FeedbackModal.svelte';
   import { launchStreamlitApp } from '../lib/streamlit-integration.js';
   import { initScrollAnimations } from '../lib/animations.js';
   
@@ -249,15 +249,11 @@
   <!-- Final CTA Section -->
   <CTASection />
   
-  <!-- Feedback Section -->
-  <section class="feedback-wrapper czech-section">
-    <div class="czech-container czech-flex-center">
-      <FeedbackForm />
-    </div>
-  </section>
-  
   <!-- Immediate Help - Fixed Position -->
   <ImmediateHelp />
+  
+  <!-- Feedback Modal - Floating Button -->
+  <FeedbackModal />
   
   <!-- Footer -->
   <footer class="czech-footer">
@@ -525,11 +521,7 @@
     margin: 0;
   }
   
-  /* Feedback Section */
-  .feedback-wrapper {
-    background: var(--bg-secondary);
-    border-top: 1px solid var(--subtle-border);
-  }
+
   
   /* Footer Styles */
   .czech-footer {

@@ -1,0 +1,74 @@
+[
+  {
+    "id": 1,
+    "name": "Anna z Ostravy",
+    "action": "Dobrovolničila v potravinové bance během zimy",
+    "impact": "Pomohla více než 120 rodinám",
+    "location": "Ostrava",
+    "icon": "🥖",
+    "season": "winter"
+  },
+  {
+    "id": 2,
+    "name": "Petr z Brna",
+    "action": "Daroval krev poté, co navštívil tuto stránku",
+    "impact": "Jeho darování zachránilo 3 životy",
+    "location": "Brno",
+    "icon": "❤️",
+    "season": "spring"
+  },
+  {
+    "id": 3,
+    "name": "Marie z Prahy",
+    "action": "Založila komunitní zahradu pro seniory",
+    "impact": "Spojila 50+ lidí v sousedství",
+    "location": "Praha",
+    "icon": "🌱",
+    "season": "summer"
+  },
+  {
+    "id": 4,
+    "name": "Tomáš z Plzně",
+    "action": "Učí děti v azylovém domě programování",
+    "impact": "15 dětí získalo nové dovednosti",
+    "location": "Plzeň",
+    "icon": "💻",
+    "season": "autumn"
+  },
+  {
+    "id": 5,
+    "name": "Věra z Českých Budějovic",
+    "action": "Organizuje sbírky zimního oblečení",
+    "impact": "Oblečila více než 200 lidí v nouzi",
+    "location": "České Budějovice",
+    "icon": "🧥",
+    "season": "winter"
+  },
+  {
+    "id": 6,
+    "name": "Jan z Olomouce",
+    "action": "Navštěvuje osamělé seniory každý týden",
+    "impact": "Pomáhá 12 seniorům překonat osamělost",
+    "location": "Olomouc",
+    "icon": "👴",
+    "season": "spring"
+  },
+  {
+    "id": 7,
+    "name": "Kateřina z Pardubic",
+    "action": "Pečuje o opuštěná zvířata ve volném čase",
+    "impact": "Našla domov pro 30+ zvířat za rok",
+    "location": "Pardubice",
+    "icon": "🐕",
+    "season": "summer"
+  },
+  {
+    "id": 8,
+    "name": "Lukáš z Hradce Králové",
+    "action": "Vyučuje češtinu pro uprchlíky zdarma",
+    "impact": "Pomohl 25 lidem naučit se základy češtiny",
+    "location": "Hradec Králové",
+    "icon": "📚",
+    "season": "autumn"
+  }
+] 

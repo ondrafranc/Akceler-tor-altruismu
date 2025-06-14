@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { currentLanguage } from '../lib/stores.js';
   import { initScrollAnimations, cleanupAnimations } from '../lib/animations.js';
+  import { inject } from '@vercel/analytics';
   import '../styles/czech-theme.css';
   
   // SEO and meta tags
@@ -53,6 +54,9 @@
   }
   
   onMount(() => {
+    // Initialize Vercel Analytics for production deployment tracking
+    inject();
+    
     // Initialize animations
     initScrollAnimations();
     

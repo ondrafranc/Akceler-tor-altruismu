@@ -1,5 +1,4 @@
 import { c as create_ssr_component, s as setContext, v as validate_component, m as missing_component } from "./ssr.js";
-import "./shared-server.js";
 let base = "";
 let assets = base;
 const initial = { base, assets };
@@ -9,6 +8,12 @@ function reset() {
 }
 function set_assets(path) {
   assets = initial.assets = path;
+}
+let public_env = {};
+function set_private_env(environment) {
+}
+function set_public_env(environment) {
+  public_env = environment;
 }
 function afterUpdate() {
 }
@@ -173,7 +178,7 @@ const options = {
 		<div class="error">
 			<span class="status">` + status + '</span>\n			<div class="message">\n				<h1>' + message + "</h1>\n			</div>\n		</div>\n	</body>\n</html>\n"
   },
-  version_hash: "1ubqhec"
+  version_hash: "1mup9g0"
 };
 function get_hooks() {
   return {};
@@ -181,9 +186,12 @@ function get_hooks() {
 export {
   assets as a,
   base as b,
-  set_building as c,
+  set_public_env as c,
+  set_assets as d,
+  set_building as e,
   get_hooks as g,
   options as o,
+  public_env as p,
   reset as r,
-  set_assets as s
+  set_private_env as s
 };

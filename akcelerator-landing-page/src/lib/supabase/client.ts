@@ -1,9 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
-import { env } from '$env/dynamic/public';
 
-// Get environment variables with fallbacks for development
-const supabaseUrl = env.PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
-const supabaseKey = env.PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
+// Environment variables for Vercel deployment
+// These come from your Vercel project settings
+declare const PUBLIC_SUPABASE_URL: string | undefined;
+declare const PUBLIC_SUPABASE_ANON_KEY: string | undefined;
+
+const supabaseUrl = typeof PUBLIC_SUPABASE_URL !== 'undefined' 
+    ? PUBLIC_SUPABASE_URL 
+    : 'https://your-project.supabase.co';
+    
+const supabaseKey = typeof PUBLIC_SUPABASE_ANON_KEY !== 'undefined' 
+    ? PUBLIC_SUPABASE_ANON_KEY 
+    : 'your-anon-key';
 
 // Create Supabase client for anonymous operations
 export const supabase = createClient(supabaseUrl, supabaseKey, {

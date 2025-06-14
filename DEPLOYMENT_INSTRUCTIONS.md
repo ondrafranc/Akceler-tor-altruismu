@@ -1,64 +1,228 @@
-# Streamlit App Deployment Instructions
+# 🚀 Deployment Instructions - Dual Architecture
 
-## Deploy to Streamlit Cloud
+This platform consists of **two main components** that need to be deployed separately:
 
-### 1. Prerequisites
+1. **SvelteKit Frontend** (Landing Page) → Vercel
+2. **Streamlit Backend** (Application Engine) → Streamlit Cloud
+
+## 🎯 Architecture Overview
+
+```
+Landing Page (Vercel) ←→ Streamlit App (Streamlit Cloud)
+        ↓                       ↓
+  Supabase Database ←→ User Feedback
+```
+
+---
+
+## 1️⃣ Frontend Deployment (SvelteKit → Vercel)
+
+### Prerequisites
+- GitHub account
+- Vercel account (free at https://vercel.com)
+- Repository pushed to GitHub
+
+### Deployment Steps
+
+1. **Connect to Vercel**:
+   - Go to https://vercel.com
+   - Click "New Project"
+   - Import your GitHub repository
+
+2. **Configure Build Settings**:
+   - **Framework**: SvelteKit
+   - **Root Directory**: `akcelerator-landing-page`
+   - **Build Command**: `npm run build`
+   - **Output Directory**: Leave default
+
+3. **Environment Variables** (in Vercel Dashboard):
+   ```bash
+   PUBLIC_SUPABASE_URL=your_supabase_url
+   PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+
+4. **Deploy**: Click "Deploy" and wait for completion
+
+5. **Custom Domain** (optional):
+   - Add `akcelerator-altruismu.cz` in Vercel domain settings
+
+### Expected Result
+- **URL**: `https://your-project.vercel.app`
+- **Features**: Story Garden, Feedback Modal, Crisis Support
+- **Analytics**: Automatic Vercel Analytics tracking
+
+---
+
+## 2️⃣ Backend Deployment (Streamlit → Streamlit Cloud)
+
+### Prerequisites
 - GitHub account
 - Streamlit Cloud account (free at https://streamlit.io/cloud)
-- This repository pushed to GitHub
+- Streamlit app code in `/streamlit-app/` folder
 
-### 2. Deployment Steps
+### Deployment Steps
 
 1. **Go to Streamlit Cloud**: https://streamlit.io/cloud
+
 2. **Click "New app"**
-3. **Connect your GitHub repository**: Select this repository
-4. **Configure the app**:
-   - **Main file path**: `app_czech_enhanced.py`
-   - **URL**: Choose a memorable URL (e.g., `akcelerator-altruismus`)
-   - **Branch**: `main` (or your current branch)
+
+3. **Configure the app**:
+   - **Repository**: Select this repository
+   - **Branch**: `main`
+   - **Main file path**: `streamlit-app/app.py`
+   - **URL**: Choose memorable URL (e.g., `akcelerator-altruismus`)
+
+4. **Advanced Settings**:
    - **Python version**: 3.9+
+   - **Requirements file**: `streamlit-app/requirements.txt`
 
-5. **Advanced settings** (optional):
-   - Set environment variables if needed
-   - Configure secrets if using external APIs
+5. **Deploy**: Click "Deploy!" and wait for completion
 
-6. **Deploy**: Click "Deploy!" and wait for completion
-7. **Access**: Your app will be available at:
-```
-https://akcelerator-altruismu.streamlit.app
-```
+6. **Test**: Verify the app works at your Streamlit Cloud URL
 
-### 4. Post-Deployment
-1. Test the app functionality
-2. Update the landing page to use the new URL
-3. Test the integration between landing page and Streamlit app
+### Expected Result
+- **URL**: `https://akcelerator-altruismu.streamlit.app`
+- **Features**: Assessment, Matching, Personalized Guidance
 
-### 5. Troubleshooting
+---
 
-**Common Issues:**
-- **File not found errors**: Ensure all data files are in the correct paths
-- **Import errors**: Check that all dependencies are in `requirements.txt`
-- **Encoding issues**: Ensure all files are UTF-8 encoded
+## 3️⃣ Integration & Testing
 
-**File Structure Required:**
-```
-├── app_czech_enhanced.py          # Main app file
-├── requirements.txt               # Dependencies
-├── .streamlit/
-│   └── config.toml               # Theme configuration
-├── data/
-│   ├── czech/
-│   │   ├── causes_czech.json
-│   │   ├── actions_czech.json
-│   │   └── encouragement_czech.json
-│   └── international/
-│       ├── causes.json
-│       ├── actions.json
-│       └── encouragement_messages.json
+### Update Frontend Integration
+After Streamlit deployment, update the integration URL in:
+
+**File**: `akcelerator-landing-page/src/lib/streamlit-integration.js`
+
+```javascript
+// Update this URL to your actual Streamlit deployment
+const STREAMLIT_URL = 'https://akcelerator-altruismu.streamlit.app';
 ```
 
-### 6. Update Landing Page
-After successful deployment, update the Streamlit URL in:
-- `akcelerator-landing-page/src/lib/streamlit-integration.js`
+### Test Complete Flow
+1. **Landing Page**: Verify story garden and feedback work
+2. **Launch Button**: Test "Spustit akcelerátor" opens Streamlit app
+3. **Context Preservation**: Ensure user data flows between components
+4. **Feedback Loop**: Verify feedback is collected in Supabase
 
-Replace the URL with your actual deployment URL. 
+---
+
+## 4️⃣ Monitoring & Maintenance
+
+### Frontend (Vercel)
+- **Analytics**: Built-in Vercel Analytics
+- **Performance**: Automatic performance monitoring
+- **Deployments**: GitHub auto-deploy on push
+
+### Backend (Streamlit Cloud)
+- **Logs**: Available in Streamlit Cloud dashboard
+- **Performance**: Monitor app responsiveness
+- **Updates**: Auto-deploy on GitHub push
+
+### Database (Supabase)
+- **Feedback Collection**: Monitor incoming feedback
+- **Storage**: Check database storage usage
+- **API Limits**: Monitor API usage
+
+---
+
+## 5️⃣ Troubleshooting
+
+### Common Frontend Issues
+**Build Failures**:
+- Check `package.json` dependencies
+- Verify environment variables in Vercel
+
+**Supabase Connection**:
+- Verify environment variables are set
+- Check Supabase URL and key validity
+
+### Common Backend Issues
+**Import Errors**:
+- Ensure all dependencies in `streamlit-app/requirements.txt`
+- Check Python version compatibility
+
+**Data File Errors**:
+- Verify `streamlit-app/data/` folder structure
+- Ensure all JSON files are valid
+
+**Performance Issues**:
+- Monitor Streamlit Cloud resource usage
+- Optimize data loading with `@st.cache_data`
+
+### Integration Issues
+**Launch Button Not Working**:
+- Check Streamlit URL in integration file
+- Verify CORS settings if needed
+
+**Context Not Preserved**:
+- Review URL parameter passing
+- Check Streamlit app parameter handling
+
+---
+
+## 6️⃣ File Structure Reference
+
+### Production Structure
+```
+/ (Project Root)
+├── akcelerator-landing-page/    # → Deployed to Vercel
+│   ├── src/components/          # UI components
+│   ├── src/lib/supabase/        # Database integration
+│   └── vercel.json              # Deployment config
+├── streamlit-app/               # → Deployed to Streamlit Cloud
+│   ├── app.py                   # Main application
+│   ├── data/                    # Application data
+│   └── requirements.txt         # Dependencies
+└── legacy/                      # Development history
+```
+
+### Required Files for Deployment
+**Frontend (Vercel)**:
+- `akcelerator-landing-page/package.json`
+- `akcelerator-landing-page/svelte.config.js`
+- `akcelerator-landing-page/vercel.json`
+
+**Backend (Streamlit Cloud)**:
+- `streamlit-app/app.py`
+- `streamlit-app/requirements.txt`
+- `streamlit-app/.streamlit/config.toml`
+- `streamlit-app/data/` (complete folder)
+
+---
+
+## ✅ Deployment Checklist
+
+### Pre-Deployment
+- [ ] Code pushed to GitHub
+- [ ] Environment variables documented
+- [ ] Both components tested locally
+
+### Frontend Deployment
+- [ ] Vercel project created
+- [ ] Build settings configured
+- [ ] Environment variables set
+- [ ] Custom domain configured (optional)
+- [ ] Deployment successful
+
+### Backend Deployment
+- [ ] Streamlit Cloud app created
+- [ ] File paths configured correctly
+- [ ] App deployed successfully
+- [ ] All features working
+
+### Integration Testing
+- [ ] Landing page loads correctly
+- [ ] Story garden interactive
+- [ ] "Spustit akcelerátor" launches Streamlit
+- [ ] Feedback system working
+- [ ] Crisis support accessible
+
+### Production Ready
+- [ ] Both URLs documented
+- [ ] Team has access to dashboards
+- [ ] Monitoring set up
+- [ ] Documentation updated
+
+---
+
+*This dual-architecture approach ensures scalability, maintainability, and optimal user experience across both marketing and application components.* 

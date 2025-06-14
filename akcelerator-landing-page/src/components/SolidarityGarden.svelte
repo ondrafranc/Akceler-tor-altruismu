@@ -2,6 +2,8 @@
   import { onMount } from 'svelte';
   import { gsap } from 'gsap';
   import { ScrollTrigger } from 'gsap/ScrollTrigger';
+  import StoryModal from './StoryModal.svelte';
+  import successStories from '../data/success_stories.json';
   
   gsap.registerPlugin(ScrollTrigger);
   
@@ -15,6 +17,10 @@
   let plantedSeeds = 0;
   let grownTrees = 0;
   let communityFlowers = 0;
+  
+  // Story modal state
+  let isStoryModalOpen = false;
+  let currentStory = null;
   
   // Get current season for dynamic theming
   function getCurrentSeason() {
@@ -31,7 +37,7 @@
     czech: {
       title: "Zahrada solidarity",
       subtitle: "Interaktivní vizualizace naší společné pomoci",
-      description: "Každá vaše akce zde zaseje semínko naděje. Kliknutím na prvky zahrady můžete sledovat růst naší komunity.",
+      description: "Každá vaše akce zde zaseje semínko naděje. Kliknutím na rostliny objevíte skutečné příběhy české solidarity a laskavosti.",
       counter: "lidí pomohlo tento týden",
       plantSeed: "Zasadit semínko",
       waterPlant: "Zalít rostlinu",
@@ -141,6 +147,36 @@
     totalCommunityActions += Math.floor(Math.random() * 5) + 1;
   }
   
+  // Show success story when garden element is clicked
+  function showSuccessStory(element) {
+    // Filter stories by current season or get random story
+    const seasonalStories = successStories.filter(story => story.season === currentSeason);
+    const storiesToShow = seasonalStories.length > 0 ? seasonalStories : successStories;
+    
+    // Get random story
+    const randomStory = storiesToShow[Math.floor(Math.random() * storiesToShow.length)];
+    currentStory = randomStory;
+    isStoryModalOpen = true;
+    
+    // Add special growth animation to clicked element
+    gsap.to(element, {
+      scale: 1.3,
+      duration: 0.5,
+      ease: "back.out(1.7)",
+      yoyo: true,
+      repeat: 1,
+      onComplete: () => {
+        // Add sparkle effect
+        createSparkles(element);
+      }
+    });
+  }
+  
+  function closeStoryModal() {
+    isStoryModalOpen = false;
+    currentStory = null;
+  }
+  
   onMount(() => {
     // Main container animation
     gsap.fromTo(gardenContainer,
@@ -229,36 +265,64 @@
         <!-- Interactive Garden Elements -->
         <div class="garden-floor">
           <!-- Trees (representing major community actions) -->
-          <div class="garden-element tree interactive-element floating-element" 
-               title="Velké komunitní akce">
+          <div class="garden-element tree interactive-element floating-element story-trigger" 
+               title="Klikněte pro inspirativní příběh"
+               role="button"
+               tabindex="0"
+               on:click={(e) => showSuccessStory(e.target)}
+               on:keydown={(e) => e.key === 'Enter' && showSuccessStory(e.target)}>
             🌳
           </div>
-          <div class="garden-element tree interactive-element floating-element" 
-               title="Vzdělávací programy">
+          <div class="garden-element tree interactive-element floating-element story-trigger" 
+               title="Klikněte pro inspirativní příběh"
+               role="button"
+               tabindex="0"
+               on:click={(e) => showSuccessStory(e.target)}
+               on:keydown={(e) => e.key === 'Enter' && showSuccessStory(e.target)}>
             🌲
           </div>
           
           <!-- Flowers (representing individual actions) -->
-          <div class="garden-element flower interactive-element floating-element seed-1" 
-               title="Individuální pomoc">
+          <div class="garden-element flower interactive-element floating-element seed-1 story-trigger" 
+               title="Klikněte pro inspirativní příběh"
+               role="button"
+               tabindex="0"
+               on:click={(e) => showSuccessStory(e.target)}
+               on:keydown={(e) => e.key === 'Enter' && showSuccessStory(e.target)}>
             🌸
           </div>
-          <div class="garden-element flower interactive-element floating-element seed-2" 
-               title="Dobrovolnictví">
+          <div class="garden-element flower interactive-element floating-element seed-2 story-trigger" 
+               title="Klikněte pro inspirativní příběh"
+               role="button"
+               tabindex="0"
+               on:click={(e) => showSuccessStory(e.target)}
+               on:keydown={(e) => e.key === 'Enter' && showSuccessStory(e.target)}>
             🌺
           </div>
-          <div class="garden-element flower interactive-element floating-element seed-3" 
-               title="Dárcovství">
+          <div class="garden-element flower interactive-element floating-element seed-3 story-trigger" 
+               title="Klikněte pro inspirativní příběh"
+               role="button"
+               tabindex="0"
+               on:click={(e) => showSuccessStory(e.target)}
+               on:keydown={(e) => e.key === 'Enter' && showSuccessStory(e.target)}>
             🌻
           </div>
           
           <!-- Growing plants (dynamic content) -->
-          <div class="garden-element sprout interactive-element floating-element" 
-               title="Rostoucí iniciativy">
+          <div class="garden-element sprout interactive-element floating-element story-trigger" 
+               title="Klikněte pro inspirativní příběh"
+               role="button"
+               tabindex="0"
+               on:click={(e) => showSuccessStory(e.target)}
+               on:keydown={(e) => e.key === 'Enter' && showSuccessStory(e.target)}>
             🌱
           </div>
-          <div class="garden-element sprout interactive-element floating-element" 
-               title="Nové projekty">
+          <div class="garden-element sprout interactive-element floating-element story-trigger" 
+               title="Klikněte pro inspirativní příběh"
+               role="button"
+               tabindex="0"
+               on:click={(e) => showSuccessStory(e.target)}
+               on:keydown={(e) => e.key === 'Enter' && showSuccessStory(e.target)}>
             🌿
           </div>
         </div>
@@ -313,6 +377,13 @@
       </div>
     </div>
   </div>
+  
+  <!-- Story Modal -->
+  <StoryModal 
+    isOpen={isStoryModalOpen} 
+    story={currentStory} 
+    on:close={closeStoryModal}
+  />
 </section>
 
 <style>
@@ -420,6 +491,41 @@
   .garden-element:hover {
     transform: scale(1.2) translateY(-5px);
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+  }
+  
+  .story-trigger {
+    position: relative;
+    outline: none;
+  }
+  
+  .story-trigger:focus {
+    outline: 2px solid var(--czech-forest);
+    outline-offset: 4px;
+  }
+  
+  .story-trigger::after {
+    content: '✨';
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    font-size: 1rem;
+    opacity: 0;
+    animation: sparkle-hint 2s ease-in-out infinite;
+  }
+  
+  .story-trigger:hover::after {
+    opacity: 1;
+    animation: sparkle-pulse 0.5s ease-in-out infinite;
+  }
+  
+  @keyframes sparkle-hint {
+    0%, 80%, 100% { opacity: 0; }
+    40% { opacity: 0.6; }
+  }
+  
+  @keyframes sparkle-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.6; }
+    50% { transform: scale(1.2); opacity: 1; }
   }
   
   .tree {
