@@ -68,7 +68,6 @@ declare module '$env/static/private' {
 	export const npm_config_node_gyp: string;
 	export const npm_config_noproxy: string;
 	export const npm_config_npm_version: string;
-	export const npm_config_open: string;
 	export const npm_config_prefix: string;
 	export const npm_config_userconfig: string;
 	export const npm_config_user_agent: string;
@@ -186,7 +185,6 @@ declare module '$env/dynamic/private' {
 		npm_config_node_gyp: string;
 		npm_config_noproxy: string;
 		npm_config_npm_version: string;
-		npm_config_open: string;
 		npm_config_prefix: string;
 		npm_config_userconfig: string;
 		npm_config_user_agent: string;
