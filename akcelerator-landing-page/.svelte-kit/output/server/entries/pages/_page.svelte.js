@@ -2,8 +2,7 @@ import { c as create_ssr_component, a as add_attribute, e as escape, b as create
 import { c as currentLanguage$1 } from "../../chunks/animations.js";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger.js";
-import { createClient } from "@supabase/supabase-js";
-import { P as PUBLIC_SUPABASE_URL, a as PUBLIC_SUPABASE_ANON_KEY } from "../../chunks/public.js";
+import "../../chunks/client.js";
 const Hero_svelte_svelte_type_style_lang = "";
 const css$8 = {
   code: ".scroll-indicator.svelte-1yhxkcy{animation:svelte-1yhxkcy-bounceGentle 2s ease-in-out infinite}@keyframes svelte-1yhxkcy-bounceGentle{0%,20%,50%,80%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}60%{transform:translateY(-4px)}}.particle-container.svelte-1yhxkcy{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1}.floating-particle{box-shadow:0 0 6px rgba(176, 141, 87, 0.4),\r\n      0 0 12px rgba(46, 93, 49, 0.2),\r\n      0 0 18px rgba(255, 255, 255, 0.1);filter:drop-shadow(0 0 3px rgba(176, 141, 87, 0.3))\r\n      drop-shadow(0 0 6px rgba(46, 93, 49, 0.2));transition:all 0.3s ease}.floating-particle:before{content:'';position:absolute;top:-2px;left:-2px;right:-2px;bottom:-2px;background:radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);border-radius:50%;pointer-events:none}.czech-button-primary,.czech-button-secondary{opacity:1 !important;transform:translateY(0) !important}.czech-container.svelte-1yhxkcy{padding:0 2rem}.czech-heading-xl.svelte-1yhxkcy{margin-bottom:2rem}.czech-body-large.svelte-1yhxkcy{margin-bottom:1.5rem}.flex.gap-4.svelte-1yhxkcy{gap:1.5rem;margin-bottom:3rem}@media(max-width: 768px){.flex.svelte-1yhxkcy{flex-direction:column;align-items:center;gap:1rem}.czech-container.svelte-1yhxkcy{padding:0 1.5rem}.czech-heading-xl.svelte-1yhxkcy{font-size:2rem;line-height:1.2;margin-bottom:1.5rem}.czech-body-large.svelte-1yhxkcy{font-size:1.1rem;margin-bottom:1rem}.floating-particle{opacity:0.6 !important;transform:scale(0.8) !important}}@media(prefers-reduced-motion: reduce){.floating-particle{animation:none !important;opacity:0.3 !important}}@media(prefers-contrast: high){.floating-particle{opacity:0.8 !important;filter:none;box-shadow:none}}",
@@ -477,24 +476,6 @@ const CTASection = create_ssr_component(($$result, $$props, $$bindings, slots) =
   return `<section id="final-cta" class="cta-section svelte-et5uaz"${add_attribute("this", ctaContainer, 0)}><div class="czech-container"> <div class="background-elements svelte-et5uaz" data-svelte-h="svelte-k5ugyx"><div class="floating-element element-1 svelte-et5uaz">🌱</div> <div class="floating-element element-2 svelte-et5uaz">🤝</div> <div class="floating-element element-3 svelte-et5uaz">💚</div> <div class="floating-element element-4 svelte-et5uaz">🌍</div></div>  <div class="cta-content svelte-et5uaz"><div class="cta-header svelte-et5uaz"><h2 class="czech-heading-lg mb-4 svelte-et5uaz">${escape(content[currentLanguage].title)}</h2> <p class="czech-body-large mb-6 max-w-2xl mx-auto">${escape(content[currentLanguage].subtitle)}</p> <p class="czech-body mb-8 max-w-xl mx-auto opacity-80">${escape(content[currentLanguage].description)}</p></div>  <div class="cta-buttons svelte-et5uaz"><button class="czech-button-primary cta-primary svelte-et5uaz"><span>${escape(content[currentLanguage].primaryCTA)}</span> <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"></path></svg></button> <button class="czech-button-secondary cta-secondary svelte-et5uaz">${escape(content[currentLanguage].secondaryCTA)}</button></div>  <div class="trust-indicators svelte-et5uaz"><div class="guarantee svelte-et5uaz"><span class="guarantee-icon svelte-et5uaz" data-svelte-h="svelte-1g63c70">✓</span> ${escape(content[currentLanguage].guarantee)}</div> <div class="privacy svelte-et5uaz"><span class="privacy-icon svelte-et5uaz" data-svelte-h="svelte-1h2sshi">🔒</span> ${escape(content[currentLanguage].privacy)}</div></div></div>  <div class="community-stats svelte-et5uaz"><div class="stat-item svelte-et5uaz"><div class="stat-number svelte-et5uaz" data-svelte-h="svelte-g4bb93">1,834</div> <div class="stat-label svelte-et5uaz">${escape(content[currentLanguage].stats.users)}</div></div> <div class="stat-item svelte-et5uaz"><div class="stat-number svelte-et5uaz" data-svelte-h="svelte-nzwmfo">247</div> <div class="stat-label svelte-et5uaz">${escape(content[currentLanguage].stats.actions)}</div></div> <div class="stat-item svelte-et5uaz"><div class="stat-number svelte-et5uaz" data-svelte-h="svelte-put88">12</div> <div class="stat-label svelte-et5uaz">${escape(content[currentLanguage].stats.impact)}</div></div></div>  <div class="final-message svelte-et5uaz"><div class="message-content svelte-et5uaz"><p class="czech-body italic">${escape(
     '"Každý velký sen začíná malým krokem. Váš krok může změnit svět."'
   )}</p> <div class="hearts svelte-et5uaz" data-svelte-h="svelte-1inp17v">💚 💚 💚</div></div></div></div> </section>`;
-});
-console.log("🔧 Supabase Environment Check:", {
-  hasUrl: !!PUBLIC_SUPABASE_URL,
-  hasKey: !!PUBLIC_SUPABASE_ANON_KEY,
-  urlPreview: PUBLIC_SUPABASE_URL.substring(0, 30) + "...",
-  keyPreview: PUBLIC_SUPABASE_ANON_KEY.substring(0, 20) + "..."
-});
-createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
-  auth: {
-    persistSession: false,
-    // No authentication needed for anonymous feedback
-    autoRefreshToken: false
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10
-    }
-  }
 });
 const FeedbackModal_svelte_svelte_type_style_lang = "";
 const css$2 = {

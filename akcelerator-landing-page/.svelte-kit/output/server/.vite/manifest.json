@@ -10,11 +10,14 @@
   "_animations.js": {
     "file": "chunks/animations.js",
     "imports": [
-      "_index.js"
+      "_index2.js"
     ]
   },
   "_index.js": {
-    "file": "chunks/index.js",
+    "file": "chunks/index.js"
+  },
+  "_index2.js": {
+    "file": "chunks/index2.js",
     "imports": [
       "_ssr.js"
     ]
@@ -35,10 +38,19 @@
     "file": "index.js",
     "imports": [
       "_internal.js",
-      "_index.js"
+      "_index.js",
+      "_index2.js"
     ],
     "isEntry": true,
     "src": "node_modules/@sveltejs/kit/src/runtime/server/index.js"
+  },
+  "src/lib/supabase/client.js": {
+    "file": "chunks/client.js",
+    "imports": [
+      "_public.js"
+    ],
+    "isDynamicEntry": true,
+    "src": "src/lib/supabase/client.js"
   },
   "src/routes/+error.css": {
     "file": "_app/immutable/assets/_error.4290aee4.css",
@@ -91,9 +103,22 @@
     "imports": [
       "_ssr.js",
       "_animations.js",
-      "_public.js"
+      "src/lib/supabase/client.js"
     ],
     "isEntry": true,
     "src": "src/routes/+page.svelte"
+  },
+  "src/routes/api/test-supabase/+server.js": {
+    "dynamicImports": [
+      "src/lib/supabase/client.js"
+    ],
+    "file": "entries/endpoints/api/test-supabase/_server.js",
+    "imports": [
+      "_index.js",
+      "src/lib/supabase/client.js",
+      "_public.js"
+    ],
+    "isEntry": true,
+    "src": "src/routes/api/test-supabase/+server.js"
   }
 }
