@@ -1,6 +1,7 @@
 <script>
     import { onMount, createEventDispatcher } from 'svelte';
-    import { sendFeedback } from '$lib/supabase/client.js';
+    // Remove direct Supabase import - use API endpoint instead
+    // import { sendFeedback } from '$lib/supabase/client.js';
     import { currentLanguage } from '../lib/stores.js';
 
     const dispatch = createEventDispatcher();
@@ -26,6 +27,33 @@
 
     // Form validation
     $: isFormValid = feedback.trim().length > 0;
+
+    // Use API endpoint instead of direct Supabase
+    async function sendFeedbackViaAPI(data) {
+        try {
+            const response = await fetch('/api/test-supabase', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: data.text,
+                    emotion: data.emotion,
+                    rating: data.rating
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('API call failed:', error);
+            return { success: false, error: error.message };
+        }
+    }
 
     // Content translations
     const content = {
@@ -152,7 +180,7 @@
         statusMessage = '';
 
         try {
-            const result = await sendFeedback({
+            const result = await sendFeedbackViaAPI({
                 text: feedback.trim(),
                 emotion: emotion || undefined,
                 rating: rating || undefined

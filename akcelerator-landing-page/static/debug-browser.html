@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #e3f2fd; color: #0d47a1; border: 1px solid #bbdefb; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🧪 API Debug Test</h1>
+    <p>This page tests the API endpoint directly from the browser.</p>
+    
+    <div id="results"></div>
+    
+    <button onclick="testLocalAPI()">Test Local API (localhost:5173)</button>
+    <button onclick="testProductionAPI()">Test Production API</button>
+    <button onclick="checkEnvVars()">Check Environment</button>
+    <button onclick="clearResults()">Clear Results</button>
+
+    <script>
+        const resultsDiv = document.getElementById('results');
+
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = message;
+            resultsDiv.appendChild(div);
+        }
+
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+
+        async function testLocalAPI() {
+            addResult('🧪 Testing Local API Endpoint...', 'info');
+            
+            try {
+                const response = await fetch('/api/test-supabase');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                addResult(`✅ Local API Success:<pre>${JSON.stringify(data, null, 2)}</pre>`, 'success');
+                
+            } catch (error) {
+                addResult(`❌ Local API Failed: ${error.message}`, 'error');
+                
+                // Test if we can reach the base URL
+                try {
+                    const baseResponse = await fetch('/');
+                    if (baseResponse.ok) {
+                        addResult('✅ Base URL accessible, but API endpoint failed', 'info');
+                    }
+                } catch (baseError) {
+                    addResult(`❌ Cannot reach base URL: ${baseError.message}`, 'error');
+                }
+            }
+        }
+
+        async function testProductionAPI() {
+            const productionUrl = prompt('Enter your production URL (e.g., https://your-app.vercel.app):');
+            if (!productionUrl) return;
+            
+            addResult(`🧪 Testing Production API: ${productionUrl}/api/test-supabase`, 'info');
+            
+            try {
+                const response = await fetch(`${productionUrl}/api/test-supabase`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                addResult(`✅ Production API Success:<pre>${JSON.stringify(data, null, 2)}</pre>`, 'success');
+                
+            } catch (error) {
+                addResult(`❌ Production API Failed: ${error.message}`, 'error');
+            }
+        }
+
+        function checkEnvVars() {
+            addResult('🔧 Checking Environment Variables...', 'info');
+            
+            // Check if we're in SvelteKit environment
+            if (typeof window !== 'undefined') {
+                addResult('✅ Running in browser environment', 'info');
+                
+                // Try to detect if this is development or production
+                const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+                addResult(`📍 Environment: ${isDev ? 'Development' : 'Production'}`, 'info');
+                addResult(`🌐 Current URL: ${location.href}`, 'info');
+                
+                // Note: Environment variables are not directly accessible in browser
+                addResult('ℹ️ Environment variables are not directly accessible in browser. Check developer console for app logs.', 'info');
+            }
+        }
+
+        // Auto-run environment check
+        window.addEventListener('load', () => {
+            checkEnvVars();
+        });
+    </script>
+</body>
+</html> 
