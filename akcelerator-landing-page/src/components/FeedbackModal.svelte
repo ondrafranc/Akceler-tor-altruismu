@@ -37,13 +37,15 @@
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    text: data.text,
+                    feedback_text: data.text,
                     emotion: data.emotion,
                     rating: data.rating
                 })
             });
 
             if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Server response:', response.status, errorText);
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
@@ -304,11 +306,11 @@
                             placeholder={content[language].feedbackPlaceholder}
                             class="feedback-textarea"
                             rows="4"
-                            maxlength="1000"
+                            maxlength="2000"
                             disabled={isSubmitting}
                         ></textarea>
                         <div class="char-counter">
-                            {feedback.length}/1000
+                            {feedback.length}/2000
                         </div>
                     </div>
 
