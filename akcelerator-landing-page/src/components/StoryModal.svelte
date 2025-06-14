@@ -1,6 +1,7 @@
 <script>
     import { createEventDispatcher, onMount, onDestroy } from 'svelte';
     import { currentLanguage } from '../lib/stores.js';
+    import { launchStreamlitApp } from '../lib/streamlit-integration.js';
     
     const dispatch = createEventDispatcher();
     
@@ -24,14 +25,18 @@
             whatDid: "Co udělal/a:",
             impact: "Jaký to mělo dopad:",
             inspiration: "I ty můžeš udělat rozdíl! Každá malá akce má svůj význam.",
-            ctaButton: "Inspiruj mě k akci!"
+            ctaButton: "Najít mou cestu k akci",
+            ctaSecondary: "Zavřít příběh",
+            actionHint: "Spusťte akcelerátor a najděte vlastní způsob, jak pomoci"
         },
         english: {
             closeLabel: "Close story",
             whatDid: "What they did:",
             impact: "What impact it had:",
             inspiration: "You can make a difference too! Every small action has its meaning.",
-            ctaButton: "Inspire me to act!"
+            ctaButton: "Find my path to action",
+            ctaSecondary: "Close story",
+            actionHint: "Launch the accelerator to find your own way to help"
         }
     };
     
@@ -53,6 +58,19 @@
         if (previouslyFocused) {
             previouslyFocused.focus();
         }
+    }
+    
+    // Launch accelerator with context from this story
+    function handleTakeAction() {
+        // Close modal first
+        closeModal();
+        
+        // Launch the accelerator with language context
+        launchStreamlitApp({ 
+            language,
+            context: 'story_inspiration',
+            storyType: story?.category || 'general'
+        });
     }
     
     // Handle focus management
@@ -141,12 +159,24 @@
                     </p>
                 </div>
                 
+                <div class="action-hint">
+                    <p class="hint-text">
+                        💡 {content[language].actionHint}
+                    </p>
+                </div>
+                
                 <div class="modal-actions">
                     <button 
                         class="primary-button"
+                        on:click={handleTakeAction}
+                    >
+                        {content[language].ctaButton} 🚀
+                    </button>
+                    <button 
+                        class="secondary-button"
                         on:click={closeModal}
                     >
-                        {content[language].ctaButton} 🌱
+                        {content[language].ctaSecondary}
                     </button>
                 </div>
             </div>
@@ -317,8 +347,27 @@
         line-height: 1.5;
     }
     
+    .action-hint {
+        background: rgba(46, 93, 49, 0.05);
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin: 16px 0;
+        border-left: 3px solid var(--copper-detail);
+    }
+    
+    .hint-text {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        line-height: 1.4;
+        font-style: italic;
+    }
+    
     .modal-actions {
         margin-top: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
     }
     
     .primary-button {
@@ -339,6 +388,26 @@
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(46, 93, 49, 0.4);
         background: linear-gradient(135deg, var(--czech-forest-light) 0%, var(--czech-forest) 100%);
+    }
+    
+    .secondary-button {
+        background: transparent;
+        color: var(--text-secondary);
+        border: 1px solid var(--subtle-border);
+        padding: 10px 24px;
+        border-radius: 25px;
+        font-weight: 500;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all var(--timing-medium) var(--ease-gentle);
+        min-width: 160px;
+    }
+    
+    .secondary-button:hover {
+        background: var(--bg-accent);
+        color: var(--czech-forest);
+        border-color: var(--czech-forest);
+        transform: translateY(-1px);
     }
     
     @media (max-width: 768px) {
@@ -363,9 +432,14 @@
             font-size: 2.5rem;
         }
         
-        .primary-button {
+        .primary-button,
+        .secondary-button {
             width: 100%;
             min-width: auto;
+        }
+        
+        .modal-actions {
+            gap: 8px;
         }
     }
     

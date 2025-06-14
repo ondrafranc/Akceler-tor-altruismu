@@ -25,6 +25,9 @@
       "_ssr.js"
     ]
   },
+  "_public.js": {
+    "file": "chunks/public.js"
+  },
   "_ssr.js": {
     "file": "chunks/ssr.js"
   },
@@ -69,17 +72,26 @@
     "src": "src/routes/+layout.svelte"
   },
   "src/routes/+page.css": {
-    "file": "_app/immutable/assets/_page.3de96866.css",
+    "file": "_app/immutable/assets/_page.4f5e3500.css",
     "src": "src/routes/+page.css"
+  },
+  "src/routes/+page.server.js": {
+    "file": "entries/pages/_page.server.js",
+    "imports": [
+      "_public.js"
+    ],
+    "isEntry": true,
+    "src": "src/routes/+page.server.js"
   },
   "src/routes/+page.svelte": {
     "css": [
-      "_app/immutable/assets/_page.3de96866.css"
+      "_app/immutable/assets/_page.4f5e3500.css"
     ],
     "file": "entries/pages/_page.svelte.js",
     "imports": [
       "_ssr.js",
-      "_animations.js"
+      "_animations.js",
+      "_public.js"
     ],
     "isEntry": true,
     "src": "src/routes/+page.svelte"

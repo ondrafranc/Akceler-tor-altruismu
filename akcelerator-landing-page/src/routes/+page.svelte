@@ -7,8 +7,12 @@
   import ImmediateHelp from '../components/ImmediateHelp.svelte';
   import CTASection from '../components/CTASection.svelte';
   import FeedbackModal from '../components/FeedbackModal.svelte';
+  import LanguageToggle from '../components/LanguageToggle.svelte';
   import { launchStreamlitApp } from '../lib/streamlit-integration.js';
   import { initScrollAnimations } from '../lib/animations.js';
+  
+  /** @type {import('./$types').PageData} */
+  export let data;
   
   let language = 'czech';
   
@@ -48,17 +52,6 @@
     }
   };
   
-  function switchLanguage(newLang) {
-    currentLanguage.set(newLang);
-    
-    // Update URL without reload (only on client)
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location);
-      url.searchParams.set('lang', newLang);
-      window.history.replaceState({}, '', url);
-    }
-  }
-  
   function scrollToSection(sectionId) {
     if (typeof document !== 'undefined') {
       const element = document.getElementById(sectionId);
@@ -74,6 +67,20 @@
   onMount(() => {
     // Initialize scroll animations
     initScrollAnimations();
+    
+    // Log Supabase connection status from server
+    if (data?.supabaseStatus) {
+      console.log('🔗 Supabase Status:', data.supabaseStatus);
+      if (data.supabaseStatus.connected) {
+        console.log('✅ Supabase connection successful!');
+        console.log(`📊 Feedback entries found: ${data.supabaseStatus.feedbackCount}`);
+        if (data.supabaseStatus.recentFeedback?.length > 0) {
+          console.log('📝 Recent feedback samples:', data.supabaseStatus.recentFeedback.slice(0, 3));
+        }
+      } else {
+        console.error('❌ Supabase connection failed:', data.supabaseStatus.error);
+      }
+    }
     
     // Add smooth scrolling for navigation links
     const navLinks = document.querySelectorAll('.nav-link[data-section]');
@@ -109,27 +116,12 @@
       <a href="#czech-map" class="nav-link" data-section="czech-map">
         {content[language].sections.map}
       </a>
-
     </div>
     
     <!-- Language Selector & CTA -->
     <div class="nav-actions">
-      <div class="language-selector">
-        <button 
-          class="lang-button {language === 'czech' ? 'active' : ''}"
-          on:click={() => switchLanguage('czech')}
-          aria-label="Česky"
-        >
-          🇨🇿
-        </button>
-        <button 
-          class="lang-button {language === 'english' ? 'active' : ''}"
-          on:click={() => switchLanguage('english')}
-          aria-label="English"
-        >
-          🇺🇸
-        </button>
-      </div>
+      <!-- Unified Language Toggle -->
+      <LanguageToggle />
       
       <button 
         class="nav-cta"
@@ -145,7 +137,7 @@
 </nav>
 
 <!-- Main Content -->
-<div class="landing-page">
+<main class="landing-page">
   <!-- Hero Section -->
   <Hero />
   
@@ -248,8 +240,6 @@
   <!-- Czech Map Section -->
   <CzechMap />
   
-  
-  
   <!-- Final CTA Section -->
   <CTASection />
   
@@ -258,75 +248,7 @@
   
   <!-- Feedback Modal - Floating Button -->
   <FeedbackModal />
-  
-  <!-- Footer -->
-  <footer class="czech-footer">
-    <div class="czech-container">
-      <div class="footer-content">
-        <div class="footer-main">
-          <div class="footer-logo">
-            <div class="logo-icon">🤝</div>
-            <span class="logo-text">Akcelerátor altruismu</span>
-          </div>
-          <p class="footer-description">
-            {language === 'czech' 
-              ? 'Praktická cesta od empatie k akci. Pomáháme tisícům Čechů najít svou cestu k smysluplné pomoci.'
-              : 'Practical path from empathy to action. Helping thousands of Czechs find their way to meaningful help.'}
-          </p>
-        </div>
-        
-        <div class="footer-links">
-          <div class="footer-section">
-            <h4 class="footer-title">
-              {language === 'czech' ? 'Platforma' : 'Platform'}
-            </h4>
-            <ul class="footer-list">
-              <li><a href="#how-it-works">{language === 'czech' ? 'Jak to funguje' : 'How it works'}</a></li>
-              <li><a href="#privacy">{language === 'czech' ? 'Soukromí' : 'Privacy'}</a></li>
-              <li><a href="#about">{language === 'czech' ? 'O projektu' : 'About'}</a></li>
-            </ul>
-          </div>
-          
-          <div class="footer-section">
-            <h4 class="footer-title">
-              {language === 'czech' ? 'Pomoc' : 'Help'}
-            </h4>
-            <ul class="footer-list">
-              <li><a href="#faq">FAQ</a></li>
-              <li><a href="#contact">{language === 'czech' ? 'Kontakt' : 'Contact'}</a></li>
-              <li><a href="#support">{language === 'czech' ? 'Podpora' : 'Support'}</a></li>
-            </ul>
-          </div>
-          
-          <div class="footer-section">
-            <h4 class="footer-title">
-              {language === 'czech' ? 'Partneři' : 'Partners'}
-            </h4>
-            <ul class="footer-list">
-              <li><a href="https://charita.cz" target="_blank" rel="noopener">Charita ČR</a></li>
-              <li><a href="https://dobrovolnik.cz" target="_blank" rel="noopener">Dobrovolník.cz</a></li>
-              <li><a href="https://adra.cz" target="_blank" rel="noopener">ADRA</a></li>
-            </ul>
-          </div>
-        </div>
-      </div>
-      
-      <div class="footer-bottom">
-        <p class="footer-copyright">
-          © 2024 Akcelerátor altruismu. 
-          {language === 'czech' 
-            ? 'Vytvořeno s láskou pro českou komunitu.'
-            : 'Made with love for the Czech community.'}
-        </p>
-        <div class="footer-meta">
-          <a href="#privacy">{language === 'czech' ? 'Ochrana soukromí' : 'Privacy Policy'}</a>
-          <span class="divider">•</span>
-          <a href="#terms">{language === 'czech' ? 'Podmínky' : 'Terms'}</a>
-        </div>
-      </div>
-    </div>
-  </footer>
-</div>
+</main>
 
 <style>
   /* Navigation Styles */
@@ -404,29 +326,6 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-  }
-  
-  .language-selector {
-    display: flex;
-    background: var(--bg-secondary);
-    border-radius: 8px;
-    padding: 2px;
-    border: 1px solid var(--subtle-border);
-  }
-  
-  .lang-button {
-    background: transparent;
-    border: none;
-    padding: 0.5rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: all var(--timing-medium) var(--ease-gentle);
-  }
-  
-  .lang-button.active {
-    background: var(--czech-forest);
-    transform: scale(1.1);
   }
   
   .nav-cta {
@@ -527,103 +426,6 @@
   
 
   
-  /* Footer Styles */
-  .czech-footer {
-    background: var(--czech-forest-dark);
-    color: var(--warm-stone);
-    padding: 3rem 0 1rem;
-    margin-top: 4rem;
-  }
-  
-  .footer-content {
-    display: grid;
-    grid-template-columns: 2fr 3fr;
-    gap: 3rem;
-    margin-bottom: 2rem;
-  }
-  
-  .footer-logo {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-    font-weight: 600;
-    font-size: 1.2rem;
-  }
-  
-  .footer-description {
-    color: rgba(245, 241, 232, 0.8);
-    line-height: 1.6;
-    max-width: 400px;
-  }
-  
-  .footer-links {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 2rem;
-  }
-  
-  .footer-title {
-    color: var(--warm-stone);
-    font-weight: 600;
-    margin-bottom: 1rem;
-    font-size: 1rem;
-  }
-  
-  .footer-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-  
-  .footer-list li {
-    margin-bottom: 0.5rem;
-  }
-  
-  .footer-list a {
-    color: rgba(245, 241, 232, 0.7);
-    text-decoration: none;
-    transition: color var(--timing-medium) var(--ease-gentle);
-  }
-  
-  .footer-list a:hover {
-    color: var(--warm-stone);
-  }
-  
-  .footer-bottom {
-    border-top: 1px solid rgba(245, 241, 232, 0.2);
-    padding-top: 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.9rem;
-  }
-  
-  .footer-copyright {
-    color: rgba(245, 241, 232, 0.6);
-    margin: 0;
-  }
-  
-  .footer-meta {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    color: rgba(245, 241, 232, 0.6);
-  }
-  
-  .footer-meta a {
-    color: rgba(245, 241, 232, 0.7);
-    text-decoration: none;
-  }
-  
-  .footer-meta a:hover {
-    color: var(--warm-stone);
-  }
-  
-  .divider {
-    opacity: 0.5;
-  }
-  
   /* Mobile Responsive */
   @media (max-width: 768px) {
     .nav-container {
@@ -660,22 +462,6 @@
       flex-direction: column;
       text-align: center;
       padding: 1rem;
-    }
-    
-    .footer-content {
-      grid-template-columns: 1fr;
-      gap: 2rem;
-    }
-    
-    .footer-links {
-      grid-template-columns: 1fr;
-      gap: 1.5rem;
-    }
-    
-    .footer-bottom {
-      flex-direction: column;
-      gap: 1rem;
-      text-align: center;
     }
   }
 </style> 

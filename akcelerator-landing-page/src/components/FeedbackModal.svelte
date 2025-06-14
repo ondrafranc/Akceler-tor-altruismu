@@ -1,6 +1,6 @@
 <script>
     import { onMount, createEventDispatcher } from 'svelte';
-    import { sendFeedback } from '$lib/supabase/client';
+    import { sendFeedback } from '$lib/supabase/client.js';
     import { currentLanguage } from '../lib/stores.js';
 
     const dispatch = createEventDispatcher();
@@ -363,7 +363,7 @@
     /* Floating Trigger Button */
     .feedback-trigger {
         position: fixed;
-        bottom: 30px;
+        bottom: 100px; /* Moved higher to avoid conflict with ImmediateHelp */
         right: 30px;
         background: linear-gradient(135deg, var(--czech-forest) 0%, var(--czech-forest-light) 100%);
         color: white;
@@ -397,6 +397,38 @@
 
     .feedback-text {
         white-space: nowrap;
+    }
+
+    /* Mobile Responsiveness */
+    @media (max-width: 768px) {
+        .feedback-trigger {
+            bottom: 80px; /* Adjusted for mobile */
+            right: 15px;
+            left: auto;
+            padding: 10px 16px;
+            font-size: 0.85rem;
+            max-width: 160px;
+        }
+        
+        .feedback-text {
+            display: none; /* Hide text on very small screens, keep only icon */
+        }
+        
+        .feedback-icon {
+            font-size: 1.4rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .feedback-trigger {
+            bottom: 70px;
+            right: 10px;
+            border-radius: 50%;
+            padding: 12px;
+            width: 48px;
+            height: 48px;
+            justify-content: center;
+        }
     }
 
     /* Modal Overlay */

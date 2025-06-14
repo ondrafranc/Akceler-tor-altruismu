@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { gsap } from 'gsap';
   import { scrollToSection } from '../lib/animations.js';
-  import LanguageToggle from './LanguageToggle.svelte';
+
   import { currentLanguage } from '../lib/stores.js';
   
   let heroContainer;
@@ -82,13 +82,7 @@
     gsap.set(parallaxForest, { y: 0 });
     
     // Initial animations
-    tl.from('.language-toggle', {
-      opacity: 0,
-      y: -20,
-      duration: 0.6,
-      ease: "power2.out"
-    })
-    .from(mainHeading, {
+    tl.from(mainHeading, {
       opacity: 0,
       y: 30,
       duration: 0.8,
@@ -149,10 +143,7 @@
   <div class="floating-particle" style="position: absolute; top: 60%; left: 20%; width: 5px; height: 5px; background: var(--moravian-earth); border-radius: 50%; opacity: 0.5;"></div>
   <div class="floating-particle" style="position: absolute; top: 40%; right: 25%; width: 3px; height: 3px; background: var(--czech-forest); border-radius: 50%; opacity: 0.7;"></div>
   
-  <!-- Language Selector -->
-  <div class="absolute top-4 right-4 z-10">
-    <LanguageToggle on:languageChange={handleLanguageChange} />
-  </div>
+
   
   <!-- Main Content -->
   <div class="czech-container czech-text-center relative z-10">

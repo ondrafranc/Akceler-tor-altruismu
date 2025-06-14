@@ -1,6 +1,6 @@
 <script>
     import { currentLanguage } from '../lib/stores.js';
-    import { sendFeedback } from '../lib/supabase/client';
+    import { sendFeedback } from '../lib/supabase/client.js';
     
     // Component state
     let feedbackText = '';

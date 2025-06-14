@@ -3,6 +3,7 @@
   import { currentLanguage } from '../lib/stores.js';
   import { initScrollAnimations, cleanupAnimations } from '../lib/animations.js';
   import { inject } from '@vercel/analytics';
+  import { injectSpeedInsights } from '@vercel/speed-insights/sveltekit';
   import '../styles/czech-theme.css';
   
   // SEO and meta tags
@@ -56,6 +57,9 @@
   onMount(() => {
     // Initialize Vercel Analytics for production deployment tracking
     inject();
+    
+    // Initialize Vercel Speed Insights for performance monitoring
+    injectSpeedInsights();
     
     // Initialize animations
     initScrollAnimations();
