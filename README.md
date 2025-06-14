@@ -1,8 +1,12 @@
-# 🌱 Altruism Accelerator MVP
+# 🇨🇿 Akcelerátor Altruismu - LIVE MVP
 
-**Transform empathetic overwhelm into meaningful action**
+**Praktická cesta od empatie k akci**
 
-A strategic tool designed for people who *want to help the world* but feel lost or overwhelmed by the scale of global problems. This MVP provides personalized guidance to channel good intentions into effective, sustainable impact.
+✅ **LIVE MVP DEPLOYED**: https://akcelerator-altruismu.streamlit.app  
+✅ **Landing Page**: Czech-focused SvelteKit frontend with immediate crisis support  
+✅ **Full Integration**: Working connection between landing page and Streamlit accelerator
+
+A strategic platform designed specifically for Czech users who want to help their community but feel overwhelmed by the options. This live MVP provides personalized guidance through real Czech organizations and culturally adapted content.
 
 ## 🎯 Purpose
 
@@ -37,23 +41,29 @@ A strategic tool designed for people who *want to help the world* but feel lost 
 - Community impact visualization
 - Milestone celebrations and next-level suggestions
 
-## 🚀 Quick Start
+## 🚀 Live Application
 
-### Installation
+### Production URLs
+- **Main App**: https://akcelerator-altruismu.streamlit.app
+- **Landing Page**: Integrated SvelteKit frontend (auto-launches main app)
+
+### Local Development
 ```bash
-git clone <repository-url>
-cd altruism-accelerator
+# Backend (Streamlit)
 pip install -r requirements.txt
+streamlit run app_czech_enhanced.py
+
+# Frontend (SvelteKit landing page)
+cd akcelerator-landing-page
+npm install
+npm run dev
 ```
 
-### Run the Application
-```bash
-streamlit run app.py
-```
-
-Visit the live application at: https://akcelerator-altruismu.streamlit.app
-
-For local development, the app will open at `http://localhost:8501`
+### Current Architecture
+- **Frontend**: SvelteKit landing page with Czech/English support
+- **Backend**: Streamlit accelerator (`app_czech_enhanced.py`)
+- **Integration**: Seamless handoff from landing page to accelerator
+- **Data**: Real Czech organizations and culturally adapted content
 
 ## 🏗️ Architecture Overview
 
@@ -104,21 +114,33 @@ Personalized Implementation Plan
 - **Quick Actions**: 2-5 minute immediate impact options
 - **Impact Dashboard**: Progress tracking and community metrics
 
-## 🎯 MVP Scope
+## 🎯 Current MVP Status - LIVE & DEPLOYED
 
-### Included in V1
-✅ Core assessment flow (values, resources, preferences)  
-✅ Basic cause-action matching algorithm  
-✅ 4-5 vetted cause categories with specific actions  
-✅ Emotional state consideration in recommendations  
-✅ Simple progress tracking  
-✅ Community impact visualization  
+### ✅ Completed in V1 (Current Live Version)
+✅ **Czech-focused landing page** (SvelteKit) with immediate crisis support  
+✅ **Core assessment flow** (values, resources, preferences)  
+✅ **Advanced matching algorithm** with multi-factor scoring  
+✅ **Real Czech organizations** (Charita ČR, Dobrovolník.cz, ADRA, etc.)  
+✅ **Dual-language support** (Czech/English with cultural adaptation)  
+✅ **Crisis intervention resources** integrated in UI  
+✅ **Community impact visualization** with Czech regional data  
+✅ **Interactive SolidarityGarden** with seasonal theming and growth animations  
+✅ **Seasonal engagement** and streak tracking  
+✅ **Professional deployment** with error handling  
 
-### Planned for Future Versions
-🔄 **V2**: User accounts, action history, email reminders  
-🔄 **V3**: AI-enhanced recommendations, social features  
-🔄 **V4**: Mobile app, location-based opportunities  
-🔄 **V5**: Organization partnerships, impact verification  
+### 🔄 Planned for V2 (Next Phase)
+✅ **Enhanced SolidarityGarden interactivity** (COMPLETED)  
+🔄 **Regional customization** (Prague/Brno/Ostrava specific content)  
+🔄 **Enhanced hover animations** across all components  
+🔄 **Language fallback improvements** with browser detection  
+🔄 **User accounts** with action history  
+🔄 **Community features** and local meetups  
+
+### 🔄 Planned for V3+ (Future)
+🔄 **Mobile app development**  
+🔄 **AI-enhanced recommendations**  
+🔄 **API partnerships** with Czech organizations  
+🔄 **Impact verification** and measurement tools  
 
 ## 🤝 Strategic Approach
 

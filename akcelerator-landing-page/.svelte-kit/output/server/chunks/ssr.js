@@ -12,6 +12,16 @@ function run_all(fns) {
 function safe_not_equal(a, b) {
   return a != a ? b == b : a !== b || a && typeof a === "object" || typeof a === "function";
 }
+function subscribe(store, ...callbacks) {
+  if (store == null) {
+    for (const callback of callbacks) {
+      callback(void 0);
+    }
+    return noop;
+  }
+  const unsub = store.subscribe(...callbacks);
+  return unsub.unsubscribe ? () => unsub.unsubscribe() : unsub;
+}
 let current_component;
 function set_current_component(component) {
   current_component = component;
@@ -112,8 +122,9 @@ export {
   add_attribute as a,
   each as b,
   create_ssr_component as c,
-  safe_not_equal as d,
+  subscribe as d,
   escape as e,
+  safe_not_equal as f,
   missing_component as m,
   noop as n,
   setContext as s,

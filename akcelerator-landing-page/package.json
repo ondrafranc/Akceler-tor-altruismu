@@ -20,11 +20,12 @@
     "vite": "^4.5.5"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.50.0",
     "@sveltejs/adapter-vercel": "^3.0.3",
-    "gsap": "^3.12.8",
-    "three": "^0.170.0",
-    "p5": "^1.9.4",
     "@tailwindcss/typography": "^0.5.15",
-    "lucide-svelte": "^0.468.0"
+    "gsap": "^3.12.8",
+    "lucide-svelte": "^0.468.0",
+    "p5": "^1.9.4",
+    "three": "^0.170.0"
   }
-} 
+}

@@ -4,8 +4,9 @@
   import Hero from '../components/Hero.svelte';
   import SolidarityGarden from '../components/SolidarityGarden.svelte';
   import CzechMap from '../components/CzechMap.svelte';
-  
+  import ImmediateHelp from '../components/ImmediateHelp.svelte';
   import CTASection from '../components/CTASection.svelte';
+  import FeedbackForm from '../components/FeedbackForm.svelte';
   import { launchStreamlitApp } from '../lib/streamlit-integration.js';
   import { initScrollAnimations } from '../lib/animations.js';
   
@@ -247,6 +248,16 @@
   
   <!-- Final CTA Section -->
   <CTASection />
+  
+  <!-- Feedback Section -->
+  <section class="feedback-wrapper czech-section">
+    <div class="czech-container czech-flex-center">
+      <FeedbackForm />
+    </div>
+  </section>
+  
+  <!-- Immediate Help - Fixed Position -->
+  <ImmediateHelp />
   
   <!-- Footer -->
   <footer class="czech-footer">
@@ -512,6 +523,12 @@
     font-weight: 500;
     color: var(--czech-forest);
     margin: 0;
+  }
+  
+  /* Feedback Section */
+  .feedback-wrapper {
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--subtle-border);
   }
   
   /* Footer Styles */
