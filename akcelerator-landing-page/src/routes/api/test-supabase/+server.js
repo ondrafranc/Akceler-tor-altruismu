@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import { createClient } from '@supabase/supabase-js';
 import { 
-	SUPABASE_URL, 
-	NEXT_PUBLIC_SUPABASE_ANON_KEY,
+	SUPABASE_URL,
+	SUPABASE_ANON_KEY,
 	SUPABASE_SERVICE_ROLE_KEY 
 } from '$env/static/private';
 
@@ -11,12 +11,13 @@ function createServerSupabaseClient() {
 	try {
 		// Try to use the service role key first (more permissions for server-side operations)
 		const url = SUPABASE_URL;
-		const key = SUPABASE_SERVICE_ROLE_KEY || NEXT_PUBLIC_SUPABASE_ANON_KEY;
+		const key = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
 		
 		if (!url || !key) {
 			console.error('❌ Missing environment variables:', { 
 				hasUrl: !!url, 
-				hasKey: !!key 
+				hasKey: !!key,
+				availableVars: { SUPABASE_URL: !!SUPABASE_URL, SUPABASE_ANON_KEY: !!SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY: !!SUPABASE_SERVICE_ROLE_KEY }
 			});
 			throw new Error('Missing Supabase environment variables');
 		}
