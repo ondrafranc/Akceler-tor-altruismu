@@ -1,15 +1,28 @@
 import { json } from '@sveltejs/kit';
 import { createClient } from '@supabase/supabase-js';
-import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+import { 
+	SUPABASE_URL, 
+	NEXT_PUBLIC_SUPABASE_ANON_KEY,
+	SUPABASE_SERVICE_ROLE_KEY 
+} from '$env/static/private';
 
 // Create server-side Supabase client
 function createServerSupabaseClient() {
 	try {
-		if (!PUBLIC_SUPABASE_URL || !PUBLIC_SUPABASE_ANON_KEY) {
+		// Try to use the service role key first (more permissions for server-side operations)
+		const url = SUPABASE_URL;
+		const key = SUPABASE_SERVICE_ROLE_KEY || NEXT_PUBLIC_SUPABASE_ANON_KEY;
+		
+		if (!url || !key) {
+			console.error('❌ Missing environment variables:', { 
+				hasUrl: !!url, 
+				hasKey: !!key 
+			});
 			throw new Error('Missing Supabase environment variables');
 		}
 		
-		return createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY);
+		console.log('✅ Creating Supabase client with URL:', url);
+		return createClient(url, key);
 	} catch (error) {
 		console.error('❌ Failed to create Supabase client:', error);
 		return null;
@@ -29,14 +42,14 @@ export async function GET() {
 			}, { status: 500 });
 		}
 
-		// Test connection with a simple query
+		// Test connection
 		const { data, error } = await supabase
 			.from('feedback')
 			.select('count')
 			.limit(1);
 
 		if (error) {
-			console.error('❌ Supabase connection test failed:', error);
+			console.error('❌ Supabase query error:', error);
 			return json({ 
 				success: false, 
 				error: error.message,
@@ -45,77 +58,62 @@ export async function GET() {
 		}
 
 		console.log('✅ Supabase connection successful');
-		return json({
-			success: true,
-			message: 'Supabase connection working',
-			timestamp: new Date().toISOString(),
-			environment: 'production',
-			hasValidUrl: PUBLIC_SUPABASE_URL?.includes('supabase.co'),
-			urlDomain: PUBLIC_SUPABASE_URL ? new URL(PUBLIC_SUPABASE_URL).hostname : 'unknown'
+		return json({ 
+			success: true, 
+			message: 'Supabase connection working!',
+			timestamp: new Date().toISOString()
 		});
 
 	} catch (error) {
-		console.error('❌ API Error:', error);
+		console.error('❌ Server error:', error);
 		return json({ 
 			success: false, 
-			error: error.message,
+			error: 'Server error: ' + error.message,
 			timestamp: new Date().toISOString()
 		}, { status: 500 });
 	}
 }
 
 export async function POST({ request }) {
-	console.log('📝 Feedback submission API called');
+	console.log('📝 Feedback submission started');
 	
 	try {
-		// Parse request body
-		const body = await request.json();
-		console.log('📋 Request body received:', body);
-		
-		// Validate required fields
-		if (!body.feedback_text || typeof body.feedback_text !== 'string') {
-			console.error('❌ Invalid feedback text:', body.feedback_text);
-			return json({ 
-				success: false, 
-				error: 'feedback_text is required and must be a string' 
-			}, { status: 400 });
-		}
-
-		// Sanitize and validate input
-		const feedbackText = body.feedback_text.trim();
-		if (feedbackText.length === 0) {
-			return json({ 
-				success: false, 
-				error: 'Feedback text cannot be empty' 
-			}, { status: 400 });
-		}
-
-		if (feedbackText.length > 2000) {
-			return json({ 
-				success: false, 
-				error: 'Feedback text is too long (max 2000 characters)' 
-			}, { status: 400 });
-		}
-
-		// Create server-side Supabase client
 		const supabase = createServerSupabaseClient();
 		if (!supabase) {
 			return json({ 
 				success: false, 
-				error: 'Database connection failed' 
+				error: 'Failed to create Supabase client' 
 			}, { status: 500 });
+		}
+
+		const body = await request.json();
+		console.log('📥 Received feedback data:', body);
+
+		// Validate required field
+		if (!body.feedback_text || typeof body.feedback_text !== 'string') {
+			return json({ 
+				success: false, 
+				error: 'Missing or invalid feedback_text field' 
+			}, { status: 400 });
+		}
+
+		// Validate feedback length
+		if (body.feedback_text.length > 2000) {
+			return json({ 
+				success: false, 
+				error: 'Feedback text too long (max 2000 characters)' 
+			}, { status: 400 });
 		}
 
 		// Prepare data for insertion
 		const feedbackData = {
-			feedback_text: feedbackText,
+			feedback_text: body.feedback_text.trim(),
 			emotion: body.emotion || null,
-			rating: body.rating || null,
-			created_at: new Date().toISOString(),
-			source: 'landing_page'
+			rating: body.rating ? parseInt(body.rating) : null,
+			created_at: new Date().toISOString()
 		};
 
-		console.log('💾 Attempting to insert feedback:', feedbackData);
+		console.log('💾 Inserting feedback:', feedbackData);
 
 		// Insert feedback into database
 		const { data, error } = await supabase
@@ -124,38 +122,26 @@ export async function POST({ request }) {
 			.select();
 
 		if (error) {
-			console.error('❌ Database insertion failed:', error);
+			console.error('❌ Database insertion error:', error);
 			return json({ 
 				success: false, 
 				error: `Database error: ${error.message}`,
-				details: error
+				details: error 
 			}, { status: 500 });
 		}
 
 		console.log('✅ Feedback saved successfully:', data);
-		
-		return json({
-			success: true,
+		return json({ 
+			success: true, 
 			message: 'Feedback saved successfully',
-			timestamp: new Date().toISOString(),
 			id: data[0]?.id
 		});
 
 	} catch (error) {
-		console.error('❌ Server error in POST /api/test-supabase:', error);
-		
-		// Handle JSON parsing errors
-		if (error instanceof SyntaxError) {
-			return json({ 
-				success: false, 
-				error: 'Invalid JSON in request body' 
-			}, { status: 400 });
-		}
-		
+		console.error('❌ POST handler error:', error);
 		return json({ 
 			success: false, 
-			error: `Server error: ${error.message}`,
-			timestamp: new Date().toISOString()
+			error: 'Server error: ' + error.message 
 		}, { status: 500 });
 	}
 } 

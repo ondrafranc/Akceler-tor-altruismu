@@ -26,6 +26,18 @@
  * ```
  */
 declare module '$env/static/private' {
+	export const POSTGRES_URL: string;
+	export const POSTGRES_USER: string;
+	export const POSTGRES_HOST: string;
+	export const SUPABASE_JWT_SECRET: string;
+	export const NEXT_PUBLIC_SUPABASE_ANON_KEY: string;
+	export const POSTGRES_PRISMA_URL: string;
+	export const POSTGRES_PASSWORD: string;
+	export const POSTGRES_DATABASE: string;
+	export const SUPABASE_URL: string;
+	export const NEXT_PUBLIC_SUPABASE_URL: string;
+	export const SUPABASE_SERVICE_ROLE_KEY: string;
+	export const POSTGRES_URL_NON_POOLING: string;
 	export const ALLUSERSPROFILE: string;
 	export const AMDRMSDKPATH: string;
 	export const APPDATA: string;
@@ -143,6 +155,18 @@ declare module '$env/static/public' {
  */
 declare module '$env/dynamic/private' {
 	export const env: {
+		POSTGRES_URL: string;
+		POSTGRES_USER: string;
+		POSTGRES_HOST: string;
+		SUPABASE_JWT_SECRET: string;
+		NEXT_PUBLIC_SUPABASE_ANON_KEY: string;
+		POSTGRES_PRISMA_URL: string;
+		POSTGRES_PASSWORD: string;
+		POSTGRES_DATABASE: string;
+		SUPABASE_URL: string;
+		NEXT_PUBLIC_SUPABASE_URL: string;
+		SUPABASE_SERVICE_ROLE_KEY: string;
+		POSTGRES_URL_NON_POOLING: string;
 		ALLUSERSPROFILE: string;
 		AMDRMSDKPATH: string;
 		APPDATA: string;
