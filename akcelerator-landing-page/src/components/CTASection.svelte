@@ -16,11 +16,6 @@
       description: "Stačí 5 minut, abys našel/našla svou první akci. Každý krok počítá.",
       primaryCTA: "Spustit akcelerátor",
       secondaryCTA: "Rychlá akce za 2 minuty",
-      stats: {
-        users: "1,834 aktivních pomocníků",
-        actions: "247 akcí tento týden",
-        impact: "12 regionů zapojeno"
-      },
       guarantee: "100% transparentní organizace",
       privacy: "Žádný spam, jen smysluplná pomoc"
     },
@@ -30,11 +25,6 @@
       description: "Just 5 minutes to find your first action. Every step counts.",
       primaryCTA: "Launch accelerator",
       secondaryCTA: "Quick 2-minute action",
-      stats: {
-        users: "1,834 active helpers",
-        actions: "247 actions this week",
-        impact: "12 regions involved"
-      },
       guarantee: "100% transparent organizations",
       privacy: "No spam, just meaningful help"
     }
@@ -68,23 +58,6 @@
           trigger: ctaContainer,
           start: "top 70%",
           toggleActions: "play none none reverse"
-        }
-      }
-    );
-    
-    // Animate stats with stagger
-    gsap.fromTo('.stat-item',
-      { opacity: 0, y: 20 },
-      {
-        opacity: 1,
-        y: 0,
-        duration: 0.8,
-        stagger: 0.1,
-        ease: "power2.out",
-        delay: 0.3,
-        scrollTrigger: {
-          trigger: ctaContainer,
-          start: "top 70%"
         }
       }
     );
@@ -150,22 +123,9 @@
           {content[currentLanguage].privacy}
         </div>
       </div>
-    </div>
-    
-    <!-- Community Stats -->
-    <div class="community-stats">
-      <div class="stat-item">
-        <div class="stat-number">1,834</div>
-        <div class="stat-label">{content[currentLanguage].stats.users}</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-number">247</div>
-        <div class="stat-label">{content[currentLanguage].stats.actions}</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-number">12</div>
-        <div class="stat-label">{content[currentLanguage].stats.impact}</div>
-      </div>
+      
+      <!-- Simple divider line -->
+      <div class="section-divider"></div>
     </div>
     
     <!-- Final Encouragement -->
@@ -296,36 +256,10 @@
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
   }
   
-  .community-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 2rem;
-    max-width: 800px;
-    margin: 0 auto 3rem;
-    padding: 2rem;
-    background: rgba(245, 241, 232, 0.1);
-    border-radius: 16px;
-    backdrop-filter: blur(8px);
-  }
-  
-  .stat-item {
-    text-align: center;
-  }
-  
-  .stat-number {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: var(--copper-detail);
-    line-height: 1;
-    margin-bottom: 0.5rem;
-  }
-  
-  .stat-label {
-    font-size: 0.9rem;
-    opacity: 0.9;
-    font-weight: 500;
-    color: var(--warm-stone);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  .section-divider {
+    height: 1px;
+    background-color: rgba(245, 241, 232, 0.3);
+    margin: 3rem 0;
   }
   
   .final-message {
@@ -381,16 +315,6 @@
       gap: 1rem;
     }
     
-    .community-stats {
-      grid-template-columns: 1fr;
-      gap: 1.5rem;
-      padding: 1.5rem;
-    }
-    
-    .stat-number {
-      font-size: 2rem;
-    }
-    
     .floating-element {
       font-size: 2rem;
     }
@@ -402,8 +326,8 @@
   
   /* Tablet adjustments */
   @media (max-width: 1024px) and (min-width: 769px) {
-    .community-stats {
-      grid-template-columns: repeat(3, 1fr);
+    .floating-element {
+      font-size: 2rem;
     }
   }
 </style> 
