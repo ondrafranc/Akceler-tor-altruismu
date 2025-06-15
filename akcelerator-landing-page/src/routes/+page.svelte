@@ -27,12 +27,13 @@
       nav: {
         home: "Domů",
         how: "Jak to funguje",
+        stories: "Příběhy naděje",
         regions: "Regiony",
         launch: "Spustit akcelerátor"
       },
       sections: {
-        story: "Příběh solidarity",
-        garden: "Zahrada solidarity",
+        story: "Od empatie k akci",
+        garden: "Příběhy naděje",
         map: "Pomoc napříč Českem",
         cta: "Začni pomáhat"
       }
@@ -41,12 +42,13 @@
       nav: {
         home: "Home",
         how: "How it works",
+        stories: "Stories of Hope",
         regions: "Regions", 
         launch: "Launch accelerator"
       },
       sections: {
-        story: "Story of solidarity",
-        garden: "Solidarity garden",
+        story: "From empathy to action",
+        garden: "Stories of Hope",
         map: "Help across Czechia",
         cta: "Start helping"
       }
@@ -111,8 +113,11 @@
       <a href="#hero" class="nav-link" data-section="hero">
         {content[language].nav.home}
       </a>
+      <a href="#story" class="nav-link" data-section="story">
+        {content[language].sections.story}
+      </a>
       <a href="#solidarity-garden" class="nav-link" data-section="solidarity-garden">
-        {content[language].sections.garden}
+        {content[language].nav.stories}
       </a>
       <a href="#czech-map" class="nav-link" data-section="czech-map">
         {content[language].sections.map}
@@ -142,12 +147,12 @@
   <!-- Hero Section -->
   <Hero />
   
-  <!-- Storytelling Section -->
+  <!-- From Empathy to Action Section - Enhanced Structure -->
   <section id="story" class="story-section czech-section">
     <div class="czech-container">
       <div class="story-content">
         <div class="story-text">
-          <h2 class="czech-heading-lg mb-8">
+          <h2 class="czech-heading-lg mb-8 text-center">
             {language === 'czech' 
               ? 'Od empatie k akci – česky a prakticky' 
               : 'From empathy to action – Czech and practical'}
@@ -165,12 +170,14 @@
                 <div class="quote-decoration">💝</div>
               </div>
               
-              <p class="czech-body-large mb-4">
-                Češi nechtějí velká gesta. Chceme <strong>praktické kroky</strong> který skutečně pomáhají.
-              </p>
-              <p class="czech-body mb-4">
-                Každá akce začíná u vás. Každý krok má význam.
-              </p>
+              <div class="story-intro">
+                <p class="czech-body-large mb-4">
+                  Češi nechtějí velká gesta. Chceme <strong>praktické kroky</strong>, které skutečně pomáhají.
+                </p>
+                <p class="czech-body mb-6">
+                  Každá akce začíná u vás. Každý krok má význam. Spojujeme lidi, kteří chtějí pomoci, s konkrétními možnostmi.
+                </p>
+              </div>
             </div>
           {:else}
             <div class="story-paragraphs">
@@ -184,15 +191,60 @@
                 <div class="quote-decoration">💝</div>
               </div>
               
-              <p class="czech-body-large mb-4">
-                Czechs don't want grand gestures. We want <strong>practical steps</strong> that truly help.
-              </p>
-              <p class="czech-body mb-4">
-                Every action starts with you. Every step matters.
-              </p>
+              <div class="story-intro">
+                <p class="czech-body-large mb-4">
+                  Czechs don't want grand gestures. We want <strong>practical steps</strong> that truly help.
+                </p>
+                <p class="czech-body mb-6">
+                  Every action starts with you. Every step matters. We connect people who want to help with concrete opportunities.
+                </p>
+              </div>
             </div>
           {/if}
           
+          <!-- Action Steps - Clear Path -->
+          <div class="action-steps">
+            <h3 class="czech-heading-md mb-6 text-center">
+              {language === 'czech' ? 'Jak to funguje:' : 'How it works:'}
+            </h3>
+            <div class="steps-grid">
+              <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                  <h4 class="step-title">
+                    {language === 'czech' ? 'Řekni nám o sobě' : 'Tell us about yourself'}
+                  </h4>
+                  <p class="step-description">
+                    {language === 'czech' ? 'Stačí pár otázek o tom, co tě zajímá a kolik času máš' : 'Just a few questions about what interests you and how much time you have'}
+                  </p>
+                </div>
+              </div>
+              <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                  <h4 class="step-title">
+                    {language === 'czech' ? 'Najdi svou příležitost' : 'Find your opportunity'}
+                  </h4>
+                  <p class="step-description">
+                    {language === 'czech' ? 'Doporučíme ti konkrétní akce ve tvém okolí' : 'We recommend specific actions in your area'}
+                  </p>
+                </div>
+              </div>
+              <div class="step-card">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                  <h4 class="step-title">
+                    {language === 'czech' ? 'Začni pomáhat' : 'Start helping'}
+                  </h4>
+                  <p class="step-description">
+                    {language === 'czech' ? 'Připoj se k ověřeným organizacím a udělej rozdíl' : 'Join verified organizations and make a difference'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Community Stats -->
           <div class="story-stats">
             <div class="stat-item">
               <div class="stat-icon">🏃‍♀️</div>
@@ -218,6 +270,7 @@
           </div>
         </div>
         
+        <!-- Visual Elements - Improved -->
         <div class="story-visual">
           <div class="visual-elements">
             <div class="element element-1">
@@ -386,6 +439,92 @@
   
   .story-paragraphs {
     margin-bottom: 3rem;
+  }
+  
+  .story-intro {
+    text-align: center;
+    max-width: 700px;
+    margin: 0 auto;
+  }
+  
+  /* Action Steps Section */
+  .action-steps {
+    margin: 4rem 0;
+    padding: 3rem 0;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+  }
+  
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  
+  .step-card {
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+    border: 1px solid var(--subtle-border);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .step-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(46, 93, 49, 0.15);
+    background: rgba(255, 255, 255, 0.95);
+  }
+  
+  .step-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--czech-forest), var(--copper-detail));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .step-card:hover::before {
+    opacity: 1;
+  }
+  
+  .step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, var(--czech-forest), var(--czech-forest-light));
+    color: white;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 12px rgba(46, 93, 49, 0.3);
+  }
+  
+  .step-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--czech-forest);
+    margin-bottom: 1rem;
+    line-height: 1.3;
+  }
+  
+  .step-description {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0;
   }
   
   /* Enhanced Havel Quote Styling */
@@ -630,6 +769,34 @@
     
     .stat-number {
       font-size: 2.2rem;
+    }
+    
+    .action-steps {
+      margin: 2rem 0;
+      padding: 2rem 1rem;
+    }
+    
+    .steps-grid {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+    
+    .step-card {
+      padding: 1.5rem;
+    }
+    
+    .step-number {
+      width: 50px;
+      height: 50px;
+      font-size: 1.3rem;
+    }
+    
+    .step-title {
+      font-size: 1.1rem;
+    }
+    
+    .step-description {
+      font-size: 0.9rem;
     }
     
     .visual-elements {

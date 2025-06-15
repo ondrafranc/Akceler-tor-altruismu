@@ -283,13 +283,17 @@
     align-items: center;
     gap: 0.5rem;
     font-size: 0.9rem;
-    opacity: 0.9;
+    opacity: 0.95;
+    color: var(--warm-stone);
+    font-weight: 500;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   }
   
   .guarantee-icon,
   .privacy-icon {
     color: var(--copper-detail);
     font-weight: bold;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
   }
   
   .community-stats {
@@ -318,8 +322,10 @@
   
   .stat-label {
     font-size: 0.9rem;
-    opacity: 0.8;
+    opacity: 0.9;
     font-weight: 500;
+    color: var(--warm-stone);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   }
   
   .final-message {
@@ -330,15 +336,25 @@
     max-width: 600px;
     margin: 0 auto;
     padding: 2rem;
-    background: rgba(245, 241, 232, 0.05);
+    background: rgba(245, 241, 232, 0.15);
     border-radius: 12px;
-    border: 1px solid rgba(245, 241, 232, 0.2);
+    border: 1px solid rgba(245, 241, 232, 0.3);
+    backdrop-filter: blur(8px);
+  }
+  
+  .message-content p {
+    color: var(--warm-stone);
+    font-size: 1.1rem;
+    line-height: 1.6;
+    font-weight: 500;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   }
   
   .hearts {
     font-size: 1.5rem;
     margin-top: 1rem;
-    opacity: 0.8;
+    opacity: 0.9;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
   }
   
   /* Mobile optimizations */

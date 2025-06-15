@@ -21,17 +21,17 @@
   
   const content = {
     czech: {
-      heading: "Pomoc začíná u vás.",
-      subheading: "Najděte malý krok, který má význam.",
-      description: "Společně měníme svět – soused po sousedovi",
+      heading: "Cítíš se zahlcen/a všemi problémy kolem?",
+      subheading: "Nejsi v tom sám/sama. A existuje cesta vpřed.",
+      description: "Začni malým krokem, který má opravdový význam. Společně dokážeme více.",
       ctaPrimary: "Najít moji cestu",
       ctaSecondary: "Příběhy inspirace",
       scrollText: "Objevte vaše možnosti"
     },
     english: {
-      heading: "Help starts with you.",
-      subheading: "Find a small step that matters.",
-      description: "Together we make change – neighbor by neighbor",
+      heading: "Feeling overwhelmed by all the problems around?",
+      subheading: "You're not alone. And there is a way forward.",
+      description: "Start with a small step that has real meaning. Together we can do more.",
       ctaPrimary: "Find my path",
       ctaSecondary: "Stories of inspiration",
       scrollText: "Discover your possibilities"
