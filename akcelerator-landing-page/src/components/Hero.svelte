@@ -21,20 +21,20 @@
   
   const content = {
     czech: {
-      heading: "Cítíš se zahlcen/a všemi problémy kolem?",
-      subheading: "Nejsi v tom sám/sama. A existuje cesta vpřed.",
-      description: "Nalezni praktický způsob, jak udělat rozdíl – krok za krokem, společně",
-      ctaPrimary: "Najít svou cestu",
-      ctaSecondary: "Rychlá pomoc",
-      scrollText: "Pokračuj níže pro více inspirace"
+      heading: "Pomoc začíná u vás.",
+      subheading: "Najděte malý krok, který má význam.",
+      description: "Společně měníme svět – soused po sousedovi",
+      ctaPrimary: "Najít moji cestu",
+      ctaSecondary: "Příběhy inspirace",
+      scrollText: "Objevte vaše možnosti"
     },
     english: {
-      heading: "Feeling overwhelmed by the world's problems?",
-      subheading: "You're not alone. And there's a path forward.",
-      description: "Find practical ways to make a difference – step by step, together",
-      ctaPrimary: "Find Your Path",
-      ctaSecondary: "I Need Help Now",
-      scrollText: "Continue below for more inspiration"
+      heading: "Help starts with you.",
+      subheading: "Find a small step that matters.",
+      description: "Together we make change – neighbor by neighbor",
+      ctaPrimary: "Find my path",
+      ctaSecondary: "Stories of inspiration",
+      scrollText: "Discover your possibilities"
     }
   };
   
@@ -269,30 +269,30 @@
         
         <button 
           class="czech-button-secondary hero-secondary-cta"
-          on:click={() => scrollToSection('solidarity-garden')}
+          on:click={() => scrollToSection('stories')}
         >
           <span class="cta-text">{content[language].ctaSecondary}</span>
         </button>
       </div>
       
-      <!-- Enhanced Value Proposition -->
+      <!-- Enhanced Value Proposition - User-Focused -->
       <div class="hero-value-props">
         <div class="value-prop">
-          <div class="prop-icon">🎯</div>
+          <div class="prop-icon">💡</div>
           <span class="prop-text">
-            {language === 'czech' ? 'Praktické kroky' : 'Practical steps'}
+            {language === 'czech' ? 'Inspirace od lidí jako vy' : 'Inspiration from people like you'}
+          </span>
+        </div>
+        <div class="value-prop">
+          <div class="prop-icon">🛡</div>
+          <span class="prop-text">
+            {language === 'czech' ? 'Bezpečné a ověřené kroky' : 'Safe and trusted steps'}
           </span>
         </div>
         <div class="value-prop">
           <div class="prop-icon">🤝</div>
           <span class="prop-text">
-            {language === 'czech' ? 'Ověřené organizace' : 'Trusted organizations'}
-          </span>
-        </div>
-        <div class="value-prop">
-          <div class="prop-icon">💝</div>
-          <span class="prop-text">
-            {language === 'czech' ? 'Skutečný dopad' : 'Real impact'}
+            {language === 'czech' ? 'Začít můžete hned' : 'You can start right now'}
           </span>
         </div>
       </div>

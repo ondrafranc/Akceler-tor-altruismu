@@ -155,66 +155,61 @@
           
           {#if language === 'czech'}
             <div class="story-paragraphs">
-              <!-- Enhanced Havel Quote - Better Positioned -->
+              <!-- Inspirational Quote - User-Focused -->
               <div class="havel-quote-hero">
-                <div class="quote-decoration">🌟</div>
+                <div class="quote-decoration">💝</div>
                 <blockquote class="quote-content">
-                  "Naděje není přesvědčení, že se něco povede, 
-                  ale jistota, že má smysl, bez ohledu na to, jak to dopadne."
+                  "Když nemůžete pomoci všem, pomozte alespoň jednomu."
                 </blockquote>
-                <cite class="quote-attribution">— Václav Havel</cite>
-                <div class="quote-decoration">🌟</div>
+                <cite class="quote-attribution">— Matka Tereza</cite>
+                <div class="quote-decoration">💝</div>
               </div>
               
-              <p class="czech-body-large mb-6">
-                Tato platforma vznikla z poznání, že Češi nechtějí velká gesta a prázdné řeči. 
-                Chceme <strong>praktické kroky</strong>, které skutečně pomáhají.
+              <p class="czech-body-large mb-4">
+                Češi nechtějí velká gesta. Chceme <strong>praktické kroky</strong> který skutečně pomáhají.
               </p>
-              <p class="czech-body mb-6">
-                Od pomoci sousedům po podporu ukrajinských rodin, od doučování dětí 
-                po péči o seniory – každá akce je propojená s důvěryhodnými 
-                českými organizacemi.
+              <p class="czech-body mb-4">
+                Každá akce začíná u vás. Každý krok má význam.
               </p>
             </div>
           {:else}
             <div class="story-paragraphs">
-              <!-- Enhanced Havel Quote - Better Positioned -->
+              <!-- Inspirational Quote - User-Focused -->
               <div class="havel-quote-hero">
-                <div class="quote-decoration">🌟</div>
+                <div class="quote-decoration">💝</div>
                 <blockquote class="quote-content">
-                  "Hope is not the conviction that something will turn out well, 
-                  but the certainty that something makes sense, regardless of how it turns out."
+                  "If you can't help everyone, help just one."
                 </blockquote>
-                <cite class="quote-attribution">— Václav Havel</cite>
-                <div class="quote-decoration">🌟</div>
+                <cite class="quote-attribution">— Mother Teresa</cite>
+                <div class="quote-decoration">💝</div>
               </div>
               
-              <p class="czech-body-large mb-6">
-                This platform was born from understanding that Czechs don't want grand gestures 
-                and empty words. We want <strong>practical steps</strong> that truly help.
+              <p class="czech-body-large mb-4">
+                Czechs don't want grand gestures. We want <strong>practical steps</strong> that truly help.
               </p>
-              <p class="czech-body mb-6">
-                From helping neighbors to supporting Ukrainian families, from tutoring children 
-                to caring for seniors – every action is connected with trustworthy 
-                Czech organizations.
+              <p class="czech-body mb-4">
+                Every action starts with you. Every step matters.
               </p>
             </div>
           {/if}
           
           <div class="story-stats">
             <div class="stat-item">
+              <div class="stat-icon">🏃‍♀️</div>
               <div class="stat-number">247</div>
               <div class="stat-label">
                 {language === 'czech' ? 'akcí tento týden' : 'actions this week'}
               </div>
             </div>
             <div class="stat-item">
+              <div class="stat-icon">🤝</div>
               <div class="stat-number">1,834</div>
               <div class="stat-label">
                 {language === 'czech' ? 'aktivních lidí' : 'active helpers'}
               </div>
             </div>
             <div class="stat-item">
+              <div class="stat-icon">🗺️</div>
               <div class="stat-number">12</div>
               <div class="stat-label">
                 {language === 'czech' ? 'regionů' : 'regions'}
@@ -226,22 +221,31 @@
         <div class="story-visual">
           <div class="visual-elements">
             <div class="element element-1">
-              <div class="element-icon">🤝</div>
+              <div class="element-icon">🏠</div>
               <p class="element-text">
                 {language === 'czech' ? 'Soused pomáhá sousedovi' : 'Neighbor helps neighbor'}
               </p>
+              <button class="element-cta" on:click={() => scrollToSection('solidarity-garden')}>
+                {language === 'czech' ? 'Zobrazit příběhy' : 'View stories'}
+              </button>
             </div>
             <div class="element element-2">
-              <div class="element-icon">🌱</div>
+              <div class="element-icon">✨</div>
               <p class="element-text">
                 {language === 'czech' ? 'Malé kroky, velký dopad' : 'Small steps, big impact'}
               </p>
+              <button class="element-cta" on:click={() => scrollToSection('solidarity-garden')}>
+                {language === 'czech' ? 'Začít hned' : 'Start now'}
+              </button>
             </div>
             <div class="element element-3">
-              <div class="element-icon">💚</div>
+              <div class="element-icon">💪</div>
               <p class="element-text">
                 {language === 'czech' ? 'Praktická solidarita' : 'Practical solidarity'}
               </p>
+              <button class="element-cta" on:click={() => scrollToSection('solidarity-garden')}>
+                {language === 'czech' ? 'Připojit se' : 'Join now'}
+              </button>
             </div>
           </div>
         </div>
@@ -447,6 +451,10 @@
     border: 1px solid var(--subtle-border);
     transition: all 0.3s ease;
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
   }
   
   .stat-item:hover {
@@ -455,12 +463,17 @@
     background: rgba(255, 255, 255, 0.9);
   }
   
+  .stat-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  }
+  
   .stat-number {
     font-size: 2.8rem;
     font-weight: 700;
     color: var(--czech-forest);
     line-height: 1;
-    margin-bottom: 0.75rem;
     text-shadow: 0 1px 2px rgba(46, 93, 49, 0.1);
   }
   
@@ -480,8 +493,9 @@
   
   .element {
     display: flex;
-    align-items: center;
-    gap: 1.5rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
     padding: 2rem;
     background: rgba(255, 255, 255, 0.8);
     border: 1px solid var(--subtle-border);
@@ -489,6 +503,7 @@
     transition: all var(--timing-medium) var(--ease-gentle);
     position: relative;
     overflow: hidden;
+    cursor: pointer;
   }
   
   .element::before {
@@ -504,8 +519,8 @@
   }
   
   .element:hover {
-    transform: translateX(12px);
-    box-shadow: 0 8px 24px rgba(46, 93, 49, 0.15);
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 12px 32px rgba(46, 93, 49, 0.2);
     background: rgba(255, 255, 255, 0.95);
   }
   
@@ -513,10 +528,21 @@
     opacity: 1;
   }
   
+  .element:hover .element-icon {
+    animation: wiggle 0.6s ease-in-out;
+  }
+  
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-3deg) scale(1.05); }
+    75% { transform: rotate(3deg) scale(1.05); }
+  }
+  
   .element-icon {
     font-size: 2.5rem;
     flex-shrink: 0;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    transition: all 0.3s ease;
   }
   
   .element-text {
@@ -525,6 +551,26 @@
     margin: 0;
     font-size: 1.05rem;
     line-height: 1.4;
+    flex-grow: 1;
+  }
+  
+  .element-cta {
+    background: var(--czech-forest);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    align-self: flex-start;
+  }
+  
+  .element-cta:hover {
+    background: var(--czech-forest-light);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(46, 93, 49, 0.3);
   }
   
   /* Mobile Responsive */
@@ -593,14 +639,13 @@
     }
     
     .element {
-      flex-direction: column;
       text-align: center;
       padding: 1.5rem;
       gap: 1rem;
     }
     
     .element:hover {
-      transform: translateY(-3px);
+      transform: translateY(-3px) scale(1);
     }
     
     .element-icon {
@@ -609,6 +654,12 @@
     
     .element-text {
       font-size: 0.95rem;
+    }
+    
+    .element-cta {
+      align-self: center;
+      padding: 0.6rem 1.25rem;
+      font-size: 0.85rem;
     }
   }
   

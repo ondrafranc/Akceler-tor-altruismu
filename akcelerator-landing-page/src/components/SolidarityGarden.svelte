@@ -259,10 +259,10 @@
          class:autumn={currentSeason === 'autumn'} 
          class:winter={currentSeason === 'winter'}>
       
-      <!-- Seasonal Header -->
+      <!-- Stories Header -->
       <div class="seasonal-header">
-        <span class="season-indicator">
-          {content[language].seasonInfo[currentSeason]}
+        <span class="story-indicator">
+          {language === 'czech' ? '✨ Inspirace z terénu' : '✨ Inspiration from the field'}
         </span>
       </div>
       
@@ -396,14 +396,14 @@
       
       <!-- Inspirational Quote (Enhanced & Better Aligned) -->
       <div class="havel-quote-enhanced">
-        <div class="quote-icon">🌟</div>
+        <div class="quote-icon">💝</div>
         <blockquote class="quote-text">
           {language === 'czech' 
-            ? '"Naděje není to přesvědčení, že něco dobře dopadne, ale jistota, že má něco smysl – bez ohledu na to, jak to dopadne."'
-            : '"Hope is not the conviction that something will turn out well, but the certainty that something is meaningful – no matter how it turns out."'}
+            ? '"Malé skutky laskavosti mění svět více než velká slova."'
+            : '"Small acts of kindness change the world more than big words."'}
         </blockquote>
-        <cite class="quote-author">— Václav Havel</cite>
-        <div class="quote-icon">🌟</div>
+        <cite class="quote-author">— Unknown</cite>
+        <div class="quote-icon">💝</div>
       </div>
     </div>
   </div>
@@ -452,7 +452,7 @@
     backdrop-filter: blur(10px);
   }
   
-  .season-indicator {
+  .story-indicator {
     font-size: 1.1rem;
     color: var(--czech-forest);
     font-weight: 500;
