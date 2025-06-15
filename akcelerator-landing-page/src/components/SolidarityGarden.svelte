@@ -10,13 +10,6 @@
   let gardenContainer;
   let totalCommunityActions = 247;
   let language = 'czech';
-  let gardenElements = [];
-  let seasonalBackground = '';
-  
-  // Interactive garden state
-  let plantedSeeds = 0;
-  let grownTrees = 0;
-  let communityFlowers = 0;
   
   // Subscribe to language changes
   currentLanguage.subscribe(value => {
@@ -27,14 +20,13 @@
   let isStoryModalOpen = false;
   let currentStory = null;
   
-  // No more direct JSON import - we'll fetch it
+  // Load success stories
   let successStories = [];
   let isLoading = true;
   
   // Get current season based on date (only on client)
   function getCurrentSeason() {
     if (typeof window === 'undefined') {
-      // Default for SSR
       return 'spring';
     }
     
@@ -49,37 +41,45 @@
   
   const content = {
     czech: {
-      title: "Zahrada inspirativních příběhů",
-      subtitle: "Objevte skutečné příběhy naděje a solidarity",
-      description: "Každá rostlina v této zahradě představuje skutečný příběh pomoce. Kliknutím na rostliny objevíte, jak lidé kolem nás mění svět k lepšímu.",
-      callToAction: "🌱 Klikněte na rostliny a objevte příběhy naděje",
+      title: "Příběhy naděje z celého Česka",
+      subtitle: "Každý bod na mapě představuje skutečný příběh pomoči",
+      description: "Objevte inspirativní příběhy lidí, kteří změnili svět kolem sebe k lepšímu. Kliknutím na jednotlivé prvky se dozvíte více o jejich cestě.",
+      callToAction: "Klikněte na ikony pro inspirativní příběhy",
       counter: "lidí pomohlo tento týden",
-      plantSeed: "Zasadit semínko",
-      waterPlant: "Zalít rostlinu",
-      watchGrow: "Sledovat růst",
-      storyPrompt: "Klikněte pro inspirativní příběh",
+      exploreStories: "Prozkoumat příběhy",
+      discoverMore: "Objevit další",
+      storyCategories: {
+        community: "Komunitní pomoc",
+        individual: "Osobní příběhy", 
+        family: "Rodinná solidarita",
+        volunteer: "Dobrovolnictví"
+      },
       seasonInfo: {
-        spring: "🌸 Jarní obnova - čas nových začátků",
-        summer: "☀️ Letní energie - čas akcí",
-        autumn: "🍂 Podzimní sklizeň - čas díkůvzdání",
-        winter: "❄️ Zimní péče - čas solidarity"
+        spring: "🌸 Jarní obnova - nové příběhy naděje",
+        summer: "☀️ Letní energie - aktivní pomoc",
+        autumn: "🍂 Podzimní sklizeň - vděčnost za dobro",
+        winter: "❄️ Zimní péče - teplo lidskosti"
       }
     },
     english: {
-      title: "Garden of Inspiring Stories",
-      subtitle: "Discover real stories of hope and solidarity",
-      description: "Every plant in this garden represents a real story of help. Click on the plants to discover how people around us are changing the world for the better.",
-      callToAction: "🌱 Click on plants to discover stories of hope",
+      title: "Stories of Hope from All Over Czechia",
+      subtitle: "Every point on the map represents a real story of help",
+      description: "Discover inspiring stories of people who changed the world around them for the better. Click on individual elements to learn more about their journey.",
+      callToAction: "Click on icons for inspiring stories",
       counter: "people helped this week",
-      plantSeed: "Plant a seed",
-      waterPlant: "Water plant",
-      watchGrow: "Watch grow",
-      storyPrompt: "Click for inspiring story",
+      exploreStories: "Explore Stories",
+      discoverMore: "Discover More",
+      storyCategories: {
+        community: "Community Help",
+        individual: "Personal Stories",
+        family: "Family Solidarity", 
+        volunteer: "Volunteering"
+      },
       seasonInfo: {
-        spring: "🌸 Spring renewal - time for new beginnings",
-        summer: "☀️ Summer energy - time for action", 
-        autumn: "🍂 Autumn harvest - time for gratitude",
-        winter: "❄️ Winter care - time for solidarity"
+        spring: "🌸 Spring renewal - new stories of hope",
+        summer: "☀️ Summer energy - active help",
+        autumn: "🍂 Autumn harvest - gratitude for good",
+        winter: "❄️ Winter care - warmth of humanity"
       }
     }
   };
@@ -102,7 +102,24 @@
           location: "Praha",
           action: "Organizuje komunitní zahradničení",
           impact: "Spojila 50+ sousedů",
+          category: "community",
           season: ["spring", "summer"]
+        },
+        {
+          name: "Tomáš H.",
+          location: "Brno", 
+          action: "Pomáhá seniorům s nákupy",
+          impact: "Pravidelně pomáhá 15 seniorům",
+          category: "individual",
+          season: ["autumn", "winter"]
+        },
+        {
+          name: "Anna S.",
+          location: "Ostrava",
+          action: "Doučuje děti zdarma",
+          impact: "Pomohla 30+ dětem se vzděláním", 
+          category: "volunteer",
+          season: ["spring", "autumn"]
         }
       ];
     } finally {
@@ -110,107 +127,38 @@
     }
   }
   
-  // Interactive garden functions
-  function plantSeed() {
-    plantedSeeds++;
-    gsap.fromTo('.seed-' + plantedSeeds, 
-      { scale: 0, opacity: 0, y: 20 },
-      { 
-        scale: 1, 
-        opacity: 1, 
-        y: 0, 
-        duration: 0.8, 
-        ease: "back.out(1.7)",
-        onComplete: () => {
-          // Animate into small plant after 2 seconds
-          setTimeout(() => growPlant(plantedSeeds), 2000);
-        }
-      }
-    );
-  }
-  
-  function growPlant(seedId) {
-    gsap.to('.seed-' + seedId, {
-      scale: 1.5,
-      duration: 1.5,
-      ease: "power2.out",
-      onComplete: () => {
-        communityFlowers++;
-        // Add sparkle effect
-        createSparkles('.seed-' + seedId);
-      }
-    });
-  }
-  
-  function createSparkles(element) {
-    if (typeof document === 'undefined') return;
-    
-    for (let i = 0; i < 5; i++) {
-      const sparkle = document.createElement('div');
-      sparkle.innerHTML = '✨';
-      sparkle.className = 'sparkle';
-      sparkle.style.position = 'absolute';
-      sparkle.style.left = Math.random() * 40 - 20 + 'px';
-      sparkle.style.top = Math.random() * 40 - 20 + 'px';
-      sparkle.style.pointerEvents = 'none';
-      sparkle.style.zIndex = '1000';
-      
-      const container = element.closest('.garden-floor') || element.parentElement;
-      if (container) {
-        container.appendChild(sparkle);
-        
-        // Remove sparkle after animation
-        setTimeout(() => sparkle.remove(), 2000);
-      }
-    }
-  }
-  
-  function waterGarden() {
-    // Simulate watering effect - grow all existing plants slightly
-    gsap.to('.garden-element', {
-      scale: 1.1,
-      duration: 0.3,
-      yoyo: true,
-      repeat: 1,
-      ease: "power2.inOut"
-    });
-    
-    // Increase community stats
-    totalCommunityActions += Math.floor(Math.random() * 5) + 1;
-  }
-  
-  // Show success story when garden element is clicked
-  function showSuccessStory(element) {
+  // Show success story when story element is clicked
+  function showSuccessStory(storyData = null) {
     if (isLoading || !successStories.length) {
       console.log('Stories not yet loaded or empty');
       return;
     }
     
-    // Filter stories by current season
-    const seasonalStories = successStories.filter(story => 
-      story.season && story.season.includes(currentSeason)
-    );
+    let selectedStory;
     
-    // Fall back to all stories if no seasonal matches
-    const availableStories = seasonalStories.length > 0 ? seasonalStories : successStories;
-    
-    if (availableStories.length === 0) {
-      console.log('No stories available');
-      return;
+    if (storyData) {
+      selectedStory = storyData;
+    } else {
+      // Filter stories by current season
+      const seasonalStories = successStories.filter(story => 
+        story.season && story.season.includes(currentSeason)
+      );
+      
+      // Fall back to all stories if no seasonal matches
+      const availableStories = seasonalStories.length > 0 ? seasonalStories : successStories;
+      
+      if (availableStories.length === 0) {
+        console.log('No stories available');
+        return;
+      }
+      
+      // Get random story
+      const randomIndex = Math.floor(Math.random() * availableStories.length);
+      selectedStory = availableStories[randomIndex];
     }
     
-    // Get random story
-    const randomIndex = Math.floor(Math.random() * availableStories.length);
-    currentStory = availableStories[randomIndex];
-    
-    // Show modal
+    currentStory = selectedStory;
     isStoryModalOpen = true;
-    
-    // Add visual feedback - sparkle effect (only on client)
-    if (typeof window !== 'undefined') {
-      createSparkles(element);
-      growthAnimation(element);
-    }
   }
   
   // Close story modal
@@ -219,16 +167,16 @@
     currentStory = null;
   }
   
-  // Growth animation for clicked element
-  function growthAnimation(element) {
+  // Create gentle pulse animation for story triggers
+  function createStoryPulse(element) {
     if (typeof window === 'undefined' || !gsap) return;
     
     gsap.fromTo(element, 
       { scale: 1 }, 
       { 
-        scale: 1.3, 
-        duration: 0.2, 
-        ease: "back.out(1.7)",
+        scale: 1.1, 
+        duration: 0.3, 
+        ease: "power2.out",
         yoyo: true,
         repeat: 1
       }
@@ -236,6 +184,12 @@
   }
   
   onMount(async () => {
+    // Set current season
+    currentSeason = getCurrentSeason();
+    
+    // Load success stories
+    await loadSuccessStories();
+    
     // Main container animation
     gsap.fromTo(gardenContainer,
       { opacity: 0, y: 30 },
@@ -252,45 +206,27 @@
       }
     );
     
-    // Set current season
-    currentSeason = getCurrentSeason();
-    
-    // Load success stories
-    await loadSuccessStories();
-    
-    // Animate garden elements in sequence
-    gsap.fromTo('.garden-element',
+    // Animate story elements in sequence
+    gsap.fromTo('.story-element',
       { scale: 0, opacity: 0 },
       {
         scale: 1,
         opacity: 1,
         duration: 0.6,
-        stagger: 0.2,
+        stagger: 0.15,
         ease: "back.out(1.7)",
         delay: 0.5
       }
     );
     
-    // Set up hover animations for interactive elements
-    const interactiveElements = document.querySelectorAll('.interactive-element');
-    interactiveElements.forEach(element => {
-      element.addEventListener('mouseenter', () => {
-        gsap.to(element, { scale: 1.1, duration: 0.3, ease: "power2.out" });
-      });
-      
-      element.addEventListener('mouseleave', () => {
-        gsap.to(element, { scale: 1, duration: 0.3, ease: "power2.out" });
-      });
-    });
-    
-    // Gentle floating animation for garden elements
-    gsap.to('.floating-element', {
-      y: -10,
-      duration: 2,
+    // Gentle floating animation for story elements
+    gsap.to('.floating-story', {
+      y: -8,
+      duration: 2.5,
       ease: "power2.inOut",
       yoyo: true,
       repeat: -1,
-      stagger: 0.3
+      stagger: 0.4
     });
   });
 </script>
@@ -304,19 +240,21 @@
       <p class="czech-body-large mb-6 max-w-2xl mx-auto">
         {content[language].subtitle}
       </p>
-      <p class="czech-body mb-6 max-w-3xl mx-auto">
+      <p class="czech-body mb-8 max-w-3xl mx-auto">
         {content[language].description}
       </p>
+      
       <!-- Clear Call-to-Action -->
-      <div class="story-cta-banner">
+      <div class="story-discovery-banner">
+        <div class="discovery-icon">📖</div>
         <p class="czech-body-large font-semibold text-czech-forest">
           {content[language].callToAction}
         </p>
       </div>
     </div>
     
-    <!-- Interactive Garden -->
-    <div class="garden-wrapper" class:spring={currentSeason === 'spring'} 
+    <!-- Story Discovery Map -->
+    <div class="story-discovery-wrapper" class:spring={currentSeason === 'spring'} 
          class:summer={currentSeason === 'summer'} 
          class:autumn={currentSeason === 'autumn'} 
          class:winter={currentSeason === 'winter'}>
@@ -328,115 +266,126 @@
         </span>
       </div>
       
-      <div class="garden-canvas">
-        <!-- Background landscape -->
-        <div class="garden-background">
-          <div class="hills"></div>
-          <div class="sky"></div>
-        </div>
-        
-        <!-- Interactive Garden Elements -->
-        <div class="garden-floor">
-          <!-- Trees (representing major community actions) -->
-          <div class="garden-element tree interactive-element floating-element story-trigger" 
-               title={content[language].storyPrompt}
-               role="button"
-               tabindex="0"
-               on:click={(e) => showSuccessStory(e.target)}
-               on:keydown={(e) => e.key === 'Enter' && showSuccessStory(e.target)}>
-            🌳
-            <div class="story-tooltip">{content[language].storyPrompt}</div>
-          </div>
-          <div class="garden-element tree interactive-element floating-element story-trigger" 
-               title={content[language].storyPrompt}
-               role="button"
-               tabindex="0"
-               on:click={(e) => showSuccessStory(e.target)}
-               on:keydown={(e) => e.key === 'Enter' && showSuccessStory(e.target)}>
-            🌲
-            <div class="story-tooltip">{content[language].storyPrompt}</div>
+      <div class="story-canvas">
+        <!-- Story Discovery Grid -->
+        <div class="story-grid">
+          
+          <!-- Community Stories -->
+          <div class="story-category">
+            <h3 class="category-title">{content[language].storyCategories.community}</h3>
+            <div class="story-icons">
+              <div class="story-element story-trigger floating-story" 
+                   title="Klikněte pro příběh komunitní pomoci"
+                   role="button"
+                   tabindex="0"
+                   on:click={() => showSuccessStory(successStories.find(s => s.category === 'community'))}
+                   on:keydown={(e) => e.key === 'Enter' && showSuccessStory(successStories.find(s => s.category === 'community'))}>
+                <div class="story-icon">🏘️</div>
+                <div class="story-preview">Sousedé pomáhají sousedům</div>
+              </div>
+              
+              <div class="story-element story-trigger floating-story" 
+                   role="button"
+                   tabindex="0"
+                   on:click={() => showSuccessStory()}
+                   on:keydown={(e) => e.key === 'Enter' && showSuccessStory()}>
+                <div class="story-icon">🤝</div>
+                <div class="story-preview">Místní iniciativy</div>
+              </div>
+            </div>
           </div>
           
-          <!-- Flowers (representing individual actions) -->
-          <div class="garden-element flower interactive-element floating-element seed-1 story-trigger" 
-               title={content[language].storyPrompt}
-               role="button"
-               tabindex="0"
-               on:click={(e) => showSuccessStory(e.target)}
-               on:keydown={(e) => e.key === 'Enter' && showSuccessStory(e.target)}>
-            🌸
-            <div class="story-tooltip">{content[language].storyPrompt}</div>
-          </div>
-          <div class="garden-element flower interactive-element floating-element seed-2 story-trigger" 
-               title={content[language].storyPrompt}
-               role="button"
-               tabindex="0"
-               on:click={(e) => showSuccessStory(e.target)}
-               on:keydown={(e) => e.key === 'Enter' && showSuccessStory(e.target)}>
-            🌺
-            <div class="story-tooltip">{content[language].storyPrompt}</div>
-          </div>
-          <div class="garden-element flower interactive-element floating-element seed-3 story-trigger" 
-               title={content[language].storyPrompt}
-               role="button"
-               tabindex="0"
-               on:click={(e) => showSuccessStory(e.target)}
-               on:keydown={(e) => e.key === 'Enter' && showSuccessStory(e.target)}>
-            🌻
-            <div class="story-tooltip">{content[language].storyPrompt}</div>
+          <!-- Individual Stories -->
+          <div class="story-category">
+            <h3 class="category-title">{content[language].storyCategories.individual}</h3>
+            <div class="story-icons">
+              <div class="story-element story-trigger floating-story" 
+                   role="button"
+                   tabindex="0"
+                   on:click={() => showSuccessStory(successStories.find(s => s.category === 'individual'))}
+                   on:keydown={(e) => e.key === 'Enter' && showSuccessStory(successStories.find(s => s.category === 'individual'))}>
+                <div class="story-icon">👤</div>
+                <div class="story-preview">Osobní cesty pomoci</div>
+              </div>
+              
+              <div class="story-element story-trigger floating-story" 
+                   role="button"
+                   tabindex="0"
+                   on:click={() => showSuccessStory()}
+                   on:keydown={(e) => e.key === 'Enter' && showSuccessStory()}>
+                <div class="story-icon">💝</div>
+                <div class="story-preview">Neočekávané dobro</div>
+              </div>
+            </div>
           </div>
           
-          <!-- Growing plants (dynamic content) -->
-          <div class="garden-element sprout interactive-element floating-element story-trigger" 
-               title={content[language].storyPrompt}
-               role="button"
-               tabindex="0"
-               on:click={(e) => showSuccessStory(e.target)}
-               on:keydown={(e) => e.key === 'Enter' && showSuccessStory(e.target)}>
-            🌱
-            <div class="story-tooltip">{content[language].storyPrompt}</div>
+          <!-- Family Stories -->
+          <div class="story-category">
+            <h3 class="category-title">{content[language].storyCategories.family}</h3>
+            <div class="story-icons">
+              <div class="story-element story-trigger floating-story" 
+                   role="button"
+                   tabindex="0"
+                   on:click={() => showSuccessStory()}
+                   on:keydown={(e) => e.key === 'Enter' && showSuccessStory()}>
+                <div class="story-icon">👨‍👩‍👧‍👦</div>
+                <div class="story-preview">Rodinná podpora</div>
+              </div>
+              
+              <div class="story-element story-trigger floating-story" 
+                   role="button"
+                   tabindex="0"
+                   on:click={() => showSuccessStory()}
+                   on:keydown={(e) => e.key === 'Enter' && showSuccessStory()}>
+                <div class="story-icon">🏠</div>
+                <div class="story-preview">Domácí péče</div>
+              </div>
+            </div>
           </div>
-          <div class="garden-element sprout interactive-element floating-element story-trigger" 
-               title={content[language].storyPrompt}
-               role="button"
-               tabindex="0"
-               on:click={(e) => showSuccessStory(e.target)}
-               on:keydown={(e) => e.key === 'Enter' && showSuccessStory(e.target)}>
-            🌿
-            <div class="story-tooltip">{content[language].storyPrompt}</div>
+          
+          <!-- Volunteer Stories -->
+          <div class="story-category">
+            <h3 class="category-title">{content[language].storyCategories.volunteer}</h3>
+            <div class="story-icons">
+              <div class="story-element story-trigger floating-story" 
+                   role="button"
+                   tabindex="0"
+                   on:click={() => showSuccessStory(successStories.find(s => s.category === 'volunteer'))}
+                   on:keydown={(e) => e.key === 'Enter' && showSuccessStory(successStories.find(s => s.category === 'volunteer'))}>
+                <div class="story-icon">🎓</div>
+                <div class="story-preview">Vzdělávací podpora</div>
+              </div>
+              
+              <div class="story-element story-trigger floating-story" 
+                   role="button"
+                   tabindex="0"
+                   on:click={() => showSuccessStory()}
+                   on:keydown={(e) => e.key === 'Enter' && showSuccessStory()}>
+                <div class="story-icon">🌟</div>
+                <div class="story-preview">Dobrovolnické projekty</div>
+              </div>
+            </div>
           </div>
         </div>
         
-        <!-- Interactive Controls -->
-        <div class="garden-controls">
-          <button class="czech-button-secondary interactive-element" 
-                  on:click={plantSeed}>
-            🌱 {content[language].plantSeed}
-          </button>
-          <button class="czech-button-secondary interactive-element" 
-                  on:click={waterGarden}>
-            💧 {content[language].waterPlant}
-          </button>
-        </div>
-        
-        <!-- Community Stats as Garden Growth -->
-        <div class="community-garden-stats">
-          <div class="stat-plant">
-            <div class="plant-icon">🌳</div>
+        <!-- Community Impact Stats -->
+        <div class="impact-stats">
+          <div class="stat-item">
+            <div class="stat-icon">📚</div>
             <div class="stat-number">{totalCommunityActions}</div>
             <div class="stat-label">{content[language].counter}</div>
           </div>
           
-          <div class="stat-plant">
-            <div class="plant-icon">🌸</div>
-            <div class="stat-number">{plantedSeeds + communityFlowers}</div>
+          <div class="stat-item">
+            <div class="stat-icon">❤️</div>
+            <div class="stat-number">{successStories.length}</div>
             <div class="stat-label">
-              {language === 'czech' ? 'zasazených semínek' : 'planted seeds'}
+              {language === 'czech' ? 'zdokumentovaných příběhů' : 'documented stories'}
             </div>
           </div>
           
-          <div class="stat-plant">
-            <div class="plant-icon">💚</div>
+          <div class="stat-item">
+            <div class="stat-icon">🏘️</div>
             <div class="stat-number">{Math.floor(totalCommunityActions / 10)}</div>
             <div class="stat-label">
               {language === 'czech' ? 'aktivních komunit' : 'active communities'}
@@ -445,15 +394,16 @@
         </div>
       </div>
       
-      <!-- Inspirational Quote (Enhanced) -->
-      <div class="havel-quote enhanced-quote">
-        <div class="quote-decoration">🌱</div>
-        <p class="czech-body italic">
+      <!-- Inspirational Quote (Enhanced & Better Aligned) -->
+      <div class="havel-quote-enhanced">
+        <div class="quote-icon">🌟</div>
+        <blockquote class="quote-text">
           {language === 'czech' 
-            ? '"Naděje není to přesvědčení, že něco dobře dopadne, ale jistota, že má něco smysl – bez ohledu na to, jak to dopadne." - Václav Havel'
-            : '"Hope is not the conviction that something will turn out well, but the certainty that something is meaningful – no matter how it turns out." - Václav Havel'}
-        </p>
-        <div class="quote-decoration">🌱</div>
+            ? '"Naděje není to přesvědčení, že něco dobře dopadne, ale jistota, že má něco smysl – bez ohledu na to, jak to dopadne."'
+            : '"Hope is not the conviction that something will turn out well, but the certainty that something is meaningful – no matter how it turns out."'}
+        </blockquote>
+        <cite class="quote-author">— Václav Havel</cite>
+        <div class="quote-icon">🌟</div>
       </div>
     </div>
   </div>
@@ -467,9 +417,9 @@
 </section>
 
 <style>
-  .garden-wrapper {
+  .story-discovery-wrapper {
     position: relative;
-    max-width: 900px;
+    max-width: 1000px;
     margin: 0 auto;
     border-radius: 20px;
     overflow: hidden;
@@ -479,19 +429,19 @@
   }
   
   /* Seasonal Theming */
-  .garden-wrapper.spring {
+  .story-discovery-wrapper.spring {
     background: linear-gradient(135deg, #f0f9f0 0%, #e8f5e8 100%);
   }
   
-  .garden-wrapper.summer {
+  .story-discovery-wrapper.summer {
     background: linear-gradient(135deg, #fff9e6 0%, #f5f0e8 100%);
   }
   
-  .garden-wrapper.autumn {
+  .story-discovery-wrapper.autumn {
     background: linear-gradient(135deg, #faf5f0 0%, #f0e6d6 100%);
   }
   
-  .garden-wrapper.winter {
+  .story-discovery-wrapper.winter {
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   }
   
@@ -512,285 +462,215 @@
     border: 1px solid var(--subtle-border);
   }
   
-  .garden-canvas {
+  .story-canvas {
     position: relative;
-    min-height: 400px;
     padding: 2rem;
     overflow: hidden;
   }
   
-  .garden-background {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1;
-  }
-  
-  .hills {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 60%;
-    background: linear-gradient(180deg, transparent 0%, var(--bohemian-mist) 100%);
-    border-radius: 50% 50% 0 0;
-  }
-  
-  .sky {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 50%;
-    background: linear-gradient(180deg, rgba(173, 216, 230, 0.3) 0%, transparent 100%);
-  }
-  
-  .garden-floor {
-    position: relative;
-    z-index: 2;
+  /* Story Discovery Grid */
+  .story-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-    gap: 1.5rem;
-    align-items: end;
-    padding: 1rem 0;
-    min-height: 200px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
   }
   
-  .garden-element {
-    font-size: 2.5rem;
-    text-align: center;
-    cursor: pointer;
+  .story-category {
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 16px;
+    padding: 1.5rem;
+    border: 1px solid var(--subtle-border);
     transition: all 0.3s ease;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-    transform-origin: bottom center;
-    position: relative;
   }
   
-  .garden-element:hover {
-    transform: scale(1.2) translateY(-5px);
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+  .story-category:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(46, 93, 49, 0.1);
   }
   
-  .story-trigger {
-    position: relative;
-    outline: none;
+  .category-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--czech-forest);
+    margin-bottom: 1rem;
+    text-align: center;
   }
   
-  .story-trigger:focus {
-    outline: 2px solid var(--czech-forest);
-    outline-offset: 4px;
-  }
-  
-  .story-trigger::after {
-    content: '✨';
-    position: absolute;
-    top: -10px;
-    right: -10px;
-    font-size: 1rem;
-    opacity: 0;
-    animation: sparkle-hint 2s ease-in-out infinite;
-  }
-  
-  .story-trigger:hover::after {
-    opacity: 1;
-    animation: sparkle-pulse 0.5s ease-in-out infinite;
-  }
-  
-  @keyframes sparkle-hint {
-    0%, 80%, 100% { opacity: 0; }
-    40% { opacity: 0.6; }
-  }
-  
-  @keyframes sparkle-pulse {
-    0%, 100% { transform: scale(1); opacity: 0.6; }
-    50% { transform: scale(1.2); opacity: 1; }
-  }
-  
-  .tree {
-    font-size: 3rem;
-    grid-row: span 2;
-  }
-  
-  .flower {
-    font-size: 2rem;
-    animation: gentle-sway 3s ease-in-out infinite;
-  }
-  
-  .sprout {
-    font-size: 1.8rem;
-    opacity: 0.8;
-  }
-  
-  @keyframes gentle-sway {
-    0%, 100% { transform: rotate(-2deg); }
-    50% { transform: rotate(2deg); }
-  }
-  
-  .garden-controls {
-    position: relative;
-    z-index: 3;
+  .story-icons {
     display: flex;
     gap: 1rem;
     justify-content: center;
-    margin: 2rem 0;
     flex-wrap: wrap;
   }
   
-  .garden-controls button {
-    font-size: 0.9rem;
-    padding: 0.75rem 1.25rem;
-    border-radius: 25px;
+  .story-element {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+    padding: 1rem;
+    cursor: pointer;
     transition: all 0.3s ease;
+    border: 2px solid transparent;
+    text-align: center;
+    min-width: 120px;
+    position: relative;
+    overflow: hidden;
   }
   
-  .garden-controls button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(46, 93, 49, 0.3);
+  .story-element:hover {
+    transform: translateY(-3px);
+    border-color: var(--czech-forest-light);
+    box-shadow: 0 6px 20px rgba(46, 93, 49, 0.2);
   }
   
-  .community-garden-stats {
+  .story-element:focus {
+    outline: 2px solid var(--czech-forest);
+    outline-offset: 2px;
+  }
+  
+  .story-element::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(176, 141, 87, 0.1), transparent);
+    transition: left 0.5s;
+  }
+  
+  .story-element:hover::before {
+    left: 100%;
+  }
+  
+  .story-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+  
+  .story-preview {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    line-height: 1.3;
+  }
+  
+  /* Impact Stats */
+  .impact-stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 1.5rem;
     padding: 2rem;
     background: rgba(255, 255, 255, 0.6);
     backdrop-filter: blur(10px);
     border-radius: 16px 16px 0 0;
-    margin-top: 2rem;
+    margin-top: 1rem;
   }
   
-  .stat-plant {
+  .stat-item {
     text-align: center;
-    padding: 1rem;
+    padding: 1.5rem 1rem;
     background: var(--bg-accent);
     border-radius: 12px;
     border: 1px solid var(--subtle-border);
     transition: all 0.3s ease;
   }
   
-  .stat-plant:hover {
+  .stat-item:hover {
     transform: translateY(-3px);
     box-shadow: 0 6px 20px rgba(46, 93, 49, 0.15);
   }
   
-  .plant-icon {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
+  .stat-icon {
+    font-size: 2.2rem;
+    margin-bottom: 0.75rem;
+    display: block;
   }
   
   .stat-number {
-    font-size: 1.8rem;
-    font-weight: 600;
+    font-size: 2rem;
+    font-weight: 700;
     color: var(--czech-forest);
     line-height: 1;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.5rem;
   }
   
   .stat-label {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     color: var(--text-secondary);
     font-weight: 500;
   }
   
-  .enhanced-quote {
-    background: linear-gradient(135deg, var(--bg-accent) 0%, rgba(255, 255, 255, 0.8) 100%);
-    border: none;
+  /* Enhanced Havel Quote */
+  .havel-quote-enhanced {
+    background: linear-gradient(135deg, var(--bg-accent) 0%, rgba(255, 255, 255, 0.9) 100%);
     border-radius: 16px;
-    padding: 2rem;
-    margin: 0;
+    padding: 2.5rem;
+    margin: 2rem 0 0;
     backdrop-filter: blur(10px);
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+    text-align: center;
+    border: 1px solid var(--subtle-border);
+    position: relative;
+    overflow: hidden;
   }
   
-  .quote-decoration {
+  .havel-quote-enhanced::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--copper-detail), var(--czech-forest-light), var(--copper-detail));
+  }
+  
+  .quote-icon {
     font-size: 1.5rem;
-    opacity: 0.6;
+    color: var(--copper-detail);
+    margin: 0 1rem;
+  }
+  
+  .quote-text {
+    font-size: 1.1rem;
+    font-style: italic;
     color: var(--czech-forest);
+    line-height: 1.6;
+    margin: 1rem 0;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    font-weight: 400;
   }
   
-  /* Sparkle animation - Applied dynamically via JavaScript (see createSparkles function) */
-  .sparkle {
-    animation: sparkle-fade 2s ease-out forwards;
+  .quote-author {
+    display: block;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-top: 1rem;
+    font-style: normal;
   }
   
-  @keyframes sparkle-fade {
-    0% {
-      opacity: 1;
-      transform: scale(0) rotate(0deg);
-    }
-    50% {
-      opacity: 1;
-      transform: scale(1) rotate(180deg);
-    }
-    100% {
-      opacity: 0;
-      transform: scale(0) rotate(360deg);
-    }
-  }
-  
-  /* Responsive Design */
-  @media (max-width: 768px) {
-    .garden-canvas {
-      padding: 1.5rem 1rem;
-      min-height: 300px;
-    }
-    
-    .garden-floor {
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1rem;
-    }
-    
-    .garden-element {
-      font-size: 2rem;
-    }
-    
-    .tree {
-      font-size: 2.5rem;
-    }
-    
-    .garden-controls {
-      flex-direction: column;
-      align-items: center;
-    }
-    
-    .garden-controls button {
-      width: 200px;
-    }
-    
-    .community-garden-stats {
-      grid-template-columns: 1fr;
-      gap: 1rem;
-      padding: 1.5rem;
-    }
-    
-    .enhanced-quote {
-      flex-direction: column;
-      text-align: center;
-      padding: 1.5rem;
-    }
-  }
-  
-  @media (max-width: 900px) {
-    .garden-wrapper {
-      max-width: 100%;
-      border-radius: 16px;
-    }
-  }
-  
-  /* Story-focused enhancements */
-  .story-cta-banner {
-    background: linear-gradient(135deg, rgba(46, 93, 49, 0.1) 0%, rgba(46, 93, 49, 0.05) 100%);
+  /* Story Discovery Banner */
+  .story-discovery-banner {
+    background: linear-gradient(135deg, rgba(46, 93, 49, 0.08) 0%, rgba(46, 93, 49, 0.04) 100%);
     border: 2px solid var(--czech-forest-light);
     border-radius: 12px;
-    padding: 1rem 2rem;
+    padding: 1.5rem 2rem;
     margin: 1.5rem auto;
     max-width: 600px;
     text-align: center;
-    animation: gentle-pulse 3s ease-in-out infinite;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    animation: gentle-pulse 4s ease-in-out infinite;
+  }
+  
+  .discovery-icon {
+    font-size: 1.5rem;
+    color: var(--czech-forest);
   }
   
   @keyframes gentle-pulse {
@@ -798,50 +678,109 @@
     50% { transform: scale(1.02); }
   }
   
-  .story-tooltip {
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--czech-forest);
-    color: white;
-    padding: 0.5rem 0.75rem;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transition: all 0.3s ease;
-    z-index: 1000;
-    margin-bottom: 8px;
-  }
-  
-  .story-tooltip::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border: 4px solid transparent;
-    border-top-color: var(--czech-forest);
-  }
-  
-  .story-trigger:hover .story-tooltip,
-  .story-trigger:focus .story-tooltip {
-    opacity: 1;
-    transform: translateX(-50%) translateY(-4px);
-  }
-  
+  /* Responsive Design */
   @media (max-width: 768px) {
-    .story-cta-banner {
-      padding: 0.75rem 1rem;
-      margin: 1rem auto;
-      font-size: 0.9rem;
+    .story-canvas {
+      padding: 1.5rem 1rem;
     }
     
-    .story-tooltip {
-      font-size: 0.7rem;
-      padding: 0.4rem 0.6rem;
+    .story-grid {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+    
+    .story-category {
+      padding: 1rem;
+    }
+    
+    .story-icons {
+      gap: 0.75rem;
+    }
+    
+    .story-element {
+      min-width: 100px;
+      padding: 0.75rem;
+    }
+    
+    .story-icon {
+      font-size: 1.5rem;
+    }
+    
+    .story-preview {
+      font-size: 0.8rem;
+    }
+    
+    .impact-stats {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      padding: 1.5rem;
+    }
+    
+    .stat-item {
+      padding: 1rem;
+    }
+    
+    .stat-icon {
+      font-size: 1.8rem;
+    }
+    
+    .stat-number {
+      font-size: 1.6rem;
+    }
+    
+    .havel-quote-enhanced {
+      padding: 1.5rem;
+      margin: 1rem 0 0;
+    }
+    
+    .quote-text {
+      font-size: 1rem;
+    }
+    
+    .quote-icon {
+      display: none;
+    }
+    
+    .story-discovery-banner {
+      flex-direction: column;
+      gap: 0.5rem;
+      padding: 1rem;
+      margin: 1rem auto;
+    }
+  }
+  
+  @media (max-width: 900px) {
+    .story-discovery-wrapper {
+      max-width: 100%;
+      border-radius: 16px;
+    }
+  }
+  
+  /* Accessibility */
+  @media (prefers-reduced-motion: reduce) {
+    .story-element,
+    .stat-item,
+    .story-category {
+      transition: none;
+    }
+    
+    .gentle-pulse,
+    .floating-story {
+      animation: none;
+    }
+  }
+  
+  /* High contrast mode */
+  @media (prefers-contrast: high) {
+    .story-element,
+    .stat-item,
+    .story-category {
+      border-width: 2px;
+    }
+    
+    .story-element:hover,
+    .stat-item:hover {
+      border-color: #000;
     }
   }
 </style> 

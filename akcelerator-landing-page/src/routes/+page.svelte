@@ -147,7 +147,7 @@
     <div class="czech-container">
       <div class="story-content">
         <div class="story-text">
-          <h2 class="czech-heading-lg mb-6">
+          <h2 class="czech-heading-lg mb-8">
             {language === 'czech' 
               ? 'Od empatie k akci – česky a prakticky' 
               : 'From empathy to action – Czech and practical'}
@@ -155,11 +155,18 @@
           
           {#if language === 'czech'}
             <div class="story-paragraphs">
-              <p class="czech-body-large mb-4">
-                Václav Havel říkal: "Naděje není přesvědčení, že se něco povede, 
-                ale jistota, že má smysl, bez ohledu na to, jak to dopadne."
-              </p>
-              <p class="czech-body mb-4">
+              <!-- Enhanced Havel Quote - Better Positioned -->
+              <div class="havel-quote-hero">
+                <div class="quote-decoration">🌟</div>
+                <blockquote class="quote-content">
+                  "Naděje není přesvědčení, že se něco povede, 
+                  ale jistota, že má smysl, bez ohledu na to, jak to dopadne."
+                </blockquote>
+                <cite class="quote-attribution">— Václav Havel</cite>
+                <div class="quote-decoration">🌟</div>
+              </div>
+              
+              <p class="czech-body-large mb-6">
                 Tato platforma vznikla z poznání, že Češi nechtějí velká gesta a prázdné řeči. 
                 Chceme <strong>praktické kroky</strong>, které skutečně pomáhají.
               </p>
@@ -171,11 +178,18 @@
             </div>
           {:else}
             <div class="story-paragraphs">
-              <p class="czech-body-large mb-4">
-                Václav Havel said: "Hope is not the conviction that something will turn out well, 
-                but the certainty that something makes sense, regardless of how it turns out."
-              </p>
-              <p class="czech-body mb-4">
+              <!-- Enhanced Havel Quote - Better Positioned -->
+              <div class="havel-quote-hero">
+                <div class="quote-decoration">🌟</div>
+                <blockquote class="quote-content">
+                  "Hope is not the conviction that something will turn out well, 
+                  but the certainty that something makes sense, regardless of how it turns out."
+                </blockquote>
+                <cite class="quote-attribution">— Václav Havel</cite>
+                <div class="quote-decoration">🌟</div>
+              </div>
+              
+              <p class="czech-body-large mb-6">
                 This platform was born from understanding that Czechs don't want grand gestures 
                 and empty words. We want <strong>practical steps</strong> that truly help.
               </p>
@@ -355,77 +369,163 @@
   
   /* Story Section */
   .story-section {
-    padding: 5rem 0;
+    padding: 6rem 0;
+    background: linear-gradient(135deg, #fafcfa 0%, #f0f6f0 100%);
   }
   
   .story-content {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 4rem;
-    align-items: center;
+    gap: 5rem;
+    align-items: start;
   }
   
   .story-paragraphs {
-    margin-bottom: 2rem;
+    margin-bottom: 3rem;
+  }
+  
+  /* Enhanced Havel Quote Styling */
+  .havel-quote-hero {
+    background: linear-gradient(135deg, rgba(46, 93, 49, 0.05) 0%, rgba(176, 141, 87, 0.05) 100%);
+    border-left: 4px solid var(--czech-forest);
+    border-radius: 0 12px 12px 0;
+    padding: 2rem 2.5rem;
+    margin: 2rem 0 3rem 0;
+    position: relative;
+    box-shadow: 0 4px 16px rgba(46, 93, 49, 0.1);
+    backdrop-filter: blur(5px);
+  }
+  
+  .havel-quote-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--czech-forest), var(--copper-detail));
+  }
+  
+  .quote-decoration {
+    font-size: 1.2rem;
+    color: var(--copper-detail);
+    margin: 0 0.5rem;
+    display: inline-block;
+  }
+  
+  .quote-content {
+    font-size: 1.15rem;
+    font-style: italic;
+    color: var(--czech-forest);
+    line-height: 1.6;
+    margin: 1rem 0;
+    font-weight: 400;
+    text-align: center;
+  }
+  
+  .quote-attribution {
+    display: block;
+    text-align: center;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-top: 1rem;
+    font-style: normal;
   }
   
   .story-stats {
     display: flex;
-    gap: 2rem;
+    gap: 2.5rem;
+    margin-top: 2rem;
   }
   
   .stat-item {
     text-align: center;
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 12px;
+    border: 1px solid var(--subtle-border);
+    transition: all 0.3s ease;
+    flex: 1;
+  }
+  
+  .stat-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(46, 93, 49, 0.15);
+    background: rgba(255, 255, 255, 0.9);
   }
   
   .stat-number {
-    font-size: 2.5rem;
+    font-size: 2.8rem;
     font-weight: 700;
     color: var(--czech-forest);
     line-height: 1;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
+    text-shadow: 0 1px 2px rgba(46, 93, 49, 0.1);
   }
   
   .stat-label {
     font-size: 0.9rem;
     color: var(--text-secondary);
     font-weight: 500;
+    line-height: 1.3;
   }
   
   .visual-elements {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 2.5rem;
+    margin-top: 2rem;
   }
   
   .element {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 1.5rem;
-    background: var(--bg-accent);
+    gap: 1.5rem;
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.8);
     border: 1px solid var(--subtle-border);
-    border-radius: 12px;
+    border-radius: 16px;
     transition: all var(--timing-medium) var(--ease-gentle);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .element::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--copper-detail), var(--czech-forest-light));
+    opacity: 0;
+    transition: opacity var(--timing-medium) var(--ease-gentle);
   }
   
   .element:hover {
-    transform: translateX(8px);
-    box-shadow: 0 8px 24px rgba(46, 93, 49, 0.1);
+    transform: translateX(12px);
+    box-shadow: 0 8px 24px rgba(46, 93, 49, 0.15);
+    background: rgba(255, 255, 255, 0.95);
+  }
+  
+  .element:hover::before {
+    opacity: 1;
   }
   
   .element-icon {
-    font-size: 2rem;
+    font-size: 2.5rem;
     flex-shrink: 0;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
   }
   
   .element-text {
     font-weight: 500;
     color: var(--czech-forest);
     margin: 0;
+    font-size: 1.05rem;
+    line-height: 1.4;
   }
-  
-
   
   /* Mobile Responsive */
   @media (max-width: 768px) {
@@ -446,23 +546,88 @@
       padding-top: 60px;
     }
     
+    .story-section {
+      padding: 4rem 0;
+    }
+    
     .story-content {
       grid-template-columns: 1fr;
-      gap: 2rem;
+      gap: 3rem;
+    }
+    
+    .havel-quote-hero {
+      padding: 1.5rem 2rem;
+      margin: 1.5rem 0 2rem 0;
+      border-radius: 0 8px 8px 0;
+    }
+    
+    .quote-content {
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+    
+    .quote-decoration {
+      font-size: 1rem;
     }
     
     .story-stats {
-      justify-content: center;
+      flex-direction: column;
+      gap: 1rem;
+      align-items: center;
+    }
+    
+    .stat-item {
+      padding: 1rem;
+      width: 100%;
+      max-width: 250px;
+    }
+    
+    .stat-number {
+      font-size: 2.2rem;
     }
     
     .visual-elements {
       order: -1;
+      gap: 1.5rem;
+      margin-top: 0;
     }
     
     .element {
       flex-direction: column;
       text-align: center;
-      padding: 1rem;
+      padding: 1.5rem;
+      gap: 1rem;
+    }
+    
+    .element:hover {
+      transform: translateY(-3px);
+    }
+    
+    .element-icon {
+      font-size: 2rem;
+    }
+    
+    .element-text {
+      font-size: 0.95rem;
+    }
+  }
+  
+  /* Tablet optimizations */
+  @media (max-width: 1024px) and (min-width: 769px) {
+    .story-content {
+      gap: 3.5rem;
+    }
+    
+    .havel-quote-hero {
+      padding: 1.75rem 2rem;
+    }
+    
+    .story-stats {
+      gap: 2rem;
+    }
+    
+    .visual-elements {
+      gap: 2rem;
     }
   }
 </style> 

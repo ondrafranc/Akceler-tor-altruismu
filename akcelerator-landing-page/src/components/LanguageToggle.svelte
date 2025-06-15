@@ -13,8 +13,8 @@
   });
   
   const languages = {
-    czech: { code: 'cs', flag: '🇨🇿', name: 'Čeština', shortName: 'CZ', nativeName: 'Čeština' },
-    english: { code: 'en', flag: '🇺🇸', name: 'English', shortName: 'EN', nativeName: 'English' }
+    czech: { code: 'cs', flag: '🇨🇿', name: 'Čeština', shortName: 'CZ' },
+    english: { code: 'en', flag: '🇺🇸', name: 'English', shortName: 'EN' }
   };
   
   function toggleDropdown() {
