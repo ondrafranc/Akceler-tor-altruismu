@@ -147,26 +147,26 @@
   <!-- Hero Section -->
   <Hero />
   
-  <!-- From Empathy to Action Section - Simplified -->
+  <!-- From Empathy to Action Section - Refined -->
   <section id="from-empathy-to-action" class="czech-section">
     <div class="czech-container">
-      <h2 class="czech-heading-lg text-center mb-12">Od empatie k akci – česky a prakticky</h2>
+      <h2 class="czech-heading-lg text-center mb-16">Od empatie k akci – česky a prakticky</h2>
       
       <!-- Quote with Icon -->
-      <div class="text-center mb-12">
-        <div class="quiet-celebration max-w-2xl mx-auto">
-          <div class="flex items-center justify-center gap-4 mb-4">
+      <div class="text-center mb-16">
+        <div class="quote-block max-w-2xl mx-auto">
+          <div class="flex items-center justify-center gap-4 mb-6">
             <span class="text-3xl">❤️</span>
             <blockquote class="czech-body-large italic">
               "Když nemůžete pomoci všem, pomozte alespoň jednomu."
             </blockquote>
           </div>
-          <p class="text-right czech-body font-medium">— Matka Tereza</p>
+          <p class="text-right czech-body font-medium text-green-700">— Matka Tereza</p>
         </div>
       </div>
       
       <!-- Explanation Paragraph -->
-      <div class="max-w-3xl mx-auto text-center mb-16">
+      <div class="max-w-3xl mx-auto text-center mb-20">
         <p class="czech-body-large mb-6">
           Tato platforma vznikla z poznání, že Češi nechtějí velká gesta a prázdné řeči. Chceme <strong>praktické kroky</strong>, které skutečně pomáhají.
         </p>
@@ -175,45 +175,54 @@
         </p>
       </div>
       
-      <!-- Three Stylized Boxes -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-16">
-        <div class="solidarity-card text-center">
-          <div class="text-4xl mb-4">🏠</div>
-          <h3 class="czech-heading-md mb-3">Soused pomáhá sousedovi</h3>
-          <p class="czech-body">Najděte způsoby, jak pomoci přímo ve svém okolí – od nákupů po hlídání dětí.</p>
+      <!-- Three Enhanced Story Boxes -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-24">
+        <div class="story-approach-card">
+          <div class="story-approach-header">
+            <span class="story-approach-icon">🏠</span>
+            <h3 class="story-approach-title">Soused pomáhá sousedovi</h3>
+          </div>
+          <p class="story-approach-text">Najděte způsoby, jak pomoci přímo ve svém okolí – od nákupů po hlídání dětí.</p>
         </div>
         
-        <div class="solidarity-card text-center">
-          <div class="text-4xl mb-4">✨</div>
-          <h3 class="czech-heading-md mb-3">Malé kroky, velký dopad</h3>
-          <p class="czech-body">Zjistěte, jak i malé činy mohou změnit život druhých a vytvořit lepší komunitu.</p>
+        <div class="story-approach-card">
+          <div class="story-approach-header">
+            <span class="story-approach-icon">✨</span>
+            <h3 class="story-approach-title">Malé kroky, velký dopad</h3>
+          </div>
+          <p class="story-approach-text">Zjistěte, jak i malé činy mohou změnit život druhých a vytvořit lepší komunitu.</p>
         </div>
         
-        <div class="solidarity-card text-center">
-          <div class="text-4xl mb-4">💪</div>
-          <h3 class="czech-heading-md mb-3">Praktická solidarita</h3>
-          <p class="czech-body">Spojte síly s důvěryhodnými organizacemi ve vašem okolí.</p>
+        <div class="story-approach-card">
+          <div class="story-approach-header">
+            <span class="story-approach-icon">💪</span>
+            <h3 class="story-approach-title">Praktická solidarita</h3>
+          </div>
+          <p class="story-approach-text">Spojte síly s důvěryhodnými organizacemi ve vašem okolí.</p>
         </div>
       </div>
       
-      <!-- Simple Stats -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
-        <div class="text-center">
-          <div class="text-3xl mb-2">☀️</div>
-          <div class="czech-heading-lg text-center">247</div>
-          <div class="czech-body">akcí tento týden</div>
-        </div>
-        
-        <div class="text-center">
-          <div class="text-3xl mb-2">🤝</div>
-          <div class="czech-heading-lg text-center">1,834</div>
-          <div class="czech-body">aktivních pomocníků</div>
-        </div>
-        
-        <div class="text-center">
-          <div class="text-3xl mb-2">📍</div>
-          <div class="czech-heading-lg text-center">12</div>
-          <div class="czech-body">regionů</div>
+      <!-- Stats Section with Clear Separation -->
+      <div class="stats-section">
+        <div class="stats-divider"></div>
+        <div class="stats-container">
+          <div class="stat-item">
+            <div class="stat-icon">☀️</div>
+            <div class="stat-number">7</div>
+            <div class="stat-label">akcí tento týden</div>
+          </div>
+          
+          <div class="stat-item">
+            <div class="stat-icon">🤝</div>
+            <div class="stat-number">234</div>
+            <div class="stat-label">aktivních pomocníků</div>
+          </div>
+          
+          <div class="stat-item">
+            <div class="stat-icon">📍</div>
+            <div class="stat-number">7</div>
+            <div class="stat-label">regionů</div>
+          </div>
         </div>
       </div>
     </div>
@@ -337,6 +346,117 @@
     padding-top: 70px; /* Account for fixed nav */
   }
   
+  /* From Empathy to Action Section Styles */
+  .quote-block {
+    background: var(--bg-accent);
+    border-left: 4px solid var(--czech-forest-light);
+    padding: 2rem 2.5rem;
+    border-radius: 12px;
+    transition: all var(--timing-medium) var(--ease-gentle);
+  }
+  
+  .story-approach-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--subtle-border);
+    border-radius: 16px;
+    padding: 2rem;
+    transition: all var(--timing-medium) var(--ease-gentle);
+    box-shadow: 0 2px 8px rgba(46, 93, 49, 0.08);
+    border-top: 3px solid transparent;
+  }
+  
+  .story-approach-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(46, 93, 49, 0.15);
+    border-top-color: var(--czech-forest-light);
+    background: linear-gradient(135deg, var(--bg-primary) 0%, rgba(232, 242, 232, 0.3) 100%);
+  }
+  
+  .story-approach-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+  
+  .story-approach-icon {
+    font-size: 2.5rem;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+  
+  .story-approach-title {
+    font-family: Inter, sans-serif;
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: var(--czech-forest);
+    margin: 0;
+    line-height: 1.3;
+  }
+  
+  .story-approach-text {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin: 0;
+  }
+  
+  .stats-section {
+    max-width: 4xl;
+    margin: 0 auto;
+  }
+  
+  .stats-divider {
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--czech-forest-light) 0%, var(--copper-detail) 100%);
+    margin: 0 auto 3rem;
+    border-radius: 1px;
+  }
+  
+  .stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 2rem;
+    max-width: 3xl;
+    margin: 0 auto;
+    padding: 2.5rem;
+    background: rgba(245, 241, 232, 0.4);
+    border-radius: 20px;
+    border: 1px solid rgba(212, 231, 212, 0.6);
+  }
+  
+  .stat-item {
+    text-align: center;
+    padding: 1rem;
+    transition: all var(--timing-medium) var(--ease-gentle);
+  }
+  
+  .stat-item:hover {
+    transform: translateY(-1px);
+  }
+  
+  .stat-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    display: block;
+  }
+  
+  .stat-number {
+    font-family: Inter, sans-serif;
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--czech-forest);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+  
+  .stat-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
   /* Mobile Responsive */
   @media (max-width: 768px) {
     .nav-container {
@@ -354,6 +474,40 @@
     
     .landing-page {
       padding-top: 60px;
+    }
+    
+    /* From Empathy to Action - Mobile */
+    .quote-block {
+      padding: 1.5rem 2rem;
+    }
+    
+    .story-approach-card {
+      padding: 1.5rem;
+    }
+    
+    .story-approach-header {
+      flex-direction: column;
+      text-align: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    
+    .story-approach-title {
+      font-size: 1.2rem;
+    }
+    
+    .story-approach-text {
+      text-align: center;
+    }
+    
+    .stats-container {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+      padding: 2rem 1.5rem;
+    }
+    
+    .stat-number {
+      font-size: 2rem;
     }
   }
 </style> 
