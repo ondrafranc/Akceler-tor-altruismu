@@ -340,8 +340,8 @@ def load_causes_data(language='czech'):
             with open('data/international/causes.json', 'r', encoding='utf-8') as f:
                 data = json.load(f)
         return data.get('causes', {})
-    except FileNotFoundError:
-        st.warning(f"Causes data file not found for {language}. Using fallback.")
+    except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError) as e:
+        st.warning(f"Causes data file issue for {language}. Using fallback. Error: {str(e)}")
         return {}
 
 @st.cache_data
@@ -355,8 +355,8 @@ def load_actions_data(language='czech'):
             with open('data/international/actions.json', 'r', encoding='utf-8') as f:
                 data = json.load(f)
         return data.get('actions', {})
-    except FileNotFoundError:
-        st.warning(f"Actions data file not found for {language}.")
+    except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError) as e:
+        st.warning(f"Actions data file issue for {language}. Error: {str(e)}")
         return {}
 
 @st.cache_data
@@ -369,11 +369,24 @@ def load_encouragement_data(language='czech'):
         else:
             with open('data/international/encouragement_messages.json', 'r', encoding='utf-8') as f:
                 return json.load(f)
-    except FileNotFoundError:
+    except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError) as e:
+        st.warning(f"Encouragement data file issue for {language}. Error: {str(e)}")
         if language == 'czech':
             return {"welcome_messages": ["Vítejte v Akcelerátoru altruismu!"]}
         else:
             return {"welcome_messages": ["Welcome to Altruism Accelerator!"]}
+
+# Safer function execution wrapper to prevent tokenization issues
+def safe_execute_with_fallback(func, *args, **kwargs):
+    """Execute function with fallback for tokenization issues"""
+    try:
+        return func(*args, **kwargs)
+    except Exception as e:
+        if "TokenError" in str(e) or "unterminated string literal" in str(e):
+            st.error(f"🔧 Detected tokenization issue (Python 3.13 compatibility). Please refresh the page. Error: {str(e)[:100]}...")
+            return None
+        else:
+            raise e
 
 def get_text(key, language='czech'):
     """Get localized text"""
