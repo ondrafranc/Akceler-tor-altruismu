@@ -176,40 +176,43 @@
         </div>
       </div>
       
-      <!-- Explanation Paragraph -->
-      <div class="max-w-3xl mx-auto text-center mb-16">
-        <p class="czech-body-large mb-4">
-          Tato platforma vznikla z poznání, že Češi nechtějí velká gesta a prázdné řeči. Chceme <strong>praktické kroky</strong>, které skutečně pomáhají.
-        </p>
-        <p class="czech-body">
-          Každý den někdo potřebuje pomoc. Možná je to soused, který se stará o nemocného rodiče. Nebo místní organizace, která hledá dobrovolníky. Někdy stačí jen malá věc – ale jak najít tu správnou příležitost?
-        </p>
-      </div>
-      
-      <!-- Three Enhanced Story Boxes -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-16">
-        <div class="story-approach-card">
-          <div class="story-approach-header">
-            <span class="story-approach-icon">🏠</span>
-            <h3 class="story-approach-title">Soused pomáhá sousedovi</h3>
-          </div>
-          <p class="story-approach-text">Najděte způsoby, jak pomoci přímo ve svém okolí – od nákupů po hlídání dětí.</p>
+      <!-- Compact Layout: Explanation and Tiles Side by Side -->
+      <div class="empathy-content-wrapper">
+        <!-- Left Column: Explanation -->
+        <div class="empathy-explanation">
+          <p class="czech-body-large mb-4">
+            Tato platforma vznikla z poznání, že Češi nechtějí velká gesta a prázdné řeči. Chceme <strong>praktické kroky</strong>, které skutečně pomáhají.
+          </p>
+          <p class="czech-body">
+            Každý den někdo potřebuje pomoc. Možná je to soused, který se stará o nemocného rodiče. Nebo místní organizace, která hledá dobrovolníky. Někdy stačí jen malá věc – ale jak najít tu správnou příležitost?
+          </p>
         </div>
         
-        <div class="story-approach-card">
-          <div class="story-approach-header">
-            <span class="story-approach-icon">✨</span>
-            <h3 class="story-approach-title">Malé kroky, velký dopad</h3>
+        <!-- Right Column: Three Enhanced Story Tiles -->
+        <div class="empathy-tiles">
+          <div class="story-approach-card">
+            <div class="story-approach-header">
+              <span class="story-approach-icon">🏠</span>
+              <h3 class="story-approach-title">Soused pomáhá sousedovi</h3>
+            </div>
+            <p class="story-approach-text">Najděte způsoby, jak pomoci přímo ve svém okolí – od nákupů po hlídání dětí.</p>
           </div>
-          <p class="story-approach-text">Zjistěte, jak i malé činy mohou změnit život druhých a vytvořit lepší komunitu.</p>
-        </div>
-        
-        <div class="story-approach-card">
-          <div class="story-approach-header">
-            <span class="story-approach-icon">💪</span>
-            <h3 class="story-approach-title">Praktická solidarita</h3>
+          
+          <div class="story-approach-card">
+            <div class="story-approach-header">
+              <span class="story-approach-icon">✨</span>
+              <h3 class="story-approach-title">Malé kroky, velký dopad</h3>
+            </div>
+            <p class="story-approach-text">Zjistěte, jak i malé činy mohou změnit život druhých a vytvořit lepší komunitu.</p>
           </div>
-          <p class="story-approach-text">Spojte síly s důvěryhodnými organizacemi ve vašem okolí.</p>
+          
+          <div class="story-approach-card">
+            <div class="story-approach-header">
+              <span class="story-approach-icon">💪</span>
+              <h3 class="story-approach-title">Praktická solidarita</h3>
+            </div>
+            <p class="story-approach-text">Spojte síly s důvěryhodnými organizacemi ve vašem okolí.</p>
+          </div>
         </div>
       </div>
       
@@ -418,6 +421,35 @@
     font-style: italic;
   }
   
+  /* Compact Layout Styles */
+  .empathy-content-wrapper {
+    display: flex;
+    gap: 3rem;
+    align-items: flex-start;
+    max-width: 6xl;
+    margin: 0 auto 3rem;
+  }
+  
+  .empathy-explanation {
+    flex: 1;
+    max-width: 450px;
+    padding-right: 1rem;
+  }
+  
+  .empathy-explanation .czech-body-large,
+  .empathy-explanation .czech-body {
+    text-align: left;
+    margin-bottom: 1.5rem;
+  }
+  
+  .empathy-tiles {
+    flex: 1.5;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    max-width: 500px;
+  }
+  
   .story-approach-card {
     background: var(--bg-primary);
     border: 1px solid var(--subtle-border);
@@ -562,25 +594,53 @@
       font-size: 0.8rem;
     }
     
+    /* Mobile: Stack layout vertically */
+    .empathy-content-wrapper {
+      flex-direction: column;
+      gap: 2rem;
+      margin: 0 auto 2rem;
+    }
+    
+    .empathy-explanation {
+      max-width: none;
+      padding-right: 0;
+      text-align: center;
+    }
+    
+    .empathy-explanation .czech-body-large,
+    .empathy-explanation .czech-body {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    
+    .empathy-tiles {
+      max-width: none;
+    }
+    
     .story-approach-card {
-      padding: 1.5rem;
+      padding: 1.25rem;
       height: auto;
     }
     
     .story-approach-header {
-      flex-direction: column;
-      text-align: center;
-      gap: 0.75rem;
+      flex-direction: row;
+      text-align: left;
+      gap: 1rem;
       margin-bottom: 1rem;
     }
     
+    .story-approach-icon {
+      font-size: 2rem;
+    }
+    
     .story-approach-title {
-      font-size: 1.2rem;
+      font-size: 1.1rem;
     }
     
     .story-approach-text {
-      text-align: center;
+      text-align: left;
       flex-grow: 0;
+      font-size: 0.9rem;
     }
     
     .stats-container {

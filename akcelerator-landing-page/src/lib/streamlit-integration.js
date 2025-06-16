@@ -7,7 +7,7 @@
 // ================================================================
 
 // Configuration
-const STREAMLIT_BASE_URL = 'https://akcelerator-altruismu.streamlit.app';
+const STREAMLIT_BASE_URL = 'https://akceler-tor-altruismu-gvf9tctpuuq4t4tpjmaesa.streamlit.app';
 const API_ENDPOINTS = {
   stats: '/api/stats',
   actions: '/api/recent-actions',

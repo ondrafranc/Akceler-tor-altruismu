@@ -55,8 +55,8 @@
   function launchAccelerator() {
     // Smooth transition to Streamlit app
     const url = language === 'czech' ? 
-      'https://akcelerator-altruismu.streamlit.app?lang=czech' : 
-      'https://akcelerator-altruismu.streamlit.app?lang=english';
+      'https://akceler-tor-altruismu-gvf9tctpuuq4t4tpjmaesa.streamlit.app?lang=czech' : 
+      'https://akceler-tor-altruismu-gvf9tctpuuq4t4tpjmaesa.streamlit.app?lang=english';
     
     // Add loading state animation (only on client)
     if (typeof window !== 'undefined' && gsap && ctaButtons) {

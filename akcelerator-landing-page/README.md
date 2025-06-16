@@ -93,7 +93,7 @@ vercel
 For production deployment, set these in Vercel Dashboard:
 
 ```
-STREAMLIT_BASE_URL=https://akcelerator-altruismu.streamlit.app
+STREAMLIT_BASE_URL=https://akceler-tor-altruismu-gvf9tctpuuq4t4tpjmaesa.streamlit.app
 ```
 
 ### Vercel Settings
@@ -114,7 +114,7 @@ The project includes optimized `vercel.json` and SvelteKit adapter configuration
 ## 🔗 Integration
 
 ### Streamlit Backend
-- Production app: `https://akcelerator-altruismu.streamlit.app`
+- Production app: `https://akceler-tor-altruismu-gvf9tctpuuq4t4tpjmaesa.streamlit.app`
 - The landing page CTA button opens the Streamlit app in a new tab
 - Includes error handling and fallback dialogs
 

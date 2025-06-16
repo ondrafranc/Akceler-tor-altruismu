@@ -17,7 +17,7 @@
     
     <div class="error-actions">
       <a 
-        href="https://akcelerator-altruismu.streamlit.app" 
+        		href="https://akceler-tor-altruismu-gvf9tctpuuq4t4tpjmaesa.streamlit.app" 
         class="primary-button"
         target="_blank"
         rel="noopener noreferrer"

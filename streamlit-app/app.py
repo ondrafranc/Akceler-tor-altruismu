@@ -21,51 +21,96 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Enhanced CSS for Czech cultural adaptation - less flashy, more professional
+# Enhanced CSS for Czech cultural adaptation - Comprehensive UX/UI Refactor
 st.markdown("""
 <style>
+    /* Enhanced Typography Hierarchy */
     .main-header {
-        font-size: clamp(1.8rem, 5vw, 2.2rem);
+        font-size: clamp(2rem, 5vw, 2.8rem);
         color: #2E5D31;
         text-align: center;
-        margin-bottom: 1rem;
-        font-weight: 600;
+        margin-bottom: 1.5rem;
+        font-weight: 700;
+        line-height: 1.2;
+        text-shadow: 0 2px 4px rgba(46, 93, 49, 0.1);
         animation: fadeInDown 0.6s ease-out;
     }
     .sub-header {
-        font-size: clamp(1rem, 3vw, 1.1rem);
+        font-size: clamp(1.1rem, 3vw, 1.3rem);
         color: #5A6B5A;
         text-align: center;
-        margin-bottom: 2rem;
+        margin-bottom: 2.5rem;
         font-style: normal;
+        font-weight: 400;
+        line-height: 1.5;
         animation: fadeIn 0.8s ease-out 0.2s both;
     }
+    .section-header {
+        font-size: clamp(1.4rem, 4vw, 1.8rem);
+        color: #2E5D31;
+        margin-bottom: 1.5rem;
+        font-weight: 600;
+        border-bottom: 2px solid #A8D5A8;
+        padding-bottom: 0.5rem;
+    }
+    /* Enhanced Card System */
     .cause-card {
         border: 1px solid #A8D5A8;
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 1rem 0;
+        border-radius: 16px;
+        padding: 2rem;
+        margin: 1.5rem 0;
         background: linear-gradient(135deg, #F8FDF8 0%, #F0F8F0 100%);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-        transition: all 0.3s ease;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.1);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-top: 3px solid transparent;
     }
     .cause-card:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.12), 0 3px 6px rgba(0,0,0,0.08);
         border-color: #7AB87A;
+        border-top-color: #7AB87A;
+        background: linear-gradient(135deg, #F9FEF9 0%, #F2F9F2 100%);
     }
     .action-card {
         border: 1px solid #C4E4C4;
-        border-radius: 8px;
-        padding: 1rem;
-        margin: 0.5rem 0;
-        background-color: #FAFBFA;
-        transition: all 0.2s ease;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        background: linear-gradient(135deg, #FAFBFA 0%, #F5F7F5 100%);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        border-left: 4px solid transparent;
     }
     .action-card:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);
         border-color: #9BC89B;
+        border-left-color: #7AB87A;
+        background: linear-gradient(135deg, #FBFCFB 0%, #F6F8F6 100%);
+    }
+    
+    /* Enhanced Button System */
+    .stButton > button {
+        background: linear-gradient(135deg, #7AB87A 0%, #5A9B5A 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 10px !important;
+        padding: 0.75rem 1.5rem !important;
+        font-weight: 600 !important;
+        font-size: 0.95rem !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 3px 6px rgba(122, 184, 122, 0.3) !important;
+        text-transform: none !important;
+        letter-spacing: 0.01em !important;
+    }
+    .stButton > button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 12px rgba(122, 184, 122, 0.4) !important;
+        background: linear-gradient(135deg, #8BC88B 0%, #6BAC6B 100%) !important;
+    }
+    .stButton > button:active {
+        transform: translateY(0) !important;
+        box-shadow: 0 2px 4px rgba(122, 184, 122, 0.3) !important;
     }
     .progress-text {
         font-size: 0.9rem;
@@ -142,6 +187,112 @@ st.markdown("""
         display: inline-block;
         margin: 0.2rem;
     }
+    /* Enhanced Layout System */
+    .content-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1rem 2rem;
+    }
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin: 2rem 0;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin: 2rem 0;
+    }
+    
+    /* Enhanced Progress Indicators */
+    .stProgress > div > div {
+        background: linear-gradient(90deg, #7AB87A 0%, #5A9B5A 100%) !important;
+        border-radius: 10px !important;
+        height: 8px !important;
+    }
+    .stProgress > div {
+        background-color: #E0EBE0 !important;
+        border-radius: 10px !important;
+        height: 8px !important;
+    }
+    
+    /* Enhanced Selectbox and Input Styling */
+    .stSelectbox > div > div {
+        border-radius: 8px !important;
+        border: 2px solid #C4E4C4 !important;
+        transition: all 0.3s ease !important;
+    }
+    .stSelectbox > div > div:focus-within {
+        border-color: #7AB87A !important;
+        box-shadow: 0 0 0 3px rgba(122, 184, 122, 0.1) !important;
+    }
+    
+    /* Enhanced Multiselect Styling */
+    .stMultiSelect > div > div {
+        border-radius: 8px !important;
+        border: 2px solid #C4E4C4 !important;
+    }
+    .stMultiSelect > div > div:focus-within {
+        border-color: #7AB87A !important;
+        box-shadow: 0 0 0 3px rgba(122, 184, 122, 0.1) !important;
+    }
+    
+    /* Enhanced Radio Button Styling */
+    .stRadio > div {
+        gap: 1rem !important;
+    }
+    .stRadio > div > label {
+        padding: 0.75rem 1rem !important;
+        border-radius: 8px !important;
+        border: 1px solid #C4E4C4 !important;
+        background: #FAFBFA !important;
+        transition: all 0.3s ease !important;
+        cursor: pointer !important;
+    }
+    .stRadio > div > label:hover {
+        background: #F0F8F0 !important;
+        border-color: #9BC89B !important;
+    }
+    
+    /* Responsive Design Improvements */
+    @media (max-width: 768px) {
+        .content-container {
+            padding: 1rem;
+        }
+        .main-header {
+            font-size: 1.8rem !important;
+            margin-bottom: 1rem !important;
+        }
+        .sub-header {
+            font-size: 1rem !important;
+            margin-bottom: 1.5rem !important;
+        }
+        .cause-card, .action-card {
+            padding: 1rem !important;
+            margin: 0.75rem 0 !important;
+        }
+        .card-grid {
+            grid-template-columns: 1fr !important;
+            gap: 1rem !important;
+        }
+        .stats-grid {
+            grid-template-columns: 1fr !important;
+            gap: 0.75rem !important;
+        }
+    }
+    
+    /* Enhanced Accessibility */
+    .stButton > button:focus {
+        outline: 3px solid rgba(122, 184, 122, 0.5) !important;
+        outline-offset: 2px !important;
+    }
+    .cause-card:focus, .action-card:focus {
+        outline: 2px solid #7AB87A !important;
+        outline-offset: 2px !important;
+    }
+    
     @keyframes fadeInDown {
         from { opacity: 0; transform: translateY(-20px); }
         to { opacity: 1; transform: translateY(0); }
@@ -149,6 +300,10 @@ st.markdown("""
     @keyframes fadeIn {
         from { opacity: 0; }
         to { opacity: 1; }
+    }
+    @keyframes gentleGlow {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.02); }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -431,84 +586,166 @@ def celebrate_action_completion(action_title: str, cause_type: str = "", languag
         st.markdown(f'<span class="streak-indicator">{streak_msg}</span>', unsafe_allow_html=True)
 
 def main():
-    """Main application"""
-    # Language selector
-    col1, col2, col3 = st.columns([6, 1, 1])
+    """Main application with enhanced UX/UI"""
+    # Enhanced Language selector with better styling
+    col1, col2, col3 = st.columns([7, 1.5, 1.5])
     with col2:
-        if st.button("🇨🇿", help="Čeština"):
+        if st.button("🇨🇿 Čeština", help="Přepnout na češtinu", key="lang_cz"):
             st.session_state.language = 'czech'
             st.rerun()
     with col3:
-        if st.button("🇺🇸", help="English"):
+        if st.button("🇺🇸 English", help="Switch to English", key="lang_en"):
             st.session_state.language = 'english'
             st.rerun()
     
     language = st.session_state.language
     
-    # Sidebar with enhanced navigation
-    st.sidebar.markdown(f"# {get_text('title', language)}")
-    st.sidebar.markdown(f"*{get_text('subtitle', language)}*")
+    # Add a subtle divider
+    st.markdown("---")
     
-    # Show user stats in sidebar
-    if st.session_state.total_impact['actions'] > 0:
-        st.sidebar.markdown(f"### {get_text('my_impact', language)}")
-        st.sidebar.metric(get_text('actions_taken', language), st.session_state.total_impact['actions'])
-        
-        # Show streak
-        if st.session_state.streak_count > 1:
-            if language == 'czech':
-                st.sidebar.markdown(f"🔥 **{st.session_state.streak_count} akcí v řadě**")
+    # Enhanced Sidebar with better user guidance
+    with st.sidebar:
+        st.markdown(f"""
+        <div class="content-container">
+            <h1 class="main-header" style="font-size: 1.5rem; text-align: left; margin-bottom: 0.5rem;">
+                {get_text('title', language)}
+            </h1>
+            <p style="color: #5A6B5A; font-style: italic; margin-bottom: 1.5rem; font-size: 0.9rem;">
+                {get_text('subtitle', language)}
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+        # Enhanced user stats with better visual hierarchy
+        if st.session_state.total_impact['actions'] > 0:
+            st.markdown(f"### 📊 {get_text('my_impact', language)}")
+            
+            # Progress metrics in a container
+            with st.container():
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric(
+                        label=get_text('actions_taken', language), 
+                        value=st.session_state.total_impact['actions'],
+                        delta=f"+{len(st.session_state.actions_completed)} dnes" if language == 'czech' else f"+{len(st.session_state.actions_completed)} today"
+                    )
+                with col2:
+                    total_time = st.session_state.total_impact['time']
+                    time_label = "Času věnováno" if language == 'czech' else "Time spent"
+                    st.metric(
+                        label=time_label, 
+                        value=f"{total_time} min",
+                        delta=f"{total_time/60:.1f}h celkem" if language == 'czech' else f"{total_time/60:.1f}h total"
+                    )
+            
+            # Enhanced streak display
+            if st.session_state.streak_count > 1:
+                streak_text = f"🔥 **{st.session_state.streak_count} akcí v řadě!**" if language == 'czech' else f"🔥 **{st.session_state.streak_count} day streak!**"
+                st.success(streak_text)
+            
+            st.markdown("---")
+    
+        # Enhanced contextual encouragement
+        if random.random() < 0.4:  # Slightly more frequent encouragement
+            if st.session_state.total_impact['actions'] == 0:
+                encouragement = get_random_encouragement("welcome_messages", language)
+                st.info(f"💚 {encouragement}")
+            elif st.session_state.total_impact['actions'] < 3:
+                encouragement = get_random_encouragement("progress_encouragement", language)
+                st.success(f"🌟 {encouragement}")
             else:
-                st.sidebar.markdown(f"🔥 **{st.session_state.streak_count} day streak**")
-    
-    # Contextual encouragement
-    if random.random() < 0.3:
-        if st.session_state.total_impact['actions'] == 0:
-            encouragement = get_random_encouragement("welcome_messages", language)
-        elif st.session_state.total_impact['actions'] < 3:
-            encouragement = get_random_encouragement("progress_encouragement", language)
-        else:
-            encouragement = get_random_encouragement("community_impact_messages", language)
-        st.sidebar.info(f"💚 {encouragement}")
-    
-    # Seasonal message
-    seasonal_msg = get_seasonal_message(language)
-    if seasonal_msg and random.random() < 0.2:
-        st.sidebar.markdown(f'<div style="font-style: italic; padding: 8px; background-color: #f0fff0; border-radius: 5px; margin: 10px 0;"><small>🌿 {seasonal_msg}</small></div>', unsafe_allow_html=True)
-    
-    # Navigation
-    pages = {
-        f"🏠 {get_text('welcome', language)}": show_welcome_page,
-        f"🧭 {get_text('find_path', language)}": show_assessment_page,
-        f"⚡ {get_text('quick_actions', language)}": show_quick_actions_page,
-        f"📊 {get_text('my_impact', language)}": show_impact_page,
-        f"🌍 {get_text('explore_causes', language)}": show_causes_page
-    }
-    
-    selected_page = st.sidebar.radio("", list(pages.keys()))
+                encouragement = get_random_encouragement("community_impact_messages", language)
+                st.balloons() if random.random() < 0.1 else None  # Rare celebration
+                st.success(f"🎉 {encouragement}")
+        
+        # Enhanced seasonal message
+        seasonal_msg = get_seasonal_message(language)
+        if seasonal_msg and random.random() < 0.3:
+            st.markdown(f"""
+            <div style="
+                background: linear-gradient(135deg, #f0fff0 0%, #e8f5e8 100%);
+                border-left: 4px solid #7AB87A;
+                border-radius: 8px;
+                padding: 1rem;
+                margin: 1rem 0;
+                font-style: italic;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            ">
+                <span style="font-size: 1.1em;">🌿</span> {seasonal_msg}
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        # Enhanced Navigation with better visual hierarchy
+        st.markdown("### 🧭 Navigace" if language == 'czech' else "### 🧭 Navigation")
+        
+        # Navigation with enhanced styling
+        pages = {
+            f"🏠 {get_text('welcome', language)}": show_welcome_page,
+            f"🧭 {get_text('find_path', language)}": show_assessment_page,
+            f"⚡ {get_text('quick_actions', language)}": show_quick_actions_page,
+            f"📊 {get_text('my_impact', language)}": show_impact_page,
+            f"🌍 {get_text('explore_causes', language)}": show_causes_page
+        }
+        
+        selected_page = st.radio(
+            "Vyberte stránku:" if language == 'czech' else "Select page:",
+            list(pages.keys()),
+            label_visibility="collapsed"
+        )
     
     # Show selected page
     pages[selected_page]()
 
 def show_welcome_page():
-    """Enhanced welcome page with cultural adaptation"""
+    """Enhanced welcome page with better UX and cultural adaptation"""
     language = st.session_state.language
+    
+    # Main content container
+    st.markdown('<div class="content-container">', unsafe_allow_html=True)
     
     st.markdown(f'<h1 class="main-header">{get_text("title", language)}</h1>', unsafe_allow_html=True)
     
     welcome_msg = get_random_encouragement("welcome_messages", language)
     st.markdown(f'<p class="sub-header">{welcome_msg}</p>', unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns([1, 2, 1])
+    # Add a welcoming introduction
+    if language == 'czech':
+        intro_text = """
+        🌟 **Vítejte v prostoru, kde se empatie mění v konkrétní činy.**
+        
+        Tento nástroj vám pomůže najít smysluplné způsoby, jak pomoci druhým – 
+        ať už máte 5 minut nebo celý den, žijete v Praze nebo obklopeni přírodou.
+        """
+    else:
+        intro_text = """
+        🌟 **Welcome to a space where empathy transforms into concrete action.**
+        
+        This tool helps you find meaningful ways to help others – 
+        whether you have 5 minutes or a whole day, live in Prague or the countryside.
+        """
+    st.markdown(intro_text)
+    
+    st.markdown("---")
+    
+    # Enhanced layout with better visual balance
+    col1, col2, col3 = st.columns([1, 3, 1])
     
     with col2:
-        # Show seasonal message
+        # Enhanced seasonal message display
         seasonal_msg = get_seasonal_message(language)
         if seasonal_msg:
-            st.markdown(f'<div class="quote-box">🌿 {seasonal_msg}</div>', unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="quote-box" style="text-align: center; margin: 2rem 0;">
+                <span style="font-size: 1.2em;">🌿</span> {seasonal_msg}
+            </div>
+            """, unsafe_allow_html=True)
         
+        # Enhanced emotional assessment section
         if language == 'czech':
-            st.markdown("### Jak se právě cítíš?")
+            st.markdown('<h3 class="section-header" style="text-align: center;">💭 Jak se právě cítíš?</h3>', unsafe_allow_html=True)
+            st.markdown("*Pomůže nám najít správný přístup pro vás*")
             emotional_options = [
                 "😔 Zahlcen/a všemi problémy",
                 "😤 Frustrován/a a chci jednat", 
@@ -518,7 +755,8 @@ def show_welcome_page():
                 "😐 Nejistý/á, kde začít"
             ]
         else:
-            st.markdown("### How are you feeling right now?")
+            st.markdown('<h3 class="section-header" style="text-align: center;">💭 How are you feeling right now?</h3>', unsafe_allow_html=True)
+            st.markdown("*This helps us find the right approach for you*")
             emotional_options = [
                 "😔 Overwhelmed by all the problems",
                 "😤 Frustrated and want to act", 
@@ -528,34 +766,67 @@ def show_welcome_page():
                 "😐 Uncertain where to start"
             ]
         
+        # Enhanced emotional state selector
         emotional_state = st.radio(
-            "",
+            "Vyberte možnost, která nejlépe vystihuje váš současný stav:" if language == 'czech' else "Choose the option that best describes your current state:",
             emotional_options,
-            key="emotional_state"
+            key="emotional_state",
+            label_visibility="collapsed"
         )
         
+        # Enhanced contextual response
         if emotional_state:
             emotion_key = emotional_state.split()[1].lower()
             st.session_state.user_profile['emotional_state'] = emotion_key
             
-            # Get contextual response
+            # Enhanced contextual response with better messaging
             encouragement_data = load_encouragement_data(language)
             responses = encouragement_data.get("emotional_state_responses", {}).get(emotion_key, [])
             if responses:
                 response = random.choice(responses)
-                st.success(response)
+                st.success(f"✨ {response}")
+            else:
+                # Fallback encouraging response
+                if language == 'czech':
+                    fallback_response = "Rozumíme vašim pocitům. Najdeme společně způsob, jak můžete pomoci."
+                else:
+                    fallback_response = "We understand how you feel. Let's find a way you can help together."
+                st.info(f"💚 {fallback_response}")
         
         st.markdown("---")
         
-        col_a, col_b = st.columns(2)
+        # Enhanced CTA section with better hierarchy
+        if language == 'czech':
+            st.markdown("### 🚀 Jak chcete začít?")
+            st.markdown("*Vyberte si cestu, která vám vyhovuje:*")
+        else:
+            st.markdown("### 🚀 How would you like to start?")
+            st.markdown("*Choose the path that suits you:*")
+        
+        # Better CTA layout with spacing
+        col_a, col_space, col_b = st.columns([2, 0.5, 2])
         with col_a:
-            if st.button(f"🧭 {get_text('take_assessment', language)}", type="primary", use_container_width=True):
+            if st.button(
+                f"🧭 {get_text('take_assessment', language)}", 
+                type="primary", 
+                use_container_width=True,
+                help="Získejte personalizovaná doporučení na míru" if language == 'czech' else "Get personalized recommendations tailored to you"
+            ):
                 st.session_state.assessment_step = 1
                 st.rerun()
         
         with col_b:
-            if st.button(f"⚡ {get_text('get_quick_help', language)}", use_container_width=True):
+            if st.button(
+                f"⚡ {get_text('get_quick_help', language)}", 
+                use_container_width=True,
+                help="Najděte rychlé akce, které můžete udělat hned teď" if language == 'czech' else "Find quick actions you can do right now"
+            ):
+                # Navigate to quick actions page
+                st.session_state.quick_action_requested = True
                 st.rerun()
+    
+    # Close content container
+    st.markdown('</div>', unsafe_allow_html=True)
 
 def show_assessment_page():
     """Enhanced assessment with Czech cultural adaptation"""
