@@ -148,12 +148,12 @@
   <Hero />
   
   <!-- From Empathy to Action Section - Refined -->
-  <section id="from-empathy-to-action" class="czech-section">
+  <section id="from-empathy-to-action" class="czech-section empathy-section">
     <div class="czech-container">
-      <h2 class="czech-heading-lg text-center mb-16">Od empatie k akci – česky a prakticky</h2>
+      <h2 class="czech-heading-lg text-center mb-12">Od empatie k akci – česky a prakticky</h2>
       
       <!-- Quote with Icon -->
-      <div class="text-center mb-16">
+      <div class="text-center mb-12">
         <div class="quote-block max-w-2xl mx-auto">
           <div class="flex items-center justify-center gap-4 mb-6">
             <span class="text-3xl">❤️</span>
@@ -165,18 +165,29 @@
         </div>
       </div>
       
+      <!-- POC Disclaimer -->
+      <div class="poc-disclaimer">
+        <div class="poc-disclaimer-content">
+          <span class="poc-disclaimer-icon">ℹ️</span>
+          <p class="poc-disclaimer-text">
+            <em>This is a POC (Proof of Concept) version of the platform – chci si ověřit koncept a dostat zpětnou vazbu, moc děkuji!
+            </em>
+          </p>
+        </div>
+      </div>
+      
       <!-- Explanation Paragraph -->
-      <div class="max-w-3xl mx-auto text-center mb-20">
-        <p class="czech-body-large mb-6">
+      <div class="max-w-3xl mx-auto text-center mb-16">
+        <p class="czech-body-large mb-4">
           Tato platforma vznikla z poznání, že Češi nechtějí velká gesta a prázdné řeči. Chceme <strong>praktické kroky</strong>, které skutečně pomáhají.
         </p>
         <p class="czech-body">
-          Každý den slyšíme něco potřebuje pomoc. Možná je to soused, který se stará o nemocného rodiče. Nebo místní organizace, která hledá dobrovolníky. Někdy stačí jen malá věc – ale jak najít tu správnou příležitost?
+          Každý den někdo potřebuje pomoc. Možná je to soused, který se stará o nemocného rodiče. Nebo místní organizace, která hledá dobrovolníky. Někdy stačí jen malá věc – ale jak najít tu správnou příležitost?
         </p>
       </div>
       
       <!-- Three Enhanced Story Boxes -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-24">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-16">
         <div class="story-approach-card">
           <div class="story-approach-header">
             <span class="story-approach-icon">🏠</span>
@@ -208,7 +219,7 @@
         <div class="stats-container">
           <div class="stat-item">
             <div class="stat-icon">☀️</div>
-            <div class="stat-number">7</div>
+            <div class="stat-number">12</div>
             <div class="stat-label">akcí tento týden</div>
           </div>
           
@@ -346,6 +357,22 @@
     padding-top: 70px; /* Account for fixed nav */
   }
   
+  /* Empathy Section Background */
+  .empathy-section {
+    background: linear-gradient(135deg, rgba(245, 248, 245, 0.6) 0%, rgba(237, 242, 237, 0.3) 100%);
+    position: relative;
+  }
+  
+  .empathy-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(212, 231, 212, 0.5) 50%, transparent 100%);
+  }
+  
   /* From Empathy to Action Section Styles */
   .quote-block {
     background: var(--bg-accent);
@@ -353,6 +380,42 @@
     padding: 2rem 2.5rem;
     border-radius: 12px;
     transition: all var(--timing-medium) var(--ease-gentle);
+  }
+  
+  /* POC Disclaimer Styles */
+  .poc-disclaimer {
+    max-width: 600px;
+    margin: 0 auto 2rem;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .poc-disclaimer-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    background: rgba(255, 243, 205, 0.7);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.08);
+  }
+  
+  .poc-disclaimer-icon {
+    font-size: 1rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+  }
+  
+  .poc-disclaimer-text {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: #92400e;
+    margin: 0;
+  }
+  
+  .poc-disclaimer-text em {
+    font-style: italic;
   }
   
   .story-approach-card {
@@ -363,6 +426,9 @@
     transition: all var(--timing-medium) var(--ease-gentle);
     box-shadow: 0 2px 8px rgba(46, 93, 49, 0.08);
     border-top: 3px solid transparent;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
   }
   
   .story-approach-card:hover {
@@ -399,6 +465,7 @@
     line-height: 1.6;
     color: var(--text-secondary);
     margin: 0;
+    flex-grow: 1;
   }
   
   .stats-section {
@@ -481,8 +548,23 @@
       padding: 1.5rem 2rem;
     }
     
+    .poc-disclaimer {
+      max-width: none;
+      margin: 0 1rem 2rem;
+    }
+    
+    .poc-disclaimer-content {
+      padding: 0.875rem 1rem;
+      gap: 0.625rem;
+    }
+    
+    .poc-disclaimer-text {
+      font-size: 0.8rem;
+    }
+    
     .story-approach-card {
       padding: 1.5rem;
+      height: auto;
     }
     
     .story-approach-header {
@@ -498,6 +580,7 @@
     
     .story-approach-text {
       text-align: center;
+      flex-grow: 0;
     }
     
     .stats-container {
