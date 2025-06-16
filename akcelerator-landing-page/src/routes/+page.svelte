@@ -147,193 +147,73 @@
   <!-- Hero Section -->
   <Hero />
   
-  <!-- From Empathy to Action Section - Redesigned -->
-  <section id="from-empathy-to-action" class="czech-section bg-gradient-to-br from-green-50 to-blue-50">
+  <!-- From Empathy to Action Section - Simplified -->
+  <section id="from-empathy-to-action" class="czech-section">
     <div class="czech-container">
       <h2 class="czech-heading-lg text-center mb-12">Od empatie k akci – česky a prakticky</h2>
       
-      <div class="grid lg:grid-cols-2 gap-12 items-start mb-16">
-        <!-- Left Column: Philosophy -->
-        <div class="space-y-6">
-          <div class="bg-gradient-to-r from-green-50 to-transparent border-l-4 border-green-600 p-6 rounded-r-lg">
-            <div class="flex items-start gap-4 mb-4">
-              <span class="text-2xl">❤️</span>
-              <blockquote class="italic text-lg text-green-800 leading-relaxed">
-                "Když nemůžete pomoci všem, pomozte alespoň jednomu."
-              </blockquote>
-            </div>
-            <p class="text-right text-sm text-green-700 font-medium">— Matka Tereza</p>
+      <!-- Quote with Icon -->
+      <div class="text-center mb-12">
+        <div class="quiet-celebration max-w-2xl mx-auto">
+          <div class="flex items-center justify-center gap-4 mb-4">
+            <span class="text-3xl">❤️</span>
+            <blockquote class="czech-body-large italic">
+              "Když nemůžete pomoci všem, pomozte alespoň jednomu."
+            </blockquote>
           </div>
-          
-          <div class="space-y-4">
-            <p class="czech-body text-gray-700 leading-relaxed">
-              Tato platforma vznikla z poznání, že Češi nechtějí velká gesta a prázdné řeči. Chceme <strong>praktické kroky</strong>, které skutečně pomáhají.
-            </p>
-            
-            <p class="czech-body text-gray-600 leading-relaxed">
-              Každý den slyšíme něco potřebuje pomoc. Možná je to soused, který se stará o nemocného rodiče. Nebo místní organizace, která hledá dobrovolníky. Někdy stačí jen malá věc – ale jak najít tu správnou příležitost?
-            </p>
-          </div>
-        </div>
-        
-        <!-- Right Column: Action Boxes -->
-        <div class="grid gap-4">
-          <div class="bg-white p-6 rounded-xl border border-gray-200 hover:border-green-300 hover:shadow-md transition-all duration-300">
-            <div class="flex items-center gap-3 mb-3">
-              <span class="text-2xl">🏠</span>
-              <h3 class="text-lg font-semibold text-green-800">Soused pomáhá sousedovi</h3>
-            </div>
-            <p class="text-gray-600 text-sm mb-4">Najděte způsoby, jak pomoci přímo ve svém okolí – od nákupů po hlídání dětí.</p>
-            <button class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
-              Zobrazit příběhy
-            </button>
-          </div>
-          
-          <div class="bg-white p-6 rounded-xl border border-gray-200 hover:border-green-300 hover:shadow-md transition-all duration-300">
-            <div class="flex items-center gap-3 mb-3">
-              <span class="text-2xl">✨</span>
-              <h3 class="text-lg font-semibold text-green-800">Malé kroky, velký dopad</h3>
-            </div>
-            <p class="text-gray-600 text-sm mb-4">Zjistěte, jak i malé činy mohou změnit život druhých a vytvořit lepší komunitu.</p>
-            <button class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
-              Začít hned
-            </button>
-          </div>
-          
-          <div class="bg-white p-6 rounded-xl border border-gray-200 hover:border-green-300 hover:shadow-md transition-all duration-300">
-            <div class="flex items-center gap-3 mb-3">
-              <span class="text-2xl">🤝</span>
-              <h3 class="text-lg font-semibold text-green-800">Praktická solidarita</h3>
-            </div>
-            <p class="text-gray-600 text-sm mb-4">Spojte síly s důvěryhodnými organizacemi ve vašem okolí.</p>
-            <button class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
-              Připojit se
-            </button>
-          </div>
+          <p class="text-right czech-body font-medium">— Matka Tereza</p>
         </div>
       </div>
-
-      <!-- How It Works - 3 Step Flow -->
-      <div class="mb-16">
-        <h3 class="czech-heading-md text-center mb-10 text-green-800">Jak to funguje:</h3>
-        
-        <!-- Desktop: Horizontal Flow -->
-        <div class="hidden md:flex items-center justify-center space-x-8 max-w-4xl mx-auto">
-          <!-- Step 1 -->
-          <div class="flex-1 text-center group">
-            <div class="bg-green-600 text-white w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4 group-hover:bg-green-700 transition-colors">
-              1
-            </div>
-            <div class="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-md transition-all duration-300">
-              <div class="text-2xl mb-3">👤</div>
-              <h4 class="font-semibold text-green-800 mb-2">Řekněte nám o sobě</h4>
-              <p class="text-sm text-gray-600">Stačí pár otázek o tom, co vás zajímá a kolik času máte.</p>
-            </div>
-          </div>
-          
-          <!-- Arrow 1 -->
-          <div class="text-green-400 text-2xl">→</div>
-          
-          <!-- Step 2 -->
-          <div class="flex-1 text-center group">
-            <div class="bg-green-600 text-white w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4 group-hover:bg-green-700 transition-colors">
-              2
-            </div>
-            <div class="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-md transition-all duration-300">
-              <div class="text-2xl mb-3">🎯</div>
-              <h4 class="font-semibold text-green-800 mb-2">Najděte příležitost</h4>
-              <p class="text-sm text-gray-600">Dostanete osobní doporučení akcí, které sedí k vašemu životu.</p>
-            </div>
-          </div>
-          
-          <!-- Arrow 2 -->
-          <div class="text-green-400 text-2xl">→</div>
-          
-          <!-- Step 3 -->
-          <div class="flex-1 text-center group">
-            <div class="bg-green-600 text-white w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4 group-hover:bg-green-700 transition-colors">
-              3
-            </div>
-            <div class="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-md transition-all duration-300">
-              <div class="text-2xl mb-3">🚀</div>
-              <h4 class="font-semibold text-green-800 mb-2">Začněte pomáhat</h4>
-              <p class="text-sm text-gray-600">Spojíme vás s důvěryhodnými organizacemi ve vašem okolí.</p>
-            </div>
-          </div>
+      
+      <!-- Explanation Paragraph -->
+      <div class="max-w-3xl mx-auto text-center mb-16">
+        <p class="czech-body-large mb-6">
+          Tato platforma vznikla z poznání, že Češi nechtějí velká gesta a prázdné řeči. Chceme <strong>praktické kroky</strong>, které skutečně pomáhají.
+        </p>
+        <p class="czech-body">
+          Každý den slyšíme něco potřebuje pomoc. Možná je to soused, který se stará o nemocného rodiče. Nebo místní organizace, která hledá dobrovolníky. Někdy stačí jen malá věc – ale jak najít tu správnou příležitost?
+        </p>
+      </div>
+      
+      <!-- Three Stylized Boxes -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-16">
+        <div class="solidarity-card text-center">
+          <div class="text-4xl mb-4">🏠</div>
+          <h3 class="czech-heading-md mb-3">Soused pomáhá sousedovi</h3>
+          <p class="czech-body">Najděte způsoby, jak pomoci přímo ve svém okolí – od nákupů po hlídání dětí.</p>
         </div>
         
-        <!-- Mobile: Vertical Flow -->
-        <div class="md:hidden space-y-6">
-          <!-- Step 1 -->
-          <div class="relative">
-            <div class="flex items-start space-x-4">
-              <div class="bg-green-600 text-white w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0">
-                1
-              </div>
-              <div class="flex-1 bg-white p-4 rounded-xl border border-gray-200">
-                <div class="flex items-center gap-2 mb-2">
-                  <span class="text-xl">👤</span>
-                  <h4 class="font-semibold text-green-800">Řekněte nám o sobě</h4>
-                </div>
-                <p class="text-sm text-gray-600">Stačí pár otázek o tom, co vás zajímá a kolik času máte.</p>
-              </div>
-            </div>
-            <div class="absolute left-5 top-12 w-0.5 h-6 bg-green-300"></div>
-          </div>
-          
-          <!-- Step 2 -->
-          <div class="relative">
-            <div class="flex items-start space-x-4">
-              <div class="bg-green-600 text-white w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0">
-                2
-              </div>
-              <div class="flex-1 bg-white p-4 rounded-xl border border-gray-200">
-                <div class="flex items-center gap-2 mb-2">
-                  <span class="text-xl">🎯</span>
-                  <h4 class="font-semibold text-green-800">Najděte příležitost</h4>
-                </div>
-                <p class="text-sm text-gray-600">Dostanete osobní doporučení akcí, které sedí k vašemu životu.</p>
-              </div>
-            </div>
-            <div class="absolute left-5 top-12 w-0.5 h-6 bg-green-300"></div>
-          </div>
-          
-          <!-- Step 3 -->
-          <div>
-            <div class="flex items-start space-x-4">
-              <div class="bg-green-600 text-white w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0">
-                3
-              </div>
-              <div class="flex-1 bg-white p-4 rounded-xl border border-gray-200">
-                <div class="flex items-center gap-2 mb-2">
-                  <span class="text-xl">🚀</span>
-                  <h4 class="font-semibold text-green-800">Začněte pomáhat</h4>
-                </div>
-                <p class="text-sm text-gray-600">Spojíme vás s důvěryhodnými organizacemi ve vašem okolí.</p>
-              </div>
-            </div>
-          </div>
+        <div class="solidarity-card text-center">
+          <div class="text-4xl mb-4">✨</div>
+          <h3 class="czech-heading-md mb-3">Malé kroky, velký dopad</h3>
+          <p class="czech-body">Zjistěte, jak i malé činy mohou změnit život druhých a vytvořit lepší komunitu.</p>
+        </div>
+        
+        <div class="solidarity-card text-center">
+          <div class="text-4xl mb-4">💪</div>
+          <h3 class="czech-heading-md mb-3">Praktická solidarita</h3>
+          <p class="czech-body">Spojte síly s důvěryhodnými organizacemi ve vašem okolí.</p>
         </div>
       </div>
-
-      <!-- Primary Stats - Clean and Immediate -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-        <div class="bg-white p-6 rounded-xl border border-gray-200 text-center hover:shadow-md transition-all duration-300">
+      
+      <!-- Simple Stats -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+        <div class="text-center">
           <div class="text-3xl mb-2">☀️</div>
-          <div class="text-3xl font-bold text-green-700 mb-1">247</div>
-          <div class="text-sm text-gray-600 font-medium">akcí tento týden</div>
+          <div class="czech-heading-lg text-center">247</div>
+          <div class="czech-body">akcí tento týden</div>
         </div>
         
-        <div class="bg-white p-6 rounded-xl border border-gray-200 text-center hover:shadow-md transition-all duration-300">
+        <div class="text-center">
           <div class="text-3xl mb-2">🤝</div>
-          <div class="text-3xl font-bold text-green-700 mb-1">1,834</div>
-          <div class="text-sm text-gray-600 font-medium">aktivních pomocníků</div>
+          <div class="czech-heading-lg text-center">1,834</div>
+          <div class="czech-body">aktivních pomocníků</div>
         </div>
         
-        <div class="bg-white p-6 rounded-xl border border-gray-200 text-center hover:shadow-md transition-all duration-300">
+        <div class="text-center">
           <div class="text-3xl mb-2">📍</div>
-          <div class="text-3xl font-bold text-green-700 mb-1">12</div>
-          <div class="text-sm text-gray-600 font-medium">regionů</div>
+          <div class="czech-heading-lg text-center">12</div>
+          <div class="czech-body">regionů</div>
         </div>
       </div>
     </div>
