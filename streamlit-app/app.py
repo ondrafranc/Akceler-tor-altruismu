@@ -450,20 +450,77 @@ def load_actions_data(language='czech'):
 
 @st.cache_data
 def load_encouragement_data(language='czech'):
-    """Load encouragement messages based on language"""
+    """Load encouragement messages with robust error handling"""
+    fallback_data = {
+        'czech': {
+            "welcome_messages": [
+                "Najdi praktický způsob, jak pomoct – krok za krokem.",
+                "Každý malý krok pomáhá. Začneme tam, kde se cítíš připraven/a.",
+                "Není potřeba měnit svět najednou. Stačí začít tam, kde jsi."
+            ],
+            "emotional_state_responses": {
+                "zahlcen": ["Je normální cítit se zahlcen/a. Problémy jsou veliké, ale lidská schopnost pomáhat také."],
+                "frustrován": ["Ta frustrace je energie. Ukazuje, že jsi připraven/a na skutečnou změnu."],
+                "nadějný": ["Tvoje naděje je nakažlivá a svět ji právě teď potřebuje."],
+                "provinile": ["Pocit viny ukazuje, že tvoje hodnoty jsou v pořádku, ale akce je užitečnější než vina."],
+                "motivován": ["Ta energie je zlatá! Pojďme se ujistit, že je směřována tam, kde může mít největší dopad."],
+                "nejistý": ["Nevědět, kde začít, je nejupřímnější reakce na složité problémy."]
+            },
+            "action_completion_celebrations": [
+                "Výborně! Právě jsi udělal/a něco praktického pro zlepšení světa.",
+                "Dobře! Tahle akce bude mít dopad způsoby, o kterých možná nikdy nebudeš vědět."
+            ],
+            "progress_encouragement": [
+                "Každá akce, kterou uděláš, dokazuje, že jednotlivci mohou vytvářet změnu.",
+                "Nepomáháš jen ostatním – stáváš se člověkem, kterým chceš být."
+            ]
+        },
+        'english': {
+            "welcome_messages": [
+                "Find a practical way to help – step by step.",
+                "Every small step helps. Let's start where you feel ready.",
+                "No need to change the world all at once. Just start where you are."
+            ],
+            "emotional_state_responses": {
+                "overwhelmed": ["It's normal to feel overwhelmed. Problems are big, but so is human capacity to help."],
+                "frustrated": ["That frustration is energy. It shows you're ready for real change."],
+                "hopeful": ["Your hope is contagious and the world needs it right now."],
+                "guilty": ["Guilt shows your values are right, but action is more useful than guilt."],
+                "motivated": ["That energy is golden! Let's make sure it's directed where it can have the biggest impact."],
+                "uncertain": ["Not knowing where to start is the most honest response to complex problems."]
+            },
+            "action_completion_celebrations": [
+                "Excellent! You just did something practical to improve the world.",
+                "Well done! This action will have impact in ways you may never know."
+            ],
+            "progress_encouragement": [
+                "Every action you take proves that individuals can create change.",
+                "You're not just helping others – you're becoming who you want to be."
+            ]
+        }
+    }
+    
     try:
         if language == 'czech':
             with open('data/czech/encouragement_czech.json', 'r', encoding='utf-8') as f:
-                return json.load(f)
+                data = json.load(f)
+                # Validate that essential keys exist
+                if 'welcome_messages' in data and 'emotional_state_responses' in data:
+                    return data
+                else:
+                    # File exists but missing essential data, use fallback
+                    return fallback_data['czech']
         else:
             with open('data/international/encouragement_messages.json', 'r', encoding='utf-8') as f:
-                return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError) as e:
-        st.warning(f"Encouragement data file issue for {language}. Error: {str(e)}")
-        if language == 'czech':
-            return {"welcome_messages": ["Vítejte v Akcelerátoru altruismu!"]}
-        else:
-            return {"welcome_messages": ["Welcome to Altruism Accelerator!"]}
+                data = json.load(f)
+                if 'welcome_messages' in data:
+                    return data
+                else:
+                    return fallback_data['english']
+                    
+    except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError, PermissionError):
+        # Silently use fallback data without showing error messages
+        return fallback_data.get(language, fallback_data['czech'])
 
 # Safer function execution wrapper to prevent tokenization issues
 def safe_execute_with_fallback(func, *args, **kwargs):
@@ -688,7 +745,7 @@ def celebrate_action_completion(action_title: str, cause_type: str = "", languag
         st.markdown(f'<span class="streak-indicator">{streak_msg}</span>', unsafe_allow_html=True)
 
 def main():
-    """Main application with enhanced UX/UI"""
+    """Main application with enhanced UX/UI - simplified and stable"""
     # Enhanced Language selector with better styling
     col1, col2, col3 = st.columns([7, 1.5, 1.5])
     with col2:
@@ -705,49 +762,39 @@ def main():
     # Add a subtle divider
     st.markdown("---")
     
-    # Enhanced Sidebar with better user guidance
+    # Enhanced Sidebar with simplified styling
     with st.sidebar:
-        st.markdown(f"""
-        <div class="content-container">
-            <h1 class="main-header" style="font-size: 1.5rem; text-align: left; margin-bottom: 0.5rem;">
-                {get_text('title', language)}
-            </h1>
-            <p style="color: #5A6B5A; font-style: italic; margin-bottom: 1.5rem; font-size: 0.9rem;">
-                {get_text('subtitle', language)}
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-        # Enhanced user stats with better visual hierarchy
+        # Simplified title
+        st.markdown(f"## {get_text('title', language)}")
+        st.markdown(f"*{get_text('subtitle', language)}*")
+        
+        # Enhanced user stats - simplified
         if st.session_state.total_impact['actions'] > 0:
             st.markdown(f"### 📊 {get_text('my_impact', language)}")
             
             # Progress metrics in a container
-            with st.container():
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric(
-                        label=get_text('actions_taken', language), 
-                        value=st.session_state.total_impact['actions'],
-                        delta=f"+{len(st.session_state.actions_completed)} dnes" if language == 'czech' else f"+{len(st.session_state.actions_completed)} today"
-                    )
-                with col2:
-                    total_time = st.session_state.total_impact['time']
-                    time_label = "Času věnováno" if language == 'czech' else "Time spent"
-                    st.metric(
-                        label=time_label, 
-                        value=f"{total_time} min",
-                        delta=f"{total_time/60:.1f}h celkem" if language == 'czech' else f"{total_time/60:.1f}h total"
-                    )
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric(
+                    label=get_text('actions_taken', language), 
+                    value=st.session_state.total_impact['actions']
+                )
+            with col2:
+                total_time = st.session_state.total_impact['time']
+                time_label = "Času věnováno" if language == 'czech' else "Time spent"
+                st.metric(
+                    label=time_label, 
+                    value=f"{total_time} min"
+                )
             
-            # Enhanced streak display
+            # Enhanced streak display - simplified
             if st.session_state.streak_count > 1:
                 streak_text = f"🔥 **{st.session_state.streak_count} akcí v řadě!**" if language == 'czech' else f"🔥 **{st.session_state.streak_count} day streak!**"
                 st.success(streak_text)
             
             st.markdown("---")
     
-        # Enhanced contextual encouragement
+        # Enhanced contextual encouragement - simplified
         if random.random() < 0.4:  # Slightly more frequent encouragement
             if st.session_state.total_impact['actions'] == 0:
                 encouragement = get_random_encouragement("welcome_messages", language)
@@ -756,30 +803,17 @@ def main():
                 encouragement = get_random_encouragement("progress_encouragement", language)
                 st.success(f"🌟 {encouragement}")
             else:
-                encouragement = get_random_encouragement("community_impact_messages", language)
-                st.balloons() if random.random() < 0.1 else None  # Rare celebration
+                encouragement = get_random_encouragement("progress_encouragement", language)
                 st.success(f"🎉 {encouragement}")
         
-        # Enhanced seasonal message
+        # Enhanced seasonal message - simplified
         seasonal_msg = get_seasonal_message(language)
         if seasonal_msg and random.random() < 0.3:
-            st.markdown(f"""
-            <div style="
-                background: linear-gradient(135deg, #f0fff0 0%, #e8f5e8 100%);
-                border-left: 4px solid #7AB87A;
-                border-radius: 8px;
-                padding: 1rem;
-                margin: 1rem 0;
-                font-style: italic;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            ">
-                <span style="font-size: 1.1em;">🌿</span> {seasonal_msg}
-            </div>
-            """, unsafe_allow_html=True)
+            st.info(f"🌿 {seasonal_msg}")
         
         st.markdown("---")
         
-        # Enhanced Navigation with better visual hierarchy
+        # Enhanced Navigation - simplified
         st.markdown("### 🧭 Navigace" if language == 'czech' else "### 🧭 Navigation")
         
         # Navigation with enhanced styling
@@ -801,7 +835,7 @@ def main():
     pages[selected_page]()
 
 def show_welcome_page():
-    """Enhanced welcome page with better UX and cultural adaptation"""
+    """Enhanced welcome page with fixed UX and cultural adaptation"""
     language = st.session_state.language
     
     # POC Disclaimer Badge (non-intrusive)
@@ -840,61 +874,78 @@ def show_welcome_page():
         """
     st.markdown(intro_text)
     
+    # Quote comes AFTER intro, properly positioned
+    seasonal_msg = get_seasonal_message(language)
+    if seasonal_msg:
+        st.markdown(f"""
+        <div class="quote-box">
+            <span style="font-size: 1.2em;">🌿</span> {seasonal_msg}
+        </div>
+        """, unsafe_allow_html=True)
+    
     st.markdown("---")
     
-    # Enhanced layout with better visual balance
-    col1, col2, col3 = st.columns([1, 3, 1])
+    # Enhanced emotional assessment section - simplified and responsive
+    if language == 'czech':
+        st.markdown("### 💭 Jak se právě cítíš?")
+        st.markdown("*Pomůže nám najít správný přístup pro vás*")
+        emotional_options = [
+            "😔 Zahlcen/a všemi problémy",
+            "😤 Frustrován/a a chci jednat", 
+            "😊 Nadějný/á a připraven/a pomoci",
+            "😕 Provinile kvůli nedělání dost",
+            "🔥 Motivován/a něco změnit",
+            "😐 Nejistý/á, kde začít"
+        ]
+    else:
+        st.markdown("### 💭 How are you feeling right now?")
+        st.markdown("*This helps us find the right approach for you*")
+        emotional_options = [
+            "😔 Overwhelmed by all the problems",
+            "😤 Frustrated and want to act", 
+            "😊 Hopeful and ready to help",
+            "😕 Guilty about not doing enough",
+            "🔥 Motivated to make a difference",
+            "😐 Uncertain where to start"
+        ]
     
-    with col2:
-        # Enhanced seasonal message display
-        seasonal_msg = get_seasonal_message(language)
-        if seasonal_msg:
-            st.markdown(f"""
-            <div class="quote-box">
-                <span style="font-size: 1.2em;">🌿</span> {seasonal_msg}
-            </div>
-            """, unsafe_allow_html=True)
-        
-        # Enhanced emotional assessment section
-        if language == 'czech':
-            st.markdown('<h3 class="section-header" style="text-align: center;">💭 Jak se právě cítíš?</h3>', unsafe_allow_html=True)
-            st.markdown("<p style='text-align: center; color: #5A6B5A; margin-bottom: 1.5rem;'><i>Pomůže nám najít správný přístup pro vás</i></p>")
-            emotional_options = [
-                "😔 Zahlcen/a všemi problémy",
-                "😤 Frustrován/a a chci jednat", 
-                "😊 Nadějný/á a připraven/a pomoci",
-                "😕 Provinile kvůli nedělání dost",
-                "🔥 Motivován/a něco změnit",
-                "😐 Nejistý/á, kde začít"
-            ]
-        else:
-            st.markdown('<h3 class="section-header" style="text-align: center;">💭 How are you feeling right now?</h3>', unsafe_allow_html=True)
-            st.markdown("<p style='text-align: center; color: #5A6B5A; margin-bottom: 1.5rem;'><i>This helps us find the right approach for you</i></p>")
-            emotional_options = [
-                "😔 Overwhelmed by all the problems",
-                "😤 Frustrated and want to act", 
-                "😊 Hopeful and ready to help",
-                "😕 Guilty about not doing enough",
-                "🔥 Motivated to make a difference",
-                "😐 Uncertain where to start"
-            ]
-        
-        # Enhanced emotional state selector
-        emotional_state = st.radio(
-            "Vyberte možnost, která nejlépe vystihuje váš současný stav:" if language == 'czech' else "Choose the option that best describes your current state:",
-            emotional_options,
-            key="emotional_state",
-            label_visibility="collapsed"
-        )
-        
-        # Enhanced contextual response
-        if emotional_state:
-            emotion_key = emotional_state.split()[1].lower()
-            st.session_state.user_profile['emotional_state'] = emotion_key
+    # Enhanced emotional state selector - simplified
+    emotional_state = st.radio(
+        "Vyberte možnost:" if language == 'czech' else "Choose option:",
+        emotional_options,
+        key="emotional_state",
+        label_visibility="collapsed"
+    )
+    
+    # Enhanced contextual response - more robust
+    if emotional_state:
+        # Extract emotion key more safely and map to English keys used in JSON
+        emotion_parts = emotional_state.split()
+        if len(emotion_parts) > 1:
+            emotion_key = emotion_parts[1].lower().rstrip('/a').rstrip('ý').rstrip('á')
+            # Map Czech emotions to English response keys (as used in JSON)
+            emotion_mapping = {
+                'zahlcen': 'overwhelmed',
+                'frustrován': 'frustrated', 
+                'nadějný': 'hopeful',
+                'provinile': 'guilty',
+                'motivován': 'motivated',
+                'nejistý': 'uncertain',
+                'overwhelmed': 'overwhelmed',
+                'frustrated': 'frustrated',
+                'hopeful': 'hopeful', 
+                'guilty': 'guilty',
+                'motivated': 'motivated',
+                'uncertain': 'uncertain'
+            }
             
-            # Enhanced contextual response with better messaging
+            mapped_emotion = emotion_mapping.get(emotion_key, 'uncertain')
+            st.session_state.user_profile['emotional_state'] = mapped_emotion
+            
+            # Get appropriate response
             encouragement_data = load_encouragement_data(language)
-            responses = encouragement_data.get("emotional_state_responses", {}).get(emotion_key, [])
+            responses = encouragement_data.get("emotional_state_responses", {}).get(mapped_emotion, [])
+            
             if responses:
                 response = random.choice(responses)
                 st.success(f"✨ {response}")
@@ -905,86 +956,86 @@ def show_welcome_page():
                 else:
                     fallback_response = "We understand how you feel. Let's find a way you can help together."
                 st.info(f"💚 {fallback_response}")
-        
-        st.markdown("---")
-        
-        # Enhanced CTA section with better visual hierarchy
-        st.markdown(f"""
-        <div class="cta-section">
-            <h3 style="margin-bottom: 1rem; color: #2E5D31;">
-                {'🚀 Jak chcete začít?' if language == 'czech' else '🚀 How would you like to start?'}
-            </h3>
-            <p style="color: #5A6B5A; margin-bottom: 1.5rem;">
-                {'Vyberte si cestu, která vám vyhovuje:' if language == 'czech' else 'Choose the path that suits you:'}
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Better CTA layout with spacing
-        col_a, col_space, col_b = st.columns([2, 0.5, 2])
-        with col_a:
-            if st.button(
-                f"🧭 {get_text('take_assessment', language)}", 
-                type="primary", 
-                use_container_width=True,
-                help="Získejte personalizovaná doporučení na míru" if language == 'czech' else "Get personalized recommendations tailored to you"
-            ):
-                st.session_state.assessment_step = 1
-                st.rerun()
-        
-        with col_b:
-            if st.button(
-                f"⚡ {get_text('get_quick_help', language)}", 
-                use_container_width=True,
-                help="Najděte rychlé akce, které můžete udělat hned teď" if language == 'czech' else "Find quick actions you can do right now"
-            ):
-                # Navigate to quick actions page
-                st.session_state.quick_action_requested = True
-                st.rerun()
-        
-        # Enhanced "Where can I help today?" expandable section
-        with st.expander(
-            "🌍 Zobrazit příležitosti v mém okolí" if language == 'czech' else "🌍 Show opportunities near me",
-            expanded=False
+    
+    st.markdown("---")
+    
+    # Enhanced CTA section with better visual hierarchy - simplified
+    st.markdown(f"""
+    <div class="cta-section">
+        <h3 style="margin-bottom: 1rem; color: #2E5D31;">
+            {'🚀 Jak chcete začít?' if language == 'czech' else '🚀 How would you like to start?'}
+        </h3>
+        <p style="color: #5A6B5A; margin-bottom: 1.5rem;">
+            {'Vyberte si cestu, která vám vyhovuje:' if language == 'czech' else 'Choose the path that suits you:'}
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Better CTA layout with proper spacing - responsive
+    col_a, col_b = st.columns(2)
+    with col_a:
+        if st.button(
+            f"🧭 {get_text('take_assessment', language)}", 
+            type="primary", 
+            use_container_width=True,
+            help="Získejte personalizovaná doporučení na míru" if language == 'czech' else "Get personalized recommendations tailored to you"
         ):
-            if language == 'czech':
-                st.markdown("""
-                ### 🏠 Praha
-                - **Organizace pro zvířata**: [Voříškoviště](https://voriskoviste.cz) - dobrovolnictví s opuštěnými psy
-                - **Pomoc bezdomovcům**: [Naděje](https://www.nadeje.cz) - rozdávání jídla, sociální práce
-                - **Podpora vzdělání**: [Učíme online](https://www.ucimeonline.cz) - doučování dětí online
-                
-                ### 🏢 Brno
-                - **Senioři**: [Život 90](https://zivot90.cz) - návštěvy, doprovázení k lékaři
-                - **Ekologie**: [Lipka](https://lipka.cz) - úklidy parků, výsadba rostlin
-                - **Děti v nouzi**: [SOS dětské vesničky](https://www.sos-vesničky.cz)
-                
-                ### 🌐 Online z domova
-                - **Krizová pomoc**: [Linka důvěry](https://www.ceska-sprava.cz) - školení dobrovolníků
-                - **Překládání**: [Translators without Borders](https://translatorswithoutborders.org)
-                - **Vzdělání**: [Khan Academy česky](https://cs.khanacademy.org) - tvorba obsahu
-                
-                *📝 Poznámka: Toto jsou skutečné organizace. Před zapojením si ověřte aktuální možnosti.*
-                """)
-            else:
-                st.markdown("""
-                ### 🏠 Prague
-                - **Animal welfare**: [Voříškoviště](https://voriskoviste.cz) - volunteering with abandoned dogs
-                - **Homeless support**: [Naděje](https://www.nadeje.cz) - food distribution, social work
-                - **Education support**: [Učíme online](https://www.ucimeonline.cz) - online tutoring for children
-                
-                ### 🏢 Brno
-                - **Senior care**: [Život 90](https://zivot90.cz) - visits, medical accompaniment
-                - **Environmental**: [Lipka](https://lipka.cz) - park cleanups, tree planting
-                - **Children in need**: [SOS Children's Villages](https://www.sos-vesničky.cz)
-                
-                ### 🌐 Online from home
-                - **Crisis support**: [Helpline](https://www.ceska-sprava.cz) - volunteer training
-                - **Translation**: [Translators without Borders](https://translatorswithoutborders.org)
-                - **Education**: [Khan Academy Czech](https://cs.khanacademy.org) - content creation
-                
-                *📝 Note: These are real organizations. Please verify current opportunities before getting involved.*
-                """)
+            st.session_state.assessment_step = 1
+            st.rerun()
+    
+    with col_b:
+        if st.button(
+            f"⚡ {get_text('get_quick_help', language)}", 
+            use_container_width=True,
+            help="Najděte rychlé akce, které můžete udělat hned teď" if language == 'czech' else "Find quick actions you can do right now"
+        ):
+            # Navigate to quick actions page
+            st.session_state.quick_action_requested = True
+            st.rerun()
+    
+    # Enhanced "Where can I help today?" expandable section - improved layout
+    with st.expander(
+        "🌍 Zobrazit příležitosti v mém okolí" if language == 'czech' else "🌍 Show opportunities near me",
+        expanded=False
+    ):
+        if language == 'czech':
+            st.markdown("""
+            **🏠 Praha**
+            - **Organizace pro zvířata**: [Voříškoviště](https://voriskoviste.cz) - dobrovolnictví s opuštěnými psy
+            - **Pomoc bezdomovcům**: [Naděje](https://www.nadeje.cz) - rozdávání jídla, sociální práce
+            - **Podpora vzdělání**: [Učíme online](https://www.ucimeonline.cz) - doučování dětí online
+            
+            **🏢 Brno**
+            - **Senioři**: [Život 90](https://zivot90.cz) - návštěvy, doprovázení k lékaři
+            - **Ekologie**: [Lipka](https://lipka.cz) - úklidy parků, výsadba rostlin
+            - **Děti v nouzi**: [SOS dětské vesničky](https://www.sos-vesničky.cz)
+            
+            **🌐 Online z domova**
+            - **Krizová pomoc**: [Linka důvěry](https://www.ceska-sprava.cz) - školení dobrovolníků
+            - **Překládání**: [Translators without Borders](https://translatorswithoutborders.org)
+            - **Vzdělání**: [Khan Academy česky](https://cs.khanacademy.org) - tvorba obsahu
+            
+            *📝 Poznámka: Toto jsou skutečné organizace. Před zapojením si ověřte aktuální možnosti.*
+            """)
+        else:
+            st.markdown("""
+            **🏠 Prague**
+            - **Animal welfare**: [Voříškoviště](https://voriskoviste.cz) - volunteering with abandoned dogs
+            - **Homeless support**: [Naděje](https://www.nadeje.cz) - food distribution, social work
+            - **Education support**: [Učíme online](https://www.ucimeonline.cz) - online tutoring for children
+            
+            **🏢 Brno**
+            - **Senior care**: [Život 90](https://zivot90.cz) - visits, medical accompaniment
+            - **Environmental**: [Lipka](https://lipka.cz) - park cleanups, tree planting
+            - **Children in need**: [SOS Children's Villages](https://www.sos-vesničky.cz)
+            
+            **🌐 Online from home**
+            - **Crisis support**: [Helpline](https://www.ceska-sprava.cz) - volunteer training
+            - **Translation**: [Translators without Borders](https://translatorswithoutborders.org)
+            - **Education**: [Khan Academy Czech](https://cs.khanacademy.org) - content creation
+            
+            *📝 Note: These are real organizations. Please verify current opportunities before getting involved.*
+            """)
     
     # Close content container
     st.markdown('</div>', unsafe_allow_html=True)
