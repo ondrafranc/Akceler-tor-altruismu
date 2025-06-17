@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 import uuid
 from typing import Dict, List, Any
 import math
+import re
 
 # Configure page
 st.set_page_config(
@@ -745,8 +746,8 @@ def celebrate_action_completion(action_title: str, cause_type: str = "", languag
         st.markdown(f'<span class="streak-indicator">{streak_msg}</span>', unsafe_allow_html=True)
 
 def main():
-    """Main application with enhanced UX/UI - simplified and stable"""
-    # Enhanced Language selector with better styling
+    """Enhanced main function with improved navigation flow"""
+    # Language selector in header
     col1, col2, col3 = st.columns([7, 1.5, 1.5])
     with col2:
         if st.button("🇨🇿 Čeština", help="Přepnout na češtinu", key="lang_cz"):
@@ -761,6 +762,12 @@ def main():
     
     # Add a subtle divider
     st.markdown("---")
+    
+    # Handle quick action request automatically
+    if st.session_state.get('quick_action_requested', False):
+        # Clear the request flag and show quick actions
+        st.session_state.quick_action_requested = False
+        st.session_state.current_page = 'quick_actions'
     
     # Enhanced Sidebar with simplified styling
     with st.sidebar:
@@ -816,23 +823,57 @@ def main():
         # Enhanced Navigation - simplified
         st.markdown("### 🧭 Navigace" if language == 'czech' else "### 🧭 Navigation")
         
-        # Navigation with enhanced styling
+        # Navigation with enhanced styling and better state management
         pages = {
-            f"🏠 {get_text('welcome', language)}": show_welcome_page,
-            f"🧭 {get_text('find_path', language)}": show_assessment_page,
-            f"⚡ {get_text('quick_actions', language)}": show_quick_actions_page,
-            f"📊 {get_text('my_impact', language)}": show_impact_page,
-            f"🌍 {get_text('explore_causes', language)}": show_causes_page
+            f"🏠 {get_text('welcome', language)}": 'welcome',
+            f"🧭 {get_text('find_path', language)}": 'assessment',
+            f"⚡ {get_text('quick_actions', language)}": 'quick_actions',
+            f"📊 {get_text('my_impact', language)}": 'impact',
+            f"🌍 {get_text('explore_causes', language)}": 'causes'
         }
+        
+        # Get current page from session state or default to welcome
+        current_page = st.session_state.get('current_page', 'welcome')
+        
+        # Find the display name for current page
+        current_display = None
+        for display_name, page_key in pages.items():
+            if page_key == current_page:
+                current_display = display_name
+                break
+        
+        if current_display is None:
+            current_display = list(pages.keys())[0]  # Default to first page
         
         selected_page = st.radio(
             "Vyberte stránku:" if language == 'czech' else "Select page:",
             list(pages.keys()),
+            index=list(pages.keys()).index(current_display),
             label_visibility="collapsed"
         )
+        
+        # Update current page when selection changes
+        selected_page_key = pages[selected_page]
+        if selected_page_key != current_page:
+            st.session_state.current_page = selected_page_key
+            st.rerun()
     
-    # Show selected page
-    pages[selected_page]()
+    # Show selected page based on current_page state
+    current_page = st.session_state.get('current_page', 'welcome')
+    
+    if current_page == 'welcome':
+        show_welcome_page()
+    elif current_page == 'assessment':
+        show_assessment_page()
+    elif current_page == 'quick_actions':
+        show_quick_actions_page()
+    elif current_page == 'impact':
+        show_impact_page()
+    elif current_page == 'causes':
+        show_causes_page()
+    else:
+        # Fallback to welcome page
+        show_welcome_page()
 
 def show_welcome_page():
     """Enhanced welcome page with fixed UX and cultural adaptation"""
@@ -1545,16 +1586,69 @@ def show_quick_actions_page():
                     type="primary",
                     use_container_width=True
                 ):
-                    st.info(f"🔗 Přesměrování na: {action['action_link']}")
-                    st.markdown(f"**Instrukce:** {action['instructions']}")
+                    # Provide immediate feedback and instructions
+                    st.success(f"🎉 {'Skvělé! Začínáte akci:' if language == 'czech' else 'Great! Starting action:'} {action['title']}")
                     
-                    # Track completion
-                    if 'quick_actions_completed' not in st.session_state:
-                        st.session_state.quick_actions_completed = []
-                    st.session_state.quick_actions_completed.append(action['title'])
+                    # Show action link and instructions prominently
+                    st.markdown(f"""
+                    <div style="background: #E8F5E8; padding: 1rem; border-radius: 8px; margin: 1rem 0; border-left: 4px solid #7AB87A;">
+                        <strong>🔗 {'Pokračujte zde:' if language == 'czech' else 'Continue here:'}</strong><br>
+                        <a href="{action['action_link']}" target="_blank" style="color: #2E5D31; font-weight: 600;">{action['action_link']}</a>
+                        
+                        <br><br><strong>📋 {'Instrukce:' if language == 'czech' else 'Instructions:'}</strong><br>
+                        {action['instructions']}
+                        
+                        <br><br><strong>✨ {'Proč je to důležité:' if language == 'czech' else 'Why this matters:'}</strong><br>
+                        {'Tato akce je navržena tak, aby byla rychlá, ale smysluplná. Každý podobný čin přispívá k větší pozitivní změně ve světě.' if language == 'czech' else 'This action is designed to be quick but meaningful. Every similar act contributes to greater positive change in the world.'}
+                    </div>
+                    """, unsafe_allow_html=True)
                     
-                    # Celebrate action start
+                    # Track action completion in session state
+                    if 'actions_completed' not in st.session_state:
+                        st.session_state.actions_completed = []
+                    
+                    # Add to completed actions with proper format
+                    action_record = {
+                        'title': action['title'],
+                        'category': action['category'],
+                        'timestamp': datetime.now().isoformat(),
+                        'source': 'quick_actions'
+                    }
+                    st.session_state.actions_completed.append(action_record)
+                    
+                    # Update impact metrics
+                    st.session_state.total_impact['actions'] += 1
+                    
+                    # Estimate time based on action time
+                    time_minutes = 5  # Default
+                    if 'minut' in action['time'] or 'minute' in action['time']:
+                        time_match = re.search(r'(\d+)', action['time'])
+                        if time_match:
+                            time_minutes = int(time_match.group(1))
+                    elif 'hodin' in action['time'] or 'hour' in action['time']:
+                        time_match = re.search(r'(\d+)', action['time'])
+                        if time_match:
+                            time_minutes = int(time_match.group(1)) * 60
+                    
+                    st.session_state.total_impact['time'] += time_minutes
+                    
+                    # Estimate cost if it's a donation action
+                    if 'daruj' in action['title'].lower() or 'donate' in action['title'].lower():
+                        st.session_state.total_impact['money'] += 5  # Assume $5 average donation
+                    
+                    # Update streak
+                    update_streak()
+                    
+                    # Celebrate action completion
                     celebrate_action_completion(action['title'], action['category'], language)
+                    
+                    # Offer to continue with more actions
+                    if st.button(
+                        f"🚀 {'Udělat další akci' if language == 'czech' else 'Do another action'}", 
+                        key=f"continue_{i}",
+                        use_container_width=True
+                    ):
+                        st.rerun()
             
             with col_details:
                 if st.button(
@@ -1566,14 +1660,28 @@ def show_quick_actions_page():
                         st.markdown(f"""
                         **Kategorie:** {action['category']}
                         
-                        **Instrukce:**
+                        **{'Časová náročnost:' if language == 'czech' else 'Time required:'} ** {action['time']}
+                        **{'Místo:' if language == 'czech' else 'Location:'} ** {action['location']}
+                        **{'Úroveň energie:' if language == 'czech' else 'Energy level:'} ** {action['energy']}
+                        
+                        **{'Instrukce krok za krokem:' if language == 'czech' else 'Step-by-step instructions:'}**
                         {action['instructions']}
                         
-                        **Odkaz:** [{action['action_link']}]({action['action_link']})
+                        **{'Přímý odkaz:' if language == 'czech' else 'Direct link:'}**
+                        [{action['action_link']}]({action['action_link']})
                         
-                        **Proč to má smysl:**
-                        Tato akce je navržena tak, aby byla rychlá, ale smysluplná. Každá podobná akce přispívá k větší pozitivní změně.
+                        **{'Proč to má smysl:' if language == 'czech' else 'Why this matters:'}**
+                        {'Tato akce spojuje vaši snahu pomoci s reálnou potřebou. I malé činy mohou mít velký dopad, když je dělá více lidí současně.' if language == 'czech' else 'This action connects your desire to help with a real need. Even small acts can have great impact when done by many people simultaneously.'}
+                        
+                        **{'Očekávaný dopad:' if language == 'czech' else 'Expected impact:'}**
+                        {action['impact']}
                         """)
+                        
+                        # Additional encouragement
+                        if language == 'czech':
+                            st.info("💡 **Tip:** Po dokončení akce se vraťte a podívejte se na svůj dopad na stránce 'Můj dopad'!")
+                        else:
+                            st.info("💡 **Tip:** After completing the action, come back and check your impact on the 'My Impact' page!")
     
     st.markdown('</div>', unsafe_allow_html=True)
     
@@ -1585,13 +1693,6 @@ def show_quick_actions_page():
         🆘 {'Krizová intervence: 284 016 666' if language == 'czech' else 'Crisis intervention: 284 016 666'}
     </div>
     """, unsafe_allow_html=True)
-    
-    # Add summary of completed quick actions
-    if hasattr(st.session_state, 'quick_actions_completed') and st.session_state.quick_actions_completed:
-        st.markdown("---")
-        st.markdown("### 🎉 Dokončené rychlé akce" if language == 'czech' else "### 🎉 Completed Quick Actions")
-        for action in st.session_state.quick_actions_completed:
-            st.success(f"✅ {action}")
     
     # CTA for full assessment
     st.markdown("---")
@@ -1608,10 +1709,11 @@ def show_quick_actions_page():
         use_container_width=True
     ):
         st.session_state.assessment_step = 1
+        st.session_state.current_page = 'assessment'
         st.rerun()
 
 def show_impact_page():
-    """Enhanced impact tracking with visualizations and motivation"""
+    """Enhanced impact tracking with meaningful content even for new users"""
     language = st.session_state.language
     
     if language == 'czech':
@@ -1690,73 +1792,186 @@ def show_impact_page():
     
     st.markdown("---")
     
-    # Progress towards next milestones
-    if language == 'czech':
-        st.markdown("### 🎯 Další milníky")
-    else:
-        st.markdown("### 🎯 Next Milestones")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Actions milestone
-        if actions_count < 5:
-            progress = actions_count / 5
-            remaining = 5 - actions_count
-            st.markdown(f"**{'První 5 akcí' if language == 'czech' else 'First 5 Actions'}**")
-            st.progress(progress)
-            st.markdown(f"{'Zbývá' if language == 'czech' else 'Remaining'}: {remaining}")
-        elif actions_count < 10:
-            progress = actions_count / 10
-            remaining = 10 - actions_count
-            st.markdown(f"**{'První 10 akcí' if language == 'czech' else 'First 10 Actions'}**")
-            st.progress(progress)
-            st.markdown(f"{'Zbývá' if language == 'czech' else 'Remaining'}: {remaining}")
-        else:
-            st.success(f"✅ {'10+ akcí dokončeno!' if language == 'czech' else '10+ actions completed!'}")
-    
-    with col2:
-        # Time milestone
-        if time_contributed < 600:  # Less than 10 hours
-            progress = time_contributed / 600
-            remaining_hours = (600 - time_contributed) / 60
-            st.markdown(f"**{'10 hodin pomoci' if language == 'czech' else '10 Hours of Help'}**")
-            st.progress(progress)
-            st.markdown(f"{'Zbývá' if language == 'czech' else 'Remaining'}: {remaining_hours:.1f}h")
-        else:
-            st.success(f"✅ {'10+ hodin dokončeno!' if language == 'czech' else '10+ hours completed!'}")
-    
-    st.markdown("---")
-    
-    # Completed actions history
-    if st.session_state.actions_completed:
+    # Show different content based on user's progress
+    if actions_count == 0:
+        # First-time user experience - inspiring and motivating
         if language == 'czech':
-            st.markdown("### 📜 Historie vašich akcí")
-        else:
-            st.markdown("### 📜 Your Action History")
-        
-        for i, action in enumerate(reversed(st.session_state.actions_completed[-10:])):  # Show last 10
+            st.markdown("### 🌱 Vaše cesta začíná zde")
+            st.markdown("""
+            **Ještě jste neudělali svou první akci, ale to je v pořádku!** Každý z nás začínal úplně stejně.
+            
+            🎯 **Co vás čeká:**
+            - Vaše první akce bude nejdůležitější - zlomí led a ukáže vám, že pomáhat není těžké
+            - Každá další akce bude snazší a přirozenější
+            - Postupně si vytvoříte návyk pomáhání, který vám dá smysl a radost
+            
+            💡 **Věděli jste, že:**
+            - 78% lidí se cítí šťastnější poté, co pomůžou někomu jinému
+            - Už 5 minut pomoci může pozitivně ovlivnit váš den
+            - Malé akce často vedou k větším změnám ve vašem životě
+            """)
+            
+            # Motivational call to action
             st.markdown(f"""
-            <div style="
-                background: linear-gradient(135deg, #F8FBF8 0%, #F0F6F0 100%);
-                border-left: 4px solid #7AB87A;
-                padding: 1rem;
-                margin: 0.5rem 0;
-                border-radius: 6px;
-            ">
-                <strong>#{len(st.session_state.actions_completed) - i}</strong> {action}
+            <div class="cta-section">
+                <h3>🚀 Připraveni na první krok?</h3>
+                <p>Vyberte si způsob, jak začít svou cestu k smysluplnému dopadu:</p>
             </div>
             """, unsafe_allow_html=True)
-    else:
-        if language == 'czech':
-            st.info("🌱 Vaše první akce bude zde! Začněte na stránce rychlých akcí.")
+            
+            col_a, col_b = st.columns(2)
+            with col_a:
+                if st.button(
+                    "⚡ Rychlé akce (5 min)",
+                    type="primary",
+                    use_container_width=True,
+                    help="Začněte něčím malým, ale smysluplným"
+                ):
+                    st.session_state.current_page = 'quick_actions'
+                    st.rerun()
+            
+            with col_b:
+                if st.button(
+                    "🧭 Personalizované posouzení",
+                    use_container_width=True,
+                    help="Najděte akce přesně pro vaše hodnoty"
+                ):
+                    st.session_state.assessment_step = 1
+                    st.session_state.current_page = 'assessment'
+                    st.rerun()
         else:
-            st.info("🌱 Your first action will appear here! Start on the quick actions page.")
-    
-    st.markdown("---")
-    
-    # Personal impact visualization
-    if actions_count > 0:
+            st.markdown("### 🌱 Your Journey Starts Here")
+            st.markdown("""
+            **You haven't taken your first action yet, but that's perfectly fine!** Each of us started exactly the same way.
+            
+            🎯 **What awaits you:**
+            - Your first action will be the most important - it breaks the ice and shows you that helping isn't hard
+            - Each subsequent action will be easier and more natural
+            - Gradually you'll develop a habit of helping that gives you meaning and joy
+            
+            💡 **Did you know:**
+            - 78% of people feel happier after helping someone else
+            - Just 5 minutes of helping can positively impact your day
+            - Small actions often lead to bigger changes in your life
+            """)
+            
+            # Motivational call to action
+            st.markdown(f"""
+            <div class="cta-section">
+                <h3>🚀 Ready for your first step?</h3>
+                <p>Choose how to start your journey toward meaningful impact:</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            col_a, col_b = st.columns(2)
+            with col_a:
+                if st.button(
+                    "⚡ Quick Actions (5 min)",
+                    type="primary",
+                    use_container_width=True,
+                    help="Start with something small but meaningful"
+                ):
+                    st.session_state.current_page = 'quick_actions'
+                    st.rerun()
+            
+            with col_b:
+                if st.button(
+                    "🧭 Personalized Assessment",
+                    use_container_width=True,
+                    help="Find actions perfectly matched to your values"
+                ):
+                    st.session_state.assessment_step = 1
+                    st.session_state.current_page = 'assessment'
+                    st.rerun()
+        
+        # Show inspiring examples from others
+        st.markdown("---")
+        if language == 'czech':
+            st.markdown("### 🌟 Inspirace od ostatních")
+            st.markdown("""
+            **Marie z Prahy:** *"Začala jsem darováním knih do knihobudek. Během roku jsem se stala dobrovolnicí v útulku a teď organizuji akce pro celou čtvrť!"*
+            
+            **Tomáš z Brna:** *"První akce mi trvala 3 minuty - darování na výsadbu stromu. Teď mám pocit, že dělám něco smysluplného každý týden."*
+            
+            **Jana online:** *"Začala jsem psaním dopisů seniorům. Je úžasné vědět, že někomu rozjasním den, i když se nikdy nepotkáme."*
+            """)
+        else:
+            st.markdown("### 🌟 Inspiration from Others")
+            st.markdown("""
+            **Marie from Prague:** *"I started by donating books to book boxes. Within a year I became a volunteer at an animal shelter and now I organize events for the whole neighborhood!"*
+            
+            **Tomáš from Brno:** *"My first action took 3 minutes - a tree planting donation. Now I feel like I'm doing something meaningful every week."*
+            
+            **Jana online:** *"I started writing letters to seniors. It's amazing to know I brighten someone's day, even though we'll never meet."*
+            """)
+        
+    else:
+        # Progress towards next milestones for active users
+        if language == 'czech':
+            st.markdown("### 🎯 Další milníky")
+        else:
+            st.markdown("### 🎯 Next Milestones")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Actions milestone
+            if actions_count < 5:
+                progress = actions_count / 5
+                remaining = 5 - actions_count
+                st.markdown(f"**{'První 5 akcí' if language == 'czech' else 'First 5 Actions'}**")
+                st.progress(progress)
+                st.markdown(f"{'Zbývá' if language == 'czech' else 'Remaining'}: {remaining}")
+            elif actions_count < 10:
+                progress = actions_count / 10
+                remaining = 10 - actions_count
+                st.markdown(f"**{'První 10 akcí' if language == 'czech' else 'First 10 Actions'}**")
+                st.progress(progress)
+                st.markdown(f"{'Zbývá' if language == 'czech' else 'Remaining'}: {remaining}")
+            else:
+                st.success(f"✅ {'10+ akcí dokončeno!' if language == 'czech' else '10+ actions completed!'}")
+        
+        with col2:
+            # Time milestone
+            if time_contributed < 600:  # Less than 10 hours
+                progress = time_contributed / 600
+                remaining_hours = (600 - time_contributed) / 60
+                st.markdown(f"**{'10 hodin pomoci' if language == 'czech' else '10 Hours of Help'}**")
+                st.progress(progress)
+                st.markdown(f"{'Zbývá' if language == 'czech' else 'Remaining'}: {remaining_hours:.1f}h")
+            else:
+                st.success(f"✅ {'10+ hodin dokončeno!' if language == 'czech' else '10+ hours completed!'}")
+        
+        st.markdown("---")
+        
+        # Completed actions history
+        if st.session_state.actions_completed:
+            if language == 'czech':
+                st.markdown("### 📜 Historie vašich akcí")
+            else:
+                st.markdown("### 📜 Your Action History")
+            
+            for i, action in enumerate(reversed(st.session_state.actions_completed[-10:])):  # Show last 10
+                if isinstance(action, dict):
+                    action_title = action.get('title', 'Unknown action')
+                else:
+                    action_title = str(action)
+                
+                st.markdown(f"""
+                <div style="
+                    background: linear-gradient(135deg, #F8FBF8 0%, #F0F6F0 100%);
+                    border-left: 4px solid #7AB87A;
+                    padding: 1rem;
+                    margin: 0.5rem 0;
+                    border-radius: 6px;
+                ">
+                    <strong>#{len(st.session_state.actions_completed) - i}</strong> {action_title}
+                </div>
+                """, unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        # Personal impact visualization for active users
         if language == 'czech':
             st.markdown("### 🌍 Váš dopad v číslech")
             st.markdown("""
@@ -1796,7 +2011,7 @@ def show_impact_page():
                 - 🔄 You've created a positive spiral of change in your community
                 """)
     
-    # Success stories for inspiration
+    # Success stories for inspiration (for users with some actions)
     if actions_count >= 2:
         st.markdown("---")
         if language == 'czech':
@@ -1818,34 +2033,35 @@ def show_impact_page():
             </div>
             """, unsafe_allow_html=True)
     
-    # Motivational CTA
+    # Motivational CTA for continued engagement
     st.markdown("---")
-    st.markdown(f"""
-    <div class="cta-section">
-        <h3>{'🚀 Připraveni na další akci?' if language == 'czech' else '🚀 Ready for your next action?'}</h3>
-        <p>{'Momentum je klíčový. Každá další akce je snazší než ta předchozí!' if language == 'czech' else 'Momentum is key. Each action gets easier than the last!'}</p>
-    </div>
-    """, unsafe_allow_html=True)
+    if actions_count > 0:
+        st.markdown(f"""
+        <div class="cta-section">
+            <h3>{'🚀 Připraveni na další akci?' if language == 'czech' else '🚀 Ready for your next action?'}</h3>
+            <p>{'Momentum je klíčový. Každá další akce je snazší než ta předchozí!' if language == 'czech' else 'Momentum is key. Each action gets easier than the last!'}</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button(
+                f"⚡ {'Rychlé akce' if language == 'czech' else 'Quick Actions'}",
+                type="primary",
+                use_container_width=True
+            ):
+                st.session_state.current_page = 'quick_actions'
+                st.rerun()
+        
+        with col2:
+            if st.button(
+                f"🧭 {'Najít nové příležitosti' if language == 'czech' else 'Find New Opportunities'}",
+                use_container_width=True
+            ):
+                st.session_state.current_page = 'causes'
+                st.rerun()
     
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button(
-            f"⚡ {'Rychlé akce' if language == 'czech' else 'Quick Actions'}",
-            type="primary",
-            use_container_width=True
-        ):
-            st.session_state.quick_action_requested = True
-            st.rerun()
-    
-    with col2:
-        if st.button(
-            f"🧭 {'Najít nové příležitosti' if language == 'czech' else 'Find New Opportunities'}",
-            use_container_width=True
-        ):
-            st.session_state.assessment_step = 1
-            st.rerun()
-    
-    # Reflection prompt
+    # Reflection prompt for active users
     if actions_count >= 1:
         st.markdown("---")
         encouragement_data = load_encouragement_data(language)
@@ -1866,48 +2082,362 @@ def show_impact_page():
                 <p style="font-style: italic; font-size: 1.1rem;">{prompt}</p>
             </div>
             """, unsafe_allow_html=True)
+    
+    # Emergency help widget (always visible)
+    st.markdown(f"""
+    <div class="emergency-help">
+        <strong>{'Potřebujete okamžitou pomoc?' if language == 'czech' else 'Need immediate help?'}</strong><br>
+        📞 {'Linka bezpečí: 116 111' if language == 'czech' else 'Safety line: 116 111'}<br>
+        🆘 {'Krizová intervence: 284 016 666' if language == 'czech' else 'Crisis intervention: 284 016 666'}
+    </div>
+    """, unsafe_allow_html=True)
 
 def show_causes_page():
-    """Causes exploration with Czech adaptation"""
+    """Enhanced causes exploration with visual storytelling and emotional connection"""
     language = st.session_state.language
     
     if language == 'czech':
-        st.markdown('<h1 class="main-header">🌍 Prozkoumat oblasti</h1>', unsafe_allow_html=True)
+        st.markdown('<h1 class="main-header">🌍 Kde můžeš nejlépe pomoci</h1>', unsafe_allow_html=True)
+        st.markdown('<p class="sub-header">Objevuj oblasti, kde tvoje pomoc změní životy</p>', unsafe_allow_html=True)
     else:
-        st.markdown('<h1 class="main-header">🌍 Explore Causes</h1>', unsafe_allow_html=True)
+        st.markdown('<h1 class="main-header">🌍 Where You Can Make the Biggest Difference</h1>', unsafe_allow_html=True)
+        st.markdown('<p class="sub-header">Discover areas where your help changes lives</p>', unsafe_allow_html=True)
+    
+    # Show user's potential impact based on their profile
+    user_profile = st.session_state.get('user_profile', {})
+    user_values = user_profile.get('values', [])
+    time_available = user_profile.get('time_available', '')
+    
+    # Personalized causes recommendation
+    if user_values:
+        if language == 'czech':
+            st.markdown("### 🎯 Oblasti přesně pro tebe")
+            st.markdown("Na základě tvých hodnot a dostupného času:")
+        else:
+            st.markdown("### 🎯 Perfect Matches for You")
+            st.markdown("Based on your values and available time:")
+        
+        # Show personalized cause cards
+        causes_data = load_causes_data(language)
+        if causes_data:
+            personalized_causes = []
+            for cause_id, cause_info in causes_data.items():
+                match_score = calculate_cause_match(user_values, cause_info.get('values_alignment', []))
+                if match_score > 0.3:  # Good match
+                    personalized_causes.append((cause_id, cause_info, match_score))
+            
+            personalized_causes.sort(key=lambda x: x[2], reverse=True)
+            
+            # Display top matches in beautiful cards
+            for i, (cause_id, cause_info, match_score) in enumerate(personalized_causes[:3]):
+                match_percentage = int(match_score * 100)
+                
+                st.markdown(f"""
+                <div class="cause-card" style="border-top-color: #7AB87A;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                        <h3 style="margin: 0; color: #2E5D31;">{cause_info.get('emoji', '🎯')} {cause_info.get('title', 'Unknown Cause')}</h3>
+                        <span style="background: #7AB87A; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600;">{match_percentage}% shoda</span>
+                    </div>
+                    <p style="color: #5A6B5A; margin-bottom: 1.5rem; line-height: 1.6;">{cause_info.get('description', 'No description available')}</p>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0;">
+                        <div>
+                            <strong style="color: #2E5D31;">Naléhavost:</strong><br>
+                            <span style="color: #5A6B5A;">{cause_info.get('time_sensitivity', 'ongoing').title()}</span>
+                        </div>
+                        <div>
+                            <strong style="color: #2E5D31;">Rozsah:</strong><br>
+                            <span style="color: #5A6B5A;">{cause_info.get('geographic_scope', 'varies').title()}</span>
+                        </div>
+                    </div>
+                    
+                    <div style="background: #F0F8F0; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                        <strong style="color: #2E5D31;">Proč je to perfektní pro tebe:</strong>
+                        <p style="margin: 0.5rem 0 0 0; color: #4A5E4A;">Tato oblast se shoduje s tvými hodnotami a časovými možnostmi. Tvoje pomoc zde bude mít významný dopad.</p>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button(
+                        f"🚀 Najít akce v této oblasti" if language == 'czech' else "🚀 Find actions in this area",
+                        key=f"explore_cause_{i}",
+                        type="primary",
+                        use_container_width=True
+                    ):
+                        # Navigate to personalized recommendations for this cause
+                        st.session_state.selected_cause = cause_id
+                        st.session_state.assessment_step = 3
+                        st.success(f"✨ Načítám personalizované akce pro oblast: {cause_info.get('title')}")
+                        st.rerun()
+                
+                with col2:
+                    if st.button(
+                        f"📚 Dozvědět se více" if language == 'czech' else "📚 Learn more",
+                        key=f"learn_cause_{i}",
+                        use_container_width=True
+                    ):
+                        with st.expander(f"Podrobnosti: {cause_info.get('title')}", expanded=True):
+                            resources = cause_info.get('learning_resources', [])
+                            if resources:
+                                st.markdown("**Užitečné zdroje:**")
+                                for resource in resources[:3]:
+                                    st.markdown(f"• [{resource.get('title', 'Resource')}]({resource.get('url', '#')})")
+                            else:
+                                st.markdown("**Co můžeš udělat:**")
+                                st.markdown(f"- Začni malými kroty v této oblasti")
+                                st.markdown(f"- Najdi místní organizace, které se tomu věnují")
+                                st.markdown(f"- Podělí se o tuto příležitost s přáteli")
+    
+    else:
+        # User hasn't done assessment yet
+        st.markdown(f"""
+        <div class="cta-section">
+            <h3>{'💡 Najdi své ideální oblasti pomoci' if language == 'czech' else '💡 Find Your Ideal Areas to Help'}</h3>
+            <p>{'Pro personalizovaná doporučení si nejdříve projdi naše rychlé posouzení.' if language == 'czech' else 'Take our quick assessment first for personalized recommendations.'}</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if st.button(
+            f"🧭 Začít posouzení" if language == 'czech' else "🧭 Start Assessment",
+            type="primary",
+            use_container_width=True
+        ):
+            st.session_state.assessment_step = 1
+            st.rerun()
+    
+    st.markdown("---")
+    
+    # All causes overview with beautiful visual cards
+    if language == 'czech':
+        st.markdown("### 🌟 Všechny oblasti, kde můžeš pomoci")
+        st.markdown("*Klikni na kteroukoliv oblast pro více detailů*")
+    else:
+        st.markdown("### 🌟 All Areas Where You Can Help")
+        st.markdown("*Click on any area for more details*")
     
     causes_data = load_causes_data(language)
     
     if not causes_data:
-        error_text = "Nelze načíst data o oblastech." if language == 'czech' else "Unable to load causes data."
-        st.error(error_text)
-        return
+        # Beautiful fallback with real Czech opportunities
+        if language == 'czech':
+            st.markdown("""
+            <div class="card-grid">
+                <div class="cause-card">
+                    <h3>🌱 Životní prostředí</h3>
+                    <p>Pomáhej chránit českou přírodu - od výsadby stromů po úklidy parků.</p>
+                    <div style="background: #F0F8F0; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                        <strong>Příklady akcí:</strong><br>
+                        • Darování na výsadbu stromů přes Sázka.cz<br>
+                        • Úklidy parků s organizací Lipka<br>
+                        • Recyklace a udržitelný životní styl
+                    </div>
+                </div>
+                
+                <div class="cause-card">
+                    <h3>❤️ Pomoc v komunitě</h3>
+                    <p>Podpoř lidi ve svém okolí - od seniorů po rodiny v nouzi.</p>
+                    <div style="background: #F0F8F0; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                        <strong>Příklady akcí:</strong><br>
+                        • Dopisy seniorům přes Dopisy-seniorum.cz<br>
+                        • Pomoc s nákupy pro sousedy<br>
+                        • Dobrovolnictví v místních organizacích
+                    </div>
+                </div>
+                
+                <div class="cause-card">
+                    <h3>📚 Vzdělání a rozvoj</h3>
+                    <p>Pomáhej dětem a dospělým učit se a růst.</p>
+                    <div style="background: #F0F8F0; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                        <strong>Příklady akcí:</strong><br>
+                        • Online doučování přes Učíme online<br>
+                        • Darování knih do knihobudek<br>
+                        • Mentoring mladých lidí
+                    </div>
+                </div>
+                
+                <div class="cause-card">
+                    <h3>🐕 Ochrana zvířat</h3>
+                    <p>Pomáhej opuštěným a týraným zvířatům najít domov a péči.</p>
+                    <div style="background: #F0F8F0; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                        <strong>Příklady akcí:</strong><br>
+                        • Darování granulí pro útulky<br>
+                        • Dobrovolnictví s psy<br>
+                        • Podpora kastračních programů
+                    </div>
+                </div>
+                
+                <div class="cause-card">
+                    <h3>🏥 Zdraví a pohoda</h3>
+                    <p>Podporuj fyzické a duševní zdraví ve své komunitě.</p>
+                    <div style="background: #F0F8F0; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                        <strong>Příklady akcí:</strong><br>
+                        • Podpora na Lince bezpečí<br>
+                        • Darování krve<br>
+                        • Organizace sportovních aktivit
+                    </div>
+                </div>
+                
+                <div class="cause-card">
+                    <h3>🌍 Globální problémy</h3>
+                    <p>Řeš globální výzvy s lokálním dopadem.</p>
+                    <div style="background: #F0F8F0; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                        <strong>Příklady akcí:</strong><br>
+                        • Podpora uprchlíků<br>
+                        • Fair trade nákupy<br>
+                        • Vzdělávání o globálních problémech
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # CTA for quick actions
+            st.markdown("---")
+            st.markdown(f"""
+            <div class="cta-section">
+                <h3>🚀 Připraven/a začít hned teď?</h3>
+                <p>Máme pro tebe rychlé akce, které můžeš udělat během několika minut!</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if st.button(
+                "⚡ Zobrazit rychlé akce",
+                type="primary",
+                use_container_width=True
+            ):
+                st.session_state.quick_action_requested = True
+                st.rerun()
+        else:
+            # English fallback
+            st.markdown("""
+            <div class="card-grid">
+                <div class="cause-card">
+                    <h3>🌱 Environment</h3>
+                    <p>Help protect Czech nature - from tree planting to park cleanups.</p>
+                    <div style="background: #F0F8F0; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                        <strong>Example actions:</strong><br>
+                        • Tree planting donations via Sázka.cz<br>
+                        • Park cleanups with Lipka organization<br>
+                        • Recycling and sustainable living
+                    </div>
+                </div>
+                
+                <div class="cause-card">
+                    <h3>❤️ Community Support</h3>
+                    <p>Support people in your area - from seniors to families in need.</p>
+                    <div style="background: #F0F8F0; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                        <strong>Example actions:</strong><br>
+                        • Letters to seniors via Dopisy-seniorum.cz<br>
+                        • Shopping help for neighbors<br>
+                        • Volunteering with local organizations
+                    </div>
+                </div>
+                
+                <div class="cause-card">
+                    <h3>📚 Education & Development</h3>
+                    <p>Help children and adults learn and grow.</p>
+                    <div style="background: #F0F8F0; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                        <strong>Example actions:</strong><br>
+                        • Online tutoring via Učíme online<br>
+                        • Book donations to book boxes<br>
+                        • Mentoring young people
+                    </div>
+                </div>
+                
+                <div class="cause-card">
+                    <h3>🐕 Animal Protection</h3>
+                    <p>Help abandoned and abused animals find homes and care.</p>
+                    <div style="background: #F0F8F0; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                        <strong>Example actions:</strong><br>
+                        • Dog food donations to shelters<br>
+                        • Volunteering with dogs<br>
+                        • Supporting spay/neuter programs
+                    </div>
+                </div>
+                
+                <div class="cause-card">
+                    <h3>🏥 Health & Wellbeing</h3>
+                    <p>Support physical and mental health in your community.</p>
+                    <div style="background: #F0F8F0; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                        <strong>Example actions:</strong><br>
+                        • Support for Safety Line<br>
+                        • Blood donation<br>
+                        • Organizing sports activities
+                    </div>
+                </div>
+                
+                <div class="cause-card">
+                    <h3>🌍 Global Issues</h3>
+                    <p>Address global challenges with local impact.</p>
+                    <div style="background: #F0F8F0; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                        <strong>Example actions:</strong><br>
+                        • Refugee support<br>
+                        • Fair trade shopping<br>
+                        • Education about global issues
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # CTA for quick actions
+            st.markdown("---")
+            st.markdown(f"""
+            <div class="cta-section">
+                <h3>🚀 Ready to start right now?</h3>
+                <p>We have quick actions you can do in just a few minutes!</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if st.button(
+                "⚡ Show Quick Actions",
+                type="primary",
+                use_container_width=True
+            ):
+                st.session_state.quick_action_requested = True
+                st.rerun()
     
-    for cause_id, cause_info in causes_data.items():
-        with st.expander(f"{cause_info.get('emoji', '🎯')} {cause_info.get('title', 'Unknown Cause')}"):
-            st.markdown(cause_info.get('description', 'No description available'))
+    else:
+        # Display actual causes data in beautiful cards
+        st.markdown('<div class="card-grid">', unsafe_allow_html=True)
+        for cause_id, cause_info in causes_data.items():
+            st.markdown(f"""
+            <div class="cause-card">
+                <h3>{cause_info.get('emoji', '🎯')} {cause_info.get('title', 'Unknown Cause')}</h3>
+                <p style="margin-bottom: 1.5rem;">{cause_info.get('description', 'No description available')}</p>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0;">
+                    <div>
+                        <strong>Urgency:</strong><br>
+                        {cause_info.get('time_sensitivity', 'ongoing').title()}
+                    </div>
+                    <div>
+                        <strong>Scope:</strong><br>
+                        {cause_info.get('geographic_scope', 'varies').title()}
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
             
-            # Show some stats
-            col1, col2 = st.columns(2)
-            with col1:
-                urgency = cause_info.get('time_sensitivity', 'ongoing')
-                if language == 'czech':
-                    st.markdown(f"**Naléhavost:** {urgency.title()}")
-                    scope = cause_info.get('geographic_scope', 'varies')
-                    st.markdown(f"**Geografický rozsah:** {scope.title()}")
-                else:
-                    st.markdown(f"**Urgency Level:** {urgency.title()}")
-                    scope = cause_info.get('geographic_scope', 'varies')
-                    st.markdown(f"**Geographic Scope:** {scope.title()}")
-            
-            with col2:
-                # Show learning resources
-                resources = cause_info.get('learning_resources', [])
-                if resources:
-                    learn_text = "**Dozvědět se více:**" if language == 'czech' else "**Learn More:**"
-                    st.markdown(learn_text)
-                    for resource in resources[:2]:
-                        st.markdown(f"• [{resource.get('title', 'Resource')}]({resource.get('url', '#')})")
+            if st.button(
+                f"🚀 Najít akce" if language == 'czech' else "🚀 Find Actions",
+                key=f"find_actions_{cause_id}",
+                use_container_width=True
+            ):
+                st.session_state.selected_cause = cause_id
+                st.success(f"✨ Hledám akce pro oblast: {cause_info.get('title')}")
+                # Could redirect to filtered quick actions or recommendations
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Emergency help widget (always visible)
+    st.markdown(f"""
+    <div class="emergency-help">
+        <strong>{'Potřebujete okamžitou pomoc?' if language == 'czech' else 'Need immediate help?'}</strong><br>
+        📞 {'Linka bezpečí: 116 111' if language == 'czech' else 'Safety line: 116 111'}<br>
+        🆘 {'Krizová intervence: 284 016 666' if language == 'czech' else 'Crisis intervention: 284 016 666'}
+    </div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main() 
