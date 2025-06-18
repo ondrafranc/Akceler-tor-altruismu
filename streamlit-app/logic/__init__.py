@@ -1,0 +1,1 @@
+"""Business logic for Akcelerátor altruismu""" 

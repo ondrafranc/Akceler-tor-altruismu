@@ -1,0 +1,1 @@
+"""Page components for Akcelerátor altruismu""" 
