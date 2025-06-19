@@ -6,35 +6,69 @@ from logic.tracking import get_milestone_achievements, calculate_estimated_impac
 from datetime import datetime, timedelta
 
 def show_impact_page():
-    """Enhanced impact tracking with meaningful content even for new users"""
+    """A page to reflect on the user's impact, framed as a personal story."""
     language = st.session_state.language
     
     if language == 'czech':
-        st.markdown('<h1 class="main-header">📊 Váš dopad na svět</h1>', unsafe_allow_html=True)
-        st.markdown('<p class="sub-header">Každá akce má význam. Podívejte se na svůj pokrok!</p>', unsafe_allow_html=True)
+        st.markdown('<h1 class="main-header">📖 Váš příběh pomoci</h1>', unsafe_allow_html=True)
+        st.markdown('<p class="sub-header">Každá akce, kterou jste udělali, je kapitolou v příběhu pozitivní změny. Podívejte se, co jste dokázali.</p>', unsafe_allow_html=True)
     else:
-        st.markdown('<h1 class="main-header">📊 Your Impact on the World</h1>', unsafe_allow_html=True)
-        st.markdown('<p class="sub-header">Every action matters. See your progress!</p>', unsafe_allow_html=True)
+        st.markdown('<h1 class="main-header">📖 Your Story of Help</h1>', unsafe_allow_html=True)
+        st.markdown('<p class="sub-header">Every action you\'ve taken is a chapter in a story of positive change. See what you\'ve accomplished.</p>', unsafe_allow_html=True)
     
-    # Check for milestones and celebrate
+    actions_count = st.session_state.total_impact['actions']
+    
+    if actions_count == 0:
+        _show_getting_started_content(language)
+    else:
+        _show_impact_details(language)
+
+def _show_getting_started_content(language):
+    """Show gentle, encouraging content for users who haven't started yet."""
+    
+    if language == 'czech':
+        st.info("""
+        ### Vaše první kapitola čeká na napsání.
+        
+        Prázdná stránka není známkou nečinnosti, ale příležitosti. Jste na začátku cesty, a to je to nejlepší místo, kde začít. Každý velký příběh pomoci začal jedním malým krokem.
+        
+        **Jste připraveni napsat první větu?**
+        """)
+    else:
+        st.info("""
+        ### Your first chapter is waiting to be written.
+        
+        An empty page isn't a sign of inaction, but of opportunity. You are at the beginning of a journey, and that's the best place to start. Every great story of help began with a single, small step.
+        
+        **Are you ready to write the first sentence?**
+        """)
+        
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button(f"⚡ {get_text('get_quick_help', language)}", type="primary", use_container_width=True):
+            st.session_state.quick_action_requested = True
+            st.rerun()
+    
+    with col2:
+        if st.button(f"🧭 {get_text('take_assessment', language)}", use_container_width=True):
+            st.session_state.assessment_step = 1
+            st.session_state.current_page = 'assessment'
+            st.rerun()
+
+def _show_impact_details(language):
+    """Show detailed impact with narrative framing."""
     actions_count = st.session_state.total_impact['actions']
     time_contributed = st.session_state.total_impact['time']
     money_donated = st.session_state.total_impact['money']
-    
-    milestones = get_milestone_achievements(actions_count, time_contributed, money_donated)
-    
-    if milestones and not st.session_state.get('milestones_shown', False):
-        _show_milestone_celebrations(milestones, language)
-        st.session_state.milestones_shown = True
-    
+
     # Main metrics display
+    st.markdown("### Vaše shrnutí dopadu")
     col1, col2, col3 = st.columns(3)
     
     with col1:
         st.metric(
             get_text('actions_taken', language),
-            actions_count,
-            delta=1 if actions_count > 0 else None
+            actions_count
         )
     
     with col2:
@@ -48,7 +82,7 @@ def show_impact_page():
     
     with col3:
         if language == 'czech':
-            money_display = f"{int(money_donated * 25)} Kč"  # Rough CZK conversion
+            money_display = f"{int(money_donated * 25)} Kč"
         else:
             money_display = f"${money_donated:.0f}"
         st.metric(
@@ -58,139 +92,77 @@ def show_impact_page():
     
     st.markdown("---")
     
-    # Show impact content based on actions taken
-    if actions_count == 0:
-        _show_getting_started_content(language)
-    else:
-        _show_impact_details(language, actions_count, time_contributed)
-
-def _show_milestone_celebrations(milestones, language):
-    """Show milestone celebration messages"""
-    
-    for milestone in milestones:
-        if milestone == "first_action":
-            if language == 'czech':
-                st.success("🎉 Gratulujeme k vaší první akci! Každá cesta začíná jedním krokem.")
-            else:
-                st.success("🎉 Congratulations on your first action! Every journey begins with a single step.")
-        elif milestone == "five_actions":
-            if language == 'czech':
-                st.success("🌟 Úžasné! Dokončili jste 5 akcí. Stanováte se skutečným změnotvorcem!")
-            else:
-                st.success("🌟 Amazing! You've completed 5 actions. You're becoming a real changemaker!")
-        # Add more milestone celebrations as needed
-
-def _show_getting_started_content(language):
-    """Show content for users who haven't started any actions yet"""
-    
-    if language == 'czech':
-        st.markdown("""
-        ### 🌱 Vaše cesta teprve začíná
-        
-        Ještě jste neudělali žádnou akci, ale to je v pořádku! Každý velkný dopad začíná malým krokem.
-        
-        **💡 Věděli jste, že:**
-        - Průměrný člověk může ovlivnit životy 80 000 lidí během svého života
-        - Jen 5 minut denně věnovaných pomoci může změnit něčí týden
-        - Malé akce často inspirují ostatní k vlastním činům
-        
-        **🚀 Připraveni začít?**
-        """)
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("⚡ Rychlé akce (5 min)", type="primary", use_container_width=True):
-                st.session_state.quick_action_requested = True
-                st.rerun()
-        
-        with col2:
-            if st.button("🧭 Personalizované posouzení", use_container_width=True):
-                st.session_state.assessment_step = 1
-                st.session_state.current_page = 'assessment'
-                st.rerun()
-    
-    else:
-        st.markdown("""
-        ### 🌱 Your Journey is Just Beginning
-        
-        You haven't taken any actions yet, but that's perfectly fine! Every great impact starts with a small step.
-        
-        **💡 Did you know:**
-        - The average person can impact 80,000 lives during their lifetime
-        - Just 5 minutes daily of helping can change someone's week
-        - Small actions often inspire others to take their own actions
-        
-        **🚀 Ready to start?**
-        """)
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("⚡ Quick Actions (5 min)", type="primary", use_container_width=True):
-                st.session_state.quick_action_requested = True
-                st.rerun()
-        
-        with col2:
-            if st.button("🧭 Personalized Assessment", use_container_width=True):
-                st.session_state.assessment_step = 1
-                st.session_state.current_page = 'assessment'
-                st.rerun()
-
-def _show_impact_details(language, actions_count, time_contributed):
-    """Show detailed impact for users who have taken actions"""
-    
-    # Calculate estimated impact
-    estimated_impact = calculate_estimated_impact(actions_count)
-    
-    if language == 'czech':
-        st.markdown("### 🌟 Váš odhadovaný dopad")
-        
-        st.markdown(f"""
-        Na základě vašich {actions_count} akcí:
-        
-        - **👥 Lidé ovlivnění:** ~{estimated_impact['people_affected']:.0f} lidí
-        - **💫 Multiplikátor inspirace:** {estimated_impact['inspiration_multiplier']}x
-        - **🏘️ Komunitní dopad:** {estimated_impact['community_impact_score']}/100
-        """)
-        
-        st.markdown("### 📈 Váš pokrok")
-    else:
-        st.markdown("### 🌟 Your Estimated Impact")
-        
-        st.markdown(f"""
-        Based on your {actions_count} actions:
-        
-        - **👥 People Affected:** ~{estimated_impact['people_affected']:.0f} people
-        - **💫 Inspiration Multiplier:** {estimated_impact['inspiration_multiplier']}x
-        - **🏘️ Community Impact:** {estimated_impact['community_impact_score']}/100
-        """)
-        
-        st.markdown("### 📈 Your Progress")
-    
-    # Show completed actions if any
+    # Completed Actions Log - "Your Story So Far"
     if 'actions_completed' in st.session_state and st.session_state.actions_completed:
         if language == 'czech':
-            st.markdown("#### ✅ Dokončené akce")
+            st.markdown("### Váš příběh pomoci zatím...")
         else:
-            st.markdown("#### ✅ Completed Actions")
+            st.markdown("### Your story of help so far...")
         
-        for i, action in enumerate(st.session_state.actions_completed[-5:]):  # Show last 5
+        # Display actions as a narrative log
+        for i, action in enumerate(reversed(st.session_state.actions_completed[-5:])):  # Show last 5, most recent first
             timestamp = datetime.fromisoformat(action['timestamp'])
             time_ago = datetime.now() - timestamp
             
-            if time_ago.days > 0:
-                time_str = f"{time_ago.days} {'dní' if language == 'czech' else 'days'} ago"
+            if time_ago.days > 1:
+                time_str = f"před {time_ago.days} dny" if language == 'czech' else f"{time_ago.days} days ago"
+            elif time_ago.days == 1:
+                time_str = "včera" if language == 'czech' else "yesterday"
             elif time_ago.seconds > 3600:
                 hours = time_ago.seconds // 3600
-                time_str = f"{hours} {'hodin' if language == 'czech' else 'hours'} ago"
+                time_str = f"před {hours}h" if language == 'czech' else f"{hours}h ago"
             else:
-                minutes = time_ago.seconds // 60
-                time_str = f"{minutes} {'minut' if language == 'czech' else 'minutes'} ago"
+                minutes = max(1, time_ago.seconds // 60)
+                time_str = f"před {minutes} min" if language == 'czech' else f"{minutes} min ago"
             
-            st.markdown(f"- **{action['title']}** ({action['category']}) - {time_str}")
+            st.markdown(f"**{time_str}**: Jste dokončili **'{action['title']}'** v oblasti '{action['category']}'.")
+        st.markdown("---")
+
+    # Estimated Broader Impact
+    estimated_impact = calculate_estimated_impact(actions_count)
+    if language == 'czech':
+        st.markdown("### Váš možný širší dopad")
+        st.markdown(f"""
+        I malé akce mají vlnový efekt. Vaše činy mohly:
+        - **Inspirovat ostatní:** Vaše odhodlání může motivovat lidi ve vašem okolí.
+        - **Přispět k větší změně:** Jste součástí komunity, která společně řeší velké problémy.
+        - **Ovlivnit životy:** Odhaduje se, že vaše pomoc se mohla dotknout až **~{estimated_impact['people_affected']:.0f} lidí**.
+        
+        *Toto jsou odhady, které vám mají ukázat, že i malé kroky mají velký potenciál.*
+        """)
+    else:
+        st.markdown("### Your Potential Ripple Effect")
+        st.markdown(f"""
+        Even small actions create waves. Your efforts may have:
+        - **Inspired others:** Your commitment can motivate those around you.
+        - **Contributed to bigger change:** You are part of a community tackling large problems together.
+        - **Affected lives:** It's estimated your help may have touched up to **~{estimated_impact['people_affected']:.0f} people**.
+        
+        *These are estimates to show you that even small steps have great potential.*
+        """)
     
-    # Show streak if exists
-    if st.session_state.get('streak_count', 0) > 1:
-        if language == 'czech':
-            st.markdown(f"🔥 **Série akcí:** {st.session_state.streak_count} dní v řadě!")
-        else:
-            st.markdown(f"🔥 **Action Streak:** {st.session_state.streak_count} days in a row!") 
+    # Check for milestones and celebrate
+    milestones = get_milestone_achievements(actions_count, time_contributed, money_donated)
+    if milestones:
+        _show_milestone_celebrations(milestones, language)
+
+def _show_milestone_celebrations(milestones, language):
+    """Show milestone celebration messages in a more prominent way."""
+    
+    milestone_texts = {
+        "first_action": (
+            "🎉 První krok na vaší cestě!", 
+            "Congratulations on the first step of your journey!"
+        ),
+        "five_actions": (
+            "🌟 Skvělé! Už 5 dokončených akcí!",
+            "Amazing! You've completed 5 actions!"
+        )
+    }
+
+    for milestone in milestones:
+        if milestone in milestone_texts:
+            if language == 'czech':
+                st.success(f"**Milník dosažen:** {milestone_texts[milestone][0]}")
+            else:
+                st.success(f"**Milestone Reached:** {milestone_texts[milestone][1]}") 

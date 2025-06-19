@@ -7,189 +7,158 @@ from logic.encouragement import get_random_encouragement, get_seasonal_message, 
 from core.session import update_user_profile
 
 def show_welcome_page():
-    """Enhanced welcome page with fixed UX and cultural adaptation"""
+    """A warmer, more narrative welcome page to gently guide the user."""
     language = st.session_state.language
     
-    # Main content container
     st.markdown('<div class="content-container">', unsafe_allow_html=True)
     
     st.markdown(f'<h1 class="main-header">{get_text("title", language)}</h1>', unsafe_allow_html=True)
+    st.markdown(f'<p class="sub-header">{get_text("subtitle", language)}</p>', unsafe_allow_html=True)
     
-    welcome_msg = get_random_encouragement("welcome_messages", language)
-    st.markdown(f'<p class="sub-header">{welcome_msg}</p>', unsafe_allow_html=True)
-    
-    # Add a welcoming introduction
     if language == 'czech':
         intro_text = """
-        🌟 **Vítejte v prostoru, kde se empatie mění v konkrétní činy.**
-        
-        Tento nástroj vám pomůže najít smysluplné způsoby, jak pomoci druhým – 
-        ať už máte 5 minut nebo celý den, žijete v Praze nebo obklopeni přírodou.
-        
-        💡 **Jak to funguje:** Projdete si krátké posouzení, které najde akce přesně pro vaše možnosti a hodnoty.
+        **Vítejte v bezpečném prostoru, kde vaše pocity mají váhu a vaše touha pomoci může najít směr.**
+
+        Pokud se cítíte zahlceni, bezradní, nebo jen nevíte, kde začít – jste na správném místě. Tento nástroj není o tom, abyste spasili svět. Je o nalezení jednoho malého, praktického kroku, který dnes můžete udělat, a který bude v souladu s vašimi hodnotami a možnostmi.
         """
     else:
         intro_text = """
-        🌟 **Welcome to a space where empathy transforms into concrete action.**
-        
-        This tool helps you find meaningful ways to help others – 
-        whether you have 5 minutes or a whole day, live in Prague or the countryside.
-        
-        💡 **How it works:** Take a brief assessment that finds actions perfectly matched to your resources and values.
+        **Welcome to a safe space where your feelings are valid and your desire to help can find direction.**
+
+        If you feel overwhelmed, helpless, or just don't know where to start—you are in the right place. This tool isn't about saving the world. It's about finding one small, practical step you can take today that aligns with your values and your capacity.
         """
-    st.markdown(intro_text)
+    st.info(intro_text)
     
-    # Quote comes AFTER intro, properly positioned
-    seasonal_msg = get_seasonal_message(language)
+    seasonal_msg = get_random_encouragement("inspirational_quotes", language)
     if seasonal_msg:
         st.markdown(f"""
         <div class="quote-box">
-            <span style="font-size: 1.2em;">🌿</span> {seasonal_msg}
+            "{seasonal_msg}"
         </div>
         """, unsafe_allow_html=True)
     
     st.markdown("---")
     
-    # Enhanced emotional assessment section
     _render_emotional_assessment(language)
     
     st.markdown("---")
     
-    # Enhanced CTA section
     _render_cta_section(language)
     
-    # Enhanced opportunity expandable section
-    _render_opportunities_section(language)
-    
-    # Close content container
     st.markdown('</div>', unsafe_allow_html=True)
 
 def _render_emotional_assessment(language):
-    """Render the emotional assessment section"""
+    """Render a more empathetic emotional assessment section."""
     
     if language == 'czech':
-        st.markdown("### 💭 Jak se právě cítíš?")
-        st.markdown("*Pomůže nám najít správný přístup pro vás*")
+        st.markdown("### Než začneme, jak se dnes cítíte?")
+        st.markdown("Neexistuje správná nebo špatná odpověď. Pomůže nám to pochopit, co by pro vás bylo teď nejužitečnější.")
         emotional_options = [
-            "😔 Zahlcen/a všemi problémy",
-            "😤 Frustrován/a a chci jednat", 
-            "😊 Nadějný/á a připraven/a pomoci",
-            "😕 Provinile kvůli nedělání dost",
-            "🔥 Motivován/a něco změnit",
-            "😐 Nejistý/á, kde začít"
+            ("zahlcen", "😔 Jsem zahlcen/a problémy světa"),
+            ("frustrovan", "😤 Cítím frustraci a chci něco dělat"), 
+            ("nadejny", "😊 Mám naději a jsem připraven/a pomoci"),
+            ("provinile", "😕 Cítím se provinile, že nedělám víc"),
+            ("motivovan", "🔥 Jsem motivován/a a chci něco změnit"),
+            ("nejisty", "😐 Nevím, kde začít")
         ]
-    else:
-        st.markdown("### 💭 How are you feeling right now?")
-        st.markdown("*This helps us better understand what would be most helpful for you right now.*")
-        emotional_options = [
-            "😔 I'm overwhelmed by the world's problems",
-            "😤 I feel frustrated and want to do something",
-            "😊 I feel hopeful and am ready to help",
-            "😕 I feel like I should be doing more",
-            "🔥 I'm motivated to make a change",
-            "😐 I'm not sure where to start"
-        ]
-    
-    # Enhanced emotional state selector
-    emotional_state = st.radio(
-        "Vyberte možnost:" if language == 'czech' else "Choose option:",
-        emotional_options,
-        key="emotional_state",
-        label_visibility="collapsed"
-    )
-    
-    # Enhanced contextual response
-    if emotional_state:
-        # Extract emotion key more safely and map to English keys used in JSON
-        emotion_parts = emotional_state.split()
-        if len(emotion_parts) > 1:
-            emotion_key = emotion_parts[1].lower().rstrip('/a').rstrip('ý').rstrip('á')
+        emotional_state = st.radio(
+            "Vyberte, co nejlépe odpovídá vašim pocitům:",
+            [opt[1] for opt in emotional_options],
+            key="emotional_state",
+            label_visibility="collapsed"
+        )
+        
+        if emotional_state:
+            emotion_key = ""
+            for key, display_text in emotional_options:
+                if display_text == emotional_state:
+                    emotion_key = key
+                    break
             
             update_user_profile({'emotional_state': emotion_key})
-            
-            # Get appropriate response
             response = get_emotional_response(emotion_key, language)
-            st.success(f"✨ {response}")
+            st.success(f"💬 {response}")
+
+    else:
+        st.markdown("### Before we begin, how are you feeling today?")
+        st.markdown("There's no right or wrong answer. This helps us understand what might be most helpful for you right now.")
+        emotional_options = [
+            ("overwhelmed", "😔 I'm overwhelmed by the world's problems"),
+            ("frustrated", "😤 I feel frustrated and want to do something"),
+            ("hopeful", "😊 I feel hopeful and am ready to help"),
+            ("guilty", "😕 I feel like I should be doing more"),
+            ("motivated", "🔥 I'm motivated to make a change"),
+            ("uncertain", "😐 I'm not sure where to start")
+        ]
+        emotional_state = st.radio(
+            "Select what best describes your feelings:",
+            [opt[1] for opt in emotional_options],
+            key="emotional_state_en",
+            label_visibility="collapsed"
+        )
+        
+        if emotional_state:
+            emotion_key = ""
+            for key, display_text in emotional_options:
+                if display_text == emotional_state:
+                    emotion_key = key
+                    break
+
+            update_user_profile({'emotional_state': emotion_key})
+            response = get_emotional_response(emotion_key, language)
+            st.success(f"💬 {response}")
+
 
 def _render_cta_section(language):
-    """Render the call-to-action section"""
+    """Render a clearer, more inviting call-to-action section."""
     
-    st.markdown(f"""
-    <div class="cta-section">
-        <h3 style="margin-bottom: 1rem; color: #2E5D31;">
-            {'🚀 Jak chcete začít?' if language == 'czech' else '🚀 How would you like to start?'}
-        </h3>
-        <p style="color: #5A6B5A; margin-bottom: 1.5rem;">
-            {'Vyberte si cestu, která vám vyhovuje:' if language == 'czech' else 'Choose the path that suits you:'}
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    if language == 'czech':
+        st.markdown("""
+        <div class="cta-section">
+            <h3 style="margin-bottom: 1rem; color: #2E5D31;">Dvě cesty, jak začít</h3>
+            <p style="color: #5A6B5A; margin-bottom: 1.5rem;">Vyberte si tu, která vám teď dává největší smysl.</p>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div class="cta-section">
+            <h3 style="margin-bottom: 1rem; color: #2E5D31;">Two Paths to Begin</h3>
+            <p style="color: #5A6B5A; margin-bottom: 1.5rem;">Choose the one that feels right for you today.</p>
+        </div>
+        """, unsafe_allow_html=True)
     
-    # Better CTA layout with proper spacing - responsive
     col_a, col_b = st.columns(2)
     with col_a:
+        if language == 'czech':
+            st.markdown("#### Prozkoumat vaši cestu")
+            st.markdown("Věnujte 5 minut reflexi, abychom vám mohli doporučit akce šité na míru vašim hodnotám.")
+        else:
+            st.markdown("#### Explore Your Path")
+            st.markdown("Spend 5 minutes on a guided reflection to get actions tailored to your unique values.")
+        
         if st.button(
             f"🧭 {get_text('take_assessment', language)}", 
             type="primary", 
-            use_container_width=True,
-            help="Získejte personalizovaná doporučení na míru" if language == 'czech' else "Get personalized recommendations tailored to you"
+            use_container_width=True
         ):
             st.session_state.assessment_step = 1
             st.session_state.current_page = 'assessment'
             st.rerun()
     
     with col_b:
+        if language == 'czech':
+            st.markdown("#### Najít rychlou pomoc")
+            st.markdown("Podívejte se na seznam jednoduchých, konkrétních akcí, které můžete udělat hned teď.")
+        else:
+            st.markdown("#### Find Quick Help")
+            st.markdown("See a list of simple, concrete actions you can take in the next few minutes.")
+
         if st.button(
             f"⚡ {get_text('get_quick_help', language)}", 
-            use_container_width=True,
-            help="Najděte rychlé akce, které můžete udělat hned teď" if language == 'czech' else "Find quick actions you can do right now"
+            use_container_width=True
         ):
-            # Navigate to quick actions page
             st.session_state.quick_action_requested = True
             st.rerun()
 
-def _render_opportunities_section(language):
-    """Render the local opportunities section"""
-    
-    with st.expander(
-        "🌍 Zobrazit příležitosti v mém okolí" if language == 'czech' else "🌍 Show opportunities near me",
-        expanded=False
-    ):
-        if language == 'czech':
-            st.markdown("""
-            **🏠 Praha**
-            - **Organizace pro zvířata**: [Voříškoviště](https://voriskoviste.cz) - dobrovolnictví s opuštěnými psy
-            - **Pomoc bezdomovcům**: [Naděje](https://www.nadeje.cz) - rozdávání jídla, sociální práce
-            - **Podpora vzdělání**: [Učíme online](https://www.ucimeonline.cz) - doučování dětí online
-            
-            **🏢 Brno**
-            - **Senioři**: [Život 90](https://zivot90.cz) - návštěvy, doprovázení k lékaři
-            - **Ekologie**: [Lipka](https://lipka.cz) - úklidy parků, výsadba rostlin
-            - **Děti v nouzi**: [SOS dětské vesničky](https://www.sos-vesničky.cz)
-            
-            **🌐 Online z domova**
-            - **Krizová pomoc**: [Linka důvěry](https://www.ceska-sprava.cz) - školení dobrovolníků
-            - **Překládání**: [Translators without Borders](https://translatorswithoutborders.org)
-            - **Vzdělání**: [Khan Academy česky](https://cs.khanacademy.org) - tvorba obsahu
-            
-            *📝 Poznámka: Toto jsou skutečné a ověřené organizace. Doporučujeme si u nich vždy ověřit nejnovější možnosti zapojení.*
-            """)
-        else:
-            st.markdown("""
-            **🏠 Prague**
-            - **Animal welfare**: [Voříškoviště](https://voriskoviste.cz) - volunteering with abandoned dogs
-            - **Homeless support**: [Naděje](https://www.nadeje.cz) - food distribution, social work
-            - **Education support**: [Učíme online](https://www.ucimeonline.cz) - online tutoring for children
-            
-            **🏢 Brno**
-            - **Senior care**: [Život 90](https://zivot90.cz) - visits, medical accompaniment
-            - **Environmental**: [Lipka](https://lipka.cz) - park cleanups, tree planting
-            - **Children in need**: [SOS Children's Villages](https://www.sos-vesničky.cz)
-            
-            **🌐 Online from home**
-            - **Crisis support**: [Helpline](https://www.ceska-sprava.cz) - volunteer training
-            - **Translation**: [Translators without Borders](https://translatorswithoutborders.org)
-            - **Education**: [Khan Academy Czech](https://cs.khanacademy.org) - content creation
-            
-            *📝 Note: These are real, verified organizations. We recommend always checking with them for the latest opportunities to get involved.*
-            """) 
+# The opportunities section was removed as it's better placed on the 'Explore Causes' page
+# to avoid overwhelming the user on the very first page. 

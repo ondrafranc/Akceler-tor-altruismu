@@ -13,40 +13,34 @@
   ],
   "emotional_state_responses": {
     "overwhelmed": [
-      "It's completely normal to feel overwhelmed. The problems are big, but so is human capacity for good.",
-      "You're not alone in feeling this way. Millions of caring people feel overwhelmed, and that's exactly why tools like this exist.",
-      "Your overwhelm shows how deeply you care. Let's transform that caring into manageable, effective action.",
-      "The goal isn't to solve everything - it's to find your sustainable way to contribute to solutions."
+      "It's completely okay to feel this way. That feeling shows how much you care. You don't have to save the world; you just have to find one small, manageable step.",
+      "Breathe. You're in the right place. This feeling of being overwhelmed is the first step toward meaningful action. We'll help you turn it into something concrete and positive.",
+      "We know there's a lot. That's why you're here. Together, we'll find a way to turn your concern into a small but real act of help that won't overwhelm you."
     ],
     "frustrated": [
-      "That frustration is fuel. It shows you're ready for real change, not just thoughts and prayers.",
-      "Channel that energy! Some of history's greatest movements started with people who were fed up.",
-      "Your frustration means you see through the surface to the real issues. That clarity is powerful.",
-      "Let's turn that frustration into strategic action that actually moves the needle."
+      "That frustration is valuable energy. It means you aren't indifferent to injustice. Let's channel it where it can make a real difference.",
+      "We understand your frustration. It's a sign that you see problems clearly, and that is a strength. Let's find a practical outlet for that energy.",
+      "Your frustration is fuel. Many great changes started with this exact feeling. You're ready to move beyond just feelings—and that's powerful."
     ],
     "hopeful": [
-      "Your hope is contagious and exactly what the world needs right now.",
-      "Hope combined with action is unstoppable. You're already ahead of the game.",
-      "That optimism will carry you through challenges and inspire others to join you.",
-      "Hope is a choice and a practice. Thank you for choosing it, even when it's hard."
+      "Hope is a beautiful and powerful feeling. It's the foundation of all positive change. We're here to help you turn it into concrete actions.",
+      "Your hope is inspiring. It's exactly the energy the world needs. Let's find the best place to apply it together.",
+      "It's wonderful that you feel hopeful. Hold onto that; it's your compass. Now, let's add a map to it—specific steps you can take to help."
     ],
     "guilty": [
-      "Guilt shows your values are intact, but action is more helpful than guilt.",
-      "You can't help everyone, but you can help someone. That's enough.",
-      "The fact that you care this much means you're already more engaged than most people.",
-      "Replace 'I should do more' with 'I will do what I can sustainably.' That's real wisdom."
+      "This feeling shows how good your heart is. But remember, guilt is a heavy burden that prevents action. Action is much lighter and more useful.",
+      "You can't help everyone, and that's okay. The important thing is that you want to help. Let's transform that feeling into one concrete deed you can be proud of.",
+      "Many sensitive people feel the same way; you're in good company. Allow yourself to trade the feeling of guilt for the sense of meaning that comes from one small step."
     ],
     "motivated": [
-      "That energy is gold! Let's make sure it's directed where it can create maximum impact.",
-      "Your motivation is a gift to the world. We'll help you use it strategically.",
-      "Stay fired up! And let's build systems to keep that motivation sustainable long-term.",
-      "You're ready to move mountains. Let's start with the right shovel for your strength."
+      "That's fantastic energy! Your motivation is a precious resource. We'll help you direct it as effectively as possible so your help has a real impact.",
+      "Excellent news! You are ready to act. That's half the battle won. Now, let's find the other half together—the right opportunity for you.",
+      "Your determination is contagious. Let's use it to find an action that not only feels good to you but also genuinely helps."
     ],
     "uncertain": [
-      "Not knowing where to start is the most honest response to complex problems.",
-      "Uncertainty is the beginning of wisdom. You're asking the right questions.",
-      "Every expert was once a beginner. Every movement started with someone unsure but willing.",
-      "The fact that you're here, seeking direction, means you're already on the path."
+      "Uncertainty is natural. It means you're being thoughtful and looking for the right path instead of acting recklessly. That's wise.",
+      "It's perfectly fine not to know where to start. That's why we're here. We are your guide in this uncertainty. We'll take the first step together.",
+      "The fact that you're here, despite the uncertainty, shows your courage. You don't need to have it all figured out. Curiosity and a willingness to try one small step are enough."
     ]
   },
   "action_completion_celebrations": [

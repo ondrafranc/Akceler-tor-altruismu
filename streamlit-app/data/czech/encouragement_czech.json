@@ -13,40 +13,34 @@
   ],
   "emotional_state_responses": {
     "overwhelmed": [
-      "Je normální cítit se zahlcen/a. Problémy jsou veliké, ale lidská schopnost pomáhat také.",
-      "Nejsi v tom sám/sama. Miliony lidí se cítí stejně, a proto nástroje jako tento existují.",
-      "Že se cítíš zahlcen/a, ukazuje, jak moc ti na věcech záleží. Pojďme tu starost proměnit v užitečnou akci.",
-      "Nejde o to všechno vyřešit – jde o to najít udržitelný způsob, jak přispět k řešení."
+      "Je naprosto v pořádku cítit se takto. Ten pocit ukazuje, jak moc vám na světě záleží. Nemusíte ho zachránit, stačí najít jeden malý, zvládnutelný krok.",
+      "Dýchjte. Jste na správném místě. Tento pocit zahlcení je prvním krokem k smysluplné akci. Pomůžeme vám ho proměnit v něco konkrétního a pozitivního.",
+      "Víme, že je toho hodně. Ale právě proto jste tady. Společně najdeme cestu, jak vaši starost proměnit v malou, ale skutečnou pomoc, která vás nebude zahlcovat."
     ],
     "frustrated": [
-      "Ta frustrace je energie. Ukazuje, že jsi připraven/a na skutečnou změnu.",
-      "Využij tu energii! Největší změny v historii začaly lidmi, kteří měli dost.",
-      "Tvoje frustrace znamená, že vidíš za povrch k skutečným problémům. Ta jasnost je cenná.",
-      "Pojďme tu frustraci proměnit ve strategickou akci, která skutečně něco změní."
+      "Tato frustrace je cenná energie. Znamená to, že vám nespravedlnost není lhostejná. Pojďme ji nasměrovat tam, kde může skutečně něco změnit.",
+      "Chápeme vaši frustraci. Je to znamení, že vidíte problémy jasně. To je síla. Pojďme najít praktický ventil pro tuto energii.",
+      "Vaše frustrace je palivo. Mnoho velkých změn začalo právě takovým pocitem. Jste připraveni jít dál než jen k pocitům – a to je skvělé."
     ],
     "hopeful": [
-      "Tvoje naděje je nakažlivá a svět ji právě teď potřebuje.",
-      "Naděje spojená s akcí je nezastavitelná. Už máš náskok.",
-      "Ten optimismus tě ponese přes výzvy a inspiruje ostatní, aby se přidali.",
-      "Naděje je volba a cvičení. Děkuji, že si ji vybíráš, i když je to těžké."
+      "Naděje je krásný a silný pocit. Je to základ každé pozitivní změny. Jsme tu, abychom vám pomohli ji proměnit v konkrétní činy.",
+      "Vaše naděje je inspirující. Je to přesně ta energie, kterou svět potřebuje. Pojďme společně najít nejlepší místo pro její uplatnění.",
+      "Skvělé, že máte naději. Držte se jí. Je to váš kompas. Nyní k ní přidáme mapu – konkrétní kroky, jak pomoci."
     ],
     "guilty": [
-      "Pocit viny ukazuje, že tvoje hodnoty jsou v pořádku, ale akce je užitečnější než vina.",
-      "Nemůžeš pomoct všem, ale můžeš pomoct někomu. To stačí.",
-      "To, že ti na tom takhle záleží, znamená, že jsi víc angažován/a než většina lidí.",
-      "Místo 'měl/a bych dělat víc' zkus 'udělám, co zvládnu udržitelně.' To je skutečná moudrost."
+      "Tento pocit ukazuje, jak dobré je vaše srdce. Ale pamatujte, že vina je těžký náklad, který brání v akci. Akce je mnohem lehčí a užitečnější.",
+      "Nemůžete pomoci všem, a to je v pořádku. Důležité je, že chcete pomoci. Pojďme ten pocit přetavit v jeden konkrétní skutek, na který budete moci být hrdí.",
+      "Mnoho citlivých lidí se cítí stejně. Jste v dobré společnosti. Dovolte si vyměnit pocit viny za pocit smysluplnosti z jednoho malého kroku."
     ],
     "motivated": [
-      "Ta energie je zlatá! Pojďme se ujistit, že je směřována tam, kde může mít největší dopad.",
-      "Tvoje motivace je dar pro svět. Pomůžeme ti ji využít strategicky.",
-      "Zůstaň nabitý/á! A pojďme vybudovat systémy, které tu motivaci udrží dlouhodobě.",
-      "Jsi připraven/a hýbat horami. Začneme správným nástrojem pro tvou sílu."
+      "To je fantastická energie! Vaše motivace je cenný zdroj. Pomůžeme vám ji nasměrovat co nejefektivněji, aby vaše pomoc měla skutečný dopad.",
+      "Skvělá zpráva! Jste připraveni jednat. To je polovina úspěchu. Nyní společně najdeme tu druhou polovinu – správnou příležitost pro vás.",
+      "Vaše odhodlání je nakažlivé. Využijme ho k nalezení akce, která vás nejen potěší, ale také reálně pomůže."
     ],
     "uncertain": [
-      "Nevědět, kde začít, je nejupřímnější reakce na složité problémy.",
-      "Nejistota je začátek moudrosti. Kladneš si správné otázky.",
-      "Každý expert byl kdysi začátečník. Každé hnutí začalo někým nejistým, ale ochotným.",
-      "To, že jsi tady a hledáš směr, znamená, že jsi už na cestě."
+      "Nejistota je přirozená. Znamená to, že přemýšlíte a hledáte správnou cestu, místo abyste jednali bezhlavě. To je moudré.",
+      "Je naprosto v pořádku nevědět, kde začít. Proto jsme tady. Jsme vaším průvodcem v této nejistotě. První krok uděláme společně.",
+      "To, že jste tady i přes nejistotu, ukazuje vaši odvahu. Nemusíte mít hned jasno. Stačí zvědavost a ochota zkusit jeden malý krok."
     ]
   },
   "action_completion_celebrations": [
