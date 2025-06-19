@@ -11,10 +11,8 @@ from logic.encouragement import celebrate_action_completion
 from datetime import datetime
 
 def show_assessment_page():
-    """A warmer, more narrative assessment experience."""
+    """A gentle, clear assessment experience with grouped steps and clear progress."""
     language = st.session_state.language
-    
-    # Use warmer, more narrative headers
     if language == 'czech':
         st.markdown('<h1 class="main-header">Pojďme společně najít vaši cestu</h1>', unsafe_allow_html=True)
         st.markdown('<p class="sub-header">Tato krátká reflexe vám pomůže propojit vaše hodnoty s konkrétními, smysluplnými akcemi, které vám budou dávat smysl.</p>', unsafe_allow_html=True)
@@ -23,15 +21,10 @@ def show_assessment_page():
         st.markdown('<h1 class="main-header">Let\'s Find Your Path Together</h1>', unsafe_allow_html=True)
         st.markdown('<p class="sub-header">This brief reflection will help connect your values with concrete, meaningful actions that feel right for you.</p>', unsafe_allow_html=True)
         steps = ["What You Care About", "Your Resources", "Recommendations For You"]
-    
     current_step = st.session_state.get('assessment_step', 0)
-    
-    # Progress bar and contextual encouragement
     if current_step > 0:
         progress = (current_step) / len(steps)
         st.progress(progress)
-        
-        # More contextual encouragement
         if current_step == 1:
             encouragement = get_text('assessment_intro_encouragement', language)
         elif current_step == 2:
@@ -39,19 +32,18 @@ def show_assessment_page():
         else:
             encouragement = get_text('assessment_resources_encouragement', language)
         st.info(f"✨ {encouragement}")
-        
         st.markdown(f'<p class="progress-text">{get_text("step", language)} {current_step} / {len(steps)}: <strong>{steps[current_step-1]}</strong></p>', unsafe_allow_html=True)
-    
     if current_step == 0:
-        if language == 'czech':
-            st.info("👈 Svou cestu můžete začít na Úvodní stránce!")
-        else:
-            st.info("👈 You can begin your path on the Start Here page!")
+        st.info("👈 " + ("Svou cestu můžete začít na Úvodní stránce!" if language == 'czech' else "You can begin your path on the Start Here page!"))
         return
     elif current_step == 1:
-        show_values_step()
+        col1, col2 = st.columns([2, 2])
+        with col1:
+            show_values_step()
+        with col2:
+            show_resources_step(show_next=False)
     elif current_step == 2:
-        show_resources_step()
+        show_resources_step(show_next=True)
     elif current_step == 3:
         show_recommendations_step()
 
@@ -116,7 +108,7 @@ def show_values_step():
         info_text = "Prosím, vyberte alespoň jednu hodnotu, abychom mohli pokračovat." if language == 'czech' else "Please select at least one value to continue."
         st.info(f"💭 {info_text}")
 
-def show_resources_step():
+def show_resources_step(show_next=True):
     """Resources assessment with softer, more realistic framing."""
     language = st.session_state.language
     
@@ -188,17 +180,18 @@ def show_resources_step():
         'financial_capacity': financial_capacity
     })
     
-    col_back, col_next = st.columns(2)
-    with col_back:
-        back_text = "← Zpět k hodnotám" if language == 'czech' else "← Back to Values"
-        if st.button(back_text):
-            st.session_state.assessment_step = 1
-            st.rerun()
-    with col_next:
-        next_text = "Najít má doporučení! 🎯" if language == 'czech' else "Find My Recommendations! 🎯"
-        if st.button(next_text, type="primary"):
-            st.session_state.assessment_step = 3
-            st.rerun()
+    if show_next:
+        col_back, col_next = st.columns(2)
+        with col_back:
+            back_text = "← Zpět k hodnotám" if language == 'czech' else "← Back to Values"
+            if st.button(back_text):
+                st.session_state.assessment_step = 1
+                st.rerun()
+        with col_next:
+            next_text = "Najít má doporučení! 🎯" if language == 'czech' else "Find My Recommendations! 🎯"
+            if st.button(next_text, type="primary"):
+                st.session_state.assessment_step = 3
+                st.rerun()
 
 def show_recommendations_step():
     """Enhanced recommendations with narrative framing."""

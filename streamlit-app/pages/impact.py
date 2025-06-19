@@ -6,18 +6,11 @@ from logic.tracking import get_milestone_achievements, calculate_estimated_impac
 from datetime import datetime, timedelta
 
 def show_impact_page():
-    """A page to reflect on the user's impact, framed as a personal story."""
+    """A page to reflect on the user's impact, as a story with clear milestones and next steps."""
     language = st.session_state.language
-    
-    if language == 'czech':
-        st.markdown('<h1 class="main-header">📖 Váš příběh pomoci</h1>', unsafe_allow_html=True)
-        st.markdown('<p class="sub-header">Každá akce, kterou jste udělali, je kapitolou v příběhu pozitivní změny. Podívejte se, co jste dokázali.</p>', unsafe_allow_html=True)
-    else:
-        st.markdown('<h1 class="main-header">📖 Your Story of Help</h1>', unsafe_allow_html=True)
-        st.markdown('<p class="sub-header">Every action you\'ve taken is a chapter in a story of positive change. See what you\'ve accomplished.</p>', unsafe_allow_html=True)
-    
+    st.markdown(f'<h1 class="main-header">{get_text("my_impact", language)}</h1>', unsafe_allow_html=True)
+    st.markdown(f'<p class="sub-header">{get_text("subtitle", language)}</p>', unsafe_allow_html=True)
     actions_count = st.session_state.total_impact['actions']
-    
     if actions_count == 0:
         _show_getting_started_content(language)
     else:

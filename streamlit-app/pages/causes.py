@@ -7,31 +7,18 @@ from core.session import get_user_profile
 from utils.localization import get_text
 
 def show_causes_page():
-    """An inspiring exploration of different areas of impact."""
+    """An inspiring, clear exploration of different areas of impact."""
     language = st.session_state.language
-    
-    if language == 'czech':
-        st.markdown('<h1 class="main-header">Kam nasměrovat vaši pomoc?</h1>', unsafe_allow_html=True)
-        st.markdown('<p class="sub-header">Prozkoumejte různé oblasti, kde vaše energie může kvést a přinášet plody.</p>', unsafe_allow_html=True)
-    else:
-        st.markdown('<h1 class="main-header">Where to Direct Your Help?</h1>', unsafe_allow_html=True)
-        st.markdown('<p class="sub-header">Explore different areas where your energy can flourish and bear fruit.</p>', unsafe_allow_html=True)
-    
+    st.markdown(f'<h1 class="main-header">{get_text("explore_causes", language)}</h1>', unsafe_allow_html=True)
+    st.markdown(f'<p class="sub-header">{get_text("subtitle", language)}</p>', unsafe_allow_html=True)
     user_profile = get_user_profile()
     if user_profile.get('values'):
-        if language == 'czech':
-            st.info(f"💡 Na základě vašich hodnot jsme seřadili tyto oblasti tak, aby pro vás byly co nejrelevantnější.")
-        else:
-            st.info(f"💡 Based on your values, we've sorted these areas to be most relevant to you.")
-    
+        st.info(f"💡 " + ("Na základě vašich hodnot jsme seřadili tyto oblasti tak, aby pro vás byly co nejrelevantnější." if language == 'czech' else "Based on your values, we've sorted these areas to be most relevant to you."))
     causes_data = load_causes_data(language)
     actions_data = load_actions_data(language)
-    
     if not causes_data:
-        st.error(get_text('error_loading_causes', language)) # Assuming this key will be added to localization
+        st.error(get_text('error_loading_causes', language))
         return
-    
-    # Calculate matches if user has a profile
     cause_matches = []
     for cause_id, cause_info in causes_data.items():
         match_score = calculate_cause_match(
@@ -39,22 +26,17 @@ def show_causes_page():
             cause_info.get('values_alignment', [])
         ) if user_profile.get('values') else 0.5
         cause_matches.append((cause_id, cause_info, match_score))
-    
     cause_matches.sort(key=lambda x: x[2], reverse=True)
-        
     for cause_id, cause_info, match_score in cause_matches:
         with st.container():
             _render_cause_card(cause_id, cause_info, match_score, user_profile, actions_data, language)
             st.markdown("---")
-    
-    # Final CTA
     st.markdown(f"""
     <div class="cta-section">
         <h3>{'Zaujala vás některá oblast?' if language == 'czech' else 'Did an area catch your eye?'}</h3>
         <p>{'Začněte rychlou akcí nebo si projděte naši reflexi a najděte si cestu na míru.' if language == 'czech' else 'Start with a quick action or go through our reflection to find a tailored path.'}</p>
     </div>
     """, unsafe_allow_html=True)
-    
     col1, col2 = st.columns(2)
     with col1:
         if st.button(f"🧭 {get_text('take_assessment', language)}", type="primary", use_container_width=True):

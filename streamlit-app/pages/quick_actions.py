@@ -6,78 +6,29 @@ from datetime import datetime
 from config.settings import CZECH_ORGANIZATIONS
 from utils.localization import get_text
 from logic.tracking import record_action_completion
-from logic.encouragement import celebrate_action_completion
+from logic.encouragement import celebrate_action_completion, get_random_encouragement
 
 def show_quick_actions_page():
-    """A page for immediate, meaningful actions, framed as opportunities."""
+    """A page for immediate, meaningful actions, with a 2-column grid and clear CTAs."""
     language = st.session_state.language
-    
-    if language == 'czech':
-        st.markdown('<h1 class="main-header">⚡ Najděte si svou rychlou pomoc</h1>', unsafe_allow_html=True)
-        st.markdown('<p class="sub-header">Malé, konkrétní činy, které můžete udělat právě teď, abyste udělali skutečný rozdíl.</p>', unsafe_allow_html=True)
-    else:
-        st.markdown('<h1 class="main-header">⚡ Find Your Quick Help</h1>', unsafe_allow_html=True)
-        st.markdown('<p class="sub-header">Small, concrete things you can do right now to make a real difference.</p>', unsafe_allow_html=True)
-    
-    # Time-based filter
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        if language == 'czech':
-            time_filter = st.selectbox(
-                "Kolik času máte?",
-                ["5 minut", "15 minut", "30 minut", "1 hodina", "Cokoliv"]
-            )
-        else:
-            time_filter = st.selectbox(
-                "How much time do you have?",
-                ["5 minutes", "15 minutes", "30 minutes", "1 hour", "Any time"]
-            )
-    
-    with col2:
-        if language == 'czech':
-            location_filter = st.selectbox(
-                "Kde jste?",
-                ["Doma", "Venku", "V práci", "Cestou", "Kdekoli"]
-            )
-        else:
-            location_filter = st.selectbox(
-                "Where are you?",
-                ["At home", "Outside", "At work", "Traveling", "Anywhere"]
-            )
-    
-    with col3:
-        if language == 'czech':
-            energy_filter = st.selectbox(
-                "Úroveň energie",
-                ["Vysoká", "Střední", "Nízká", "Jakákoli"]
-            )
-        else:
-            energy_filter = st.selectbox(
-                "Energy level",
-                ["High", "Medium", "Low", "Any"]
-            )
-    
+    st.markdown(f'<h1 class="main-header">{get_text("quick_actions", language)}</h1>', unsafe_allow_html=True)
+    st.markdown(f'<p class="sub-header">{get_text("subtitle", language)}</p>', unsafe_allow_html=True)
+    # Only one encouragement at a time
+    encouragement = get_random_encouragement("progress_encouragement", language)
+    if encouragement:
+        st.info(encouragement)
     st.markdown("---")
-    
-    # Enhanced quick actions with real connections
     quick_actions = _get_quick_actions_data(language)
-    
     if not quick_actions:
         st.warning("Omlouváme se, momentálně nejsou k dispozici žádné rychlé akce.")
         return
-
-    # Display actions in enhanced grid layout
-    st.markdown("### Možnosti pomoci")
+    st.markdown("### Možnosti pomoci" if language == 'czech' else "### Ways to Help")
     st.markdown('<div class="action-grid">', unsafe_allow_html=True)
-    
     cols = st.columns(2)
     for i, action in enumerate(quick_actions):
         with cols[i % 2]:
             _render_action_card(action, i, language)
-    
     st.markdown('</div>', unsafe_allow_html=True)
-    
-    # CTA for full assessment
     st.markdown("---")
     st.markdown(f"""
     <div class="cta-section">
@@ -85,12 +36,7 @@ def show_quick_actions_page():
         <p>{'Věnujte 5 minut naší reflexi a my vám najdeme doporučení přesně na míru vašim hodnotám.' if language == 'czech' else 'Take our 5-minute reflection to find recommendations perfectly tailored to your values.'}</p>
     </div>
     """, unsafe_allow_html=True)
-    
-    if st.button(
-        f"🧭 {get_text('take_assessment', language)}",
-        type="primary",
-        use_container_width=True
-    ):
+    if st.button(f"🧭 {get_text('take_assessment', language)}", type="primary", use_container_width=True):
         st.session_state.assessment_step = 1
         st.session_state.current_page = 'assessment'
         st.rerun()
