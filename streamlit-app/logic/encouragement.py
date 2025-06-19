@@ -94,4 +94,49 @@ def celebrate_action_completion(action_title: str, cause_type: str = "", languag
             streak_msg = f"🔥 {st.session_state.streak_count} akcí v řadě!"
         else:
             streak_msg = f"🔥 {st.session_state.streak_count} day streak!"
-        st.markdown(f'<span class="streak-indicator">{streak_msg}</span>', unsafe_allow_html=True) 
+        st.markdown(f'<span class="streak-indicator">{streak_msg}</span>', unsafe_allow_html=True)
+
+def get_streak_celebration(streak_count, language='czech'):
+    """Get celebration message for streak achievements"""
+    if streak_count < 2:
+        return None
+    
+    if language == 'czech':
+        if streak_count == 2:
+            return "Druhý den v řadě! Budujete návyk."
+        elif streak_count == 7:
+            return "Týden v řadě! Jste neuvěřitelní!"
+        elif streak_count == 30:
+            return "Měsíc konzistentní pomoci! Jste inspirací!"
+        elif streak_count % 10 == 0:
+            return f"{streak_count} dní! Vaše odhodlání je úžasné!"
+        else:
+            return f"{streak_count} dní v řadě!"
+    else:
+        if streak_count == 2:
+            return "Second day in a row! You're building a habit."
+        elif streak_count == 7:
+            return "A week straight! You're incredible!"
+        elif streak_count == 30:
+            return "A month of consistent help! You're an inspiration!"
+        elif streak_count % 10 == 0:
+            return f"{streak_count} days! Your dedication is amazing!"
+        else:
+            return f"{streak_count} days in a row!"
+
+def get_multi_action_celebration(action_count, language='czech'):
+    """Get celebration message for multiple actions in one session"""
+    if language == 'czech':
+        if action_count == 3:
+            return "🌟 Tři akce v jednom sezení! Vaše energie je nakažlivá!"
+        elif action_count == 5:
+            return "🔥 Pět akcí! Jste dnes skutečným hrdinou pomoci!"
+        else:
+            return f"🚀 {action_count} akcí! Vaše odhodlání je neuvěřitelné!"
+    else:
+        if action_count == 3:
+            return "🌟 Three actions in one session! Your energy is contagious!"
+        elif action_count == 5:
+            return "🔥 Five actions! You're a true helping hero today!"
+        else:
+            return f"🚀 {action_count} actions! Your dedication is incredible!" 

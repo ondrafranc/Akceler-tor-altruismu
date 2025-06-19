@@ -79,4 +79,23 @@ def calculate_estimated_impact(actions_count: int) -> dict:
         'people_affected': estimated_people_helped,
         'inspiration_multiplier': actions_count,
         'community_impact_score': min(actions_count * 10, 100)
-    } 
+    }
+
+def get_user_streak():
+    """Get current user streak count"""
+    return st.session_state.get('streak_count', 0)
+
+def get_recent_actions(days=7):
+    """Get actions completed in the last N days"""
+    if 'actions_completed' not in st.session_state:
+        return []
+    
+    cutoff_date = datetime.now() - timedelta(days=days)
+    recent_actions = []
+    
+    for action in st.session_state.actions_completed:
+        action_date = datetime.fromisoformat(action['timestamp'])
+        if action_date >= cutoff_date:
+            recent_actions.append(action)
+    
+    return recent_actions 

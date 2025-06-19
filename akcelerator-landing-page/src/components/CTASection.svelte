@@ -132,10 +132,11 @@
     <div class="final-message">
       <div class="message-content">
         <p class="czech-body italic">
-          {currentLanguage === 'czech' 
-            ? '"Každý velký sen začíná malým krokem. Váš krok může změnit svět."'
-            : '"Every great dream begins with a small step. Your step can change the world."'}
+          {currentLanguage === 'czech'
+            ? "Teď zrovna stojíš. Někdo jiný leží. To je všechno, co je třeba vědět."
+            : "Right now, you're standing. Someone else is not. That's all you need to know."}
         </p>
+        
         <div class="hearts">💚 💚 💚</div>
       </div>
     </div>

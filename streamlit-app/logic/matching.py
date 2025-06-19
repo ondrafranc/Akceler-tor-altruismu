@@ -89,4 +89,30 @@ def get_matching_actions(cause_id: str, user_profile: Dict, language='czech') ->
     
     # Sort by score and return top actions
     matching_actions.sort(key=lambda x: x[1], reverse=True)
-    return [action for action, score in matching_actions] 
+    return [action for action, score in matching_actions]
+
+def get_personalized_recommendations(user_profile: Dict, language='czech') -> List[Dict]:
+    """Get personalized action recommendations based on user profile"""
+    actions_data = load_actions_data(language)
+    recommendations = []
+    
+    for action_id, action in actions_data.items():
+        score = calculate_advanced_action_score(user_profile, action)
+        
+        # Only include actions with a reasonable score
+        if score > 20:
+            recommendation = {
+                'id': action_id,
+                'title': action.get('title', 'Unknown Action'),
+                'description': action.get('description', 'No description available'),
+                'score': score,
+                'time_estimate': f"{action.get('requirements', {}).get('time_minutes', 5)} minut" if language == 'czech' else f"{action.get('requirements', {}).get('time_minutes', 5)} minutes",
+                'impact_potential': action.get('impact', {}).get('metric_description', 'Pozitivní dopad' if language == 'czech' else 'Positive impact'),
+                'organization': action.get('organization', {}).get('name', 'Unknown Organization'),
+                'website': action.get('organization', {}).get('website', '#')
+            }
+            recommendations.append(recommendation)
+    
+    # Sort by score and return top 6 recommendations
+    recommendations.sort(key=lambda x: x['score'], reverse=True)
+    return recommendations[:6] 
