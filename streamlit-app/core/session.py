@@ -42,7 +42,7 @@ def initialize_session_state():
     
     if 'last_action_date' not in st.session_state:
         st.session_state.last_action_date = None
-    
+
     # Activity and behavior tracking
     if 'last_activity' not in st.session_state:
         st.session_state.last_activity = datetime.now()
@@ -110,7 +110,7 @@ def initialize_session_state():
     # Seasonal challenge placeholder (future feature)
     if 'seasonal_challenge' not in st.session_state:
         st.session_state.seasonal_challenge = None
-    
+
     # Flag used to route directly to quick-actions when requested from CTA
     if 'quick_action_requested' not in st.session_state:
         st.session_state.quick_action_requested = False
@@ -281,7 +281,7 @@ def update_user_profile(updates: dict):
     """Persist *updates* into the user profile stored in session state."""
     if 'user_profile' not in st.session_state:
         st.session_state.user_profile = {}
-    st.session_state.user_profile.update(updates)
+    st.session_state.user_profile.update(updates) 
     
     # Track activity
     st.session_state.last_activity = datetime.now()

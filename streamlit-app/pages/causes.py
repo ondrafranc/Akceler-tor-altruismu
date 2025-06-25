@@ -25,6 +25,7 @@ def show_causes_page():
             st.session_state.quick_action_requested = True
             st.rerun()
         return
+    # Calculate cause matches based on user values
     cause_matches = []
     for cause_id, cause_info in causes_data.items():
         match_score = calculate_cause_match(
@@ -32,6 +33,8 @@ def show_causes_page():
             cause_info.get('values_alignment', [])
         ) if user_profile.get('values') else 0.5
         cause_matches.append((cause_id, cause_info, match_score))
+    
+    # Sort by match score
     cause_matches.sort(key=lambda x: x[2], reverse=True)
     for cause_id, cause_info, match_score in cause_matches:
         with st.container():
@@ -52,7 +55,7 @@ def show_causes_page():
     with col2:
         if st.button(f"⚡ {get_text('quick_actions', language)}", use_container_width=True):
             st.session_state.quick_action_requested = True
-            st.rerun()
+            st.rerun() 
     with col3:
         if st.button("❓" + (" Nejste si jistí?" if language == 'czech' else " Not sure? Let's explore together"), use_container_width=True):
             st.session_state.assessment_step = 1

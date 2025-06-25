@@ -89,11 +89,15 @@ def get_matching_actions(cause_id: str, user_profile: Dict, language='czech') ->
     
     # Sort by score and return top actions
     matching_actions.sort(key=lambda x: x[1], reverse=True)
-    return [action for action, score in matching_actions]
+    return [action for action, score in matching_actions] 
 
-def get_personalized_recommendations(user_profile: Dict, language='czech') -> List[Dict]:
+def get_personalized_recommendations(user_profile: Dict, actions_data: Dict = None, cause_matches: List = None, language='czech') -> List[Dict]:
     """Get personalized action recommendations based on user profile"""
-    actions_data = load_actions_data(language)
+    
+    # Load actions data if not provided
+    if actions_data is None:
+        actions_data = load_actions_data(language)
+    
     recommendations = []
     
     for action_id, action in actions_data.items():
@@ -102,10 +106,12 @@ def get_personalized_recommendations(user_profile: Dict, language='czech') -> Li
         # Only include actions with a reasonable score
         if score > 20:
             recommendation = {
+                'action': action,
                 'id': action_id,
                 'title': action.get('title', 'Unknown Action'),
                 'description': action.get('description', 'No description available'),
                 'score': score,
+                'match_score': int(score),  # For compatibility with assessment page
                 'time_estimate': f"{action.get('requirements', {}).get('time_minutes', 5)} minut" if language == 'czech' else f"{action.get('requirements', {}).get('time_minutes', 5)} minutes",
                 'impact_potential': action.get('impact', {}).get('metric_description', 'Pozitivní dopad' if language == 'czech' else 'Positive impact'),
                 'organization': action.get('organization', {}).get('name', 'Unknown Organization'),
@@ -115,4 +121,30 @@ def get_personalized_recommendations(user_profile: Dict, language='czech') -> Li
     
     # Sort by score and return top 6 recommendations
     recommendations.sort(key=lambda x: x['score'], reverse=True)
-    return recommendations[:6] 
+    return recommendations[:6]
+
+def calculate_cause_matches(user_profile: Dict, causes: Dict) -> List[Dict]:
+    """Calculate how well causes match the user profile"""
+    matches = []
+    
+    user_values = user_profile.get('values', [])
+    
+    for cause_id, cause_info in causes.items():
+        # Calculate match score based on values alignment
+        match_score = calculate_cause_match(
+            user_values, 
+            cause_info.get('values_alignment', [])
+        )
+        
+        # Convert to percentage
+        match_percentage = int(match_score * 100)
+        
+        matches.append({
+            'cause': cause_info,
+            'cause_id': cause_id,
+            'match_score': match_percentage
+        })
+    
+    # Sort by match score
+    matches.sort(key=lambda x: x['match_score'], reverse=True)
+    return matches 

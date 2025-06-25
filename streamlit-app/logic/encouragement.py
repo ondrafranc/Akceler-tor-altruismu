@@ -1,142 +1,198 @@
-"""Encouragement message and emotional support logic"""
+"""Encouragement and motivational messaging with authentic, trust-building language"""
 
-import random
 import streamlit as st
+import random
 from datetime import datetime
-from data.loaders import load_encouragement_data
-from logic.tracking import update_streak
+from utils.localization import get_text, get_czech_proverb
 
-def get_random_encouragement(category="welcome_messages", language='czech'):
-    """Get a random encouraging message"""
-    encouragement_data = load_encouragement_data(language)
-    messages = encouragement_data.get(category, ["You're making a difference!"])
-    return random.choice(messages)
+def get_random_encouragement(context='general', language='czech'):
+    """Get random encouragement message based on context with authentic language"""
+    
+    if language == 'czech':
+        encouragements = {
+            'general': [
+                "Každý krok má svůj smysl, i když ho nevidíte hned.",
+                "Jste na cestě, kterou už prošli jiní před vámi.",
+                "Malá rozhodnutí jako tohle tiše mění svět.",
+                "Postupně se stáváte někým, kdo pomáhá."
+            ],
+            'first_step_motivation': [
+                "I jen to, že o pomoci přemýšlíte, má svůj význam.",
+                "Každá cesta začíná prvním krokem.",
+                "Nejste sami – mnoho lidí začalo stejně jako vy.",
+                "Váš záměr pomoci už je něco krásného."
+            ],
+            'early_journey': [
+                "Vidíme, že to myslíte vážně. To je inspirativní.",
+                "Vaše kroky mají smysl, i když jsou malé.",
+                "Pomoc se postupně stává součástí vašeho života.",
+                "Každý váš krok může být pro někoho důležitý."
+            ],
+            'experienced_helper': [
+                "Stáváte se někým, kdo skutečně mění svět k lepšímu.",
+                "Vaše odhodlání je inspirativní pro ostatní.",
+                "Jste součástí komunity lidí, kteří chtějí pomáhat.",
+                "Vaše akce vytvářejí vlnky, které možná nevidíte."
+            ],
+            'action_motivation': [
+                "Tato akce může být něčím důležitým začátkem.",
+                "Malé kroky často vytvářejí větší vlnky.",
+                "Každá pomoc má svůj smysl a význam.",
+                "Vaše rozhodnutí pomoci mluví o vašem charakteru."
+            ]
+        }
+    else:
+        encouragements = {
+            'general': [
+                "Every step has its meaning, even if you don't see it immediately.",
+                "You're on a path others have walked before you.",
+                "Small decisions like this quietly change the world.",
+                "You're gradually becoming someone who helps."
+            ],
+            'first_step_motivation': [
+                "Even just thinking about helping has its meaning.",
+                "Every journey begins with the first step.",
+                "You're not alone – many people started just like you.",
+                "Your intention to help is already something beautiful."
+            ],
+            'early_journey': [
+                "We see you're serious about this. That's inspiring.",
+                "Your steps have meaning, even when they're small.",
+                "Help is gradually becoming part of your life.",
+                "Each of your steps might be important for someone."
+            ],
+            'experienced_helper': [
+                "You're becoming someone who truly changes the world for the better.",
+                "Your dedication is inspiring to others.",
+                "You're part of a community of people who want to help.",
+                "Your actions create ripples you might not see."
+            ],
+            'action_motivation': [
+                "This action might become someone's important beginning.",
+                "Small steps often create bigger ripples.",
+                "Every help has its meaning and significance.",
+                "Your decision to help speaks about your character."
+            ]
+        }
+    
+    context_messages = encouragements.get(context, encouragements['general'])
+    return random.choice(context_messages)
 
 def get_seasonal_message(language='czech'):
     """Get seasonal encouragement message"""
-    encouragement_data = load_encouragement_data(language)
-    current_month = datetime.now().month
     
-    if current_month in [3, 4, 5]:  # Spring
+    month = datetime.now().month
+    
+    if language == 'czech':
+        seasonal_messages = {
+            'spring': "Jaro je čas nových začátků. Možná je čas začít i vaši cestu pomoci.",
+            'summer': "Léto přináší energii a světlo. Využijte ji k pozitivní změně.",
+            'autumn': "Podzim nás učí, že změna může být krásná. Vaše pomoc také.",
+            'winter': "I v zimě můžeme být světlem pro ostatní."
+        }
+    else:
+        seasonal_messages = {
+            'spring': "Spring is a time of new beginnings. Maybe it's time to start your helping journey too.",
+            'summer': "Summer brings energy and light. Use it for positive change.",
+            'autumn': "Autumn teaches us that change can be beautiful. So can your help.",
+            'winter': "Even in winter, we can be light for others."
+        }
+    
+    if month in [3, 4, 5]:
         season = 'spring'
-    elif current_month in [6, 7, 8]:  # Summer
+    elif month in [6, 7, 8]:
         season = 'summer'
-    elif current_month in [9, 10, 11]:  # Autumn
+    elif month in [9, 10, 11]:
         season = 'autumn'
-    else:  # Winter
+    else:
         season = 'winter'
     
-    seasonal_messages = encouragement_data.get("czech_seasonal_messages", {}).get(season, [])
-    if seasonal_messages:
-        return random.choice(seasonal_messages)
-    return None
+    return seasonal_messages[season]
 
-def get_emotional_response(emotional_state: str, language='czech') -> str:
-    """Get appropriate response for user's emotional state"""
-    encouragement_data = load_encouragement_data(language)
-    
-    # Map Czech emotions to English response keys (as used in JSON)
-    emotion_mapping = {
-        'zahlcen': 'overwhelmed',
-        'frustrován': 'frustrated', 
-        'nadějný': 'hopeful',
-        'provinile': 'guilty',
-        'motivován': 'motivated',
-        'nejistý': 'uncertain',
-        'overwhelmed': 'overwhelmed',
-        'frustrated': 'frustrated',
-        'hopeful': 'hopeful',
-        'guilty': 'guilty',
-        'motivated': 'motivated',
-        'uncertain': 'uncertain'
-    }
-    
-    mapped_emotion = emotion_mapping.get(emotional_state, 'uncertain')
-    responses = encouragement_data.get("emotional_state_responses", {}).get(mapped_emotion, [])
-    
-    if responses:
-        return random.choice(responses)
-    else:
-        # Fallback encouraging response
-        if language == 'czech':
-            return "Rozumíme vašim pocitům. Najdeme společně způsob, jak můžete pomoci."
-        else:
-            return "We understand how you feel. Let's find a way you can help together."
-
-def celebrate_action_completion(action_title: str, cause_type: str = "", language='czech'):
-    """Enhanced celebration with cultural adaptation"""
-    encouragement_data = load_encouragement_data(language)
-    celebrations = encouragement_data.get("action_completion_celebrations", [])
-    
-    if celebrations:
-        message = random.choice(celebrations)
-        message = message.replace("{action}", action_title).replace("{cause}", cause_type)
-    else:
-        if language == 'czech':
-            message = f"Výborně! Dokončil/a jsi '{action_title}'!"
-        else:
-            message = f"Amazing work completing '{action_title}'!"
-    
-    # Czech style: quieter celebration
-    if language == 'czech':
-        st.markdown(f'<div class="quiet-celebration">{message}</div>', unsafe_allow_html=True)
-        # No balloons for Czech - more understated
-    else:
-        st.markdown(f'<div class="celebration">{message}</div>', unsafe_allow_html=True)
-        st.balloons()
-    
-    # Update streak
-    update_streak()
-    
-    # Show streak achievement
-    if st.session_state.streak_count > 1:
-        if language == 'czech':
-            streak_msg = f"🔥 {st.session_state.streak_count} akcí v řadě!"
-        else:
-            streak_msg = f"🔥 {st.session_state.streak_count} day streak!"
-        st.markdown(f'<span class="streak-indicator">{streak_msg}</span>', unsafe_allow_html=True)
-
-def get_streak_celebration(streak_count, language='czech'):
-    """Get celebration message for streak achievements"""
-    if streak_count < 2:
-        return None
+def get_emotional_response(emotion_key: str, language='czech') -> str:
+    """Get authentic emotional response based on user's emotional state"""
     
     if language == 'czech':
-        if streak_count == 2:
-            return "Druhý den v řadě! Budujete návyk."
-        elif streak_count == 7:
-            return "Týden v řadě! Jste neuvěřitelní!"
-        elif streak_count == 30:
-            return "Měsíc konzistentní pomoci! Jste inspirací!"
-        elif streak_count % 10 == 0:
-            return f"{streak_count} dní! Vaše odhodlání je úžasné!"
-        else:
-            return f"{streak_count} dní v řadě!"
+        responses = {
+            'nejisty': "Nejistota je úplně přirozená. Nikdo nemusí mít všechno vyřešené hned. Můžeme začít malými kroky.",
+            'zahlcen': "Cítit se zahlcený je lidské. Svět má mnoho problémů, ale i malé kroky mají svůj smysl.",
+            'motivovan': "Vaše motivace je krásná! Pojďme najít způsob, jak ji proměnit v konkrétní kroky.",
+            'skepticky': "Váš skepticismus je cenný. Ukazuje, že myslíte kriticky. Můžeme najít pomoc, která dává smysl.",
+            'nadsen': "Vaše nadšení je nádherné! Pojďme ho nasměrovat tam, kde bude mít největší význam.",
+            'unaveny': "Únava často znamená, že se staráte. Najdeme něco malého, co vás nebude vyčerpávat.",
+            'zvedavy': "Zvědavost je skvělý začátek! Prozkoumejme společně možnosti, které vás zaujmou."
+        }
     else:
-        if streak_count == 2:
-            return "Second day in a row! You're building a habit."
-        elif streak_count == 7:
-            return "A week straight! You're incredible!"
-        elif streak_count == 30:
-            return "A month of consistent help! You're an inspiration!"
-        elif streak_count % 10 == 0:
-            return f"{streak_count} days! Your dedication is amazing!"
-        else:
-            return f"{streak_count} days in a row!"
+        responses = {
+            'uncertain': "Uncertainty is completely natural. No one has to have everything figured out right away. We can start with small steps.",
+            'overwhelmed': "Feeling overwhelmed is human. The world has many problems, but even small steps have their meaning.",
+            'motivated': "Your motivation is beautiful! Let's find a way to turn it into concrete steps.",
+            'skeptical': "Your skepticism is valuable. It shows you think critically. We can find help that makes sense.",
+            'enthusiastic': "Your enthusiasm is wonderful! Let's direct it where it will have the greatest meaning.",
+            'tired': "Tiredness often means you care. We'll find something small that won't exhaust you.",
+            'curious': "Curiosity is a great start! Let's explore possibilities that interest you together."
+        }
+    
+    return responses.get(emotion_key, responses.get('nejisty' if language == 'czech' else 'uncertain', ''))
 
-def get_multi_action_celebration(action_count, language='czech'):
-    """Get celebration message for multiple actions in one session"""
+def get_milestone_celebration(milestone_type: str, milestone_value: int, language='czech') -> str:
+    """Get authentic celebration message for achieving milestones"""
+    
     if language == 'czech':
-        if action_count == 3:
-            return "🌟 Tři akce v jednom sezení! Vaše energie je nakažlivá!"
-        elif action_count == 5:
-            return "🔥 Pět akcí! Jste dnes skutečným hrdinou pomoci!"
-        else:
-            return f"🚀 {action_count} akcí! Vaše odhodlání je neuvěřitelné!"
+        celebrations = {
+            'first_action': "🎉 Gratulujeme k vaší první akci! Každá cesta začíná prvním krokem.",
+            'actions_5': "🌟 Pět kroků dokončeno! Vaše pomoc už má svůj příběh.",
+            'actions_10': "🔥 Deset kroků! Pomoc se stává součástí vašeho života.",
+            'actions_25': "✨ Dvacet pět kroků! Vaše odhodlání je inspirativní.",
+            'actions_50': "🏆 Padesát kroků! Jste skutečným pomocníkem!",
+            'actions_100': "🎊 Sto kroků! Vaše cesta pomoci je nádherná!",
+            'streak_7': "🔥 Týden v řadě! Budujete krásný návyk pomoci.",
+            'streak_30': "🌟 Měsíc v řadě! Pomoc je už součástí vašeho života.",
+            'time_10_hours': "⏰ Deset hodin věnovaných pomoci! Váš čas má smysl.",
+            'money_100': "💰 První větší dar! Každá koruna má svůj příběh."
+        }
     else:
-        if action_count == 3:
-            return "🌟 Three actions in one session! Your energy is contagious!"
-        elif action_count == 5:
-            return "🔥 Five actions! You're a true helping hero today!"
+        celebrations = {
+            'first_action': "🎉 Congratulations on your first action! Every journey begins with the first step.",
+            'actions_5': "🌟 Five steps completed! Your help already has its story.",
+            'actions_10': "🔥 Ten steps! Help is becoming part of your life.",
+            'actions_25': "✨ Twenty-five steps! Your dedication is inspiring.",
+            'actions_50': "🏆 Fifty steps! You're a true helper!",
+            'actions_100': "🎊 One hundred steps! Your helping journey is beautiful!",
+            'streak_7': "🔥 A week in a row! You're building a beautiful habit of helping.",
+            'streak_30': "🌟 A month in a row! Help is already part of your life.",
+            'time_10_hours': "⏰ Ten hours dedicated to helping! Your time has meaning.",
+            'money_100': "💰 First major donation! Every dollar has its story."
+        }
+    
+    # Create specific celebration based on milestone
+    if milestone_type == 'actions':
+        if milestone_value == 1:
+            key = 'first_action'
+        elif milestone_value == 5:
+            key = 'actions_5'
+        elif milestone_value == 10:
+            key = 'actions_10'
+        elif milestone_value == 25:
+            key = 'actions_25'
+        elif milestone_value == 50:
+            key = 'actions_50'
+        elif milestone_value == 100:
+            key = 'actions_100'
         else:
-            return f"🚀 {action_count} actions! Your dedication is incredible!" 
+            key = 'actions_5'  # fallback
+    elif milestone_type == 'streak':
+        if milestone_value == 7:
+            key = 'streak_7'
+        elif milestone_value == 30:
+            key = 'streak_30'
+        else:
+            key = 'streak_7'  # fallback
+    elif milestone_type == 'time' and milestone_value >= 10:
+        key = 'time_10_hours'
+    elif milestone_type == 'money' and milestone_value >= 100:
+        key = 'money_100'
+    else:
+        key = 'first_action'  # fallback
+    
+    return celebrations.get(key, celebrations['first_action']) 

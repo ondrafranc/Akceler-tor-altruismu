@@ -1,624 +1,1019 @@
-"""Enhanced assessment page with comprehensive UX improvements and user support"""
+"""Beautiful assessment page - gentle guidance to discover your path"""
 
 import streamlit as st
-from datetime import datetime
-from utils.localization import get_text, get_accessibility_text
-from logic.matching import get_personalized_recommendations
-from core.session import (update_user_profile, track_assessment_progress, 
-                         save_assessment_state, load_assessment_state,
-                         track_page_visit, get_user_behavior_insights,
-                         detect_assessment_inconsistencies)
-from components.emergency_help import check_distress_indicators
+import json
+import os
+from utils.localization import get_text, get_czech_proverb
+from logic.matching import calculate_cause_matches, get_personalized_recommendations
+from logic.encouragement import get_random_encouragement, get_emotional_response
+from core.session import update_user_profile, track_assessment_progress, track_page_visit
+from data.loaders import load_causes_data, load_actions_data
 
 def show_assessment_page():
-    """Enhanced assessment page with comprehensive UX improvements"""
+    """Beautiful assessment experience - like a gentle conversation with a wise guide"""
     language = st.session_state.language
     track_page_visit('assessment')
     
-    # Load saved assessment state if available
-    load_assessment_state()
+    # Create beautiful, warm container
+    st.markdown("""
+    <div class="assessment-container" style="
+        background: linear-gradient(135deg, #f8fdf8 0%, #f0f8f0 100%);
+        border-radius: 20px;
+        padding: 2rem;
+        margin: 1rem 0;
+        border: 1px solid #e8f5e8;
+        box-shadow: 0 4px 20px rgba(122, 184, 122, 0.1);
+    ">
+    """, unsafe_allow_html=True)
     
-    st.markdown('<div class="content-container">', unsafe_allow_html=True)
+    # Beautiful header with emotional warmth
+    _render_beautiful_assessment_header(language)
     
-    # Enhanced header with progress and support
-    _render_assessment_header(language)
+    # Progress indicator
+    current_step = st.session_state.get('assessment_step', 1)
+    _render_beautiful_progress(current_step, language)
     
-    # Show assessment based on current step
-    if st.session_state.assessment_step == 1:
-        _show_values_step(language)
-    elif st.session_state.assessment_step == 2:
-        _show_resources_step(language)
-    elif st.session_state.assessment_step == 3:
-        _show_preferences_step(language)
-    elif st.session_state.assessment_step == 4:
-        _show_confirmation_step(language)
+    # Breathing space
+    st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
+    
+    # Show appropriate step with beautiful styling
+    if current_step == 1:
+        _show_beautiful_values_step(language)
+    elif current_step == 2:
+        _show_beautiful_resources_step(language)
+    elif current_step == 3:
+        _show_beautiful_preferences_step(language)
+    elif current_step == 4:
+        _show_beautiful_results(language)
     else:
-        _show_complete_assessment(language)
+        # Reset if something goes wrong
+        st.session_state.assessment_step = 1
+        st.rerun()
     
-    # Always show save and return option
-    _show_save_and_return_option(language)
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-def _render_assessment_header(language):
-    """Render enhanced assessment header with progress and support"""
+def _render_beautiful_assessment_header(language):
+    """Beautiful header that creates emotional safety and clarity"""
     
     if language == 'czech':
-        st.markdown("# 🧭 Vaše cesta k pomoci")
-        st.markdown("*Krátká reflexe vašich hodnot a možností*")
+        title = "🧭 Vaše jemná reflexe"
+        subtitle = "Společně objevíme, jaký druh pomoci bude odpovídat vašemu srdci"
+        guidance = "Není to test – jsou to jen otázky, které vám pomohou lépe se poznat"
     else:
-        st.markdown("# 🧭 Your Path to Help")
-        st.markdown("*Brief reflection on your values and resources*")
+        title = "🧭 Your gentle reflection"
+        subtitle = "Together we'll discover what kind of help will match your heart"
+        guidance = "This isn't a test – just questions to help you know yourself better"
     
-    # Enhanced progress indicator
-    progress = max(0, (st.session_state.assessment_step - 1) / 4)
-    st.progress(progress)
-    
-    progress_text = f"Krok {st.session_state.assessment_step} ze 4" if language == 'czech' else f"Step {st.session_state.assessment_step} of 4"
-    st.markdown(f'<p class="progress-text">{progress_text}</p>', unsafe_allow_html=True)
-    
-    # Reassuring message
-    if language == 'czech':
-        st.info("💡 **Tip:** Neexistují špatné odpovědi. Můžete se kdykoliv vrátit a změnit své volby.")
-    else:
-        st.info("💡 **Tip:** There are no wrong answers. You can always go back and change your choices.")
+    st.markdown(f"""
+    <div style="text-align: center; margin-bottom: 2rem;">
+        <h1 style="
+            font-size: 2.2rem;
+            color: #2E5D31;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        ">{title}</h1>
+        <p style="
+            font-size: 1.1rem;
+            color: #5A6B5A;
+            font-style: italic;
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        ">{subtitle}</p>
+        <p style="
+            font-size: 0.95rem;
+            color: #7A8B7A;
+            margin: 0;
+        ">{guidance}</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-def _show_values_step(language):
-    """Enhanced values selection step with better UX"""
+def _render_beautiful_progress(current_step, language):
+    """Beautiful progress indicator that feels encouraging"""
     
-    if language == 'czech':
-        st.markdown("### 💚 Co je pro vás důležité?")
-        st.markdown("Vyberte hodnoty, které rezonují s vaším pohledem na svět. Pomůže nám to najít akce, které budou mít pro vás smysl.")
+    steps = [
+        ("🌱", "Hodnoty" if language == 'czech' else "Values"),
+        ("⚡", "Možnosti" if language == 'czech' else "Resources"),
+        ("🎯", "Preference" if language == 'czech' else "Preferences"),
+        ("✨", "Vaše cesta" if language == 'czech' else "Your path")
+    ]
+    
+    # Create beautiful progress bar
+    progress_html = """
+    <div style="
+        background: #f8fdf8;
+        padding: 1.5rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        border: 1px solid #e8f5e8;
+    ">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+    """
+    
+    for i, (icon, label) in enumerate(steps, 1):
+        is_current = i == current_step
+        is_completed = i < current_step
         
-        value_options = [
-            ("environment", "🌍 Ochrana životního prostředí"),
-            ("education", "📚 Vzdělávání a rozvoj"),
-            ("health", "🏥 Zdraví a pohoda"),
-            ("poverty", "🤝 Boj proti chudobě"),
-            ("equality", "⚖️ Rovnost a spravedlnost"),
-            ("community", "🏘️ Místní komunita"),
-            ("animals", "🐾 Ochrana zvířat"),
-            ("technology", "💻 Technologie pro dobro"),
-            ("arts", "🎨 Kultura a umění"),
-            ("elderly", "👴 Péče o seniory")
-        ]
-        help_text = "Vyberte 2-5 hodnot, které jsou vám nejblíž"
-    else:
-        st.markdown("### 💚 What matters to you?")
-        st.markdown("Select values that resonate with your worldview. This helps us find actions that will be meaningful to you.")
+        if is_current:
+            color = "#2E5D31"
+            bg_color = "#e8f5e8"
+            border_color = "#7AB87A"
+            text_weight = "600"
+        elif is_completed:
+            color = "#7AB87A"
+            bg_color = "#d4e7d4"
+            border_color = "#7AB87A"
+            text_weight = "500"
+        else:
+            color = "#B8C9B8"
+            bg_color = "#f5f5f5"
+            border_color = "#ddd"
+            text_weight = "400"
         
-        value_options = [
-            ("environment", "🌍 Environmental protection"),
-            ("education", "📚 Education and development"),
-            ("health", "🏥 Health and wellbeing"),
-            ("poverty", "🤝 Fighting poverty"),
-            ("equality", "⚖️ Equality and justice"),
-            ("community", "🏘️ Local community"),
-            ("animals", "🐾 Animal protection"),
-            ("technology", "💻 Technology for good"),
-            ("arts", "🎨 Culture and arts"),
-            ("elderly", "👴 Elder care")
-        ]
-        help_text = "Select 2-5 values that are closest to you"
+        progress_html += f"""
+        <div style="
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        ">
+            <div style="
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                background: {bg_color};
+                border: 2px solid {border_color};
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.5rem;
+                margin-bottom: 0.5rem;
+                transition: all 0.3s ease;
+            ">{icon}</div>
+            <span style="
+                color: {color};
+                font-size: 0.9rem;
+                font-weight: {text_weight};
+                text-align: center;
+            ">{label}</span>
+        </div>
+        """
+        
+        # Add connector line (except for last step)
+        if i < len(steps):
+            line_color = "#7AB87A" if i < current_step else "#ddd"
+            progress_html += f"""
+            <div style="
+                flex: 0.5;
+                height: 2px;
+                background: {line_color};
+                margin: 0 1rem;
+                margin-top: -25px;
+                transition: all 0.3s ease;
+            "></div>
+            """
     
-    # Enhanced multiselect with better styling
-    selected_values = st.multiselect(
-        "Vaše hodnoty:" if language == 'czech' else "Your values:",
-        [opt[1] for opt in value_options],
-        default=st.session_state.user_profile.get('values', []),
-        help=help_text,
-        key="values_multiselect"
-    )
+    progress_html += """
+        </div>
+    </div>
+    """
     
-    # Convert back to keys
-    value_keys = [key for key, label in value_options if label in selected_values]
-    
-    # Gentle validation and guidance
-    if len(value_keys) == 0:
-        st.info("💭 Zatím jste nevybrali žádné hodnoty. To je v pořádku - můžete pokračovat a vrátit se později." if language == 'czech' else "💭 You haven't selected any values yet. That's okay - you can continue and come back later.")
-    elif len(value_keys) == 1:
-        st.success("✨ Skvělý začátek! Možná byste chtěli vybrat ještě jednu nebo dvě hodnoty?" if language == 'czech' else "✨ Great start! Perhaps you'd like to select one or two more values?")
-    elif len(value_keys) > 5:
-        st.warning("🤔 Vybrali jste hodně hodnot. To je skvělé! Možná se zaměřte na 3-5 nejdůležitějších?" if language == 'czech' else "🤔 You've selected many values. That's great! Perhaps focus on the 3-5 most important ones?")
-    else:
-        st.success(f"💚 Výborně! Vybrali jste {len(value_keys)} hodnot." if language == 'czech' else f"💚 Excellent! You've selected {len(value_keys)} values.")
-    
-    # Update profile
-    update_user_profile({'values': value_keys})
-    track_assessment_progress('values', len(value_keys))
-    
-    # Navigation with enhanced UX
-    _show_step_navigation(language, can_proceed=True, current_step=1)
+    st.markdown(progress_html, unsafe_allow_html=True)
 
-def _show_resources_step(language):
-    """Enhanced resources step with better guidance"""
+def _show_beautiful_values_step(language):
+    """Beautiful values step with emotional warmth"""
     
     if language == 'czech':
-        st.markdown("### ⏰ Kolik času a energie máte?")
-        st.markdown("Buďte upřímní - respektujeme vaše možnosti a najdeme akce, které se hodí do vašeho života.")
+        st.markdown("""
+        ### 🌱 Co je vám nejblíž?
+        
+        *Vyberte oblasti, které vás oslovují. Není třeba vybrat všechno – jen to, co opravdu rezonuje s vaším srdcem.*
+        """)
+        
+        values_options = [
+            ("environment", "🌍 Ochrana přírody a klimatu", "Péče o planetu pro budoucí generace"),
+            ("education", "📚 Vzdělání a rozvoj", "Pomoc lidem růst a učit se"),
+            ("health", "🏥 Zdraví a pohoda", "Podpora tělesného a duševního zdraví"),
+            ("poverty", "🤝 Boj proti chudobě", "Pomoc těm, kteří to nejvíce potřebují"),
+            ("community", "🏘️ Komunita a sousedství", "Budování silných místních vazeb"),
+            ("human_rights", "⚖️ Lidská práva", "Spravedlnost a rovnost pro všechny"),
+            ("animals", "🐾 Ochrana zvířat", "Péče o naše zvířecí společníky"),
+            ("elderly", "👴 Senioři", "Podpora a doprovázení starších lidí"),
+            ("children", "👶 Děti a mládež", "Investice do budoucnosti mladých"),
+            ("arts", "🎨 Kultura a umění", "Obohacování života krásou a kreativitou")
+        ]
+        
+        help_text = "💡 Vyberte 2-5 oblastí, které vás nejvíce oslovují"
     else:
-        st.markdown("### ⏰ How much time and energy do you have?")
-        st.markdown("Be honest - we respect your capacity and will find actions that fit your life.")
+        st.markdown("""
+        ### 🌱 What's closest to your heart?
+        
+        *Choose areas that speak to you. No need to select everything – just what truly resonates with your heart.*
+        """)
+        
+        values_options = [
+            ("environment", "🌍 Environment & Climate", "Caring for the planet for future generations"),
+            ("education", "📚 Education & Development", "Helping people grow and learn"),
+            ("health", "🏥 Health & Wellbeing", "Supporting physical and mental health"),
+            ("poverty", "🤝 Fighting Poverty", "Helping those who need it most"),
+            ("community", "🏘️ Community & Neighborhood", "Building strong local connections"),
+            ("human_rights", "⚖️ Human Rights", "Justice and equality for all"),
+            ("animals", "🐾 Animal Protection", "Caring for our animal companions"),
+            ("elderly", "👴 Seniors", "Supporting and accompanying older people"),
+            ("children", "👶 Children & Youth", "Investing in the future of young people"),
+            ("arts", "🎨 Culture & Arts", "Enriching life with beauty and creativity")
+        ]
+        
+        help_text = "💡 Select 2-5 areas that speak to you most"
     
-    col1, col2 = st.columns(2)
+    # Beautiful values grid
+    st.markdown(f"<p style='color: #5A6B5A; font-size: 0.9rem; margin-bottom: 1.5rem;'>{help_text}</p>", unsafe_allow_html=True)
     
-    with col1:
+    # Initialize values if not set
+    if 'selected_values' not in st.session_state:
+        st.session_state.selected_values = []
+    
+    # Create beautiful grid layout
+    cols = st.columns(2)
+    
+    for i, (key, title, description) in enumerate(values_options):
+        with cols[i % 2]:
+            is_selected = key in st.session_state.selected_values
+            
+            # Beautiful value card
+            card_style = f"""
+            background: {'linear-gradient(135deg, #e8f5e8 0%, #d4e7d4 100%)' if is_selected else '#fafbfa'};
+            border: 2px solid {'#7AB87A' if is_selected else '#e8e8e8'};
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            """
+            
+            if st.button(
+                f"{title}",
+                key=f"value_{key}",
+                help=description,
+                use_container_width=True
+            ):
+                if key in st.session_state.selected_values:
+                    st.session_state.selected_values.remove(key)
+                else:
+                    st.session_state.selected_values.append(key)
+                st.rerun()
+            
+            # Show description for selected items
+            if is_selected:
+                st.markdown(f"""
+                <div style="
+                    background: #f0fff0;
+                    padding: 0.5rem;
+                    border-radius: 6px;
+                    margin-top: -0.5rem;
+                    margin-bottom: 0.8rem;
+                    font-size: 0.85rem;
+                    color: #2E5D31;
+                    font-style: italic;
+                ">
+                    {description}
+                </div>
+                """, unsafe_allow_html=True)
+    
+    # Show gentle guidance
+    selected_count = len(st.session_state.selected_values)
+    if selected_count == 0:
         if language == 'czech':
-            time_options = [
-                ("minimal", "5-15 minut týdně"),
-                ("moderate", "1-2 hodiny týdně"),
-                ("significant", "3-5 hodin týdně"),
-                ("major", "Více než 5 hodin týdně")
-            ]
-            time_commitment = st.radio(
-                "Časové možnosti:",
-                [opt[1] for opt in time_options],
-                index=next((i for i, (key, _) in enumerate(time_options) if key == st.session_state.user_profile.get('time_commitment')), 0),
-                help="Vyberte realisticky podle vašeho současného rozvrhu",
-                key="time_radio"
-            )
+            guidance = "🌸 Vezměte si čas... Co z toho vás nejvíce oslovuje?"
         else:
-            time_options = [
-                ("minimal", "5-15 minutes per week"),
-                ("moderate", "1-2 hours per week"),
-                ("significant", "3-5 hours per week"),
-                ("major", "More than 5 hours per week")
-            ]
-            time_commitment = st.radio(
-                "Time availability:",
-                [opt[1] for opt in time_options],
-                index=next((i for i, (key, _) in enumerate(time_options) if key == st.session_state.user_profile.get('time_commitment')), 0),
-                help="Choose realistically based on your current schedule",
-                key="time_radio_en"
-            )
+            guidance = "🌸 Take your time... What speaks to you most?"
+        
+        st.markdown(f"""
+        <div style="
+            background: #fff3e0;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            margin: 1rem 0;
+            color: #e65100;
+            font-style: italic;
+        ">
+            {guidance}
+        </div>
+        """, unsafe_allow_html=True)
     
-    with col2:
+    elif selected_count > 7:
         if language == 'czech':
-            financial_options = [
-                ("none", "Pouze čas a dovednosti"),
-                ("small", "Do 500 Kč měsíčně"),
-                ("moderate", "500-2000 Kč měsíčně"),
-                ("significant", "Více než 2000 Kč měsíčně")
-            ]
-            financial_capacity = st.radio(
-                "Finanční možnosti:",
-                [opt[1] for opt in financial_options],
-                index=next((i for i, (key, _) in enumerate(financial_options) if key == st.session_state.user_profile.get('financial_capacity')), 0),
-                help="Žádná částka není příliš malá - každý příspěvek má význam",
-                key="financial_radio"
-            )
+            guidance = "💭 To je hodně oblastí! Možná se zkuste zaměřit na ty nejdůležitější?"
         else:
-            financial_options = [
-                ("none", "Only time and skills"),
-                ("small", "Up to $20 monthly"),
-                ("moderate", "$20-80 monthly"),
-                ("significant", "More than $80 monthly")
-            ]
-            financial_capacity = st.radio(
-                "Financial capacity:",
-                [opt[1] for opt in financial_options],
-                index=next((i for i, (key, _) in enumerate(financial_options) if key == st.session_state.user_profile.get('financial_capacity')), 0),
-                help="No amount is too small - every contribution matters",
-                key="financial_radio_en"
-            )
+            guidance = "💭 That's quite a few areas! Maybe try focusing on the most important ones?"
+        
+        st.markdown(f"""
+        <div style="
+            background: #fff3e0;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            margin: 1rem 0;
+            color: #e65100;
+            font-style: italic;
+        ">
+            {guidance}
+        </div>
+        """, unsafe_allow_html=True)
     
-    # Convert selections to keys
-    time_key = next((key for key, label in time_options if label == time_commitment), "minimal")
-    financial_key = next((key for key, label in financial_options if label == financial_capacity), "none")
-    
-    # Encouraging feedback
-    if time_key == "minimal" and financial_key == "none":
-        st.success("💚 I malé kroky mají velký dopad! Najdeme akce, které se hodí do vašeho života." if language == 'czech' else "💚 Even small steps have big impact! We'll find actions that fit your life.")
-    elif time_key in ["significant", "major"] or financial_key in ["moderate", "significant"]:
-        st.success("🌟 Máte skvělé možnosti pomoci! Najdeme pro vás smysluplné projekty." if language == 'czech' else "🌟 You have great capacity to help! We'll find meaningful projects for you.")
     else:
-        st.success("✨ Perfektní! Vaše možnosti nám pomohou najít správné akce." if language == 'czech' else "✨ Perfect! Your capacity helps us find the right actions.")
+        if language == 'czech':
+            guidance = f"✨ Krásně! Vybrali jste {selected_count} {'oblast' if selected_count == 1 else 'oblasti' if selected_count < 5 else 'oblastí'}."
+        else:
+            guidance = f"✨ Beautiful! You've selected {selected_count} area{'s' if selected_count != 1 else ''}."
+        
+        st.markdown(f"""
+        <div style="
+            background: #f0fff0;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            margin: 1rem 0;
+            color: #2E5D31;
+            font-weight: 500;
+        ">
+            {guidance}
+        </div>
+        """, unsafe_allow_html=True)
     
-    # Update profile
-    update_user_profile({
-        'time_commitment': time_key,
-        'financial_capacity': financial_key
-    })
-    track_assessment_progress('resources', 2)
+    # Beautiful next button
+    st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
+    
+    col_back, col_next = st.columns([1, 2])
+    
+    with col_back:
+        if st.button("← Zpět" if language == 'czech' else "← Back", use_container_width=True):
+            st.session_state.current_page = 'welcome'
+            st.rerun()
+    
+    with col_next:
+        if selected_count >= 1:
+            if st.button("Pokračovat →" if language == 'czech' else "Continue →", type="primary", use_container_width=True):
+                # Save values and move to next step
+                update_user_profile({'values': st.session_state.selected_values})
+                track_assessment_progress('values_completed', {'selected_count': selected_count})
+                st.session_state.assessment_step = 2
+                st.rerun()
+        else:
+            st.button("Vyberte alespoň jednu oblast" if language == 'czech' else "Select at least one area", disabled=True, use_container_width=True)
+
+def _show_beautiful_resources_step(language):
+    """Beautiful resources step that feels supportive, not judgmental"""
+    
+    if language == 'czech':
+        st.markdown("""
+        ### ⚡ Jaké máte možnosti?
+        
+        *Každý má jiné možnosti a to je v pořádku. Pomozte nám najít akce, které se hodí do vašeho života.*
+        """)
+    else:
+        st.markdown("""
+        ### ⚡ What are your possibilities?
+        
+        *Everyone has different possibilities and that's okay. Help us find actions that fit your life.*
+        """)
+    
+    # Create two beautiful columns for time and money
+    col_time, col_money = st.columns(2, gap="large")
+    
+    with col_time:
+        _render_beautiful_time_section(language)
+    
+    with col_money:
+        _render_beautiful_money_section(language)
+    
+    # Show encouraging message based on selections
+    _show_resources_encouragement(language)
+    
+    # Navigation buttons
+    st.markdown("<div style='height: 2rem;'></div>", unsafe_allow_html=True)
+    
+    col_back, col_next = st.columns([1, 2])
+    
+    with col_back:
+        if st.button("← Zpět" if language == 'czech' else "← Back", use_container_width=True, key="resources_back"):
+            st.session_state.assessment_step = 1
+            st.rerun()
+    
+    with col_next:
+        time_selected = st.session_state.get('time_availability') is not None
+        money_selected = st.session_state.get('financial_capacity') is not None
+        
+        if time_selected and money_selected:
+            if st.button("Pokračovat →" if language == 'czech' else "Continue →", type="primary", use_container_width=True, key="resources_next"):
+                # Save resources and move to next step
+                update_user_profile({
+                    'time_availability': st.session_state.time_availability,
+                    'financial_capacity': st.session_state.financial_capacity
+                })
+                track_assessment_progress('resources_completed')
+                st.session_state.assessment_step = 3
+                st.rerun()
+        else:
+            st.button("Dokončete obě sekce" if language == 'czech' else "Complete both sections", disabled=True, use_container_width=True, key="resources_disabled")
+
+def _render_beautiful_time_section(language):
+    """Beautiful time availability section"""
+    
+    if language == 'czech':
+        st.markdown("""
+        #### 🕐 Čas
+        *Kolik času můžete věnovat pomoci?*
+        """)
+        
+        time_options = [
+            ("very_limited", "⏰ Velmi málo", "Pár minut tu a tam"),
+            ("limited", "🕐 Občas", "Hodinu týdně"),
+            ("moderate", "🕑 Pravidelně", "Několik hodin týdně"),
+            ("flexible", "🕒 Flexibilně", "Dle potřeby a nálady"),
+            ("committed", "🕓 Hodně", "Několik hodin denně")
+        ]
+    else:
+        st.markdown("""
+        #### 🕐 Time
+        *How much time can you dedicate to helping?*
+        """)
+        
+        time_options = [
+            ("very_limited", "⏰ Very little", "A few minutes here and there"),
+            ("limited", "🕐 Occasionally", "An hour per week"),
+            ("moderate", "🕑 Regularly", "Several hours per week"),
+            ("flexible", "🕒 Flexibly", "As needed and when I feel like it"),
+            ("committed", "🕓 A lot", "Several hours daily")
+        ]
+    
+    # Initialize if not set
+    if 'time_availability' not in st.session_state:
+        st.session_state.time_availability = None
+    
+    for key, title, description in time_options:
+        is_selected = st.session_state.time_availability == key
+        
+        if st.button(
+            title,
+            key=f"time_{key}",
+            use_container_width=True,
+            type="primary" if is_selected else "secondary"
+        ):
+            st.session_state.time_availability = key
+            st.rerun()
+        
+        if is_selected:
+            st.markdown(f"""
+            <div style="
+                background: #e8f5e8;
+                padding: 0.5rem;
+                border-radius: 6px;
+                margin-top: -0.5rem;
+                margin-bottom: 0.5rem;
+                font-size: 0.85rem;
+                color: #2E5D31;
+                font-style: italic;
+                text-align: center;
+            ">
+                {description}
+            </div>
+            """, unsafe_allow_html=True)
+
+def _render_beautiful_money_section(language):
+    """Beautiful financial capacity section that's non-judgmental"""
+    
+    if language == 'czech':
+        st.markdown("""
+        #### 💰 Finance
+        *Kolik můžete příležitostně darovat?*
+        """)
+        
+        money_options = [
+            ("none", "🌱 Žádné", "Čas je můj dar"),
+            ("minimal", "☕ Minimální", "Cena kávy (50-200 Kč)"),
+            ("modest", "🍕 Skromné", "Cena oběda (200-500 Kč)"),
+            ("moderate", "🎬 Střední", "Cena lístku do kina (500-1000 Kč)"),
+            ("generous", "📚 Štědré", "Cena knihy (1000+ Kč)")
+        ]
+    else:
+        st.markdown("""
+        #### 💰 Finances
+        *How much can you occasionally donate?*
+        """)
+        
+        money_options = [
+            ("none", "🌱 None", "Time is my gift"),
+            ("minimal", "☕ Minimal", "Price of coffee ($2-8)"),
+            ("modest", "🍕 Modest", "Price of lunch ($8-20)"),
+            ("moderate", "🎬 Moderate", "Price of movie ticket ($20-40)"),
+            ("generous", "📚 Generous", "Price of a book ($40+)")
+        ]
+    
+    # Initialize if not set
+    if 'financial_capacity' not in st.session_state:
+        st.session_state.financial_capacity = None
+    
+    for key, title, description in money_options:
+        is_selected = st.session_state.financial_capacity == key
+        
+        if st.button(
+            title,
+            key=f"money_{key}",
+            use_container_width=True,
+            type="primary" if is_selected else "secondary"
+        ):
+            st.session_state.financial_capacity = key
+            st.rerun()
+        
+        if is_selected:
+            st.markdown(f"""
+            <div style="
+                background: #e8f5e8;
+                padding: 0.5rem;
+                border-radius: 6px;
+                margin-top: -0.5rem;
+                margin-bottom: 0.5rem;
+                font-size: 0.85rem;
+                color: #2E5D31;
+                font-style: italic;
+                text-align: center;
+            ">
+                {description}
+            </div>
+            """, unsafe_allow_html=True)
+
+def _show_resources_encouragement(language):
+    """Show encouraging message based on resource selections"""
+    
+    time = st.session_state.get('time_availability')
+    money = st.session_state.get('financial_capacity')
+    
+    if time and money:
+        if language == 'czech':
+            if time == 'very_limited' and money == 'none':
+                message = "💚 Perfektní! Existuje spousta způsobů, jak pomoci jen s trochou času a bez peněz."
+            elif time in ['committed', 'moderate'] or money in ['generous', 'moderate']:
+                message = "✨ Úžasné! S vašimi možnostmi můžete udělat opravdu velký rozdíl."
+            else:
+                message = "🌟 Skvělé! Každý příspěvek, ať už malý nebo velký, má svůj význam."
+        else:
+            if time == 'very_limited' and money == 'none':
+                message = "💚 Perfect! There are many ways to help with just a little time and no money."
+            elif time in ['committed', 'moderate'] or money in ['generous', 'moderate']:
+                message = "✨ Amazing! With your resources, you can make a really big difference."
+            else:
+                message = "🌟 Great! Every contribution, whether small or large, has its meaning."
+        
+        st.markdown(f"""
+        <div style="
+            background: linear-gradient(135deg, #f0fff0 0%, #e8f5e8 100%);
+            padding: 1.2rem;
+            border-radius: 12px;
+            text-align: center;
+            margin: 1.5rem 0;
+            border: 1px solid #d4e7d4;
+        ">
+            <div style="color: #2E5D31; font-weight: 500;">
+                {message}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+def _show_beautiful_preferences_step(language):
+    """Beautiful preferences step for final personalization"""
+    
+    if language == 'czech':
+        st.markdown("""
+        ### 🎯 Vaše preference
+        
+        *Poslední dotazy pro dokonalé doporučení.*
+        """)
+    else:
+        st.markdown("""
+        ### 🎯 Your preferences
+        
+        *Final questions for perfect recommendations.*
+        """)
+    
+    # Create sections for different preference types
+    col_left, col_right = st.columns(2, gap="large")
+    
+    with col_left:
+        _render_action_style_preferences(language)
+    
+    with col_right:
+        _render_impact_preferences(language)
     
     # Navigation
-    _show_step_navigation(language, can_proceed=True, current_step=2)
-
-def _show_preferences_step(language):
-    """Enhanced preferences step with better explanations"""
+    st.markdown("<div style='height: 2rem;'></div>", unsafe_allow_html=True)
     
-    if language == 'czech':
-        st.markdown("### 🎯 Jaký typ pomoci vás přitahuje?")
-        st.markdown("Pomůže nám to najít akce, které budou odpovídat vašemu stylu a preferencím.")
-    else:
-        st.markdown("### 🎯 What type of help appeals to you?")
-        st.markdown("This helps us find actions that match your style and preferences.")
+    col_back, col_next = st.columns([1, 2])
     
-    col1, col2 = st.columns(2)
+    with col_back:
+        if st.button("← Zpět" if language == 'czech' else "← Back", use_container_width=True, key="prefs_back"):
+            st.session_state.assessment_step = 2
+            st.rerun()
     
-    with col1:
-        if language == 'czech':
-            st.markdown("**Způsob pomoci:**")
-            action_type_options = [
-                ("direct", "🤝 Přímá pomoc lidem"),
-                ("indirect", "🌱 Systémové změny"),
-                ("both", "🔄 Kombinace obojího")
-            ]
-            action_type = st.radio(
-                "Preferujete:",
-                [opt[1] for opt in action_type_options],
-                index=next((i for i, (key, _) in enumerate(action_type_options) if key == st.session_state.user_profile.get('action_type')), 2),
-                help="Přímá pomoc = konkrétní lidem, Systémové = dlouhodobé změny",
-                key="action_type_radio"
-            )
-        else:
-            st.markdown("**Type of help:**")
-            action_type_options = [
-                ("direct", "🤝 Direct help to people"),
-                ("indirect", "🌱 Systemic changes"),
-                ("both", "🔄 Combination of both")
-            ]
-            action_type = st.radio(
-                "You prefer:",
-                [opt[1] for opt in action_type_options],
-                index=next((i for i, (key, _) in enumerate(action_type_options) if key == st.session_state.user_profile.get('action_type')), 2),
-                help="Direct = specific people, Systemic = long-term changes",
-                key="action_type_radio_en"
-            )
-    
-    with col2:
-        if language == 'czech':
-            st.markdown("**Způsob zapojení:**")
-            involvement_options = [
-                ("online", "💻 Online aktivity"),
-                ("offline", "🏃 Osobní účast"),
-                ("flexible", "🔄 Flexibilní kombinace")
-            ]
-            involvement = st.radio(
-                "Preferujete:",
-                [opt[1] for opt in involvement_options],
-                index=next((i for i, (key, _) in enumerate(involvement_options) if key == st.session_state.user_profile.get('involvement_type')), 2),
-                help="Online = z domova, Offline = fyzická přítomnost",
-                key="involvement_radio"
-            )
-        else:
-            st.markdown("**Type of involvement:**")
-            involvement_options = [
-                ("online", "💻 Online activities"),
-                ("offline", "🏃 In-person participation"),
-                ("flexible", "🔄 Flexible combination")
-            ]
-            involvement = st.radio(
-                "You prefer:",
-                [opt[1] for opt in involvement_options],
-                index=next((i for i, (key, _) in enumerate(involvement_options) if key == st.session_state.user_profile.get('involvement_type')), 2),
-                help="Online = from home, Offline = physical presence",
-                key="involvement_radio_en"
-            )
-    
-    # Convert to keys
-    action_key = next((key for key, label in action_type_options if label == action_type), "both")
-    involvement_key = next((key for key, label in involvement_options if label == involvement), "flexible")
-    
-    # Geographic preference
-    if language == 'czech':
-        st.markdown("**Geografické zaměření:**")
-        geographic_options = [
-            ("local", "🏘️ Místní komunita"),
-            ("national", "🇨🇿 Česká republika"),
-            ("global", "🌍 Celosvětově"),
-            ("flexible", "🔄 Bez preference")
-        ]
-        geographic = st.selectbox(
-            "Kde chcete pomáhat:",
-            [opt[1] for opt in geographic_options],
-            index=next((i for i, (key, _) in enumerate(geographic_options) if key == st.session_state.user_profile.get('geographic_focus')), 3),
-            help="Vyberte oblast, která vás nejvíce zajímá",
-            key="geographic_select"
-        )
-    else:
-        st.markdown("**Geographic focus:**")
-        geographic_options = [
-            ("local", "🏘️ Local community"),
-            ("national", "🇨🇿 Czech Republic"),
-            ("global", "🌍 Worldwide"),
-            ("flexible", "🔄 No preference")
-        ]
-        geographic = st.selectbox(
-            "Where do you want to help:",
-            [opt[1] for opt in geographic_options],
-            index=next((i for i, (key, _) in enumerate(geographic_options) if key == st.session_state.user_profile.get('geographic_focus')), 3),
-            help="Choose the area that interests you most",
-            key="geographic_select_en"
-        )
-    
-    geographic_key = next((key for key, label in geographic_options if label == geographic), "flexible")
-    
-    # Encouraging message
-    st.success("🎯 Skvělé! Vaše preference nám pomohou najít akce přesně pro vás." if language == 'czech' else "🎯 Great! Your preferences help us find actions just for you.")
-    
-    # Update profile
-    update_user_profile({
-        'action_type': action_key,
-        'involvement_type': involvement_key,
-        'geographic_focus': geographic_key
-    })
-    track_assessment_progress('preferences', 3)
-    
-    # Navigation
-    _show_step_navigation(language, can_proceed=True, current_step=3)
-
-def _show_confirmation_step(language):
-    """Enhanced confirmation step with inconsistency checks"""
-    
-    if language == 'czech':
-        st.markdown("### ✅ Shrnutí vašeho profilu")
-        st.markdown("Zkontrolujte své odpovědi. Můžete se vrátit a upravit cokoliv.")
-    else:
-        st.markdown("### ✅ Your Profile Summary")
-        st.markdown("Review your answers. You can go back and adjust anything.")
-    
-    # Show profile summary
-    profile = st.session_state.user_profile
-    
-    # Check for inconsistencies
-    inconsistencies = detect_assessment_inconsistencies(profile)
-    if inconsistencies:
-        _show_inconsistency_check(language, inconsistencies)
-    
-    # Display profile in a nice format
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if language == 'czech':
-            st.markdown("#### 💚 Vaše hodnoty:")
-            if profile.get('values'):
-                for value in profile['values']:
-                    value_labels = {
-                        'environment': '🌍 Životní prostředí',
-                        'education': '📚 Vzdělávání',
-                        'health': '🏥 Zdraví',
-                        'poverty': '🤝 Boj proti chudobě',
-                        'equality': '⚖️ Rovnost',
-                        'community': '🏘️ Komunita',
-                        'animals': '🐾 Zvířata',
-                        'technology': '💻 Technologie',
-                        'arts': '🎨 Umění',
-                        'elderly': '👴 Senioři'
-                    }
-                    st.write(f"- {value_labels.get(value, value)}")
-            else:
-                st.write("*Žádné hodnoty nevybrány*")
-            
-            st.markdown("#### ⏰ Vaše možnosti:")
-            time_labels = {
-                'minimal': '5-15 minut týdně',
-                'moderate': '1-2 hodiny týdně',
-                'significant': '3-5 hodin týdně',
-                'major': 'Více než 5 hodin týdně'
-            }
-            financial_labels = {
-                'none': 'Pouze čas a dovednosti',
-                'small': 'Do 500 Kč měsíčně',
-                'moderate': '500-2000 Kč měsíčně',
-                'significant': 'Více než 2000 Kč měsíčně'
-            }
-            st.write(f"⏰ **Čas:** {time_labels.get(profile.get('time_commitment'), 'Nevybráno')}")
-            st.write(f"💰 **Finance:** {financial_labels.get(profile.get('financial_capacity'), 'Nevybráno')}")
-        else:
-            st.markdown("#### 💚 Your values:")
-            if profile.get('values'):
-                for value in profile['values']:
-                    value_labels = {
-                        'environment': '🌍 Environment',
-                        'education': '📚 Education',
-                        'health': '🏥 Health',
-                        'poverty': '🤝 Poverty',
-                        'equality': '⚖️ Equality',
-                        'community': '🏘️ Community',
-                        'animals': '🐾 Animals',
-                        'technology': '💻 Technology',
-                        'arts': '🎨 Arts',
-                        'elderly': '👴 Elderly'
-                    }
-                    st.write(f"- {value_labels.get(value, value)}")
-            else:
-                st.write("*No values selected*")
-            
-            st.markdown("#### ⏰ Your capacity:")
-            time_labels = {
-                'minimal': '5-15 minutes per week',
-                'moderate': '1-2 hours per week',
-                'significant': '3-5 hours per week',
-                'major': 'More than 5 hours per week'
-            }
-            financial_labels = {
-                'none': 'Only time and skills',
-                'small': 'Up to $20 monthly',
-                'moderate': '$20-80 monthly',
-                'significant': 'More than $80 monthly'
-            }
-            st.write(f"⏰ **Time:** {time_labels.get(profile.get('time_commitment'), 'Not selected')}")
-            st.write(f"💰 **Finance:** {financial_labels.get(profile.get('financial_capacity'), 'Not selected')}")
-    
-    with col2:
-        if language == 'czech':
-            st.markdown("#### 🎯 Vaše preference:")
-            action_labels = {
-                'direct': '🤝 Přímá pomoc',
-                'indirect': '🌱 Systémové změny',
-                'both': '🔄 Kombinace'
-            }
-            involvement_labels = {
-                'online': '💻 Online',
-                'offline': '🏃 Osobní účast',
-                'flexible': '🔄 Flexibilní'
-            }
-            geographic_labels = {
-                'local': '🏘️ Místní',
-                'national': '🇨🇿 Národní',
-                'global': '🌍 Globální',
-                'flexible': '🔄 Flexibilní'
-            }
-            st.write(f"🎯 **Typ pomoci:** {action_labels.get(profile.get('action_type'), 'Nevybráno')}")
-            st.write(f"💻 **Zapojení:** {involvement_labels.get(profile.get('involvement_type'), 'Nevybráno')}")
-            st.write(f"🌍 **Oblast:** {geographic_labels.get(profile.get('geographic_focus'), 'Nevybráno')}")
-        else:
-            st.markdown("#### 🎯 Your preferences:")
-            action_labels = {
-                'direct': '🤝 Direct help',
-                'indirect': '🌱 Systemic changes',
-                'both': '🔄 Combination'
-            }
-            involvement_labels = {
-                'online': '💻 Online',
-                'offline': '🏃 In-person',
-                'flexible': '🔄 Flexible'
-            }
-            geographic_labels = {
-                'local': '🏘️ Local',
-                'national': '🇨🇿 National',
-                'global': '🌍 Global',
-                'flexible': '🔄 Flexible'
-            }
-            st.write(f"🎯 **Type:** {action_labels.get(profile.get('action_type'), 'Not selected')}")
-            st.write(f"💻 **Involvement:** {involvement_labels.get(profile.get('involvement_type'), 'Not selected')}")
-            st.write(f"🌍 **Area:** {geographic_labels.get(profile.get('geographic_focus'), 'Not selected')}")
-    
-    # Completion encouragement
-    if profile.get('values') and profile.get('time_commitment'):
-        st.success("🎉 Váš profil je kompletní! Připraveni najít vaše doporučené akce?" if language == 'czech' else "🎉 Your profile is complete! Ready to find your recommended actions?")
-    else:
-        st.info("💭 Můžete pokračovat i s neúplným profilem, ale více informací nám pomůže najít lepší doporučení." if language == 'czech' else "💭 You can continue with an incomplete profile, but more information helps us find better recommendations.")
-    
-    track_assessment_progress('confirmation', 4)
-    
-    # Navigation
-    _show_step_navigation(language, can_proceed=True, current_step=4, is_final=True)
-
-def _show_complete_assessment(language):
-    """Show assessment completion and recommendations"""
-    
-    if language == 'czech':
-        st.markdown("# 🎉 Vaše cesta je připravena!")
-        st.markdown("Na základě vašich odpovědí jsme připravili doporučení přesně pro vás.")
-    else:
-        st.markdown("# 🎉 Your journey is ready!")
-        st.markdown("Based on your answers, we've prepared recommendations just for you.")
-    
-    # Generate recommendations
-    try:
-        recommendations = get_personalized_recommendations(st.session_state.user_profile, language)
+    with col_next:
+        # Check if at least some preferences are set
+        has_style = st.session_state.get('action_style') is not None
+        has_impact = st.session_state.get('impact_preference') is not None
         
-        if recommendations:
-            if language == 'czech':
-                st.success(f"✨ Našli jsme {len(recommendations)} akcí, které by vás mohly zajímat!")
-            else:
-                st.success(f"✨ We found {len(recommendations)} actions that might interest you!")
-            
-            # Show top recommendations preview
-            for i, rec in enumerate(recommendations[:3]):
-                with st.expander(f"🎯 {rec['title']}", expanded=i==0):
-                    st.markdown(rec['description'])
-                    if rec.get('time_estimate'):
-                        st.caption(f"⏰ {rec['time_estimate']}")
-                    if rec.get('impact_potential'):
-                        st.caption(f"💫 {rec['impact_potential']}")
+        if has_style or has_impact:  # At least one preference is enough
+            if st.button("Zobrazit má doporučení ✨" if language == 'czech' else "Show my recommendations ✨", type="primary", use_container_width=True, key="prefs_next"):
+                # Save preferences and move to results
+                update_user_profile({
+                    'action_style': st.session_state.get('action_style'),
+                    'impact_preference': st.session_state.get('impact_preference')
+                })
+                track_assessment_progress('preferences_completed')
+                st.session_state.assessment_step = 4
+                st.rerun()
         else:
-            if language == 'czech':
-                st.info("🔍 Připravujeme vaše doporučení... Mezitím můžete prozkoumat rychlé akce!")
-            else:
-                st.info("🔍 Preparing your recommendations... Meanwhile, you can explore quick actions!")
+            if st.button("Vyberte alespoň jednu preferenci" if language == 'czech' else "Select at least one preference", disabled=True, use_container_width=True, key="prefs_disabled"):
+                pass
+
+def _render_action_style_preferences(language):
+    """Render action style preferences"""
     
-    except Exception as e:
-        st.error("Omlouváme se, při generování doporučení došlo k chybě." if language == 'czech' else "Sorry, there was an error generating recommendations.")
+    if language == 'czech':
+        st.markdown("""
+        #### 🎭 Styl akce
+        *Jak rádi pomáháte?*
+        """)
+        
+        style_options = [
+            ("direct", "🤝 Přímo", "Osobní kontakt s lidmi"),
+            ("behind_scenes", "🔧 V zákulisí", "Organizace a logistika"),
+            ("digital", "💻 Online", "Pomoc přes internet"),
+            ("creative", "🎨 Kreativně", "Umění a kreativní projekty"),
+            ("advocacy", "📢 Osvěta", "Šíření povědomí")
+        ]
+    else:
+        st.markdown("""
+        #### 🎭 Action style
+        *How do you like to help?*
+        """)
+        
+        style_options = [
+            ("direct", "🤝 Directly", "Personal contact with people"),
+            ("behind_scenes", "🔧 Behind scenes", "Organization and logistics"),
+            ("digital", "💻 Online", "Help via internet"),
+            ("creative", "🎨 Creatively", "Art and creative projects"),
+            ("advocacy", "📢 Advocacy", "Spreading awareness")
+        ]
     
-    # Navigation to other sections
+    # Initialize if not set
+    if 'action_style' not in st.session_state:
+        st.session_state.action_style = None
+    
+    for key, title, description in style_options:
+        is_selected = st.session_state.action_style == key
+        
+        if st.button(
+            title,
+            key=f"style_{key}",
+            use_container_width=True,
+            type="primary" if is_selected else "secondary"
+        ):
+            st.session_state.action_style = key
+            st.rerun()
+        
+        if is_selected:
+            st.markdown(f"""
+            <div style="
+                background: #e8f5e8;
+                padding: 0.5rem;
+                border-radius: 6px;
+                margin-top: -0.5rem;
+                margin-bottom: 0.5rem;
+                font-size: 0.85rem;
+                color: #2E5D31;
+                font-style: italic;
+                text-align: center;
+            ">
+                {description}
+            </div>
+            """, unsafe_allow_html=True)
+
+def _render_impact_preferences(language):
+    """Render impact preferences"""
+    
+    if language == 'czech':
+        st.markdown("""
+        #### 🌟 Typ dopadu
+        *Jaký druh změny vás motivuje?*
+        """)
+        
+        impact_options = [
+            ("immediate", "⚡ Okamžitý", "Rychlé, viditelné výsledky"),
+            ("long_term", "🌱 Dlouhodobý", "Trvalé systémové změny"),
+            ("local", "🏘️ Místní", "Pomoc ve vašem okolí"),
+            ("global", "🌍 Globální", "Celosvětové problémy"),
+            ("personal", "💝 Osobní", "Individuální příběhy")
+        ]
+    else:
+        st.markdown("""
+        #### 🌟 Impact type
+        *What kind of change motivates you?*
+        """)
+        
+        impact_options = [
+            ("immediate", "⚡ Immediate", "Quick, visible results"),
+            ("long_term", "🌱 Long-term", "Lasting systemic changes"),
+            ("local", "🏘️ Local", "Help in your area"),
+            ("global", "🌍 Global", "Worldwide problems"),
+            ("personal", "💝 Personal", "Individual stories")
+        ]
+    
+    # Initialize if not set
+    if 'impact_preference' not in st.session_state:
+        st.session_state.impact_preference = None
+    
+    for key, title, description in impact_options:
+        is_selected = st.session_state.impact_preference == key
+        
+        if st.button(
+            title,
+            key=f"impact_{key}",
+            use_container_width=True,
+            type="primary" if is_selected else "secondary"
+        ):
+            st.session_state.impact_preference = key
+            st.rerun()
+        
+        if is_selected:
+            st.markdown(f"""
+            <div style="
+                background: #e8f5e8;
+                padding: 0.5rem;
+                border-radius: 6px;
+                margin-top: -0.5rem;
+                margin-bottom: 0.5rem;
+                font-size: 0.85rem;
+                color: #2E5D31;
+                font-style: italic;
+                text-align: center;
+            ">
+                {description}
+            </div>
+            """, unsafe_allow_html=True)
+
+def _show_beautiful_results(language):
+    """Beautiful results page with personalized recommendations"""
+    
+    # Calculate matches and get recommendations
+    causes = load_causes_data(language)
+    actions = load_actions_data(language)
+    
+    if not causes or not actions:
+        _show_beautiful_error_state(language)
+        return
+    
+    # Get user profile
+    user_profile = {
+        'values': st.session_state.get('selected_values', []),
+        'time_availability': st.session_state.get('time_availability'),
+        'financial_capacity': st.session_state.get('financial_capacity'),
+        'action_style': st.session_state.get('action_style'),
+        'impact_preference': st.session_state.get('impact_preference')
+    }
+    
+    # Calculate matches
+    cause_matches = calculate_cause_matches(user_profile, causes)
+    recommendations = get_personalized_recommendations(user_profile, actions, cause_matches)
+    
+    # Beautiful header
+    if language == 'czech':
+        st.markdown("""
+        ### ✨ Vaše osobní cesta pomoci
+        
+        *Na základě vašich odpovědí jsme našli akce, které by vám mohly sedět.*
+        """)
+    else:
+        st.markdown("""
+        ### ✨ Your personal path of help
+        
+        *Based on your answers, we found actions that might fit you.*
+        """)
+    
+    # Show beautiful recommendations
+    _render_beautiful_recommendations(recommendations, language)
+    
+    # Show cause matches
+    st.markdown("---")
+    _render_beautiful_cause_matches(cause_matches, language)
+    
+    # Beautiful next steps
+    st.markdown("---")
+    _render_beautiful_next_steps_section(language)
+
+def _render_beautiful_recommendations(recommendations, language):
+    """Render beautiful action recommendations"""
+    
+    if not recommendations:
+        if language == 'czech':
+            st.warning("Omlouváme se, ale momentálně nemáme doporučení, která by přesně odpovídala vašim preferencím. Zkuste se podívat na rychlé akce nebo oblasti pomoci.")
+        else:
+            st.warning("Sorry, we don't currently have recommendations that exactly match your preferences. Try looking at quick actions or help areas.")
+        return
+    
+    if language == 'czech':
+        st.markdown("#### 🎯 Doporučené akce pro vás")
+    else:
+        st.markdown("#### 🎯 Recommended actions for you")
+    
+    # Show top 3-5 recommendations in beautiful cards
+    for i, rec in enumerate(recommendations[:5]):
+        action = rec['action']
+        match_score = rec['match_score']
+        
+        # Beautiful action card
+        st.markdown(f"""
+        <div style="
+            background: linear-gradient(135deg, #f8fdf8 0%, #f0f8f0 100%);
+            border: 2px solid #7AB87A;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            position: relative;
+        ">
+            <div style="
+                position: absolute;
+                top: -10px;
+                right: 15px;
+                background: #7AB87A;
+                color: white;
+                padding: 0.3rem 0.8rem;
+                border-radius: 15px;
+                font-size: 0.8rem;
+                font-weight: 600;
+            ">
+                {match_score}% shoda
+            </div>
+            
+            <h4 style="color: #2E5D31; margin-bottom: 0.5rem;">
+                {action.get('icon', '🌟')} {action['title']}
+            </h4>
+            
+            <p style="color: #5A6B5A; margin-bottom: 1rem; line-height: 1.5;">
+                {action['description']}
+            </p>
+            
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                <span style="
+                    background: #e8f5e8;
+                    padding: 0.3rem 0.8rem;
+                    border-radius: 15px;
+                    font-size: 0.8rem;
+                    color: #2E5D31;
+                ">⏱️ {action.get('time_commitment', 'Flexibilní')}</span>
+                
+                <span style="
+                    background: #e8f5e8;
+                    padding: 0.3rem 0.8rem;
+                    border-radius: 15px;
+                    font-size: 0.8rem;
+                    color: #2E5D31;
+                ">💰 {action.get('cost', 'Zdarma')}</span>
+            </div>
+            
+            <div style="
+                background: #f0fff0;
+                padding: 0.8rem;
+                border-radius: 8px;
+                margin-bottom: 1rem;
+                border-left: 3px solid #7AB87A;
+            ">
+                <strong style="color: #2E5D31;">💫 Dopad:</strong> {action.get('impact', 'Pozitivní změna')}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Action button
+        if st.button(f"🚀 Začít: {action['title']}", key=f"action_{i}", use_container_width=True):
+            # Track action selection and redirect
+            st.session_state.selected_action = action
+            st.session_state.current_page = 'quick_actions'
+            st.rerun()
+
+def _render_beautiful_cause_matches(cause_matches, language):
+    """Render beautiful cause matches"""
+    
+    if language == 'czech':
+        st.markdown("#### 🌍 Oblasti, které vám sedí")
+        st.markdown("*Podle vašich hodnot jsme vybrali oblasti, kde můžete udělat největší rozdíl.*")
+    else:
+        st.markdown("#### 🌍 Areas that fit you")
+        st.markdown("*Based on your values, we selected areas where you can make the biggest difference.*")
+    
+    # Show top matches in a beautiful grid
+    cols = st.columns(2)
+    
+    for i, match in enumerate(cause_matches[:6]):
+        cause = match['cause']
+        score = match['match_score']
+        
+        with cols[i % 2]:
+            st.markdown(f"""
+            <div style="
+                background: linear-gradient(135deg, #fafbfa 0%, #f0f8f0 100%);
+                border: 1px solid #e8f5e8;
+                border-radius: 12px;
+                padding: 1.2rem;
+                margin-bottom: 1rem;
+                text-align: center;
+                height: 150px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            ">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">
+                    {cause.get('icon', '🌟')}
+                </div>
+                <h5 style="color: #2E5D31; margin-bottom: 0.5rem;">
+                    {cause['title']}
+                </h5>
+                <div style="
+                    background: #7AB87A;
+                    color: white;
+                    padding: 0.2rem 0.6rem;
+                    border-radius: 10px;
+                    font-size: 0.8rem;
+                    margin: 0 auto;
+                ">
+                    {score}% shoda
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+def _render_beautiful_next_steps_section(language):
+    """Beautiful next steps section"""
+    
+    if language == 'czech':
+        st.markdown("""
+        ### 🌟 Co dál?
+        
+        *Vaše cesta začíná právě teď. Vyberte si, jak chcete pokračovat.*
+        """)
+    else:
+        st.markdown("""
+        ### 🌟 What's next?
+        
+        *Your journey starts right now. Choose how you want to continue.*
+        """)
+    
     col1, col2, col3 = st.columns(3)
+    
     with col1:
         if st.button("⚡ Rychlé akce" if language == 'czech' else "⚡ Quick actions", use_container_width=True):
             st.session_state.current_page = 'quick_actions'
             st.rerun()
+    
     with col2:
-        if st.button("🌍 Prozkoumat oblasti" if language == 'czech' else "🌍 Explore areas", use_container_width=True):
+        if st.button("🌍 Všechny oblasti" if language == 'czech' else "🌍 All areas", use_container_width=True):
             st.session_state.current_page = 'causes'
             st.rerun()
+    
     with col3:
         if st.button("📊 Můj dopad" if language == 'czech' else "📊 My impact", use_container_width=True):
             st.session_state.current_page = 'impact'
             st.rerun()
-
-def _show_step_navigation(language, can_proceed=True, current_step=1, is_final=False):
-    """Enhanced step navigation with better UX"""
     
-    st.markdown("---")
-    col1, col2, col3 = st.columns([1, 2, 1])
+    # Option to retake assessment
+    st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
+    
+    if st.button("🔄 Upravit mé odpovědi" if language == 'czech' else "🔄 Edit my answers", use_container_width=True):
+        # Reset assessment
+        st.session_state.assessment_step = 1
+        st.rerun()
+
+def _show_beautiful_error_state(language):
+    """Beautiful error state when data can't be loaded"""
+    
+    if language == 'czech':
+        st.markdown("""
+        ### 😔 Něco se pokazilo
+        
+        Omlouváme se, ale momentálně nemůžeme načíst doporučení. 
+        Zkuste to prosím znovu nebo se podívejte na rychlé akce.
+        """)
+    else:
+        st.markdown("""
+        ### 😔 Something went wrong
+        
+        Sorry, we can't load recommendations right now. 
+        Please try again or check out quick actions.
+        """)
+    
+    col1, col2 = st.columns(2)
     
     with col1:
-        if current_step > 1:
-            if st.button("← Zpět" if language == 'czech' else "← Back", use_container_width=True):
-                st.session_state.assessment_step = current_step - 1
-                st.rerun()
+        if st.button("🔄 Zkusit znovu" if language == 'czech' else "🔄 Try again", use_container_width=True):
+            st.rerun()
     
     with col2:
-        # Save progress automatically
-        save_assessment_state()
-        
-        # Show gentle nudges for incomplete sections
-        if not can_proceed:
-            st.info("💭 Dokončete tento krok pro pokračování" if language == 'czech' else "💭 Complete this step to continue")
-    
-    with col3:
-        if is_final:
-            if st.button("🎉 Dokončit" if language == 'czech' else "🎉 Complete", type="primary", use_container_width=True):
-                st.session_state.assessment_step = 5
-                st.rerun()
-        elif can_proceed:
-            if st.button("Pokračovat →" if language == 'czech' else "Continue →", type="primary", use_container_width=True):
-                st.session_state.assessment_step = current_step + 1
-                st.rerun()
-
-def _show_save_and_return_option(language):
-    """Show save and return later option"""
-    
-    with st.expander("💾 Uložit a vrátit se později" if language == 'czech' else "💾 Save and return later", expanded=False):
-        if language == 'czech':
-            st.markdown("""
-            **Můžete kdykoliv odejít a vrátit se.**
-            
-            Vaše odpovědi se automaticky ukládají. Když se vrátíte, budete pokračovat tam, kde jste skončili.
-            
-            Žádný spěch - jde o vaši cestu.
-            """)
-        else:
-            st.markdown("""
-            **You can leave anytime and come back.**
-            
-            Your answers are automatically saved. When you return, you'll continue where you left off.
-            
-            No rush - this is your journey.
-            """)
-        
-        if st.button("🏠 Vrátit se na úvod" if language == 'czech' else "🏠 Return to welcome", use_container_width=True):
-            save_assessment_state()
-            st.session_state.current_page = 'welcome'
-            st.rerun()
-
-def _show_inconsistency_check(language, inconsistencies):
-    """Show gentle inconsistency check"""
-    
-    if language == 'czech':
-        st.warning("🤔 **Malá kontrola:** Všimli jsme si možného nesouladu ve vašich odpovědích.")
-    else:
-        st.warning("🤔 **Quick check:** We noticed a possible inconsistency in your answers.")
-    
-    for inconsistency in inconsistencies:
-        if language == 'czech':
-            st.write(f"• {inconsistency['message_czech']}")
-        else:
-            st.write(f"• {inconsistency['message_english']}")
-    
-    if language == 'czech':
-        st.info("💡 To je v pořádku! Můžete pokračovat nebo se vrátit a upravit odpovědi. Neexistují špatné volby.")
-    else:
-        st.info("💡 That's okay! You can continue or go back and adjust your answers. There are no wrong choices.") 
+        if st.button("⚡ Rychlé akce" if language == 'czech' else "⚡ Quick actions", use_container_width=True):
+            st.session_state.current_page = 'quick_actions'
+            st.rerun() 
