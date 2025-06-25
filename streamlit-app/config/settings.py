@@ -5,10 +5,10 @@ import streamlit as st
 def configure_page():
     """Configure Streamlit page settings"""
     st.set_page_config(
-        page_title="Akcelerátor altruismu",
-        page_icon="🇨🇿",
+        page_title="Akcelerátor altruismu - Proměňte pocit bezmoci v laskavé činy",
+        page_icon="💚",
         layout="wide",
-        initial_sidebar_state="expanded"
+        initial_sidebar_state="collapsed"
     )
 
 # Application constants

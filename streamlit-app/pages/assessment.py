@@ -411,7 +411,10 @@ def _show_beautiful_resources_step(language):
                     'time_availability': st.session_state.time_availability,
                     'financial_capacity': st.session_state.financial_capacity
                 })
-                track_assessment_progress('resources_completed')
+                track_assessment_progress('resources_completed', {
+                    'time_availability': st.session_state.time_availability,
+                    'financial_capacity': st.session_state.financial_capacity
+                })
                 st.session_state.assessment_step = 3
                 st.rerun()
         else:
@@ -627,7 +630,10 @@ def _show_beautiful_preferences_step(language):
                     'action_style': st.session_state.get('action_style'),
                     'impact_preference': st.session_state.get('impact_preference')
                 })
-                track_assessment_progress('preferences_completed')
+                track_assessment_progress('preferences_completed', {
+                    'action_style': st.session_state.get('action_style'),
+                    'impact_preference': st.session_state.get('impact_preference')
+                })
                 st.session_state.assessment_step = 4
                 st.rerun()
         else:

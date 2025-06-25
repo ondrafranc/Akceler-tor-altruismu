@@ -1,4 +1,4 @@
-"""Beautiful impact page - your story of meaningful change"""
+"""Clean and responsive impact page - your story of meaningful change"""
 
 import streamlit as st
 import random
@@ -11,357 +11,150 @@ import plotly.graph_objects as go
 import plotly.express as px
 
 def show_impact_page():
-    """Beautiful impact experience - your story of meaningful change"""
+    """Clean and responsive impact experience"""
     language = st.session_state.language
     track_page_visit('impact')
-    
-    # Create beautiful, inspiring container
-    st.markdown("""
-    <div class="impact-container" style="
-        background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
-        border-radius: 20px;
-        padding: 2rem;
-        margin: 1rem 0;
-        border: 1px solid #d1c4e9;
-        box-shadow: 0 4px 20px rgba(156, 39, 176, 0.1);
-    ">
-    """, unsafe_allow_html=True)
     
     # Get user data
     total_impact = st.session_state.get('total_impact', {'actions': 0, 'estimated_reach': 0})
     behavior_insights = get_user_behavior_insights()
     
-    # Beautiful header
-    _render_beautiful_header(language, total_impact)
+    # Header
+    _render_header(language, total_impact)
     
-    # Show appropriate content based on user's journey stage
+    # Main content based on user's journey stage
     if total_impact['actions'] == 0:
-        _show_beautiful_beginning_story(language)
+        _show_beginning_story(language)
     else:
-        _show_beautiful_impact_story(language, total_impact, behavior_insights)
+        _show_impact_story(language, total_impact, behavior_insights)
     
-    # Always show inspiration and next steps
-    _show_beautiful_inspiration_section(language, total_impact)
-    
-    st.markdown("</div>", unsafe_allow_html=True)
+    # Always show next steps
+    _show_next_steps(language, total_impact)
 
-def _render_beautiful_header(language, total_impact):
-    """Beautiful header that celebrates the user's journey"""
-    
+def _render_header(language, total_impact):
+    """Clean header section"""
     actions_count = total_impact['actions']
     
-    if language == 'czech':
-        if actions_count == 0:
-            title = "📖 Váš příběh pomoci"
-            subtitle = "Každý příběh má svůj začátek – váš čeká na první kapitolu"
+    # Create centered header
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if language == 'czech':
+            if actions_count == 0:
+                st.markdown("# 📖 Váš příběh pomoci")
+                st.markdown("*Každý příběh má svůj začátek – váš čeká na první kapitolu*")
+            else:
+                st.markdown("# 📖 Váš příběh pomoci")
+                st.markdown(f"*Už jste napsali {actions_count} {'kapitolu' if actions_count == 1 else 'kapitoly' if actions_count < 5 else 'kapitol'} pozitivní změny*")
         else:
-            title = f"📖 Váš příběh pomoci"
-            subtitle = f"Už jste napsali {actions_count} {'kapitolu' if actions_count == 1 else 'kapitoly' if actions_count < 5 else 'kapitol'} pozitivní změny"
-    else:
-        if actions_count == 0:
-            title = "📖 Your story of help"
-            subtitle = "Every story has its beginning – yours is waiting for the first chapter"
-        else:
-            title = f"📖 Your story of help"
-            subtitle = f"You've already written {actions_count} chapter{'s' if actions_count != 1 else ''} of positive change"
-    
-    st.markdown(f"""
-    <div style="text-align: center; margin-bottom: 2rem;">
-        <h1 style="
-            font-size: 2.5rem;
-            color: #6A1B9A;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-        ">{title}</h1>
-        <p style="
-            font-size: 1.2rem;
-            color: #4A4A4A;
-            font-style: italic;
-            margin-bottom: 1rem;
-            line-height: 1.4;
-        ">{subtitle}</p>
-    </div>
-    """, unsafe_allow_html=True)
+            if actions_count == 0:
+                st.markdown("# 📖 Your story of help")
+                st.markdown("*Every story has its beginning – yours is waiting for the first chapter*")
+            else:
+                st.markdown("# 📖 Your story of help")
+                st.markdown(f"*You've already written {actions_count} chapter{'s' if actions_count != 1 else ''} of positive change*")
 
-def _show_beautiful_beginning_story(language):
-    """Beautiful beginning story for new users"""
+def _show_beginning_story(language):
+    """Clean beginning story for new users"""
+    
+    # Welcome section
+    st.markdown("---")
     
     if language == 'czech':
-        st.markdown("""
-        ### 🌱 Váš příběh začíná teď
-        
-        *Představte si, že každá akce pomoci je jako malý kámen hozený do klidné vody. 
-        Vytvoří kruhy, které se šíří dál, než můžete vidět.*
-        """)
-        
-        # Beautiful illustration of potential impact
-        st.markdown("""
-        <div style="
-            background: linear-gradient(135deg, #f8fdf8 0%, #f0f8f0 100%);
-            padding: 2rem;
-            border-radius: 15px;
-            margin: 1.5rem 0;
-            text-align: center;
-            border: 1px solid #e8f5e8;
-        ">
-            <h3 style="color: #2E5D31; margin-bottom: 1rem;">Co vás čeká</h3>
-            
-            <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 1rem;">
-                <div style="flex: 1; min-width: 200px;">
-                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">🌟</div>
-                    <h4 style="color: #2E5D31;">První krok</h4>
-                    <p style="color: #5A6B5A;">Vaše první akce pomoci</p>
-                </div>
-                
-                <div style="flex: 1; min-width: 200px;">
-                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">🌊</div>
-                    <h4 style="color: #2E5D31;">Vlnky změny</h4>
-                    <p style="color: #5A6B5A;">Váš dopad se šíří dál</p>
-                </div>
-                
-                <div style="flex: 1; min-width: 200px;">
-                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">🌈</div>
-                    <h4 style="color: #2E5D31;">Krásný příběh</h4>
-                    <p style="color: #5A6B5A;">Každá akce má svůj význam</p>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Encouraging call to action
-        st.markdown("""
-        ### 💫 Připraveni začít?
-        
-        *Váš první krok nemusí být velký – stačí, když bude upřímný.*
-        """)
-        
+        st.markdown("## 🌱 Váš příběh začíná teď")
+        st.markdown("*Představte si, že každá akce pomoci je jako malý kámen hozený do klidné vody. Vytvoří kruhy, které se šíří dál, než můžete vidět.*")
     else:
-        st.markdown("""
-        ### 🌱 Your story begins now
-        
-        *Imagine that every helping action is like a small stone thrown into calm water. 
-        It creates circles that spread farther than you can see.*
-        """)
-        
-        # Beautiful illustration of potential impact
-        st.markdown("""
-        <div style="
-            background: linear-gradient(135deg, #f8fdf8 0%, #f0f8f0 100%);
-            padding: 2rem;
-            border-radius: 15px;
-            margin: 1.5rem 0;
-            text-align: center;
-            border: 1px solid #e8f5e8;
-        ">
-            <h3 style="color: #2E5D31; margin-bottom: 1rem;">What awaits you</h3>
-            
-            <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 1rem;">
-                <div style="flex: 1; min-width: 200px;">
-                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">🌟</div>
-                    <h4 style="color: #2E5D31;">First step</h4>
-                    <p style="color: #5A6B5A;">Your first helping action</p>
-                </div>
-                
-                <div style="flex: 1; min-width: 200px;">
-                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">🌊</div>
-                    <h4 style="color: #2E5D31;">Ripples of change</h4>
-                    <p style="color: #5A6B5A;">Your impact spreads further</p>
-                </div>
-                
-                <div style="flex: 1; min-width: 200px;">
-                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">🌈</div>
-                    <h4 style="color: #2E5D31;">Beautiful story</h4>
-                    <p style="color: #5A6B5A;">Every action has meaning</p>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Encouraging call to action
-        st.markdown("""
-        ### 💫 Ready to begin?
-        
-        *Your first step doesn't need to be big – it just needs to be sincere.*
-        """)
+        st.markdown("## 🌱 Your story begins now")
+        st.markdown("*Imagine that every helping action is like a small stone thrown into calm water. It creates circles that spread farther than you can see.*")
     
-    # Beautiful action buttons
-    col1, col2 = st.columns(2)
+    # What awaits section with clean cards
+    st.markdown("### Co vás čeká" if language == 'czech' else "### What awaits you")
+    
+    col1, col2, col3 = st.columns(3)
     
     with col1:
-        if st.button("⚡ Rychlé akce" if language == 'czech' else "⚡ Quick actions", use_container_width=True, type="primary"):
-            st.session_state.current_page = 'quick_actions'
-            st.rerun()
+        with st.container():
+            st.markdown("#### 🌟 První krok" if language == 'czech' else "#### 🌟 First step")
+            st.markdown("Vaše první akce pomoci" if language == 'czech' else "Your first helping action")
     
     with col2:
-        if st.button("🧭 Najít mou cestu" if language == 'czech' else "🧭 Find my path", use_container_width=True):
-            st.session_state.assessment_step = 1
-            st.session_state.current_page = 'assessment'
-            st.rerun()
+        with st.container():
+            st.markdown("#### 🌊 Vlnky změny" if language == 'czech' else "#### 🌊 Ripples of change")
+            st.markdown("Váš dopad se šíří dál" if language == 'czech' else "Your impact spreads further")
+    
+    with col3:
+        with st.container():
+            st.markdown("#### 🌈 Krásný příběh" if language == 'czech' else "#### 🌈 Beautiful story")
+            st.markdown("Každá akce má svůj význam" if language == 'czech' else "Every action has meaning")
+    
+    # Call to action
+    st.markdown("---")
+    st.markdown("### 💫 Připraveni začít?" if language == 'czech' else "### 💫 Ready to begin?")
+    st.markdown("*Váš první krok nemusí být velký – stačí, když bude upřímný.*" if language == 'czech' else "*Your first step doesn't need to be big – it just needs to be sincere.*")
 
-def _show_beautiful_impact_story(language, total_impact, behavior_insights):
-    """Beautiful impact story for users with actions - honest and reflective"""
+def _show_impact_story(language, total_impact, behavior_insights):
+    """Clean impact story for users with actions"""
     
     actions_count = total_impact['actions']
     
-    # Beautiful impact summary with honest metrics
-    _render_beautiful_impact_summary(language, actions_count, total_impact)
+    # Impact summary with clean metrics
+    _render_impact_summary(language, actions_count, total_impact)
     
-    # Story timeline
-    _render_beautiful_timeline(language, behavior_insights)
+    # Timeline if there are recent actions
+    recent_actions = get_recent_actions(days=30)
+    if recent_actions:
+        _render_timeline(language, recent_actions)
     
-    # Milestones and celebrations
-    _render_beautiful_milestones(language, actions_count)
+    # Milestones
+    _render_milestones(language, actions_count)
     
-    # Personal reflections instead of fake impact visualization
+    # Personal reflections
     _render_personal_reflections(language, total_impact)
+    
+    # Encouragement
+    _render_encouragement(language, actions_count)
 
-def _render_beautiful_impact_summary(language, actions_count, total_impact):
-    """Beautiful summary of user's honest journey - no fake metrics"""
+def _render_impact_summary(language, actions_count, total_impact):
+    """Clean impact summary with honest metrics"""
     
-    if language == 'czech':
-        st.markdown("### ✨ Váš příběh v číslech")
-        
-        # Calculate authentic metrics
-        days_active = _calculate_days_active()
-        streak = get_user_streak()
-        days_since_start = total_impact.get('days_since_start', 0)
-        
-        # Beautiful metrics cards with honest language
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.markdown(f"""
-            <div style="
-                background: linear-gradient(135deg, #e8f5e8 0%, #d4e7d4 100%);
-                padding: 1.5rem;
-                border-radius: 15px;
-                text-align: center;
-                border: 1px solid #c8e6c9;
-            ">
-                <div style="font-size: 3rem; margin-bottom: 0.5rem;">🌟</div>
-                <h2 style="color: #2E5D31; margin: 0;">{actions_count}</h2>
-                <p style="color: #5A6B5A; margin: 0;">kroků na vaší cestě</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col2:
-            st.markdown(f"""
-            <div style="
-                background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
-                padding: 1.5rem;
-                border-radius: 15px;
-                text-align: center;
-                border: 1px solid #ffcc80;
-            ">
-                <div style="font-size: 3rem; margin-bottom: 0.5rem;">🌱</div>
-                <h2 style="color: #e65100; margin: 0;">{days_since_start}</h2>
-                <p style="color: #5A4A3A; margin: 0;">dní od začátku</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col3:
-            st.markdown(f"""
-            <div style="
-                background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
-                padding: 1.5rem;
-                border-radius: 15px;
-                text-align: center;
-                border: 1px solid #d1c4e9;
-            ">
-                <div style="font-size: 3rem; margin-bottom: 0.5rem;">🔥</div>
-                <h2 style="color: #6A1B9A; margin: 0;">{streak}</h2>
-                <p style="color: #4A4A4A; margin: 0;">dní v řadě</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-    else:
-        st.markdown("### ✨ Your story in numbers")
-        
-        # Calculate authentic metrics
-        days_active = _calculate_days_active()
-        streak = get_user_streak()
-        days_since_start = total_impact.get('days_since_start', 0)
-        
-        # Beautiful metrics cards with honest language
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.markdown(f"""
-            <div style="
-                background: linear-gradient(135deg, #e8f5e8 0%, #d4e7d4 100%);
-                padding: 1.5rem;
-                border-radius: 15px;
-                text-align: center;
-                border: 1px solid #c8e6c9;
-            ">
-                <div style="font-size: 3rem; margin-bottom: 0.5rem;">🌟</div>
-                <h2 style="color: #2E5D31; margin: 0;">{actions_count}</h2>
-                <p style="color: #5A6B5A; margin: 0;">steps on your path</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col2:
-            st.markdown(f"""
-            <div style="
-                background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
-                padding: 1.5rem;
-                border-radius: 15px;
-                text-align: center;
-                border: 1px solid #ffcc80;
-            ">
-                <div style="font-size: 3rem; margin-bottom: 0.5rem;">🌱</div>
-                <h2 style="color: #e65100; margin: 0;">{days_since_start}</h2>
-                <p style="color: #5A4A3A; margin: 0;">days since start</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col3:
-            st.markdown(f"""
-            <div style="
-                background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
-                padding: 1.5rem;
-                border-radius: 15px;
-                text-align: center;
-                border: 1px solid #d1c4e9;
-            ">
-                <div style="font-size: 3rem; margin-bottom: 0.5rem;">🔥</div>
-                <h2 style="color: #6A1B9A; margin: 0;">{streak}</h2>
-                <p style="color: #4A4A4A; margin: 0;">days in a row</p>
-            </div>
-            """, unsafe_allow_html=True)
+    st.markdown("---")
+    st.markdown("## ✨ Váš příběh v číslech" if language == 'czech' else "## ✨ Your story in numbers")
     
-    # Add honest journey reflection
+    # Calculate authentic metrics
+    streak = get_user_streak()
+    days_since_start = total_impact.get('days_since_start', 0)
+    
+    # Clean metrics display
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric(
+            "🌟 Kroky na cestě" if language == 'czech' else "🌟 Steps on path",
+            actions_count
+        )
+    
+    with col2:
+        st.metric(
+            "🌱 Dní od začátku" if language == 'czech' else "🌱 Days since start",
+            days_since_start
+        )
+    
+    with col3:
+        st.metric(
+            "🔥 Dní v řadě" if language == 'czech' else "🔥 Days in a row",
+            streak
+        )
+    
+    # Journey description if available
     journey_description = total_impact.get('journey_description', '')
     if journey_description:
-        st.markdown(f"""
-        <div style="
-            background: linear-gradient(135deg, #f0fff0 0%, #e8f5e8 100%);
-            padding: 1.5rem;
-            border-radius: 12px;
-            text-align: center;
-            margin: 1.5rem 0;
-            border: 1px solid #d4e7d4;
-        ">
-            <div style="color: #2E5D31; font-style: italic; line-height: 1.6; font-size: 1.1rem;">
-                💚 {journey_description}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.info(f"💚 {journey_description}")
 
-def _render_beautiful_timeline(language, behavior_insights):
-    """Beautiful timeline of user's helping journey"""
+def _render_timeline(language, recent_actions):
+    """Clean timeline of recent actions"""
     
-    recent_actions = get_recent_actions(days=30)
-    
-    if not recent_actions:
-        return
-    
-    if language == 'czech':
-        st.markdown("### 📅 Vaše cesta pomoci")
-        st.markdown("*Každý krok na vaší cestě má svůj příběh*")
-    else:
-        st.markdown("### 📅 Your helping journey")
-        st.markdown("*Every step on your journey has its story*")
+    st.markdown("---")
+    st.markdown("## 📅 Vaše cesta pomoci" if language == 'czech' else "## 📅 Your helping journey")
+    st.markdown("*Každý krok na vaší cestě má svůj příběh*" if language == 'czech' else "*Every step on your journey has its story*")
     
     # Group actions by date
     actions_by_date = {}
@@ -379,7 +172,7 @@ def _render_beautiful_timeline(language, behavior_insights):
             actions_by_date[date] = []
         actions_by_date[date].append(action)
     
-    # Beautiful timeline
+    # Display timeline with clean containers
     for date, actions in sorted(actions_by_date.items(), reverse=True):
         days_ago = (datetime.now().date() - date).days
         
@@ -398,37 +191,19 @@ def _render_beautiful_timeline(language, behavior_insights):
             else:
                 date_text = f"{days_ago} days ago"
         
-        st.markdown(f"""
-        <div style="
-            background: #fafbfa;
-            padding: 1.2rem;
-            border-radius: 12px;
-            margin: 0.8rem 0;
-            border-left: 4px solid #7AB87A;
-        ">
-            <h4 style="color: #2E5D31; margin-bottom: 0.8rem;">📅 {date_text}</h4>
-        """, unsafe_allow_html=True)
-        
-        for action in actions:
-            action_title = action.get('title', 'Akce pomoci')
-            st.markdown(f"""
-            <div style="
-                background: #f0fff0;
-                padding: 0.8rem;
-                border-radius: 8px;
-                margin: 0.5rem 0;
-                display: flex;
-                align-items: center;
-            ">
-                <span style="font-size: 1.5rem; margin-right: 0.8rem;">✅</span>
-                <span style="color: #2E5D31; font-weight: 500;">{action_title}</span>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container():
+            st.markdown(f"### 📅 {date_text}")
+            
+            for action in actions:
+                action_title = action.get('title', 'Akce pomoci')
+                st.markdown(f"✅ {action_title}")
 
-def _render_beautiful_milestones(language, actions_count):
-    """Beautiful milestones and achievements"""
+def _render_milestones(language, actions_count):
+    """Clean milestones display"""
+    
+    st.markdown("---")
+    st.markdown("## 🏆 Vaše milníky" if language == 'czech' else "## 🏆 Your milestones")
+    st.markdown("*Každý milník je důvodem k oslavě*" if language == 'czech' else "*Every milestone is a reason to celebrate*")
     
     milestones = [
         (1, "🌱", "První krok" if language == 'czech' else "First step"),
@@ -439,58 +214,17 @@ def _render_beautiful_milestones(language, actions_count):
         (50, "💎", "Mistr pomoci" if language == 'czech' else "Master of help")
     ]
     
-    if language == 'czech':
-        st.markdown("### 🏆 Vaše milníky")
-        st.markdown("*Každý milník je důvodem k oslavě*")
-    else:
-        st.markdown("### 🏆 Your milestones")
-        st.markdown("*Every milestone is a reason to celebrate*")
-    
-    # Beautiful milestone display
-    cols = st.columns(3)
-    
-    for i, (threshold, emoji, name) in enumerate(milestones):
-        with cols[i % 3]:
-            is_achieved = actions_count >= threshold
-            is_next = not is_achieved and (i == 0 or actions_count >= milestones[i-1][0])
-            
-            if is_achieved:
-                card_style = """
-                background: linear-gradient(135deg, #e8f5e8 0%, #d4e7d4 100%);
-                border: 2px solid #7AB87A;
-                opacity: 1;
-                """
-                text_color = "#2E5D31"
-            elif is_next:
-                card_style = """
-                background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
-                border: 2px solid #FF9800;
-                opacity: 1;
-                """
-                text_color = "#e65100"
-            else:
-                card_style = """
-                background: #f5f5f5;
-                border: 2px solid #ddd;
-                opacity: 0.6;
-                """
-                text_color = "#999"
-            
-            st.markdown(f"""
-            <div style="
-                {card_style}
-                padding: 1.2rem;
-                border-radius: 12px;
-                text-align: center;
-                margin: 0.5rem 0;
-                transition: all 0.3s ease;
-            ">
-                <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">{emoji}</div>
-                <h4 style="color: {text_color}; margin-bottom: 0.3rem;">{name}</h4>
-                <p style="color: {text_color}; margin: 0; font-size: 0.9rem;">{threshold} {'akcí' if language == 'czech' else 'actions'}</p>
-                {'<div style="margin-top: 0.5rem;">✅</div>' if is_achieved else ''}
-            </div>
-            """, unsafe_allow_html=True)
+    # Display milestones in rows of 3
+    for i in range(0, len(milestones), 3):
+        cols = st.columns(3)
+        for j, (threshold, emoji, name) in enumerate(milestones[i:i+3]):
+            with cols[j]:
+                is_achieved = actions_count >= threshold
+                
+                if is_achieved:
+                    st.success(f"{emoji} **{name}** ({threshold} {'akcí' if language == 'czech' else 'actions'}) ✅")
+                else:
+                    st.info(f"{emoji} **{name}** ({threshold} {'akcí' if language == 'czech' else 'actions'})")
     
     # Show progress to next milestone
     next_milestone = next((m for m in milestones if actions_count < m[0]), None)
@@ -504,51 +238,20 @@ def _render_beautiful_milestones(language, actions_count):
         else:
             progress_text = f"You need {remaining} more action{'s' if remaining != 1 else ''} to reach '{name}'!"
         
-        st.markdown(f"""
-        <div style="
-            background: linear-gradient(135deg, #f0fff0 0%, #e8f5e8 100%);
-            padding: 1.2rem;
-            border-radius: 12px;
-            text-align: center;
-            margin: 1rem 0;
-            border: 1px solid #d4e7d4;
-        ">
-            <p style="color: #2E5D31; margin-bottom: 0.8rem; font-weight: 500;">{progress_text}</p>
-            <div style="
-                background: #ddd;
-                height: 10px;
-                border-radius: 5px;
-                overflow: hidden;
-            ">
-                <div style="
-                    background: linear-gradient(90deg, #7AB87A, #4CAF50);
-                    height: 100%;
-                    width: {progress * 100}%;
-                    transition: width 0.3s ease;
-                "></div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.info(progress_text)
+        st.progress(progress)
 
 def _render_personal_reflections(language, total_impact):
-    """Show personal reflections instead of fake impact visualization"""
+    """Show personal reflections"""
+    
+    st.markdown("---")
+    st.markdown("## 💭 Vaše zamyšlení" if language == 'czech' else "## 💭 Your reflections")
     
     personal_reflections = total_impact.get('personal_reflections', [])
     
-    if language == 'czech':
-        st.markdown("### 💭 Vaše zamyšlení")
-        if personal_reflections:
-            st.markdown("*Vaše myšlenky a pocity z cesty pomoci*")
-        else:
-            st.markdown("*Zatím jste si nezapisovali žádná zamyšlení. Zkuste přidat nějaké při příští akci!*")
-    else:
-        st.markdown("### 💭 Your reflections")
-        if personal_reflections:
-            st.markdown("*Your thoughts and feelings from the helping journey*")
-        else:
-            st.markdown("*You haven't recorded any reflections yet. Try adding some with your next action!*")
-    
     if personal_reflections:
+        st.markdown("*Vaše myšlenky a pocity z cesty pomoci*" if language == 'czech' else "*Your thoughts and feelings from the helping journey*")
+        
         # Show recent reflections
         for reflection in personal_reflections[-3:]:  # Show last 3
             reflection_date = reflection.get('date', '')
@@ -561,61 +264,22 @@ def _render_personal_reflections(language, total_impact):
                 except:
                     formatted_date = reflection_date
                 
-                st.markdown(f"""
-                <div style="
-                    background: #f9f9f9;
-                    padding: 1.2rem;
-                    border-radius: 12px;
-                    margin: 1rem 0;
-                    border-left: 4px solid #9C27B0;
-                ">
-                    <div style="color: #6A1B9A; font-weight: 500; margin-bottom: 0.5rem;">
-                        📅 {formatted_date}
-                    </div>
-                    <div style="color: #4A4A4A; font-style: italic; line-height: 1.5;">
-                        "{reflection_text}"
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                with st.container():
+                    st.markdown(f"**📅 {formatted_date}**")
+                    st.markdown(f"> *{reflection_text}*")
+    else:
+        st.markdown("*Zatím jste si nezapisovali žádná zamyšlení. Zkuste přidat nějaké při příští akci!*" if language == 'czech' else "*You haven't recorded any reflections yet. Try adding some with your next action!*")
     
     # Encourage adding reflections
     if language == 'czech':
-        st.markdown("""
-        <div style="
-            background: #f3e5f5;
-            padding: 1.2rem;
-            border-radius: 12px;
-            text-align: center;
-            margin: 1.5rem 0;
-            border: 1px solid #d1c4e9;
-        ">
-            <div style="color: #6A1B9A; line-height: 1.5;">
-                💡 <strong>Tip:</strong> Při příští akci si zkuste zapsat, jak se cítíte. 
-                Vaše myšlenky jsou důležitější než jakákoliv čísla.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.info("💡 **Tip:** Při příští akci si zkuste zapsat, jak se cítíte. Vaše myšlenky jsou důležitější než jakákoliv čísla.")
     else:
-        st.markdown("""
-        <div style="
-            background: #f3e5f5;
-            padding: 1.2rem;
-            border-radius: 12px;
-            text-align: center;
-            margin: 1.5rem 0;
-            border: 1px solid #d1c4e9;
-        ">
-            <div style="color: #6A1B9A; line-height: 1.5;">
-                💡 <strong>Tip:</strong> Try writing down how you feel with your next action. 
-                Your thoughts are more important than any numbers.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.info("💡 **Tip:** Try writing down how you feel with your next action. Your thoughts are more important than any numbers.")
 
-def _show_beautiful_inspiration_section(language, total_impact):
-    """Beautiful inspiration section with encouragement and next steps"""
+def _render_encouragement(language, actions_count):
+    """Show encouragement section"""
     
-    actions_count = total_impact['actions']
+    st.markdown("---")
     
     # Get appropriate encouragement
     if actions_count == 0:
@@ -626,58 +290,22 @@ def _show_beautiful_inspiration_section(language, total_impact):
         encouragement = get_random_encouragement("experienced_helper", language)
     
     if encouragement:
-        st.markdown(f"""
-        <div style="
-            background: linear-gradient(135deg, #f0fff0 0%, #e8f5e8 100%);
-            padding: 2rem;
-            border-radius: 15px;
-            text-align: center;
-            margin: 2rem 0;
-            border: 1px solid #d4e7d4;
-        ">
-            <div style="color: #2E5D31; font-style: italic; line-height: 1.6; font-size: 1.2rem;">
-                💚 {encouragement}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.success(f"💚 {encouragement}")
     
     # Czech wisdom for inspiration
     if language == 'czech' and random.random() < 0.4:
         proverb = get_czech_proverb('impact')
         if proverb:
-            st.markdown(f"""
-            <div style="
-                background: #f3e5f5;
-                padding: 1.5rem;
-                border-radius: 12px;
-                text-align: center;
-                margin: 1.5rem 0;
-                font-style: italic;
-                color: #6A1B9A;
-                border-left: 4px solid #9C27B0;
-            ">
-                🌿 {proverb}
-            </div>
-            """, unsafe_allow_html=True)
-    
-    # Beautiful next steps
-    _render_beautiful_next_steps(language, actions_count)
+            st.info(f"🌿 {proverb}")
 
-def _render_beautiful_next_steps(language, actions_count):
-    """Beautiful next steps section"""
+def _show_next_steps(language, total_impact):
+    """Show next steps section"""
     
-    if language == 'czech':
-        st.markdown("""
-        ### 🌟 Vaše další kroky
-        
-        *Každý krok na vaší cestě má svůj význam*
-        """)
-    else:
-        st.markdown("""
-        ### 🌟 Your next steps
-        
-        *Every step on your journey has its meaning*
-        """)
+    st.markdown("---")
+    st.markdown("## 🌟 Vaše další kroky" if language == 'czech' else "## 🌟 Your next steps")
+    st.markdown("*Každý krok na vaší cestě má svůj význam*" if language == 'czech' else "*Every step on your journey has its meaning*")
+    
+    actions_count = total_impact['actions']
     
     if actions_count == 0:
         # For new users
@@ -710,10 +338,10 @@ def _render_beautiful_next_steps(language, actions_count):
         
         with col3:
             if st.button("📖 Sdílet příběh" if language == 'czech' else "📖 Share story", use_container_width=True):
-                _show_sharing_modal(language, actions_count)
+                _show_sharing_section(language, actions_count)
 
-def _show_sharing_modal(language, actions_count):
-    """Show beautiful sharing modal"""
+def _show_sharing_section(language, actions_count):
+    """Show sharing section"""
     
     with st.expander("📖 Sdílet váš příběh pomoci" if language == 'czech' else "📖 Share your helping story", expanded=True):
         if language == 'czech':
@@ -728,8 +356,6 @@ def _show_sharing_modal(language, actions_count):
             - 💚 Inspirace pro ostatní
             
             *"Malé kroky, velké změny. Každá akce má svůj význam."*
-            
-            **Chcete inspirovat ostatní?** Sdílejte svůj příběh a ukažte, že pomoc je možná pro každého.
             """)
         else:
             st.markdown(f"""
@@ -743,8 +369,6 @@ def _show_sharing_modal(language, actions_count):
             - 💚 Inspiration for others
             
             *"Small steps, big changes. Every action has its meaning."*
-            
-            **Want to inspire others?** Share your story and show that helping is possible for everyone.
             """)
         
         # Simple sharing options
@@ -766,114 +390,4 @@ def _show_sharing_modal(language, actions_count):
                 else:
                     email_text = f"Hi! I wanted to share something beautiful - I completed {actions_count} helping actions and feel great! Maybe you'd be interested in starting too: [app link]"
                 
-                st.code(email_text)
-
-def _calculate_days_active():
-    """Calculate number of days user has been active"""
-    recent_actions = get_recent_actions(days=365)  # Look at full year
-    if not recent_actions:
-        return 0
-    
-    dates = set()
-    for action in recent_actions:
-        completed_at = action.get('completed_at')
-        if isinstance(completed_at, str):
-            try:
-                date = datetime.fromisoformat(completed_at).date()
-            except:
-                date = datetime.now().date()
-        else:
-            date = completed_at.date() if completed_at else datetime.now().date()
-        dates.add(date)
-    
-    return len(dates)
-
-def _render_beautiful_impact_visualization(language, total_impact):
-    """Replace fake impact visualization with honest journey visualization"""
-    
-    actions_count = total_impact['actions']
-    
-    if actions_count == 0:
-        return
-    
-    if language == 'czech':
-        st.markdown("### 📊 Vaše cesta v čase")
-        st.markdown("*Každý krok má svůj příběh*")
-    else:
-        st.markdown("### 📊 Your journey over time")
-        st.markdown("*Every step has its story*")
-    
-    # Create honest journey visualization
-    recent_actions = get_recent_actions(days=30)
-    if recent_actions and len(recent_actions) > 1:
-        # Simple timeline of personal growth
-        dates = []
-        cumulative_actions = []
-        
-        for i, action in enumerate(recent_actions):
-            completed_at = action.get('completed_at')
-            if isinstance(completed_at, str):
-                try:
-                    date = datetime.fromisoformat(completed_at)
-                except:
-                    date = datetime.now() - timedelta(days=len(recent_actions) - i)
-            else:
-                date = completed_at if completed_at else datetime.now() - timedelta(days=len(recent_actions) - i)
-            
-            dates.append(date)
-            cumulative_actions.append(i + 1)
-        
-        fig = px.line(
-            x=dates, 
-            y=cumulative_actions,
-            title="Váš růst v čase" if language == 'czech' else "Your growth over time",
-            labels={
-                'x': 'Datum' if language == 'czech' else 'Date',
-                'y': 'Celkem kroků' if language == 'czech' else 'Total steps'
-            }
-        )
-        
-        fig.update_traces(
-            line=dict(color='#7AB87A', width=3),
-            marker=dict(size=8, color='#2E5D31')
-        )
-        
-        fig.update_layout(
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            height=300
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # Add honest interpretation
-        if language == 'czech':
-            st.markdown("""
-            <div style="
-                background: #f0fff0;
-                padding: 1rem;
-                border-radius: 10px;
-                text-align: center;
-                margin: 1rem 0;
-                font-style: italic;
-                color: #2E5D31;
-            ">
-                📈 Graf ukazuje vaši cestu – ne počet lidí, kterým jste pomohli, 
-                ale kroky, které jste udělali vy sami.
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown("""
-            <div style="
-                background: #f0fff0;
-                padding: 1rem;
-                border-radius: 10px;
-                text-align: center;
-                margin: 1rem 0;
-                font-style: italic;
-                color: #2E5D31;
-            ">
-                📈 This chart shows your journey – not the number of people you helped, 
-                but the steps you took yourself.
-            </div>
-            """, unsafe_allow_html=True) 
+                st.code(email_text) 
