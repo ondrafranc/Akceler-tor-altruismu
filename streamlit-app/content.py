@@ -103,12 +103,14 @@ JOURNEY_CONTENT = {
         
         # Step 2: Emotional Check
         'emotional_check': {
-            'title': 'How do you feel?',
+            'title': 'How do you feel right now?',
+            'purpose_intro': 'This will help us recommend the most suitable first step for you.',
             'emotions': [
                 ('overwhelmed', '😰 Overwhelmed'),
                 ('motivated', '💪 Motivated'),
                 ('uncertain', '🤔 Uncertain'),
                 ('hopeful', '🌟 Full of hope'),
+                ('lost', '😔 Lost')
             ],
             'thank_you': '💚 Thank you for sharing',
             'continue_button': 'Continue →'
@@ -184,6 +186,11 @@ EMOTIONAL_RESPONSES = {
             'Naděje je krásný a silný pocit. Je to základ každé pozitivní změny. Jsme tu, abychom vám pomohli ji proměnit v konkrétní činy.',
             'Vaše naděje je inspirující. Je to přesně ta energie, kterou svět potřebuje. Pojďme společně najít nejlepší místo pro její uplatnění.',
             'Skvělé, že máte naději. Držte se jí. Je to váš kompas. Nyní k ní přidáme mapu – konkrétní kroky, jak pomoci.'
+        ],
+        'lost': [
+            'Cítit se ztracený je těžké, ale není to vaše chyba. Někdy se prostě nevíme, kam se obrátit.',
+            'Je v pořádku nevědět, co dělat. Mnoho lidí se cítí stejně. Pomůžeme vám najít jeden malý krok.',
+            'Ztracený pocit může být začátkem něčeho nového. Nemusíte mít plán, stačí být tady.'
         ]
     },
     
@@ -207,6 +214,11 @@ EMOTIONAL_RESPONSES = {
             'Hope is a beautiful and powerful feeling. It\'s the foundation of all positive change. We\'re here to help you turn it into concrete actions.',
             'Your hope is inspiring. It\'s exactly the energy the world needs. Let\'s find the best place to apply it together.',
             'It\'s wonderful that you feel hopeful. Hold onto that; it\'s your compass. Now, let\'s add a map to it—specific steps you can take to help.'
+        ],
+        'lost': [
+            'Feeling lost is difficult, but it\'s not your fault. Sometimes we just don\'t know where to turn.',
+            'It\'s okay not to know what to do. Many people feel the same way. We\'ll help you find one small step.',
+            'Feeling lost can be the beginning of something new. You don\'t need a plan, just being here is enough.'
         ]
     }
 }
@@ -354,6 +366,13 @@ EMOTIONAL_MICRO_INTERVENTIONS = {
             'grounding_question': 'Na co nejvíc doufáte?',
             'gentle_transition': 'Vaše naděje je kompas. Budeme ji následovat.',
             'continue_when_ready': '🌟 Pokračovat s nadějí'
+        },
+        'lost': {
+            'pause_text': 'Cítit se ztracený je těžké...',
+            'acceptance_guide': 'Není to vaše chyba. Někdy se prostě nevíme, kam se obrátit.',
+            'grounding_question': 'Jedna věc, která vás dnes potěšila:',
+            'gentle_transition': 'Nemusíte mít plán. Stačí udělat jeden malý krok.',
+            'continue_when_ready': '🧭 Pokračovat pomalu'
         }
     },
     
@@ -385,6 +404,13 @@ EMOTIONAL_MICRO_INTERVENTIONS = {
             'grounding_question': 'What do you hope for most?',
             'gentle_transition': 'Your hope is a compass. We\'ll follow it.',
             'continue_when_ready': '🌟 Continue with hope'
+        },
+        'lost': {
+            'pause_text': 'Feeling lost is hard...',
+            'acceptance_guide': 'It\'s not your fault. Sometimes we just don\'t know where to turn.',
+            'grounding_question': 'One thing that brought you joy today:',
+            'gentle_transition': 'You don\'t need a plan. Just taking one small step is enough.',
+            'continue_when_ready': '🧭 Continue slowly'
         }
     }
 }
