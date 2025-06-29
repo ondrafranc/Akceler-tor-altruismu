@@ -320,6 +320,138 @@ REFLECTION_PROMPTS = {
 }
 
 # ============================================================================
+# EMOTIONAL MICRO-INTERVENTIONS
+# ============================================================================
+
+EMOTIONAL_MICRO_INTERVENTIONS = {
+    'czech': {
+        'overwhelmed': {
+            'pause_text': 'Zastavme se na chvilku...',
+            'breathing_guide': 'Zkuste se teď pomalu nadechnout... a pomalu vydechnout. Ještě jednou.',
+            'grounding_question': 'Jedna věc, kterou právě teď vidíte kolem sebe:',
+            'gentle_transition': 'Jste v bezpečí. Půjdeme pomalu, krok za krokem.',
+            'continue_when_ready': '🌱 Pokračovat, až budu připraven/a'
+        },
+        'motivated': {
+            'pause_text': 'Ta energie je krásná...',
+            'focus_guide': 'Zkusme ji teď nasměrovat tak, aby měla co největší smysl.',
+            'grounding_question': 'Co vás k této motivaci přivedlo?',
+            'gentle_transition': 'Společně najdeme způsob, jak tuto energii využít nejlépe.',
+            'continue_when_ready': '✨ Pokračovat s touto energií'
+        },
+        'uncertain': {
+            'pause_text': 'Nejistota je přirozená...',
+            'acceptance_guide': 'Nemusíte mít hned všechno jasné. Stačí být zvědaví.',
+            'grounding_question': 'Co vás přivedlo až sem, i přes nejistotu?',
+            'gentle_transition': 'Jeden malý krok je dost. Nemusíme vidět celou cestu.',
+            'continue_when_ready': '🤔 Pokračovat v průzkumu'
+        },
+        'hopeful': {
+            'pause_text': 'Naděje je krásný pocit...',
+            'nurturing_guide': 'Pojďme ji opatrně proměnit v něco konkrétního.',
+            'grounding_question': 'Na co nejvíc doufáte?',
+            'gentle_transition': 'Vaše naděje je kompas. Budeme ji následovat.',
+            'continue_when_ready': '🌟 Pokračovat s nadějí'
+        }
+    },
+    
+    'english': {
+        'overwhelmed': {
+            'pause_text': 'Let\'s pause for a moment...',
+            'breathing_guide': 'Try to breathe in slowly now... and breathe out slowly. Once more.',
+            'grounding_question': 'One thing you can see around you right now:',
+            'gentle_transition': 'You are safe. We\'ll go slowly, step by step.',
+            'continue_when_ready': '🌱 Continue when I\'m ready'
+        },
+        'motivated': {
+            'pause_text': 'That energy is beautiful...',
+            'focus_guide': 'Let\'s now direct it so it has the greatest meaning.',
+            'grounding_question': 'What brought you to this motivation?',
+            'gentle_transition': 'Together we\'ll find the best way to use this energy.',
+            'continue_when_ready': '✨ Continue with this energy'
+        },
+        'uncertain': {
+            'pause_text': 'Uncertainty is natural...',
+            'acceptance_guide': 'You don\'t need to have everything clear right away. It\'s enough to be curious.',
+            'grounding_question': 'What brought you here, despite the uncertainty?',
+            'gentle_transition': 'One small step is enough. We don\'t need to see the whole path.',
+            'continue_when_ready': '🤔 Continue exploring'
+        },
+        'hopeful': {
+            'pause_text': 'Hope is a beautiful feeling...',
+            'nurturing_guide': 'Let\'s carefully turn it into something concrete.',
+            'grounding_question': 'What do you hope for most?',
+            'gentle_transition': 'Your hope is a compass. We\'ll follow it.',
+            'continue_when_ready': '🌟 Continue with hope'
+        }
+    }
+}
+
+# ============================================================================
+# JOURNEY TRANSITIONS
+# ============================================================================
+
+JOURNEY_TRANSITIONS = {
+    'czech': {
+        'welcome_to_emotional': {
+            'transition_text': 'Začneme jemně, u vašich pocitů...',
+            'subtitle': 'Není to test. Je to jen způsob, jak vás lépe poznat.'
+        },
+        'emotional_to_values': {
+            'transition_text': 'Teď, když víme, jak se cítíte...',
+            'subtitle': 'Pojďme objevit, co vám je skutečně blízké.'
+        },
+        'values_to_action': {
+            'transition_text': 'Krásně. Teď už víme, kam směřovat...',
+            'subtitle': 'Najdeme vám něco konkrétního, co můžete udělat.'
+        }
+    },
+    
+    'english': {
+        'welcome_to_emotional': {
+            'transition_text': 'We\'ll start gently, with your feelings...',
+            'subtitle': 'This isn\'t a test. It\'s just a way to get to know you better.'
+        },
+        'emotional_to_values': {
+            'transition_text': 'Now that we know how you feel...',
+            'subtitle': 'Let\'s discover what\'s truly close to your heart.'
+        },
+        'values_to_action': {
+            'transition_text': 'Beautiful. Now we know where to direct our efforts...',
+            'subtitle': 'We\'ll find you something concrete you can do.'
+        }
+    }
+}
+
+# ============================================================================
+# ENHANCED VISUAL ELEMENTS
+# ============================================================================
+
+VISUAL_ELEMENTS = {
+    'progress_indicators': {
+        'czech': [
+            '🌱 Začínáme',
+            '💚 Naslouchání',
+            '🎯 Objevování',
+            '✨ Akce'
+        ],
+        'english': [
+            '🌱 Starting',
+            '💚 Listening', 
+            '🎯 Discovering',
+            '✨ Action'
+        ]
+    },
+    
+    'step_emotions': {
+        'welcome': '🌱',
+        'emotional_check': '💚',
+        'values_discovery': '🎯',
+        'action_selection': '✨'
+    }
+}
+
+# ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
 
@@ -369,4 +501,16 @@ def get_reflection_prompt(language: str = 'czech'):
     """Get a random reflection prompt"""
     import random
     prompts = REFLECTION_PROMPTS.get(language, [])
-    return random.choice(prompts) if prompts else "" 
+    return random.choice(prompts) if prompts else ""
+
+def get_micro_intervention(emotion_key: str, language: str = 'czech'):
+    """Get emotional micro-intervention content"""
+    return EMOTIONAL_MICRO_INTERVENTIONS.get(language, {}).get(emotion_key, {})
+
+def get_journey_transition(transition_key: str, language: str = 'czech'):
+    """Get journey transition content"""
+    return JOURNEY_TRANSITIONS.get(language, {}).get(transition_key, {})
+
+def get_visual_element(element_key: str, language: str = 'czech'):
+    """Get visual element content"""
+    return VISUAL_ELEMENTS.get(element_key, {}).get(language, []) 
