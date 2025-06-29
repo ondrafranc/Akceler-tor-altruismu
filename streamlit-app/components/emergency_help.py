@@ -1,53 +1,59 @@
-"""Enhanced emergency help widget with gentle, supportive design"""
+"""Jemná krizová podpora - diskrétní a laskavá"""
 
 import streamlit as st
 from config.settings import EMERGENCY_CONTACTS
 from utils.localization import get_text, get_accessibility_text
 
-def render_emergency_widget(language='czech'):
-    """Render the enhanced always-visible emergency help widget with gentle, supportive design"""
+def render_gentle_crisis_support(language='czech'):
+    """Jemná, diskrétní krizová podpora"""
     
     if language not in st.session_state:
         language = st.session_state.get('language', 'czech')
     
     contacts = EMERGENCY_CONTACTS.get(language, EMERGENCY_CONTACTS['czech'])
     
-    # Redesigned emergency widget with soft, supportive styling
-    emergency_html = f"""
-    <div class="emergency-help-gentle" role="complementary" aria-label="{get_accessibility_text('emergency_widget', language)}">
-        <div style="display: flex; align-items: center; margin-bottom: 10px;">
-            <span style="font-size: 1.2em; margin-right: 8px;">🤗</span>
-            <strong style="color: #5D4E75; font-size: 0.95rem;">{'Cítíte se zahlceni?' if language == 'czech' else 'Feeling overwhelmed?'}</strong>
-        </div>
-        <p style="color: #6B5B73; font-size: 0.85rem; margin: 8px 0; line-height: 1.4;">
-            {'Nejste sami. Pomoc je na dosah.' if language == 'czech' else 'You\'re not alone. Help is within reach.'}
-        </p>
-        <div style="margin-bottom: 8px;">
-            <span style="color: #7A6B8A; font-size: 0.85rem;">📞 {'Linka bezpečí:' if language == 'czech' else 'Safety line:'}</span><br>
-            <a href="tel:{contacts['safety_line']}" style="color: #5D4E75; text-decoration: none; font-weight: 600; font-size: 0.9rem; border-bottom: 1px dotted #B8A9C9;">{contacts['safety_line']}</a>
-        </div>
-        <div style="margin-bottom: 12px;">
-            <span style="color: #7A6B8A; font-size: 0.85rem;">🆘 {'Krizová pomoc:' if language == 'czech' else 'Crisis support:'}</span><br>
-            <a href="tel:{contacts['crisis_intervention']}" style="color: #5D4E75; text-decoration: none; font-weight: 600; font-size: 0.9rem; border-bottom: 1px dotted #B8A9C9;">{contacts['crisis_intervention']}</a>
-        </div>
-        <details style="margin-top: 10px;">
-            <summary style="cursor: pointer; font-size: 0.8rem; color: #8B7A9B; outline: none;">
-                {'▶ Okamžitá podpora' if language == 'czech' else '▶ Immediate support'}
-            </summary>
-            <div style="margin-top: 10px; font-size: 0.8rem; line-height: 1.4; color: #6B5B73;">
-                {'Pokud potřebujete okamžitou pomoc:' if language == 'czech' else 'If you need immediate help:'}
-                <ul style="margin: 8px 0; padding-left: 16px; color: #7A6B8A;">
-                    <li style="margin: 4px 0;">{'Zavolejte na čísla výše' if language == 'czech' else 'Call the numbers above'}</li>
-                    <li style="margin: 4px 0;">{'Najděte bezpečné místo' if language == 'czech' else 'Find a safe place'}</li>
-                    <li style="margin: 4px 0;">{'Zhluboka se nadechněte' if language == 'czech' else 'Take deep breaths'}</li>
-                    <li style="margin: 4px 0;">{'Kontaktujte blízkou osobu' if language == 'czech' else 'Contact someone close'}</li>
-                </ul>
+    # Jemný widget krizové podpory
+    crisis_html = f"""
+    <div class="gentle-crisis-support" role="complementary" aria-label="Okamžitá pomoc">
+        <div style="
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #F8F3FF 0%, #E8E3F3 100%);
+            color: #5A4B6B;
+            padding: 1rem;
+            border-radius: 15px;
+            box-shadow: 0 2px 8px rgba(90, 75, 107, 0.15);
+            max-width: 280px;
+            z-index: 1000;
+            border: 1px solid rgba(139, 123, 139, 0.2);
+            font-size: 0.9rem;
+            line-height: 1.4;
+        ">
+            <div style="margin-bottom: 0.5rem; font-weight: 500;">
+                💜 {"Cítíte se přetíženi?" if language == 'czech' else "Feeling overwhelmed?"}
             </div>
-        </details>
+            <div style="margin-bottom: 0.8rem; opacity: 0.8;">
+                {"Nejste sami. Pomoc je vždy na dosah." if language == 'czech' else "You're not alone. Help is always within reach."}
+            </div>
+            <div style="font-size: 0.8rem;">
+                <strong>{"Okamžitá pomoc:" if language == 'czech' else "Immediate help:"}</strong><br/>
+                {contacts.get('crisis_line', {}).get('name', 'Linka důvěry')}: 
+                <a href="tel:{contacts.get('crisis_line', {}).get('phone', '116111')}" 
+                   style="color: #7B6B8B; text-decoration: none; font-weight: 500;">
+                    {contacts.get('crisis_line', {}).get('phone', '116 111')}
+                </a>
+            </div>
+        </div>
     </div>
     """
     
-    st.markdown(emergency_html, unsafe_allow_html=True)
+    st.markdown(crisis_html, unsafe_allow_html=True)
+
+# Zachování zpětné kompatibility
+def render_emergency_widget(language='czech'):
+    """Zpětná kompatibilita - přesměrování na novou jemnou verzi"""
+    render_gentle_crisis_support(language)
 
 def show_crisis_support_modal(language='czech'):
     """Show comprehensive crisis support information in a modal"""
