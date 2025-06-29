@@ -3,6 +3,7 @@
 import streamlit as st
 from config.settings import EMERGENCY_CONTACTS
 from utils.localization import get_text, get_accessibility_text
+from content import get_content
 
 def render_gentle_crisis_support(language='czech'):
     """Jemná, diskrétní krizová podpora"""
@@ -10,7 +11,7 @@ def render_gentle_crisis_support(language='czech'):
     if language not in st.session_state:
         language = st.session_state.get('language', 'czech')
     
-    contacts = EMERGENCY_CONTACTS.get(language, EMERGENCY_CONTACTS['czech'])
+    crisis_content = get_content('crisis_support.gentle_widget', language)
     
     # Jemný widget krizové podpory
     crisis_html = f"""
@@ -31,17 +32,16 @@ def render_gentle_crisis_support(language='czech'):
             line-height: 1.4;
         ">
             <div style="margin-bottom: 0.5rem; font-weight: 500;">
-                💜 {"Cítíte se přetíženi?" if language == 'czech' else "Feeling overwhelmed?"}
+                💜 {crisis_content['title']}
             </div>
             <div style="margin-bottom: 0.8rem; opacity: 0.8;">
-                {"Nejste sami. Pomoc je vždy na dosah." if language == 'czech' else "You're not alone. Help is always within reach."}
+                {crisis_content['subtitle']}
             </div>
             <div style="font-size: 0.8rem;">
-                <strong>{"Okamžitá pomoc:" if language == 'czech' else "Immediate help:"}</strong><br/>
-                {contacts.get('crisis_line', {}).get('name', 'Linka důvěry')}: 
-                <a href="tel:{contacts.get('crisis_line', {}).get('phone', '116111')}" 
+                <strong>{crisis_content['help_label']}</strong><br/>
+                <a href="tel:116111" 
                    style="color: #7B6B8B; text-decoration: none; font-weight: 500;">
-                    {contacts.get('crisis_line', {}).get('phone', '116 111')}
+                    {crisis_content['crisis_line']}
                 </a>
             </div>
         </div>

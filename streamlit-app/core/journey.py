@@ -9,6 +9,7 @@ from utils.localization import get_text, get_czech_proverb
 from logic.encouragement import get_random_encouragement, get_emotional_response
 from core.session import get_user_profile, update_user_profile, track_page_visit
 from data.loaders import load_actions_data, load_causes_data
+from content import get_content, get_emotional_response as get_content_emotional_response, get_encouragement
 
 def show_journey_flow():
     """Hlavní lineární tok"""
@@ -31,113 +32,79 @@ def show_journey_flow():
 def _show_welcome_step(language):
     """Krok 1: Vítání"""
     
-    st.markdown("""
+    welcome_content = get_content('journey_content.welcome', language)
+    
+    st.markdown(f"""
     <div style="text-align: center; padding: 3rem 0 2rem 0;">
         <h1 style="color: #2E5D31; font-size: 2.5rem; margin-bottom: 1rem;">
-            🌱 Vítejte
+            {welcome_content['title']}
         </h1>
         <p style="color: #5A6B5A; font-size: 1.3rem; line-height: 1.6;">
-            Jste tady, protože vám záleží na světě kolem vás.<br/>
-            To je krásný začátek.
+            {welcome_content['subtitle']}
         </p>
     </div>
     """, unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.markdown("""
-        ### 🧭 Vaše cesta v několika krocích
+        journey_steps = welcome_content['journey_steps']
+        st.markdown(f"### {journey_steps['title']}")
         
-        1. **Pocity** - Jak se teď cítíte?
-        2. **Hodnoty** - Co vám je blízké?
-        3. **Akce** - Najdeme vám konkrétní krok
-        4. **Reflexe** - Jak to bylo?
-        """)
+        for i, step in enumerate(journey_steps['steps'], 1):
+            st.markdown(f"{i}. {step}")
         
-        if st.button("🌟 Začít mou cestu", use_container_width=True, type="primary"):
+        if st.button(welcome_content['start_button'], use_container_width=True, type="primary"):
             st.session_state.journey_step = 'emotional_check'
             st.rerun()
 
 def _show_emotional_check_step(language):
     """Krok 2: Emocionální check-in"""
     
-    st.markdown("""
+    emotional_content = get_content('journey_content.emotional_check', language)
+    
+    st.markdown(f"""
     <div style="text-align: center; padding: 2rem 0 1rem 0;">
-        <h2 style="color: #2E5D31;">Jak se cítíte?</h2>
+        <h2 style="color: #2E5D31;">{emotional_content['title']}</h2>
     </div>
     """, unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        emotions = [
-            ("overwhelmed", "😰 Zahlcen/a"),
-            ("motivated", "💪 Motivován/a"),
-            ("uncertain", "🤔 Nejistý/á"),
-            ("hopeful", "🌟 Plný/á naděje"),
-        ]
+        emotions = emotional_content['emotions']
         
         for emotion_key, title in emotions:
             if st.button(title, key=f"emotion_{emotion_key}", use_container_width=True):
                 st.session_state.emotional_state = emotion_key
-                st.success("💚 Děkujeme za sdílení")
+                st.success(emotional_content['thank_you'])
                 
-                if st.button("Pokračovat →", use_container_width=True, type="primary"):
+                # Show emotional response
+                response = get_content_emotional_response(emotion_key, language)
+                st.info(response)
+                
+                if st.button(emotional_content['continue_button'], use_container_width=True, type="primary"):
                     st.session_state.journey_step = 'values_discovery'
                     st.rerun()
                 break
 
-def _show_values_discovery_step(language):
-    """Krok 3: Objevování hodnot"""
-    
-    st.markdown("""
-    <div style="text-align: center; padding: 2rem 0 1rem 0;">
-        <h2 style="color: #2E5D31;">Co vám je blízké?</h2>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        values = [
-            ("environment", "🌍 Příroda a klima"),
-            ("community", "🏘️ Komunita"),
-            ("education", "📚 Vzdělání"),
-            ("health", "💚 Zdraví"),
-            ("poverty", "🤝 Pomoc potřebným"),
-            ("children", "👶 Děti"),
-        ]
-        
-        if 'selected_values' not in st.session_state:
-            st.session_state.selected_values = []
-        
-        for key, title in values:
-            is_selected = key in st.session_state.selected_values
-            button_type = "primary" if is_selected else "secondary"
-            
-            if st.button(title, key=f"value_{key}", use_container_width=True, type=button_type):
-                if key in st.session_state.selected_values:
-                    st.session_state.selected_values.remove(key)
-                else:
-                    st.session_state.selected_values.append(key)
-                st.rerun()
-        
-        if len(st.session_state.selected_values) >= 1:
-            if st.button("Najít mou akci →", use_container_width=True, type="primary"):
-                st.session_state.journey_step = 'action_selection'
-                st.rerun()
+
 
 def _show_action_selection_step(language):
     """Krok 4: Výběr akce"""
     
-    st.markdown("""
+    action_content = get_content('journey_content.action_selection', language)
+    
+    st.markdown(f"""
     <div style="text-align: center; padding: 2rem 0 1rem 0;">
-        <h2 style="color: #2E5D31;">Vaše doporučená akce</h2>
+        <h2 style="color: #2E5D31;">{action_content['title']}</h2>
     </div>
     """, unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        # Ukázka akce
-        st.markdown("""
+        # Sample action - in a real app this would be matched to user values
+        sample_action = action_content['sample_action']
+        
+        st.markdown(f"""
         <div style="
             background: linear-gradient(135deg, #f8fdf8 0%, #f0f8f0 100%);
             border: 2px solid #7AB87A;
@@ -145,60 +112,37 @@ def _show_action_selection_step(language):
             padding: 2rem;
             text-align: center;
         ">
-            <h3 style="color: #2E5D31;">🌟 Pomoc místní komunitě</h3>
-            <p style="color: #5A6B5A;">Najděte způsob, jak pomoci ve své lokalitě</p>
+            <h3 style="color: #2E5D31;">{sample_action['title']}</h3>
+            <p style="color: #5A6B5A;">{sample_action['description']}</p>
             <div style="background: #e8f5e8; padding: 1rem; border-radius: 10px;">
                 <strong>💫 Váš dopad:</strong><br>
-                Posílíte komunitu kolem sebe
+                {sample_action['impact']}
             </div>
         </div>
         """, unsafe_allow_html=True)
         
-        if st.button("🚀 Začít tuto akci", use_container_width=True, type="primary"):
-            st.success("🎉 Gratulujeme! Udělali jste něco krásného!")
+        if st.button(action_content['start_button'], use_container_width=True, type="primary"):
+            st.success(action_content['completion_message'])
             
-            if st.button("🔄 Udělat další akci", use_container_width=True):
+            if st.button(action_content['another_action_button'], use_container_width=True):
                 st.session_state.journey_step = 'emotional_check'
                 st.rerun()
 
 def _show_values_discovery_step(language):
     """Krok 3: Objevování hodnot"""
     
-    _show_step_header(3, "Co vám je blízké?" if language == 'czech' else "What's close to your heart?", language)
+    values_content = get_content('journey_content.values_discovery', language)
+    
+    _show_step_header(3, values_content['title'], language)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if language == 'czech':
-            st.markdown("""
-            *Vyberte 2-3 oblasti, které vás nejvíce oslovují. Pomůže nám to najít akce, které budou rezonovat s vaším srdcem.*
-            """)
-        else:
-            st.markdown("""
-            *Choose 2-3 areas that speak to you most. This will help us find actions that resonate with your heart.*
-            """)
+        st.markdown(f"*{values_content['subtitle']}*")
         
         st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
         
         # Hodnoty/oblasti
-        values = [
-            ("environment", "🌍 Příroda a klima"),
-            ("community", "🏘️ Komunita a sousedé"),
-            ("education", "📚 Vzdělání a rozvoj"),
-            ("health", "💚 Zdraví a pohoda"),
-            ("poverty", "🤝 Pomoc potřebným"),
-            ("elderly", "👴 Senioři"),
-            ("children", "👶 Děti a mládež"),
-            ("animals", "🐾 Zvířata")
-        ] if language == 'czech' else [
-            ("environment", "🌍 Nature and climate"),
-            ("community", "🏘️ Community and neighbors"),
-            ("education", "📚 Education and development"),
-            ("health", "💚 Health and wellbeing"),
-            ("poverty", "🤝 Helping those in need"),
-            ("elderly", "👴 Seniors"),
-            ("children", "👶 Children and youth"),
-            ("animals", "🐾 Animals")
-        ]
+        values = values_content['values']
         
         # Inicializace selected_values
         if 'selected_values' not in st.session_state:
@@ -218,16 +162,24 @@ def _show_values_discovery_step(language):
                         st.session_state.selected_values.append(key)
                     st.rerun()
         
+        # Guidance based on selection
+        count = len(st.session_state.selected_values)
+        if count == 0:
+            st.info("💡 " + values_content['guidance']['none_selected'])
+        elif count > 4:
+            st.warning("⚠️ " + values_content['guidance']['too_many'])
+        else:
+            area_word = "oblast" if count == 1 else "oblasti" if count < 5 else "oblastí"
+            st.success(values_content['guidance']['good_selection'].format(count=count, area_word=area_word))
+        
         # Pokračování
-        if len(st.session_state.selected_values) >= 1:
+        if count >= 1:
             st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
             
-            if st.button("Pokračovat →" if language == 'czech' else "Continue →", use_container_width=True, type="primary"):
+            if st.button(values_content['continue_button'], use_container_width=True, type="primary"):
                 update_user_profile({'values': st.session_state.selected_values})
-                st.session_state.journey_step = 'resources_check'
+                st.session_state.journey_step = 'action_selection'  # Skip resources_check for now
                 st.rerun()
-        else:
-            st.info("💡 " + ("Vyberte alespoň jednu oblast, která vás oslovuje" if language == 'czech' else "Choose at least one area that speaks to you"))
 
 def _show_resources_check_step(language):
     """Krok 4: Kontrola zdrojů"""

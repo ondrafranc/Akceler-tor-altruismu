@@ -29,7 +29,8 @@ def main():
     show_journey_flow()
     
     # Jemná krizová podpora (vždy přístupná)
-    render_gentle_crisis_support()
+    language = st.session_state.get('language', 'czech')
+    render_gentle_crisis_support(language)
 
 def _hide_streamlit_elements():
     """Skrytí všech nepotřebných Streamlit elementů"""
