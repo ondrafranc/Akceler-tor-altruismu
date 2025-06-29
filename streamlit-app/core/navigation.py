@@ -5,11 +5,6 @@ from utils.localization import get_text, get_czech_proverb
 from logic.encouragement import get_random_encouragement
 from core.session import (track_page_visit, check_inactivity, is_returning_user, 
                          toggle_accessibility_feature, add_user_feedback)
-from pages.welcome import show_welcome_page
-from pages.assessment import show_assessment_page
-from pages.quick_actions import show_quick_actions_page
-from pages.impact import show_impact_page
-from pages.causes import show_causes_page
 from components.emergency_help import render_emergency_widget
 
 def ensure_clean_layout():
@@ -217,25 +212,9 @@ def _render_welcome_back_section(language):
             st.info(f"💚 {encouragement}")
 
 def _render_main_content():
-    """Render main content based on current page"""
-    current_page = st.session_state.current_page
-    
-    # Add some spacing
-    st.markdown("<br/>", unsafe_allow_html=True)
-    
-    # Main content area
-    if current_page == 'assessment':
-        show_assessment_page()
-    elif current_page == 'quick_actions':
-        show_quick_actions_page()
-    elif current_page == 'impact':
-        show_impact_page()
-    elif current_page == 'causes':
-        show_causes_page()
-    elif current_page == 'feedback':
-        _render_feedback_page()
-    else:
-        show_assessment_page()
+    """Render main content based on current page - handled in app.py now"""
+    # This function is now handled in app.py
+    pass
 
 def _render_feedback_page():
     """Render dedicated feedback page"""
