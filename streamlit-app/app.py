@@ -10,6 +10,9 @@ from core.session import initialize_session_state
 from core.journey import show_journey_flow
 from core.navigation import _render_top_navigation, _render_settings_panel
 from components.emergency_help import render_gentle_crisis_support
+from data.loaders import load_actions_data, load_causes_data
+from content import get_content
+import json
 
 def main():
     """Hlavní vstupní bod aplikace - s navigací a lineární cestou"""
@@ -26,310 +29,504 @@ def main():
     # Skrytí všech Streamlit elementů
     _hide_streamlit_elements()
     
-    # Top navigation bar
-    _render_navigation_bar()
-    
-    # Main content based on current page/mode
-    _render_main_content()
-    
-    # Jemná krizová podpora (vždy přístupná)
-    language = st.session_state.get('language', 'czech')
-    render_gentle_crisis_support(language)
-
-def _render_navigation_bar():
-    """Render top navigation bar"""
-    language = st.session_state.get('language', 'czech')
-    
-    # Initialize current_page if not set
+    # Inicializace current_page pokud neexistuje
     if 'current_page' not in st.session_state:
         st.session_state.current_page = 'journey'
     
-    # Create navigation columns
-    nav_col1, nav_col2, nav_col3, nav_col4, nav_col5, settings_col = st.columns([1, 1, 1, 1, 1, 1])
+    # Top navigace
+    _render_enhanced_navigation()
     
-    current_page = st.session_state.get('current_page', 'journey')
-    
-    # Navigation buttons with active state styling
-    with nav_col1:
-        if st.button("🧭 Cesta" if language == 'czech' else "🧭 Journey", 
-                    type="primary" if current_page == 'journey' else "secondary",
-                    use_container_width=True,
-                    help="Najděte svou cestu k pomoci" if language == 'czech' else "Find your path to help"):
-            st.session_state.current_page = 'journey'
-            # Reset journey to welcome when clicking journey tab
-            st.session_state.journey_step = 'welcome'
-            st.rerun()
-    
-    with nav_col2:
-        if st.button("⚡ Rychlá pomoc" if language == 'czech' else "⚡ Quick Help", 
-                    type="primary" if current_page == 'quick_actions' else "secondary",
-                    use_container_width=True,
-                    help="Okamžité akce" if language == 'czech' else "Immediate actions"):
-            st.session_state.current_page = 'quick_actions'
-            st.rerun()
-    
-    with nav_col3:
-        if st.button("📊 Dopad" if language == 'czech' else "📊 Impact", 
-                    type="primary" if current_page == 'impact' else "secondary",
-                    use_container_width=True,
-                    help="Vaše cesta a pokrok" if language == 'czech' else "Your journey and progress"):
-            st.session_state.current_page = 'impact'
-            st.rerun()
-    
-    with nav_col4:
-        if st.button("🌍 Oblasti" if language == 'czech' else "🌍 Causes", 
-                    type="primary" if current_page == 'causes' else "secondary",
-                    use_container_width=True,
-                    help="Prozkoumejte oblasti pomoci" if language == 'czech' else "Explore areas of help"):
-            st.session_state.current_page = 'causes'
-            st.rerun()
-    
-    with nav_col5:
-        if st.button("📝 Zpětná vazba" if language == 'czech' else "📝 Feedback", 
-                    type="primary" if current_page == 'feedback' else "secondary",
-                    use_container_width=True,
-                    help="Sdělte nám své myšlenky" if language == 'czech' else "Share your thoughts"):
-            st.session_state.current_page = 'feedback'
-            st.rerun()
-    
-    # Settings dropdown in the last column
-    with settings_col:
-        with st.popover("⚙️ Nastavení" if language == 'czech' else "⚙️ Settings", use_container_width=True):
-            _render_settings_panel(language)
-
-def _render_main_content():
-    """Render main content based on current page"""
-    current_page = st.session_state.get('current_page', 'journey')
-    language = st.session_state.get('language', 'czech')
-    
-    # Add some spacing after navigation
-    st.markdown("<br/>", unsafe_allow_html=True)
-    
-    # Route to appropriate content
-    if current_page == 'journey':
+    # Hlavní obsah na základě vybrané stránky
+    if st.session_state.current_page == 'journey':
         show_journey_flow()
-    elif current_page == 'quick_actions':
+    elif st.session_state.current_page == 'quick_actions':
         _show_quick_actions_page()
-    elif current_page == 'impact':
+    elif st.session_state.current_page == 'impact':
         _show_impact_page()
-    elif current_page == 'causes':
+    elif st.session_state.current_page == 'causes':
         _show_causes_page()
-    elif current_page == 'feedback':
+    elif st.session_state.current_page == 'feedback':
         _show_feedback_page()
-    else:
-        show_journey_flow()
-
-def _show_quick_actions_page():
-    """Quick actions page with real Czech opportunities"""
-    language = st.session_state.get('language', 'czech')
+    elif st.session_state.current_page == 'settings':
+        _render_settings_panel()
     
-    if language == 'czech':
-        st.markdown("## ⚡ Rychlá pomoc")
-        st.markdown("*Okamžité akce, které můžete udělat právě teď*")
-    else:
-        st.markdown("## ⚡ Quick Help")
-        st.markdown("*Immediate actions you can take right now*")
-    
-    col1, col2 = st.columns(2)
-    
-    # Quick actions with real Czech organizations
-    quick_actions = [
-        {
-            'title': '🌱 Darovat strom' if language == 'czech' else '🌱 Donate a tree',
-            'description': 'Podpořte zalesňování v ČR - 200 Kč zasadí jeden strom' if language == 'czech' else 'Support reforestation in Czech Republic - 200 CZK plants one tree',
-            'url': 'https://www.sazimebudoucnost.cz/daruj',
-            'time': '2 minuty' if language == 'czech' else '2 minutes'
-        },
-        {
-            'title': '📚 Darovat knihy' if language == 'czech' else '📚 Donate books',
-            'description': 'Najděte nejbližší knihobudku a darujte knihy' if language == 'czech' else 'Find the nearest book exchange and donate books',
-            'url': 'https://www.knihobudky.cz/mapa',
-            'time': '15 minut' if language == 'czech' else '15 minutes'
-        },
-        {
-            'title': '❤️ Napsat dopis seniorovi' if language == 'czech' else '❤️ Write letter to senior',
-            'description': 'Potěšte osamělé seniory osobním dopisem' if language == 'czech' else 'Make lonely seniors happy with a personal letter',
-            'url': 'https://www.dopisy-seniorum.cz',
-            'time': '20 minut' if language == 'czech' else '20 minutes'
-        },
-        {
-            'title': '🥘 Pomoct bezdomovcům' if language == 'czech' else '🥘 Help homeless',
-            'description': 'Darujte jídlo přes aplikaci Naděje' if language == 'czech' else 'Donate food through Naděje app',
-            'url': 'https://www.nadeje.cz/daruj-jidlo',
-            'time': '5 minut' if language == 'czech' else '5 minutes'
-        },
-        {
-            'title': '🎓 Online doučování' if language == 'czech' else '🎓 Online tutoring',
-            'description': 'Staňte se online dobrovolníkem pro děti' if language == 'czech' else 'Become online volunteer for children',
-            'url': 'https://www.ucimeonline.cz/dobrovolnik',
-            'time': '1 hodina týdně' if language == 'czech' else '1 hour per week'
-        },
-        {
-            'title': '🐕 Pomoct útulku' if language == 'czech' else '🐕 Help animal shelter',
-            'description': 'Podpořte pražský útulek pro zvířata' if language == 'czech' else 'Support Prague animal shelter',
-            'url': 'https://www.utulekpraha.cz/pomoc',
-            'time': '3 minuty' if language == 'czech' else '3 minutes'
-        }
-    ]
-    
-    for i, action in enumerate(quick_actions):
-        with col1 if i % 2 == 0 else col2:
-            with st.container():
-                st.markdown(f"""
-                <div style="
-                    background: linear-gradient(135deg, #f8fdf8 0%, #f0f8f0 100%);
-                    border: 1px solid #A8D5A8;
-                    border-radius: 15px;
-                    padding: 1.5rem;
-                    margin: 1rem 0;
-                    height: 200px;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: space-between;
-                ">
-                    <div>
-                        <h4 style="color: #2E5D31; margin-bottom: 0.5rem;">{action['title']}</h4>
-                        <p style="color: #5A6B5A; margin-bottom: 1rem; font-size: 0.9rem;">{action['description']}</p>
-                    </div>
-                    <div>
-                        <small style="color: #7AB87A;">⏱️ {action['time']}</small>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                if st.button(f"Začít" if language == 'czech' else "Start", 
-                           key=f"action_{i}", use_container_width=True):
-                    st.markdown(f"[Otevřít {action['title']}]({action['url']})")
-                    st.success("Děkujeme za vaši pomoc! 💚" if language == 'czech' else "Thank you for your help! 💚")
-
-def _show_impact_page():
-    """Impact tracking page"""
-    language = st.session_state.get('language', 'czech')
-    
-    if language == 'czech':
-        st.markdown("## 📊 Váš dopad")
-        st.markdown("*Sledujte svou cestu pomoci*")
-    else:
-        st.markdown("## 📊 Your Impact")
-        st.markdown("*Track your helping journey*")
-    
-    # Simple impact metrics
-    total_actions = st.session_state.get('total_impact', {}).get('actions', 0)
-    
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Kroky" if language == 'czech' else "Steps", total_actions)
-    with col2:
-        st.metric("Dní od začátku" if language == 'czech' else "Days since start", "1")
-    with col3:
-        st.metric("Série" if language == 'czech' else "Streak", "1")
-    
-    if total_actions == 0:
-        st.info("Začněte svou cestu v sekci 'Cesta' nebo 'Rychlá pomoc'!" if language == 'czech' 
-               else "Start your journey in 'Journey' or 'Quick Help' section!")
-
-def _show_causes_page():
-    """Causes exploration page"""
-    language = st.session_state.get('language', 'czech')
-    
-    if language == 'czech':
-        st.markdown("## 🌍 Oblasti pomoci")
-        st.markdown("*Prozkoumejte různé způsoby, jak můžete pomoci*")
-    else:
-        st.markdown("## 🌍 Areas of Help")
-        st.markdown("*Explore different ways you can help*")
-    
-    causes = [
-        {
-            'title': '🌱 Životní prostředí' if language == 'czech' else '🌱 Environment',
-            'description': 'Ochrana přírody a boj proti změně klimatu' if language == 'czech' else 'Nature protection and climate change action'
-        },
-        {
-            'title': '📚 Vzdělávání' if language == 'czech' else '📚 Education', 
-            'description': 'Podpora vzdělávání a rozvoje' if language == 'czech' else 'Supporting education and development'
-        },
-        {
-            'title': '🏘️ Komunita' if language == 'czech' else '🏘️ Community',
-            'description': 'Budování silnějších komunit' if language == 'czech' else 'Building stronger communities'
-        },
-        {
-            'title': '💚 Zdraví' if language == 'czech' else '💚 Health',
-            'description': 'Podpora zdraví a pohody' if language == 'czech' else 'Supporting health and wellbeing'
-        }
-    ]
-    
-    col1, col2 = st.columns(2)
-    for i, cause in enumerate(causes):
-        with col1 if i % 2 == 0 else col2:
-            st.markdown(f"""
-            <div style="
-                background: linear-gradient(135deg, #f8fdf8 0%, #f0f8f0 100%);
-                border: 1px solid #A8D5A8;
-                border-radius: 15px;
-                padding: 1.5rem;
-                margin: 1rem 0;
-            ">
-                <h4 style="color: #2E5D31; margin-bottom: 0.5rem;">{cause['title']}</h4>
-                <p style="color: #5A6B5A; margin-bottom: 0;">{cause['description']}</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-def _show_feedback_page():
-    """Feedback page"""
-    language = st.session_state.get('language', 'czech')
-    
-    if language == 'czech':
-        st.markdown("## 📝 Zpětná vazba")
-        st.markdown("*Sdělte nám své myšlenky*")
-    else:
-        st.markdown("## 📝 Feedback")
-        st.markdown("*Share your thoughts*")
-    
-    # Feedback form
-    with st.form("feedback_form"):
-        feedback_text = st.text_area(
-            "Vaše zpětná vazba:" if language == 'czech' else "Your feedback:",
-            placeholder="Sdělte nám své myšlenky, návrhy nebo zkušenosti..." if language == 'czech' else "Share your thoughts, suggestions or experiences...",
-            height=150
-        )
-        
-        submitted = st.form_submit_button("Odeslat zpětnou vazbu" if language == 'czech' else "Send feedback")
-        
-        if submitted and feedback_text.strip():
-            st.success("Děkujeme za zpětnou vazbu! Velmi si jí vážíme." if language == 'czech' else "Thank you for your feedback! We really appreciate it.")
-            st.balloons()
+    # Jemná krizová podpora - vždy přítomná
+    render_gentle_crisis_support()
 
 def _hide_streamlit_elements():
-    """Skrytí všech nepotřebných Streamlit elementů"""
+    """Skrytí všech základních Streamlit elementů"""
     st.markdown("""
     <style>
-        /* Skrytí všech Streamlit menu a elementů */
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         header {visibility: hidden;}
         .stDeployButton {display: none;}
-        
-        /* Skrytí sidebar úplně */
-        .css-1d391kg {display: none !important;}
-        .css-1cypcdb {display: none !important;}
-        .css-17eq0hr {display: none !important;}
-        section[data-testid="stSidebar"] {display: none !important;}
-        .stSidebar {display: none !important;}
-        
-        /* Maximální využití prostoru */
-        .main .block-container {
-            padding-top: 1rem !important;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-            max-width: 100% !important;
-        }
-        
-        /* Skrytí "Manage app" a podobných */
-        .css-1v0mbdj {display: none !important;}
-        .css-1rs6os {display: none !important;}
-        .css-1vq4p4l {display: none !important;}
+        .stDecoration {display: none;}
     </style>
     """, unsafe_allow_html=True)
+
+def _render_enhanced_navigation():
+    """Vylepšená navigace s důrazem na rychlé akce"""
+    
+    st.markdown("""
+    <div style="
+        background: linear-gradient(135deg, #7AB87A 0%, #6BAD6B 100%);
+        padding: 1rem 0;
+        margin: -1rem -1rem 2rem -1rem;
+        box-shadow: 0 2px 10px rgba(122, 184, 122, 0.3);
+    ">
+        <div style="
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        ">
+    """, unsafe_allow_html=True)
+    
+    # Navigation tabs
+    cols = st.columns([1, 1, 1.5, 1, 1, 1])
+    
+    tab_style_normal = """
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+        text-align: center;
+        font-weight: 500;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+    """
+    
+    tab_style_active = """
+        background: rgba(255, 255, 255, 0.9);
+        color: #2E5D31;
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+        text-align: center;
+        font-weight: 600;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    """
+    
+    tab_style_emphasized = """
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        color: #2E5D31;
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+        text-align: center;
+        font-weight: 700;
+        border: 2px solid #FFD700;
+        box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+        animation: pulse 2s infinite;
+    """
+    
+    with cols[0]:
+        if st.button("🧭 Cesta", use_container_width=True, 
+                    type="primary" if st.session_state.current_page == 'journey' else "secondary"):
+            st.session_state.current_page = 'journey'
+            st.rerun()
+    
+    with cols[1]:
+        if st.button("📊 Dopad", use_container_width=True,
+                    type="primary" if st.session_state.current_page == 'impact' else "secondary"):
+            st.session_state.current_page = 'impact'
+            st.rerun()
+    
+    with cols[2]:
+        # Emphasized quick actions button
+        st.markdown(f"""
+        <style>
+        @keyframes pulse {{
+            0% {{ transform: scale(1); }}
+            50% {{ transform: scale(1.05); }}
+            100% {{ transform: scale(1); }}
+        }}
+        </style>
+        """, unsafe_allow_html=True)
+        
+        if st.button("⚡ RYCHLÁ POMOC", use_container_width=True,
+                    type="primary"):
+            st.session_state.current_page = 'quick_actions'
+            st.rerun()
+    
+    with cols[3]:
+        if st.button("🌍 Oblasti", use_container_width=True,
+                    type="primary" if st.session_state.current_page == 'causes' else "secondary"):
+            st.session_state.current_page = 'causes'
+            st.rerun()
+    
+    with cols[4]:
+        if st.button("📝 Zpětná vazba", use_container_width=True,
+                    type="primary" if st.session_state.current_page == 'feedback' else "secondary"):
+            st.session_state.current_page = 'feedback'
+            st.rerun()
+    
+    with cols[5]:
+        if st.button("⚙️ Nastavení", use_container_width=True,
+                    type="primary" if st.session_state.current_page == 'settings' else "secondary"):
+            st.session_state.current_page = 'settings'
+            st.rerun()
+    
+    st.markdown("</div></div>", unsafe_allow_html=True)
+
+def _show_quick_actions_page():
+    """Stránka rychlých akcí - okamžitá pomoc"""
+    
+    st.markdown("""
+    <div style="text-align: center; padding: 2rem 0;">
+        <h1 style="color: #2E5D31; margin-bottom: 0.5rem;">⚡ Rychlá pomoc</h1>
+        <p style="color: #5A6B5A; font-size: 1.2rem; margin: 0;">
+            Věci, které můžete udělat právě teď. Žádné dlouhé registrace, žádné čekání.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Load actions data
+    try:
+        actions_data = load_actions_data('czech')
+        actions = actions_data.get('actions', {})
+        
+        # Filter for quick actions (low time commitment, immediate impact)
+        quick_actions = {
+            key: action for key, action in actions.items()
+            if action.get('requirements', {}).get('time_minutes', 999) <= 30
+            or action.get('commitment_type') == 'one_time'
+        }
+        
+        # Display quick actions in cards
+        cols = st.columns(2)
+        for i, (action_id, action) in enumerate(quick_actions.items()):
+            with cols[i % 2]:
+                _render_quick_action_card(action)
+                
+    except Exception as e:
+        st.error(f"Chyba při načítání akcí: {e}")
+        
+        # Fallback quick actions
+        _render_fallback_quick_actions()
+
+def _render_quick_action_card(action):
+    """Render jednotlivé karty rychlých akcí"""
+    
+    time_req = action.get('requirements', {}).get('time_minutes', 0)
+    cost = action.get('requirements', {}).get('cost_usd', 0)
+    organization = action.get('organization', {}).get('name', 'Neznámá organizace')
+    website = action.get('organization', {}).get('website', '#')
+    
+    time_text = f"{time_req} min" if time_req < 60 else f"{time_req//60}h"
+    cost_text = "Zdarma" if cost == 0 else f"~{int(cost * 25)} Kč"
+    
+    st.markdown(f"""
+    <div style="
+        background: linear-gradient(135deg, #f8fdf8 0%, #f0f8f0 100%);
+        border: 2px solid #7AB87A;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        box-shadow: 0 4px 15px rgba(122, 184, 122, 0.2);
+        transition: transform 0.3s ease;
+    " onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+        <h3 style="color: #2E5D31; margin-bottom: 1rem;">
+            {action.get('title', 'Bez názvu')}
+        </h3>
+        <p style="color: #5A6B5A; margin-bottom: 1rem; line-height: 1.5;">
+            {action.get('description', 'Popis není k dispozici')}
+        </p>
+        <div style="
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: #4A5E4A;
+        ">
+            <span>⏱️ {time_text}</span>
+            <span>💰 {cost_text}</span>
+        </div>
+        <div style="
+            background: #e8f5e8;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: #2E5D31;
+        ">
+            <strong>Organizace:</strong> {organization}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if st.button(f"🚀 Začít: {action.get('title', 'Akce')}", 
+                use_container_width=True, 
+                type="primary",
+                key=f"quick_{action.get('id', 'unknown')}"):
+        if website and website != '#':
+            st.success(f"🎉 Skvělé! Přejděte na: {website}")
+            st.markdown(f"[Otevřít {organization}]({website})")
+        else:
+            st.success("🎉 Děkujeme za zájem! Kontaktujte organizaci přímo.")
+
+def _render_fallback_quick_actions():
+    """Záložní rychlé akce pokud se nepodaří načíst data"""
+    
+    fallback_actions = [
+        {
+            'title': '💚 Dar 100 Kč pro Charitu ČR',
+            'description': 'Okamžitý příspěvek na pomoc potřebným v České republice',
+            'time': '2 min',
+            'cost': '100 Kč',
+            'url': 'https://www.charita.cz'
+        },
+        {
+            'title': '🩸 Registrace dárce krve',
+            'description': 'Zaregistrujte se jako dárce krve a zachraňte životy',
+            'time': '5 min',
+            'cost': 'Zdarma',
+            'url': 'https://www.darcekrve.cz'
+        },
+        {
+            'title': '🌱 Podpis petice za klima',
+            'description': 'Podpořte ochranu klimatu jedním kliknutím',
+            'time': '1 min',
+            'cost': 'Zdarma',
+            'url': 'https://www.greenpeace.org/czech'
+        },
+        {
+            'title': '📱 Sdílení na sociálních sítích',
+            'description': 'Sdílejte důležitou zprávu a zvyšte povědomí',
+            'time': '30 sec',
+            'cost': 'Zdarma',
+            'url': '#'
+        }
+    ]
+    
+    cols = st.columns(2)
+    for i, action in enumerate(fallback_actions):
+        with cols[i % 2]:
+            st.markdown(f"""
+            <div style="
+                background: #f8fdf8;
+                border: 1px solid #7AB87A;
+                border-radius: 10px;
+                padding: 1rem;
+                margin: 0.5rem 0;
+            ">
+                <h4 style="color: #2E5D31; margin-bottom: 0.5rem;">
+                    {action['title']}
+                </h4>
+                <p style="color: #5A6B5A; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                    {action['description']}
+                </p>
+                <div style="font-size: 0.8rem; color: #4A5E4A;">
+                    ⏱️ {action['time']} | 💰 {action['cost']}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if st.button(f"Začít", key=f"fallback_{i}", use_container_width=True):
+                if action['url'] != '#':
+                    st.success(f"Přejděte na: {action['url']}")
+
+def _show_causes_page():
+    """Stránka oblastí pomoci"""
+    
+    st.markdown("""
+    <div style="text-align: center; padding: 2rem 0;">
+        <h1 style="color: #2E5D31; margin-bottom: 0.5rem;">🌍 Oblasti pomoci</h1>
+        <p style="color: #5A6B5A; font-size: 1.2rem; margin: 0;">
+            Objevte různé způsoby, jak můžete pomoci. Každá oblast má své specifické potřeby.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    try:
+        causes_data = load_causes_data('czech')
+        causes = causes_data.get('causes', {})
+        
+        for cause_id, cause in causes.items():
+            _render_cause_card(cause)
+            
+    except Exception as e:
+        st.error(f"Chyba při načítání oblastí: {e}")
+
+def _render_cause_card(cause):
+    """Render karty jednotlivých oblastí"""
+    
+    st.markdown(f"""
+    <div style="
+        background: linear-gradient(135deg, #f8fdf8 0%, #f0f8f0 100%);
+        border: 1px solid #7AB87A;
+        border-radius: 15px;
+        padding: 2rem;
+        margin: 1.5rem 0;
+        box-shadow: 0 2px 10px rgba(122, 184, 122, 0.1);
+    ">
+        <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+            <span style="font-size: 2rem; margin-right: 1rem;">{cause.get('emoji', '🌟')}</span>
+            <h2 style="color: #2E5D31; margin: 0;">{cause.get('title', 'Bez názvu')}</h2>
+        </div>
+        <p style="color: #5A6B5A; margin-bottom: 1.5rem; line-height: 1.6; font-size: 1.1rem;">
+            {cause.get('description', 'Popis není k dispozici')}
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Success stories
+    success_stories = cause.get('success_stories', [])
+    if success_stories:
+        with st.expander(f"💫 Příběhy úspěchu - {cause.get('title')}"):
+            for story in success_stories:
+                st.markdown(f"""
+                **{story.get('impact', 'Dopad')}** ({story.get('location', 'Neznámé místo')})
+                
+                _{story.get('story', 'Příběh není k dispozici')}_
+                """)
+
+def _show_impact_page():
+    """Stránka dopadu - statistiky a pokrok"""
+    
+    st.markdown("""
+    <div style="text-align: center; padding: 2rem 0;">
+        <h1 style="color: #2E5D31; margin-bottom: 0.5rem;">📊 Váš dopad</h1>
+        <p style="color: #5A6B5A; font-size: 1.2rem; margin: 0;">
+            Každá akce má význam. Zde vidíte, co jste už dokázali.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Personal stats
+    completed_actions = st.session_state.get('completed_actions', [])
+    total_actions = len(completed_actions)
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown(f"""
+        <div style="
+            background: linear-gradient(135deg, #7AB87A 0%, #6BAD6B 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            margin: 1rem 0;
+        ">
+            <h2 style="margin: 0; font-size: 3rem;">{total_actions}</h2>
+            <p style="margin: 0.5rem 0 0 0; font-size: 1.1rem;">Dokončených akcí</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        # Calculate estimated people helped
+        estimated_help = total_actions * 3  # rough estimate
+        st.markdown(f"""
+        <div style="
+            background: linear-gradient(135deg, #5A9B5A 0%, #4A8A4A 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            margin: 1rem 0;
+        ">
+            <h2 style="margin: 0; font-size: 3rem;">~{estimated_help}</h2>
+            <p style="margin: 0.5rem 0 0 0; font-size: 1.1rem;">Lidí jste pomohli</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        # Days since first action
+        if completed_actions:
+            first_action_date = completed_actions[0].get('completed_at')
+            if first_action_date:
+                from datetime import datetime
+                days_helping = (datetime.now() - first_action_date).days
+            else:
+                days_helping = 1
+        else:
+            days_helping = 0
+            
+        st.markdown(f"""
+        <div style="
+            background: linear-gradient(135deg, #4A8A4A 0%, #3A7A3A 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            margin: 1rem 0;
+        ">
+            <h2 style="margin: 0; font-size: 3rem;">{days_helping}</h2>
+            <p style="margin: 0.5rem 0 0 0; font-size: 1.1rem;">Dní pomáháte</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Recent actions
+    if completed_actions:
+        st.markdown("### 📝 Vaše poslední akce")
+        for action in completed_actions[-3:]:  # Show last 3 actions
+            action_data = action.get('action', {})
+            completed_at = action.get('completed_at')
+            date_str = completed_at.strftime('%d.%m.%Y') if completed_at else 'Neznámé datum'
+            
+            st.markdown(f"""
+            <div style="
+                background: #f8fdf8;
+                border-left: 4px solid #7AB87A;
+                padding: 1rem;
+                margin: 0.5rem 0;
+            ">
+                <strong>{action_data.get('title', 'Neznámá akce')}</strong><br>
+                <small style="color: #5A6B5A;">Dokončeno: {date_str}</small>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.info("🌱 Zatím jste nedokončili žádnou akci. Začněte svou cestu pomocí!")
+
+def _show_feedback_page():
+    """Stránka zpětné vazby"""
+    
+    st.markdown("""
+    <div style="text-align: center; padding: 2rem 0;">
+        <h1 style="color: #2E5D31; margin-bottom: 0.5rem;">📝 Zpětná vazba</h1>
+        <p style="color: #5A6B5A; font-size: 1.2rem; margin: 0;">
+            Pomozte nám vylepšit Akcelerátor altruismu. Vaše zpětná vazba je pro nás cenná.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    with st.form("feedback_form"):
+        st.markdown("### 💭 Jak hodnotíte svou zkušenost?")
+        
+        rating = st.select_slider(
+            "Celkové hodnocení:",
+            options=[1, 2, 3, 4, 5],
+            value=4,
+            format_func=lambda x: "⭐" * x
+        )
+        
+        st.markdown("### 📝 Co funguje dobře?")
+        positive = st.text_area(
+            "Napište nám, co se vám líbí:",
+            placeholder="Co vás nejvíce oslovilo? Která část byla nejužitečnější?"
+        )
+        
+        st.markdown("### 🔧 Co bychom mohli zlepšit?")
+        improvement = st.text_area(
+            "Napište nám vaše návrhy:",
+            placeholder="Co bylo matoucí? Co by pomohlo? Jaké funkce vám chybí?"
+        )
+        
+        submitted = st.form_submit_button("Odeslat zpětnou vazbu", use_container_width=True, type="primary")
+        
+        if submitted:
+            # Store feedback in session state
+            if 'feedback_submissions' not in st.session_state:
+                st.session_state.feedback_submissions = []
+            
+            st.session_state.feedback_submissions.append({
+                'rating': rating,
+                'positive': positive,
+                'improvement': improvement,
+                'submitted_at': st.session_state.get('current_time', 'unknown')
+            })
+            
+            st.success("🙏 Děkujeme za vaši zpětnou vazbu! Pomáhá nám vytvářet lepší zážitek pro všechny.")
 
 if __name__ == "__main__":
     main() 

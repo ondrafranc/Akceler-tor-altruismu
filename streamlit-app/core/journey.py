@@ -260,14 +260,6 @@ def _show_emotional_micro_intervention(emotion_key, language):
         </div>
         """, unsafe_allow_html=True)
         
-        # Krátká pauza s animací
-        import time
-        progress_bar = st.progress(0)
-        for i in range(100):
-            progress_bar.progress(i + 1)
-            time.sleep(0.02)  # 2 sekundy celkem
-        progress_bar.empty()
-        
         # Specifický průvodce podle emoce
         if emotion_key == 'overwhelmed':
             st.markdown(f"""
@@ -306,7 +298,7 @@ def _show_emotional_micro_intervention(emotion_key, language):
             </div>
             """, unsafe_allow_html=True)
             
-        elif emotion_key == 'uncertain':
+        elif emotion_key in ['uncertain', 'lost']:
             st.markdown(f"""
             <div style="
                 background: #f0f8f0;
@@ -335,11 +327,9 @@ def _show_emotional_micro_intervention(emotion_key, language):
         """, unsafe_allow_html=True)
         
         # Tlačítko pokračování s personalizovaným textem
-        if st.button(
-            intervention.get('continue_when_ready', 'Pokračovat →'), 
-            use_container_width=True, 
-            type="primary"
-        ):
+        continue_button_text = intervention.get('continue_when_ready', 'Pokračovat →')
+        
+        if st.button(continue_button_text, use_container_width=True, type="primary", key="continue_after_intervention"):
             st.session_state.emotion_intervention_shown = True
             st.session_state.journey_step = 'values_discovery'
             st.rerun()

@@ -302,7 +302,7 @@ def get_text(key, language='czech'):
             'part_of_movement': "You're part of a movement of people who want change",
         }
     }
-    return texts.get(language, texts['czech']).get(key, key)
+    return texts.get(language, texts['czech']).get(key, key) 
 
 def get_czech_proverb(context='general'):
     """Get contextual Czech proverbs and authentic wisdom"""
