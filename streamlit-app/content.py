@@ -27,12 +27,14 @@ JOURNEY_CONTENT = {
         
         # Step 2: Emotional Check
         'emotional_check': {
-            'title': 'Jak se cítíte?',
+            'title': 'Jak se právě teď cítíte?',
+            'purpose_intro': 'Pomůže nám to doporučit vám ten nejvhodnější první krok.',
             'emotions': [
                 ('overwhelmed', '😰 Zahlcen/a'),
                 ('motivated', '💪 Motivován/a'),
                 ('uncertain', '🤔 Nejistý/á'),
                 ('hopeful', '🌟 Plný/á naděje'),
+                ('lost', '😔 Ztracen/a')
             ],
             'thank_you': '💚 Děkujeme za sdílení',
             'continue_button': 'Pokračovat →'
