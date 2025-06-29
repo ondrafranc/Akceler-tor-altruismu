@@ -278,39 +278,46 @@ def apply_styles():
             background: rgba(122, 184, 122, 1);
         }
         
-        /* Enhanced emergency help widget */
-        .emergency-help {
+        /* Gentle emergency help widget */
+        .emergency-help-gentle {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background: linear-gradient(135deg, #FF6B6B 0%, #E55555 100%);
-            color: white;
+            background: linear-gradient(135deg, #F3F0F7 0%, #E8E3ED 100%);
+            color: #5D4E75;
             padding: 1rem;
-            border-radius: 12px;
-            font-weight: 600;
+            border-radius: 16px;
+            font-weight: 500;
             z-index: 1000;
-            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
-            max-width: 280px;
+            box-shadow: 0 6px 20px rgba(93, 78, 117, 0.15), 0 2px 6px rgba(93, 78, 117, 0.1);
+            max-width: 300px;
             transition: all 0.3s ease;
-            border: 2px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(184, 169, 201, 0.3);
+            backdrop-filter: blur(10px);
         }
-        .emergency-help:hover {
-            transform: scale(1.02);
-            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+        .emergency-help-gentle:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(93, 78, 117, 0.2), 0 4px 10px rgba(93, 78, 117, 0.15);
+            background: linear-gradient(135deg, #F5F2F9 0%, #EAE5F0 100%);
         }
-        .emergency-help a {
-            color: white !important;
-            text-decoration: underline !important;
+        .emergency-help-gentle a {
+            color: #5D4E75 !important;
+            transition: color 0.2s ease !important;
         }
-        .emergency-help a:hover {
-            color: #ffeeee !important;
+        .emergency-help-gentle a:hover {
+            color: #4A3D5C !important;
+            border-bottom-color: #5D4E75 !important;
         }
-        .emergency-help details summary {
+        .emergency-help-gentle details summary {
             margin-bottom: 8px;
+            transition: color 0.2s ease;
         }
-        .emergency-help details[open] summary {
+        .emergency-help-gentle details[open] summary {
             margin-bottom: 12px;
-            color: #ffdddd;
+            color: #5D4E75;
+        }
+        .emergency-help-gentle details summary:hover {
+            color: #4A3D5C;
         }
         
         /* Progress text styling */
@@ -569,11 +576,12 @@ def apply_styles():
                 left: 10px !important;
                 font-size: 0.7rem !important;
             }
-            .emergency-help {
+            .emergency-help-gentle {
                 bottom: 10px !important;
                 right: 10px !important;
-                max-width: 200px !important;
+                max-width: 250px !important;
                 padding: 0.75rem !important;
+                font-size: 0.8rem !important;
             }
             
             /* Mobile-specific accessibility improvements */

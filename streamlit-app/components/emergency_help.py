@@ -1,43 +1,46 @@
-"""Enhanced emergency help widget with comprehensive crisis support"""
+"""Enhanced emergency help widget with gentle, supportive design"""
 
 import streamlit as st
 from config.settings import EMERGENCY_CONTACTS
 from utils.localization import get_text, get_accessibility_text
 
 def render_emergency_widget(language='czech'):
-    """Render the enhanced always-visible emergency help widget with comprehensive support"""
+    """Render the enhanced always-visible emergency help widget with gentle, supportive design"""
     
     if language not in st.session_state:
         language = st.session_state.get('language', 'czech')
     
     contacts = EMERGENCY_CONTACTS.get(language, EMERGENCY_CONTACTS['czech'])
     
-    # Enhanced emergency widget with more comprehensive information
+    # Redesigned emergency widget with soft, supportive styling
     emergency_html = f"""
-    <div class="emergency-help" role="complementary" aria-label="{get_accessibility_text('emergency_widget', language)}">
-        <div style="display: flex; align-items: center; margin-bottom: 8px;">
-            <span style="font-size: 1.1em;">🆘</span>
-            <strong style="margin-left: 8px;">{'Potřebujete okamžitou pomoc?' if language == 'czech' else 'Need immediate help?'}</strong>
+    <div class="emergency-help-gentle" role="complementary" aria-label="{get_accessibility_text('emergency_widget', language)}">
+        <div style="display: flex; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 1.2em; margin-right: 8px;">🤗</span>
+            <strong style="color: #5D4E75; font-size: 0.95rem;">{'Cítíte se zahlceni?' if language == 'czech' else 'Feeling overwhelmed?'}</strong>
         </div>
-        <div style="margin-bottom: 6px;">
-            📞 <strong>{'Linka bezpečí: ' if language == 'czech' else 'Safety line: '}</strong>
-            <a href="tel:{contacts['safety_line']}" style="color: white; text-decoration: underline;">{contacts['safety_line']}</a>
-        </div>
+        <p style="color: #6B5B73; font-size: 0.85rem; margin: 8px 0; line-height: 1.4;">
+            {'Nejste sami. Pomoc je na dosah.' if language == 'czech' else 'You\'re not alone. Help is within reach.'}
+        </p>
         <div style="margin-bottom: 8px;">
-            🚨 <strong>{'Krizová intervence: ' if language == 'czech' else 'Crisis intervention: '}</strong>
-            <a href="tel:{contacts['crisis_intervention']}" style="color: white; text-decoration: underline;">{contacts['crisis_intervention']}</a>
+            <span style="color: #7A6B8A; font-size: 0.85rem;">📞 {'Linka bezpečí:' if language == 'czech' else 'Safety line:'}</span><br>
+            <a href="tel:{contacts['safety_line']}" style="color: #5D4E75; text-decoration: none; font-weight: 600; font-size: 0.9rem; border-bottom: 1px dotted #B8A9C9;">{contacts['safety_line']}</a>
         </div>
-        <details style="margin-top: 8px;">
-            <summary style="cursor: pointer; font-size: 0.9em; color: #ffeeee;">
-                {'▶ Co dělat v krizi' if language == 'czech' else '▶ What to do in crisis'}
+        <div style="margin-bottom: 12px;">
+            <span style="color: #7A6B8A; font-size: 0.85rem;">🆘 {'Krizová pomoc:' if language == 'czech' else 'Crisis support:'}</span><br>
+            <a href="tel:{contacts['crisis_intervention']}" style="color: #5D4E75; text-decoration: none; font-weight: 600; font-size: 0.9rem; border-bottom: 1px dotted #B8A9C9;">{contacts['crisis_intervention']}</a>
+        </div>
+        <details style="margin-top: 10px;">
+            <summary style="cursor: pointer; font-size: 0.8rem; color: #8B7A9B; outline: none;">
+                {'▶ Okamžitá podpora' if language == 'czech' else '▶ Immediate support'}
             </summary>
-            <div style="margin-top: 8px; font-size: 0.85em; line-height: 1.3;">
-                {'Pokud jste v krizi, nejste sami. Zde jsou okamžité kroky:' if language == 'czech' else 'If you\'re in crisis, you\'re not alone. Here are immediate steps:'}
-                <ul style="margin: 6px 0; padding-left: 16px;">
-                    <li>{'Zavolejte na čísla výše' if language == 'czech' else 'Call the numbers above'}</li>
-                    <li>{'Najděte bezpečné místo' if language == 'czech' else 'Find a safe place'}</li>
-                    <li>{'Zůstaňte s někým důvěryhodným' if language == 'czech' else 'Stay with someone trustworthy'}</li>
-                    <li>{'Vyhledejte lékařskou pomoc' if language == 'czech' else 'Seek medical help'}</li>
+            <div style="margin-top: 10px; font-size: 0.8rem; line-height: 1.4; color: #6B5B73;">
+                {'Pokud potřebujete okamžitou pomoc:' if language == 'czech' else 'If you need immediate help:'}
+                <ul style="margin: 8px 0; padding-left: 16px; color: #7A6B8A;">
+                    <li style="margin: 4px 0;">{'Zavolejte na čísla výše' if language == 'czech' else 'Call the numbers above'}</li>
+                    <li style="margin: 4px 0;">{'Najděte bezpečné místo' if language == 'czech' else 'Find a safe place'}</li>
+                    <li style="margin: 4px 0;">{'Zhluboka se nadechněte' if language == 'czech' else 'Take deep breaths'}</li>
+                    <li style="margin: 4px 0;">{'Kontaktujte blízkou osobu' if language == 'czech' else 'Contact someone close'}</li>
                 </ul>
             </div>
         </details>

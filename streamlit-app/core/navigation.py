@@ -12,8 +12,32 @@ from pages.impact import show_impact_page
 from pages.causes import show_causes_page
 from components.emergency_help import render_emergency_widget
 
+def ensure_clean_layout():
+    """Ensure completely clean layout with no sidebar remnants"""
+    # Hide sidebar completely
+    st.markdown("""
+    <style>
+        /* Hide sidebar completely */
+        .css-1d391kg {display: none !important;}
+        .css-1cypcdb {display: none !important;}
+        .css-17eq0hr {display: none !important;}
+        section[data-testid="stSidebar"] {display: none !important;}
+        .stSidebar {display: none !important;}
+        
+        /* Ensure main content uses full width */
+        .main .block-container {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+            max-width: 100% !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
 def main_navigation():
     """Clean main navigation with top nav bar and hero intro."""
+    # Ensure clean layout first
+    ensure_clean_layout()
+    
     language = st.session_state.get('language', 'czech')
     
     # Track page visit
