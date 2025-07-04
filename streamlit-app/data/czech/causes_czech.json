@@ -1,154 +1,146 @@
 {
-  "causes": {
-    "mistni_komunita": {
-      "id": "mistni_komunita",
-      "title": "Místní komunita",
-      "emoji": "🏠",
-      "description": "Praktická pomoc lidem ve vašem okolí. Každá komunita potřebuje lidi, kteří se starají o své sousedy.",
-      "values_alignment": ["community", "justice", "reducing_suffering"],
-      "time_sensitivity": "ongoing",
-      "geographic_scope": "local",
-      "complexity_level": "beginner_friendly",
-      "evidence_base": "community_feedback",
-      "learning_resources": [
-        {
-          "title": "Jak začít pomáhat v komunitě",
-          "url": "https://www.dobrovolnik.cz/jak-zacit",
-          "type": "guide"
-        },
-        {
-          "title": "Charita České republiky",
-          "url": "https://www.charita.cz",
-          "type": "organization"
-        }
-      ],
-      "success_stories": [
-        {
-          "story": "Organizovala pravidelné setkání seniorů v našem městě. Dnes se schází 40 lidí týdně.",
-          "impact": "Snížení osamělosti u 40 seniorů",
-          "location": "Brno"
-        }
-      ]
-    },
-    "zivotni_prostredi": {
-      "id": "zivotni_prostredi",
-      "title": "Životní prostředí",
-      "emoji": "🌍",
-      "description": "Ochrana české přírody a snižování našeho dopadu na klima. Malé změny v každodenním životě se sčítají.",
-      "values_alignment": ["environment", "community", "opportunities"],
-      "time_sensitivity": "urgent",
-      "geographic_scope": "local_to_global",
-      "complexity_level": "all_levels",
-      "evidence_base": "scientific_consensus",
-      "learning_resources": [
-        {
-          "title": "Klimatická koalice",
-          "url": "https://www.klimatickakoalice.cz",
-          "type": "organization"
-        },
-        {
-          "title": "Hnutí DUHA",
-          "url": "https://www.hnutiduha.cz",
-          "type": "organization"
-        }
-      ],
-      "success_stories": [
-        {
-          "story": "Zorganizoval úklid lesa v Krkonoších. Zapojilo se 120 dobrovolníků a odstranili 2 tuny odpadků.",
-          "impact": "Vyčištění 5 km lesních cest",
-          "location": "Krkonoše"
-        }
-      ]
-    },
-    "vzdelavani": {
-      "id": "vzdelavani",
-      "title": "Vzdělávání",
-      "emoji": "📚",
-      "description": "Podpora vzdělání a rozvoje lidí všech věkových kategorií. Znalosti a dovednosti mění životy.",
-      "values_alignment": ["education", "opportunities", "reducing_suffering"],
-      "time_sensitivity": "ongoing",
-      "geographic_scope": "local",
-      "complexity_level": "beginner_friendly",
-      "evidence_base": "educational_research",
-      "learning_resources": [
-        {
-          "title": "Škola doučování",
-          "url": "https://www.skoladoucovani.cz",
-          "type": "organization"
-        },
-        {
-          "title": "Mentoři",
-          "url": "https://www.mentori.cz",
-          "type": "organization"
-        }
-      ],
-      "success_stories": [
-        {
-          "story": "Doučovala matemiku děti z chudších rodin. 8 z 10 dětí si zlepšilo známky o jeden stupeň.",
-          "impact": "Pomohla 10 dětem za rok",
-          "location": "Ostrava"
-        }
-      ]
-    },
-    "zdravi_socialni_pece": {
-      "id": "zdravi_socialni_pece",
-      "title": "Zdraví a sociální péče",
-      "emoji": "💚",
-      "description": "Pomoc lidem v těžké životní situaci. Podpora duševního zdraví a sociální péče pro ty, kdo to potřebují.",
-      "values_alignment": ["reducing_suffering", "health", "justice"],
-      "time_sensitivity": "urgent",
-      "geographic_scope": "local",
-      "complexity_level": "requires_training",
-      "evidence_base": "healthcare_research",
-      "learning_resources": [
-        {
-          "title": "Linka bezpečí",
-          "url": "https://www.linkabezpeci.cz",
-          "type": "organization"
-        },
-        {
-          "title": "SOS dětské vesničky",
-          "url": "https://www.sos-vesnicky.cz",
-          "type": "organization"
-        }
-      ],
-      "success_stories": [
-        {
-          "story": "Prošel kurzem krizové intervence a teď pomáhá na lince důvěry. Mluvil už se 200 lidmi v krizi.",
-          "impact": "Pomoc 200 lidem v krizové situaci",
-          "location": "Praha"
-        }
-      ]
-    },
-    "technologie_pro_dobro": {
-      "id": "technologie_pro_dobro",
-      "title": "Technologie pro dobro",
-      "emoji": "💻",
-      "description": "Využití technologických dovedností k pomoci neziskovým organizacím a znevýhodněným skupinám.",
-      "values_alignment": ["opportunities", "reducing_suffering", "education"],
-      "time_sensitivity": "ongoing",
-      "geographic_scope": "any",
-      "complexity_level": "requires_skills",
-      "evidence_base": "digital_inclusion_studies",
-      "learning_resources": [
-        {
-          "title": "Czechitas",
-          "url": "https://www.czechitas.cz",
-          "type": "organization"
-        },
-        {
-          "title": "IT pomáhá",
-          "url": "https://www.itpomaha.cz",
-          "type": "initiative"
-        }
-      ],
-      "success_stories": [
-        {
-          "story": "Vytvořil webové stránky pro místní charitu zdarma. Díky tomu získali o 50% více dárců.",
-          "impact": "Zvýšení darů o 50% pro charitu",
-          "location": "Plzeň"
-        }
-      ]
-    }
+  "local_community": {
+    "id": "local_community",
+    "title": "Místní komunita",
+    "emoji": "🏠",
+    "description": "Pomoc lidem ve vašem okolí. Senioři, kteří potřebují nákup. Rodiny, které mají těžké období. Sousedé, kteří by ocenili malou výpomoc. Jsou to lidé, které můžete potkat na ulici.",
+    "impact_areas": [
+      "Nákupy pro seniory",
+      "Výpomoc rodinám v nouzi", 
+      "Sousedská pomoc",
+      "Místní akce a setkání"
+    ],
+    "success_stories": [
+      {
+        "impact": "Senioři dostali nákupy během pandemie",
+        "location": "Praha",
+        "story": "Když bylo riziko nakažení vysoké, dobrovolníci nakupovali pro starší lidi v okolí. Jednoduché gesto, které pomohlo lidem zůstat doma v bezpečí."
+      },
+      {
+        "impact": "Děti měly vánoční dárky",
+        "location": "Brno", 
+        "story": "Místní lidé se domluvili a koupili dárky pro děti z rodin, které na to neměly peníze. Nic velkého, ale pro ty děti to bylo důležité."
+      }
+    ]
+  },
+  "environment": {
+    "id": "environment",
+    "title": "Životní prostředí", 
+    "emoji": "🌍",
+    "description": "Péče o přírodu kolem nás. Úklidy lesů a parků. Snižování odpadu v domácnosti. Malé změny, které dávají smysl a které zvládnete bez toho, aniž by vám to převrátilo život naruby.",
+    "impact_areas": [
+      "Úklidy v přírodě",
+      "Méně odpadu doma",
+      "Šetrné nakupování",
+      "Ochrana místní přírody"
+    ],
+    "success_stories": [
+      {
+        "impact": "Uklidily se turistické stezky",
+        "location": "Český ráj",
+        "story": "Skupina lidí strávila sobotu úklidem odpadků na turistických trasách. Práce to byla, ale místo vypadá líp a návštěvníci si toho všimli."
+      },
+      {
+        "impact": "Zasadily se nové stromy",
+        "location": "Moravskoslezský kraj",
+        "story": "V oblasti, kde kůrovec zničil les, se lidé sešli a zasadili nové stromky. Trvá to roky, než vyrostou, ale někdo to začít musel."
+      }
+    ]
+  },
+  "education": {
+    "id": "education",
+    "title": "Vzdělávání",
+    "emoji": "📚", 
+    "description": "Pomoc s učením a dovednostmi. Doučování dětí, které to potřebují. Učení seniorů, jak používat počítač. Sdílení toho, co umíte, s těmi, kteří se chtějí něco naučit.",
+    "impact_areas": [
+      "Doučování dětí",
+      "Pomoc studentům",
+      "Počítače pro seniory",
+      "Jazykové konverzace"
+    ],
+    "success_stories": [
+      {
+        "impact": "Děti se zlepšily ve škole",
+        "location": "Ostrava",
+        "story": "Studenti vysoké školy doučovali děti z rodin, kde rodiče nemají čas nebo znalosti pomoci s úkoly. Děti začaly mít lepší známky a víc se těšily do školy."
+      },
+      {
+        "impact": "Senioři se naučili video hovory",
+        "location": "České Budějovice",
+        "story": "Během pandemie se senioři učili používat tablety a mobily, aby mohli mluvit s rodinou. Bylo to pro ně zpočátku těžké, ale pak už volali pravnoučatům sami."
+      }
+    ]
+  },
+  "health": {
+    "id": "health",
+    "title": "Zdraví a péče",
+    "emoji": "❤️",
+    "description": "Podpora lidí, kteří mají zdravotní problémy nebo těžké období. Dárcovství krve. Pomoc s dopravou k lékaři. Naslouchání lidem, kteří se cítí sami. Malé gesta, která mohou hodně znamenat.",
+    "impact_areas": [
+      "Dárcovství krve",
+      "Doprovod k lékaři",
+      "Podpora v nemoci", 
+      "Naslouchání a povídání"
+    ],
+    "success_stories": [
+      {
+        "impact": "Nemocnice měla dostatek krve",
+        "location": "Plzeň",
+        "story": "Když byla v nemocnici nouze o krev, místní lidé přišli darovat. Není to nic heroického, ale pro pacienty, kteří krev potřebovali, to bylo životně důležité."
+      },
+      {
+        "impact": "Lidé v krizi dostali podporu",
+        "location": "Liberec",
+        "story": "Dobrovolníci trávili čas s lidmi, kteří prožívali těžké období. Většinou jen poslouchali a byli tam. Někdy to stačí víc než rady."
+      }
+    ]
+  },
+  "social_services": {
+    "id": "social_services", 
+    "title": "Sociální služby",
+    "emoji": "🤝",
+    "description": "Pomoc lidem, kteří se dostali do těžké situace. Lidé bez domova, uprchlíci, rodiny v krizi. Často jde o praktické věci - jídlo, oblečení, místo na přespání, nebo jen lidský kontakt.",
+    "impact_areas": [
+      "Jídlo pro lidi bez domova",
+      "Pomoc uprchlíkům",
+      "Podpora v krizi",
+      "Praktické rady a pomoc"
+    ],
+    "success_stories": [
+      {
+        "impact": "Lidé dostali teplé jídlo",
+        "location": "Praha",
+        "story": "Každý den skupina dobrovolníků vařila a rozdávala polévku lidem bez domova. Jednoduchá věc, ale v zimě to může zachránit život."
+      },
+      {
+        "impact": "Rodiny našly nové bydlení",
+        "location": "Brno",
+        "story": "Uprchlické rodiny potřebovaly pomoc najít byt a zorientovat se v českých úřadech. Dobrovolníci jim pomohli s papírováním a hledáním práce."
+      }
+    ]
+  },
+  "animals": {
+    "id": "animals",
+    "title": "Ochrana zvířat", 
+    "emoji": "🐾",
+    "description": "Péče o zvířata, která potřebují pomoc. Útulky, kde čekají psi a kočky na nový domov. Zraněná zvířata v přírodě. Nebo jen lepší podmínky pro zvířata ve vašem okolí.",
+    "impact_areas": [
+      "Pomoc v útulcích",
+      "Záchrana zraněných zvířat",
+      "Hledání nových domovů",
+      "Lepší podmínky pro zvířata"
+    ],
+    "success_stories": [
+      {
+        "impact": "Psi našli nové rodiny",
+        "location": "Olomouc",
+        "story": "Dobrovolníci pomáhali v útulku - venčili psy, uklízeli, pomáhali najít nové majitele. Není to lehká práce, ale psi si zaslouží šanci na lepší život."
+      },
+      {
+        "impact": "Zraněná zvířata se uzdravila",
+        "location": "Krkonoše",
+        "story": "Když lidé našli zraněná zvířata v lese, zavolali záchranáře. Po léčení se většina zvířat mohla vrátit do přírody."
+      }
+    ]
   }
 } 

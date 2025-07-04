@@ -12,7 +12,7 @@ JOURNEY_CONTENT = {
         # Step 1: Welcome
         'welcome': {
             'title': '🌱 Vítejte',
-            'subtitle': 'Jste tady, protože vám záleží na světě kolem vás.<br/>To je krásný začátek.',
+            'subtitle': 'Možná se cítíte zahlceni tím, co se děje kolem vás.<br/>Je v pořádku nevědět, kde začít.',
             'journey_steps': {
                 'title': '🧭 Vaše cesta v několika krocích',
                 'steps': [
@@ -43,7 +43,7 @@ JOURNEY_CONTENT = {
         # Step 3: Values Discovery
         'values_discovery': {
             'title': 'Co vám je blízké?',
-            'subtitle': 'Vyberte 2-3 oblasti, které vás nejvíce oslovují. Pomůže nám to najít akce, které budou rezonovat s vaším srdcem.',
+            'subtitle': 'Vyberte 2-3 oblasti, které vás zajímají nebo kde byste chtěli pomoct. Nemusí to být nic velkého.',
             'values': [
                 ('environment', '🌍 Příroda a klima'),
                 ('community', '🏘️ Komunita a sousedé'),
@@ -57,7 +57,7 @@ JOURNEY_CONTENT = {
             'guidance': {
                 'none_selected': '🌸 Vezměte si čas... Co z toho vás nejvíce oslovuje?',
                 'too_many': '💭 To je hodně oblastí! Možná se zkuste zaměřit na ty nejdůležitější?',
-                'good_selection': '✨ Krásně! Vybrali jste {count} {area_word}.'
+                'good_selection': '✨ Dobře. Vybrali jste {count} {area_word}.'
             },
             'continue_button': 'Pokračovat →',
             'min_selection_hint': 'Vyberte alespoň jednu oblast'
@@ -69,10 +69,10 @@ JOURNEY_CONTENT = {
             'sample_action': {
                 'title': '🌟 Pomoc místní komunitě',
                 'description': 'Najděte způsob, jak pomoci ve své lokalitě',
-                'impact': 'Posílíte komunitu kolem sebe'
+                'impact': 'Pomůžete konkrétním lidem ve vašem okolí'
             },
             'start_button': '🚀 Začít tuto akci',
-            'completion_message': '🎉 Gratulujeme! Udělali jste něco krásného!',
+            'completion_message': '🎉 Děkujeme. Udělali jste něco užitečného.',
             'another_action_button': '🔄 Udělat další akci'
         },
         
@@ -232,8 +232,8 @@ ENCOURAGEMENT_MESSAGES = {
         'general': [
             'Každý krok má svůj smysl, i když ho nevidíte hned.',
             'Jste na cestě, kterou už prošli jiní před vámi.',
-            'Malá rozhodnutí jako tohle tiše mění svět.',
-            'Postupně se stáváte někým, kdo pomáhá.'
+            'I malé kroky mají svůj smysl.',
+            'Každá pomoc se počítá.'
         ],
         'action_motivation': [
             'Tato akce může být něčím důležitým začátkem.',

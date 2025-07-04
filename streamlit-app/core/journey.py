@@ -215,8 +215,14 @@ def _show_emotional_check_step(language):
         emotions = emotional_content['emotions']
         
         # Pokud už byla vybrána emoce, zobraz mikro-intervenci
-        if 'emotional_state' in st.session_state and 'emotion_intervention_shown' not in st.session_state:
+        if 'emotional_state' in st.session_state and not st.session_state.get('emotion_intervention_shown', False):
             _show_emotional_micro_intervention(st.session_state.emotional_state, language)
+            return
+        
+        # Pokud už byla intervence ukázána, přejdi na další krok
+        if st.session_state.get('emotion_intervention_shown', False):
+            st.session_state.journey_step = 'values_discovery'
+            st.rerun()
             return
         
         # Jinak zobraz výběr emocí
@@ -227,7 +233,7 @@ def _show_emotional_check_step(language):
         for emotion_key, title in emotions:
             if st.button(title, key=f"emotion_{emotion_key}", use_container_width=True):
                 st.session_state.emotional_state = emotion_key
-                st.session_state.emotion_intervention_shown = False
+                # Don't set emotion_intervention_shown here, let the micro-intervention function handle it
                 st.rerun()
                 break
         

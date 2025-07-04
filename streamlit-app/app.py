@@ -8,7 +8,7 @@ from config.settings import configure_page
 from config.styling import apply_styles
 from core.session import initialize_session_state
 from core.journey import show_journey_flow
-from core.navigation import _render_top_navigation, _render_settings_panel
+from core.navigation import _render_settings_panel
 from components.emergency_help import render_gentle_crisis_support
 from data.loaders import load_actions_data, load_causes_data
 from content import get_content
@@ -29,29 +29,32 @@ def main():
     # Skrytí všech Streamlit elementů
     _hide_streamlit_elements()
     
-    # Inicializace current_page pokud neexistuje
+    # Inicializace current_page pokud neexistuje - default je 'journey' (Cesta)
     if 'current_page' not in st.session_state:
         st.session_state.current_page = 'journey'
     
+    # Get language for the entire app
+    language = st.session_state.get('language', 'czech')
+    
     # Top navigace
-    _render_enhanced_navigation()
+    _render_enhanced_navigation(language)
     
     # Hlavní obsah na základě vybrané stránky
     if st.session_state.current_page == 'journey':
         show_journey_flow()
     elif st.session_state.current_page == 'quick_actions':
-        _show_quick_actions_page()
+        _show_quick_actions_page(language)
     elif st.session_state.current_page == 'impact':
-        _show_impact_page()
+        _show_impact_page(language)
     elif st.session_state.current_page == 'causes':
-        _show_causes_page()
+        _show_causes_page(language)
     elif st.session_state.current_page == 'feedback':
-        _show_feedback_page()
+        _show_feedback_page(language)
     elif st.session_state.current_page == 'settings':
-        _render_settings_panel()
+        _render_settings_panel(language)
     
     # Jemná krizová podpora - vždy přítomná
-    render_gentle_crisis_support()
+    render_gentle_crisis_support(language)
 
 def _hide_streamlit_elements():
     """Skrytí všech základních Streamlit elementů"""
@@ -65,7 +68,7 @@ def _hide_streamlit_elements():
     </style>
     """, unsafe_allow_html=True)
 
-def _render_enhanced_navigation():
+def _render_enhanced_navigation(language):
     """Vylepšená navigace s důrazem na rychlé akce"""
     
     st.markdown("""
@@ -85,44 +88,13 @@ def _render_enhanced_navigation():
     # Navigation tabs
     cols = st.columns([1, 1, 1.5, 1, 1, 1])
     
-    tab_style_normal = """
-        background: rgba(255, 255, 255, 0.1);
-        color: white;
-        padding: 0.75rem 1rem;
-        border-radius: 10px;
-        text-align: center;
-        font-weight: 500;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        transition: all 0.3s ease;
-    """
-    
-    tab_style_active = """
-        background: rgba(255, 255, 255, 0.9);
-        color: #2E5D31;
-        padding: 0.75rem 1rem;
-        border-radius: 10px;
-        text-align: center;
-        font-weight: 600;
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    """
-    
-    tab_style_emphasized = """
-        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-        color: #2E5D31;
-        padding: 0.75rem 1rem;
-        border-radius: 10px;
-        text-align: center;
-        font-weight: 700;
-        border: 2px solid #FFD700;
-        box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
-        animation: pulse 2s infinite;
-    """
-    
     with cols[0]:
         if st.button("🧭 Cesta", use_container_width=True, 
                     type="primary" if st.session_state.current_page == 'journey' else "secondary"):
             st.session_state.current_page = 'journey'
+            # Reset journey to welcome when clicking Cesta
+            if 'journey_step' in st.session_state:
+                st.session_state.journey_step = 'welcome'
             st.rerun()
     
     with cols[1]:
@@ -140,11 +112,19 @@ def _render_enhanced_navigation():
             50% {{ transform: scale(1.05); }}
             100% {{ transform: scale(1); }}
         }}
+        .stButton > button[key="quick_actions_btn"] {{
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%) !important;
+            color: #2E5D31 !important;
+            font-weight: 700 !important;
+            border: 2px solid #FFD700 !important;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4) !important;
+            animation: pulse 2s infinite !important;
+        }}
         </style>
         """, unsafe_allow_html=True)
         
         if st.button("⚡ RYCHLÁ POMOC", use_container_width=True,
-                    type="primary"):
+                    type="primary", key="quick_actions_btn"):
             st.session_state.current_page = 'quick_actions'
             st.rerun()
     
@@ -168,7 +148,7 @@ def _render_enhanced_navigation():
     
     st.markdown("</div></div>", unsafe_allow_html=True)
 
-def _show_quick_actions_page():
+def _show_quick_actions_page(language):
     """Stránka rychlých akcí - okamžitá pomoc"""
     
     st.markdown("""
@@ -182,8 +162,8 @@ def _show_quick_actions_page():
     
     # Load actions data
     try:
-        actions_data = load_actions_data('czech')
-        actions = actions_data.get('actions', {})
+        actions_data = load_actions_data(language)
+        actions = actions_data
         
         # Filter for quick actions (low time commitment, immediate impact)
         quick_actions = {
@@ -196,15 +176,15 @@ def _show_quick_actions_page():
         cols = st.columns(2)
         for i, (action_id, action) in enumerate(quick_actions.items()):
             with cols[i % 2]:
-                _render_quick_action_card(action)
+                _render_quick_action_card(action, language)
                 
     except Exception as e:
         st.error(f"Chyba při načítání akcí: {e}")
         
         # Fallback quick actions
-        _render_fallback_quick_actions()
+        _render_fallback_quick_actions(language)
 
-def _render_quick_action_card(action):
+def _render_quick_action_card(action, language):
     """Render jednotlivé karty rychlých akcí"""
     
     time_req = action.get('requirements', {}).get('time_minutes', 0)
@@ -264,39 +244,57 @@ def _render_quick_action_card(action):
         else:
             st.success("🎉 Děkujeme za zájem! Kontaktujte organizaci přímo.")
 
-def _render_fallback_quick_actions():
+def _render_fallback_quick_actions(language):
     """Záložní rychlé akce pokud se nepodaří načíst data"""
     
-    fallback_actions = [
-        {
-            'title': '💚 Dar 100 Kč pro Charitu ČR',
-            'description': 'Okamžitý příspěvek na pomoc potřebným v České republice',
-            'time': '2 min',
-            'cost': '100 Kč',
-            'url': 'https://www.charita.cz'
-        },
-        {
-            'title': '🩸 Registrace dárce krve',
-            'description': 'Zaregistrujte se jako dárce krve a zachraňte životy',
-            'time': '5 min',
-            'cost': 'Zdarma',
-            'url': 'https://www.darcekrve.cz'
-        },
-        {
-            'title': '🌱 Podpis petice za klima',
-            'description': 'Podpořte ochranu klimatu jedním kliknutím',
-            'time': '1 min',
-            'cost': 'Zdarma',
-            'url': 'https://www.greenpeace.org/czech'
-        },
-        {
-            'title': '📱 Sdílení na sociálních sítích',
-            'description': 'Sdílejte důležitou zprávu a zvyšte povědomí',
-            'time': '30 sec',
-            'cost': 'Zdarma',
-            'url': '#'
-        }
-    ]
+    if language == 'czech':
+        fallback_actions = [
+            {
+                'title': '💚 Dar 100 Kč pro Charitu ČR',
+                'description': 'Okamžitý příspěvek na pomoc potřebným v České republice',
+                'time': '2 min',
+                'cost': '100 Kč',
+                'url': 'https://www.charita.cz'
+            },
+            {
+                'title': '🩸 Registrace dárce krve',
+                'description': 'Zaregistrujte se jako dárce krve a zachraňte životy',
+                'time': '5 min',
+                'cost': 'Zdarma',
+                'url': 'https://www.darcekrve.cz'
+            },
+            {
+                'title': '🌱 Podpis petice za klima',
+                'description': 'Podpořte ochranu klimatu jedním kliknutím',
+                'time': '1 min',
+                'cost': 'Zdarma',
+                'url': 'https://www.greenpeace.org/czech'
+            },
+            {
+                'title': '📱 Sdílení na sociálních sítích',
+                'description': 'Sdílejte důležitou zprávu a zvyšte povědomí',
+                'time': '30 sec',
+                'cost': 'Zdarma',
+                'url': '#'
+            }
+        ]
+    else:
+        fallback_actions = [
+            {
+                'title': '💚 $10 Donation to Charity',
+                'description': 'Immediate contribution to help those in need',
+                'time': '2 min',
+                'cost': '$10',
+                'url': 'https://www.charitynavigator.org'
+            },
+            {
+                'title': '🩸 Blood Donor Registration',
+                'description': 'Register as a blood donor and save lives',
+                'time': '5 min',
+                'cost': 'Free',
+                'url': 'https://www.redcross.org'
+            }
+        ]
     
     cols = st.columns(2)
     for i, action in enumerate(fallback_actions):
@@ -325,7 +323,7 @@ def _render_fallback_quick_actions():
                 if action['url'] != '#':
                     st.success(f"Přejděte na: {action['url']}")
 
-def _show_causes_page():
+def _show_causes_page(language):
     """Stránka oblastí pomoci"""
     
     st.markdown("""
@@ -338,16 +336,18 @@ def _show_causes_page():
     """, unsafe_allow_html=True)
     
     try:
-        causes_data = load_causes_data('czech')
-        causes = causes_data.get('causes', {})
+        causes_data = load_causes_data(language)
+        causes = causes_data
         
         for cause_id, cause in causes.items():
-            _render_cause_card(cause)
+            _render_cause_card(cause, language)
             
     except Exception as e:
         st.error(f"Chyba při načítání oblastí: {e}")
+        # Show fallback causes
+        _render_fallback_causes(language)
 
-def _render_cause_card(cause):
+def _render_cause_card(cause, language):
     """Render karty jednotlivých oblastí"""
     
     st.markdown(f"""
@@ -380,7 +380,50 @@ def _render_cause_card(cause):
                 _{story.get('story', 'Příběh není k dispozici')}_
                 """)
 
-def _show_impact_page():
+def _render_fallback_causes(language):
+    """Fallback causes when data loading fails"""
+    
+    if language == 'czech':
+        fallback_causes = [
+            {
+                'emoji': '🏠',
+                'title': 'Místní komunita',
+                'description': 'Pomoc ve vašem okolí - senioři, rodiny v nouzi, sousedé.'
+            },
+            {
+                'emoji': '🌍',
+                'title': 'Životní prostředí',
+                'description': 'Ochrana přírody, úklidy, udržitelnost.'
+            },
+            {
+                'emoji': '📚',
+                'title': 'Vzdělávání',
+                'description': 'Doučování, knihy, podpora studentů.'
+            }
+        ]
+    else:
+        fallback_causes = [
+            {
+                'emoji': '🏠',
+                'title': 'Local Community',
+                'description': 'Help in your area - seniors, families in need, neighbors.'
+            },
+            {
+                'emoji': '🌍',
+                'title': 'Environment',
+                'description': 'Nature protection, cleanups, sustainability.'
+            },
+            {
+                'emoji': '📚',
+                'title': 'Education',
+                'description': 'Tutoring, books, student support.'
+            }
+        ]
+    
+    for cause in fallback_causes:
+        _render_cause_card(cause, language)
+
+def _show_impact_page(language):
     """Stránka dopadu - statistiky a pokrok"""
     
     st.markdown("""
@@ -478,7 +521,7 @@ def _show_impact_page():
     else:
         st.info("🌱 Zatím jste nedokončili žádnou akci. Začněte svou cestu pomocí!")
 
-def _show_feedback_page():
+def _show_feedback_page(language):
     """Stránka zpětné vazby"""
     
     st.markdown("""
@@ -514,7 +557,7 @@ def _show_feedback_page():
         
         submitted = st.form_submit_button("Odeslat zpětnou vazbu", use_container_width=True, type="primary")
         
-        if submitted:
+        if submitted and (positive.strip() or improvement.strip()):
             # Store feedback in session state
             if 'feedback_submissions' not in st.session_state:
                 st.session_state.feedback_submissions = []
