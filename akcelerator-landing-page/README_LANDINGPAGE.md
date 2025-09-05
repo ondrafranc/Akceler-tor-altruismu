@@ -93,7 +93,9 @@ vercel
 For production deployment, set these in Vercel Dashboard:
 
 ```
-STREAMLIT_BASE_URL=https://akceler-tor-altruismu-gvf9tctpuuq4t4tpjmaesa.streamlit.app
+PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+PUBLIC_STREAMLIT_BASE_URL=https://your-streamlit-app.streamlit.app
 ```
 
 ### Vercel Settings
@@ -114,7 +116,9 @@ The project includes optimized `vercel.json` and SvelteKit adapter configuration
 ## 🔗 Integration
 
 ### Streamlit Backend
-- Production app: `https://akceler-tor-altruismu-gvf9tctpuuq4t4tpjmaesa.streamlit.app`
+- Production app: configured via `PUBLIC_STREAMLIT_BASE_URL` (trailing slash trimmed)
+- Embed mode: iframe uses `?embed=true` for cleaner UI
+- Health check: landing pings `?healthz=1` before opening
 - The landing page CTA button opens the Streamlit app in a new tab
 - Includes error handling and fallback dialogs
 
@@ -134,6 +138,13 @@ npm run dev          # Start development server
 npm run build        # Build for production  
 npm run preview      # Preview production build
 npm run lint         # Run linter
+npm run test:e2e     # Run Playwright e2e tests (requires dev server)
+```
+
+### Playwright setup
+
+```bash
+npx playwright install
 ```
 
 ## 📁 Project Structure

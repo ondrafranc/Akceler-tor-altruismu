@@ -13,11 +13,15 @@ Your Supabase connection is now properly configured for Vercel production deploy
 
 ```bash
 # Variable Name: PUBLIC_SUPABASE_URL
-# Value: https://gjkaeewiocqbwipqezdr.supabase.co
+# Value: https://YOUR_PROJECT.supabase.co
 # Environment: Production, Preview, Development
 
 # Variable Name: PUBLIC_SUPABASE_ANON_KEY  
-# Value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdqa2FlZXdpb2NxYndpcHFlemRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk5MzM1NzYsImV4cCI6MjA2NTUwOTU3Nn0.3YpLekqMd8YQN3RdjDencgNkoUqAdebDTcJMasZ3va8
+# Value: YOUR_SUPABASE_ANON_KEY
+# Environment: Production, Preview, Development
+
+# Variable Name: PUBLIC_STREAMLIT_BASE_URL
+# Value: https://your-streamlit-app.streamlit.app
 # Environment: Production, Preview, Development
 ```
 
@@ -39,10 +43,13 @@ vercel link
 
 # Add environment variables
 vercel env add PUBLIC_SUPABASE_URL production
-# Enter: https://gjkaeewiocqbwipqezdr.supabase.co
+# Enter: https://YOUR_PROJECT.supabase.co
 
 vercel env add PUBLIC_SUPABASE_ANON_KEY production
-# Enter: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdqa2FlZXdpb2NxYndpcHFlemRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk5MzM1NzYsImV4cCI6MjA2NTUwOTU3Nn0.3YpLekqMd8YQN3RdjDencgNkoUqAdebDTcJMasZ3va8
+# Enter: YOUR_SUPABASE_ANON_KEY
+
+vercel env add PUBLIC_STREAMLIT_BASE_URL production
+# Enter: https://your-streamlit-app.streamlit.app
 ```
 
 ## 🔧 **Step 2: Deploy and Test**
@@ -135,7 +142,7 @@ After deployment, test these URLs:
 2. Verify project is not paused
 3. Test with curl:
    ```bash
-   curl -X GET "https://gjkaeewiocqbwipqezdr.supabase.co/rest/v1/feedback" \
+   curl -X GET "https://YOUR_PROJECT.supabase.co/rest/v1/feedback" \
         -H "apikey: YOUR_ANON_KEY" \
         -H "Authorization: Bearer YOUR_ANON_KEY"
    ```

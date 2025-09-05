@@ -89,13 +89,12 @@ Landing Page (Vercel) ←→ Streamlit App (Streamlit Cloud)
 ## 3️⃣ Integration & Testing
 
 ### Update Frontend Integration
-After Streamlit deployment, update the integration URL in:
+After Streamlit deployment, set the environment variable:
 
-**File**: `akcelerator-landing-page/src/lib/streamlit-integration.js`
+**Vercel Dashboard → Settings → Environment Variables**
 
-```javascript
-// Update this URL to your actual Streamlit deployment
-const STREAMLIT_URL = 'https://akcelerator-altruismu.streamlit.app';
+```
+PUBLIC_STREAMLIT_BASE_URL=https://your-streamlit-app.streamlit.app
 ```
 
 ### Test Complete Flow

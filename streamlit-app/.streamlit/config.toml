@@ -1,3 +1,18 @@
+[server]
+headless = true
+port = 8501
+baseUrlPath = "app"
+enableStaticServing = true
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+primaryColor = "#2E5D31"
+backgroundColor = "#FAFBFA"
+secondaryBackgroundColor = "#F0F8F0"
+textColor = "#2E5D31"
+font = "sans serif"
 [theme]
 primaryColor = "#2E5D31"
 backgroundColor = "#F8FBF8"

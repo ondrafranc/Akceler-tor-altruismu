@@ -54,13 +54,7 @@ declare module '$env/static/private' {
 	export const CURSOR_TRACE_ID: string;
 	export const DriverData: string;
 	export const EDITOR: string;
-	export const EFC_6388_1262719628: string;
-	export const EFC_6388_1592913036: string;
-	export const EFC_6388_2283032206: string;
-	export const EFC_6388_2775293581: string;
-	export const EFC_6388_3789132940: string;
-	export const FPS_BROWSER_APP_PROFILE_STRING: string;
-	export const FPS_BROWSER_USER_PROFILE_STRING: string;
+	export const EFC_10508_1592913036: string;
 	export const GIT_ASKPASS: string;
 	export const HOME: string;
 	export const HOMEDRIVE: string;
@@ -69,6 +63,8 @@ declare module '$env/static/private' {
 	export const LANG: string;
 	export const LOCALAPPDATA: string;
 	export const LOGONSERVER: string;
+	export const MSMPI_BENCHMARKS: string;
+	export const MSMPI_BIN: string;
 	export const NODE: string;
 	export const NODE_ENV: string;
 	export const npm_command: string;
@@ -118,6 +114,8 @@ declare module '$env/static/private' {
 	export const USERDOMAIN_ROAMINGPROFILE: string;
 	export const USERNAME: string;
 	export const USERPROFILE: string;
+	export const VIRTUAL_ENV: string;
+	export const VIRTUAL_ENV_PROMPT: string;
 	export const VSCODE_DEBUGPY_ADAPTER_ENDPOINTS: string;
 	export const VSCODE_GIT_ASKPASS_EXTRA_ARGS: string;
 	export const VSCODE_GIT_ASKPASS_MAIN: string;
@@ -125,6 +123,7 @@ declare module '$env/static/private' {
 	export const VSCODE_GIT_IPC_HANDLE: string;
 	export const VSCODE_INJECTION: string;
 	export const windir: string;
+	export const _OLD_VIRTUAL_PATH: string;
 }
 
 /**
@@ -183,13 +182,7 @@ declare module '$env/dynamic/private' {
 		CURSOR_TRACE_ID: string;
 		DriverData: string;
 		EDITOR: string;
-		EFC_6388_1262719628: string;
-		EFC_6388_1592913036: string;
-		EFC_6388_2283032206: string;
-		EFC_6388_2775293581: string;
-		EFC_6388_3789132940: string;
-		FPS_BROWSER_APP_PROFILE_STRING: string;
-		FPS_BROWSER_USER_PROFILE_STRING: string;
+		EFC_10508_1592913036: string;
 		GIT_ASKPASS: string;
 		HOME: string;
 		HOMEDRIVE: string;
@@ -198,6 +191,8 @@ declare module '$env/dynamic/private' {
 		LANG: string;
 		LOCALAPPDATA: string;
 		LOGONSERVER: string;
+		MSMPI_BENCHMARKS: string;
+		MSMPI_BIN: string;
 		NODE: string;
 		NODE_ENV: string;
 		npm_command: string;
@@ -247,6 +242,8 @@ declare module '$env/dynamic/private' {
 		USERDOMAIN_ROAMINGPROFILE: string;
 		USERNAME: string;
 		USERPROFILE: string;
+		VIRTUAL_ENV: string;
+		VIRTUAL_ENV_PROMPT: string;
 		VSCODE_DEBUGPY_ADAPTER_ENDPOINTS: string;
 		VSCODE_GIT_ASKPASS_EXTRA_ARGS: string;
 		VSCODE_GIT_ASKPASS_MAIN: string;
@@ -254,6 +251,7 @@ declare module '$env/dynamic/private' {
 		VSCODE_GIT_IPC_HANDLE: string;
 		VSCODE_INJECTION: string;
 		windir: string;
+		_OLD_VIRTUAL_PATH: string;
 		[key: `PUBLIC_${string}`]: undefined;
 		[key: `${string}`]: string | undefined;
 	}

@@ -17,6 +17,15 @@ import json
 def main():
     """Hlavní vstupní bod aplikace - s navigací a lineární cestou"""
     
+    # Healthcheck endpoint for monitoring and embed checks
+    try:
+        qp = getattr(st, "query_params", None)
+        if qp and (qp.get("healthz") is not None):
+            st.write({"status": "ok"})
+            return
+    except Exception:
+        pass
+
     # Konfigurace stránky
     configure_page()
     
@@ -36,25 +45,221 @@ def main():
     # Get language for the entire app
     language = st.session_state.get('language', 'czech')
     
+    # First-visit quick start chooser
+    _render_first_visit_chooser()
+
     # Top navigace
     _render_enhanced_navigation(language)
+
+    # Onboarding pomocník – zviditelní příští krok a přidá jasné CTA
+    _render_onboarding_helper(language)
+
+    # Mini impact widget – posiluje smysl a cíl (1 krok denně)
+    _render_mini_impact(language)
     
     # Hlavní obsah na základě vybrané stránky
     if st.session_state.current_page == 'journey':
         show_journey_flow()
     elif st.session_state.current_page == 'quick_actions':
         _show_quick_actions_page(language)
+        _render_context_tip(language, tip_key='quick_actions', cta_key='go_to_journey')
     elif st.session_state.current_page == 'impact':
         _show_impact_page(language)
+        _render_context_tip(language, tip_key='impact', cta_key='quick_help')
     elif st.session_state.current_page == 'causes':
         _show_causes_page(language)
+        _render_context_tip(language, tip_key='causes', cta_key='go_to_journey')
     elif st.session_state.current_page == 'feedback':
         _show_feedback_page(language)
+        _render_context_tip(language, tip_key='feedback', cta_key='go_to_journey')
     elif st.session_state.current_page == 'settings':
         _render_settings_panel(language)
     
     # Jemná krizová podpora - vždy přítomná
     render_gentle_crisis_support(language)
+
+def _render_first_visit_chooser():
+    """Offer a simple choice for first-time visitors: Quick Help vs Guided Journey."""
+    if st.session_state.get('onboarding_completed'):
+        return
+    # Only show once per session
+    if st.session_state.get('first_visit_prompt_shown'):
+        return
+    st.session_state.first_visit_prompt_shown = True
+
+    with st.container():
+        st.markdown("""
+        <div style="
+            background: linear-gradient(135deg, #f8fdf8 0%, #f0f8f0 100%);
+            border: 1px solid #e2efe2;
+            border-radius: 16px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        ">
+            <div style="color:#2E5D31; font-weight:600;">Jak chcete začít?</div>
+            <div style="color:#5A6B5A; font-size:0.95rem;">Zvolte rychlou pomoc, nebo krátkého průvodce (3–5 min).</div>
+        </div>
+        """, unsafe_allow_html=True)
+        col_a, col_b = st.columns(2)
+        with col_a:
+            if st.button("⚡ Rychlá pomoc", use_container_width=True, key="chooser_quick"):
+                st.session_state.current_page = 'quick_actions'
+                st.session_state.onboarding_completed = True
+                st.rerun()
+        with col_b:
+            if st.button("🧭 Průvodce (3–5 min)", use_container_width=True, key="chooser_guide"):
+                st.session_state.current_page = 'journey'
+                st.session_state.journey_step = 'welcome'
+                st.session_state.onboarding_completed = True
+                st.rerun()
+
+def _render_onboarding_helper(language: str):
+    """Jasná vodítka: kde právě jsem a co je další krok.
+    Zobrazuje se na začátku každé stránky, aby bylo hned zřejmé, co dělat.
+    """
+    journey_step = st.session_state.get('journey_step', 'welcome')
+
+    steps = ['welcome', 'emotional_check', 'values_discovery', 'action_selection']
+    titles_cs = {
+        'welcome': 'Vítejte',
+        'emotional_check': 'Jak se cítíte?',
+        'values_discovery': 'Co je pro vás důležité?',
+        'action_selection': 'Vyberte si první akci'
+    }
+    titles_en = {
+        'welcome': 'Welcome',
+        'emotional_check': 'How do you feel?',
+        'values_discovery': 'What matters to you?',
+        'action_selection': 'Pick your first action'
+    }
+
+    if journey_step in steps and st.session_state.get('current_page') == 'journey':
+        idx = steps.index(journey_step)
+        total = len(steps)
+        title = (titles_cs if language == 'czech' else titles_en)[journey_step]
+        next_step = steps[idx + 1] if idx + 1 < total else None
+        next_label = (
+            {
+                'welcome': 'Pokračovat →',
+                'emotional_check': 'Pokračovat →',
+                'values_discovery': 'Najít moji akci →',
+                'action_selection': 'Spustit akci →'
+            } if language == 'czech' else {
+                'welcome': 'Continue →',
+                'emotional_check': 'Continue →',
+                'values_discovery': 'Find my action →',
+                'action_selection': 'Start action →'
+            }
+        ).get(journey_step, 'Continue →')
+
+        st.markdown(
+            f"""
+            <div style="
+                margin: 0 -1rem 1rem -1rem;
+                padding: 0.75rem 1rem;
+                background: linear-gradient(90deg, #f0f8f0, #e8f5e8);
+                border-bottom: 1px solid #dbe8db;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex-wrap: wrap;
+            ">
+                <div style="color:#2E5D31; font-weight:600;">
+                    {('Krok' if language=='czech' else 'Step')} {idx+1}/{total}: {title}
+                </div>
+                <div style="color:#5A6B5A; font-size:0.95rem;">
+                    {('Tip: Klikněte na tlačítko níže pro další krok' if language=='czech' else 'Tip: Use the button to move forward')}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        col_a, col_b, col_c = st.columns([2, 2, 1])
+        with col_b:
+            if st.button(next_label, use_container_width=True, type="primary", key="onboarding_next"):
+                if next_step:
+                    st.session_state.journey_step = next_step
+                st.rerun()
+
+def _render_mini_impact(language: str):
+    actions_done = len(st.session_state.get('completed_actions', []))
+    goal_label = "Cíl dnes: 1 laskavý krok" if language=='czech' else "Today: 1 kind step"
+    done_label = f"{actions_done} " + ("akcí celkem" if language=='czech' else "actions total")
+    colx, coly, colz = st.columns([2,2,2])
+    with colx:
+        st.markdown(f"<div class='impact-metric'>{goal_label}</div>", unsafe_allow_html=True)
+    with coly:
+        st.markdown(f"<div class='impact-metric'>{done_label}</div>", unsafe_allow_html=True)
+    with colz:
+        # Gentle nudge to quick help when no action done yet
+        if actions_done == 0:
+            st.button("⚡ " + ("Rychlá pomoc" if language=='czech' else "Quick Help"), use_container_width=True, key="mini_quick", on_click=lambda: _goto('quick_actions'))
+
+def _goto(page_name: str):
+    st.session_state.current_page = page_name
+    st.rerun()
+
+def _render_context_tip(language: str, tip_key: str, cta_key: str):
+    """Small contextual helper bar with a single action.
+    tip_key: logical area; cta navigates to relevant next step.
+    """
+    tips_cs = {
+        'quick_actions': 'Tip: Nevíte, co vybrat? Vraťte se k průvodci a najdeme akci na míru.',
+        'impact': 'Tip: Udělali jste akci? Zkuste rychlou pomoc a přidejte další krok.',
+        'causes': 'Tip: Vyberte oblasti, které jsou vám blízké – poradíme konkrétní kroky.',
+        'feedback': 'Tip: Vaše zpětná vazba pomůže ostatním. Děkujeme!'
+    }
+    tips_en = {
+        'quick_actions': "Tip: Not sure what to pick? Return to the guide to get a tailored action.",
+        'impact': "Tip: Completed an action? Try Quick Help and add another step.",
+        'causes': "Tip: Choose areas that matter to you – we'll recommend concrete steps.",
+        'feedback': "Tip: Your feedback helps others. Thank you!"
+    }
+
+    cta_cs = {
+        'go_to_journey': 'Přejít na průvodce →',
+        'quick_help': 'Rychlá pomoc →'
+    }
+    cta_en = {
+        'go_to_journey': 'Go to guide →',
+        'quick_help': 'Quick Help →'
+    }
+
+    tip = (tips_cs if language == 'czech' else tips_en).get(tip_key)
+    cta_label = (cta_cs if language == 'czech' else cta_en).get(cta_key, 'Continue →')
+
+    if not tip:
+        return
+
+    st.markdown(
+        f"""
+        <div style="
+            margin: 1rem 0;
+            padding: 0.75rem 1rem;
+            background: #f6fbf6;
+            border: 1px solid #e2efe2;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        ">
+            <div style="color:#2E5D31;">{tip}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    col1, col2, col3 = st.columns([2, 2, 1])
+    with col2:
+        if st.button(cta_label, use_container_width=True, key=f"ctx_cta_{tip_key}"):
+            if cta_key == 'go_to_journey':
+                st.session_state.current_page = 'journey'
+            elif cta_key == 'quick_help':
+                st.session_state.current_page = 'quick_actions'
+            st.rerun()
 
 def _hide_streamlit_elements():
     """Skrytí všech základních Streamlit elementů"""
@@ -160,17 +365,48 @@ def _show_quick_actions_page(language):
     </div>
     """, unsafe_allow_html=True)
     
+    # Filters and progress chip
+    st.markdown("""
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+      <div style="color:#2E5D31; font-weight:600;">Okamžité akce</div>
+      <div style="background:#e8f5e8; border:1px solid #dbe8db; color:#2E5D31; padding:4px 10px; border-radius:999px; font-size:0.9rem;">
+        {completed} dokončeno
+      </div>
+    </div>
+    """.format(completed=len(st.session_state.get('completed_actions', []))), unsafe_allow_html=True)
+
+    with st.expander("🎯 Filtrovat", expanded=False):
+        colf1, colf2 = st.columns(2)
+        with colf1:
+            time_filter = st.selectbox("Čas", ["Libovolně", "Do 15 min", "Do 1 hod"], index=0)
+        with colf2:
+            location_filter = st.selectbox("Místo", ["Kdekoli", "Online", "Praha", "Brno", "Ostrava"], index=0)
+
     # Load actions data
     try:
         actions_data = load_actions_data(language)
         actions = actions_data
         
         # Filter for quick actions (low time commitment, immediate impact)
-        quick_actions = {
-            key: action for key, action in actions.items()
-            if action.get('requirements', {}).get('time_minutes', 999) <= 30
-            or action.get('commitment_type') == 'one_time'
-        }
+        quick_actions = {}
+        for key, action in actions.items():
+            minutes = action.get('requirements', {}).get('time_minutes', 999)
+            commitment = action.get('commitment_type')
+            place = action.get('location', 'online').lower()
+            if minutes <= 30 or commitment == 'one_time':
+                # Time filter
+                if time_filter == "Do 15 min" and minutes > 15:
+                    continue
+                if time_filter == "Do 1 hod" and minutes > 60:
+                    continue
+                # Location filter (simple contains)
+                if location_filter != "Kdekoli":
+                    lf = location_filter.lower()
+                    if lf != 'online' and lf not in place:
+                        continue
+                    if lf == 'online' and 'online' not in place:
+                        continue
+                quick_actions[key] = action
         
         # Display quick actions in cards
         cols = st.columns(2)
@@ -190,7 +426,7 @@ def _render_quick_action_card(action, language):
     time_req = action.get('requirements', {}).get('time_minutes', 0)
     cost = action.get('requirements', {}).get('cost_usd', 0)
     organization = action.get('organization', {}).get('name', 'Neznámá organizace')
-    website = action.get('organization', {}).get('website', '#')
+    website = action.get('organization', {}).get('website', action.get('url', '#'))
     
     time_text = f"{time_req} min" if time_req < 60 else f"{time_req//60}h"
     cost_text = "Zdarma" if cost == 0 else f"~{int(cost * 25)} Kč"
@@ -234,15 +470,29 @@ def _render_quick_action_card(action, language):
     </div>
     """, unsafe_allow_html=True)
     
-    if st.button(f"🚀 Začít: {action.get('title', 'Akce')}", 
-                use_container_width=True, 
-                type="primary",
-                key=f"quick_{action.get('id', 'unknown')}"):
-        if website and website != '#':
-            st.success(f"🎉 Skvělé! Přejděte na: {website}")
-            st.markdown(f"[Otevřít {organization}]({website})")
-        else:
-            st.success("🎉 Děkujeme za zájem! Kontaktujte organizaci přímo.")
+    # Primary CTA: direct link (no extra confirmation)
+    if website and website != '#':
+        try:
+            st.link_button(
+                f"🌐 {('Přejít na ' if language=='czech' else 'Open ')}{organization}",
+                url=website,
+                use_container_width=True
+            )
+        except Exception:
+            st.markdown(f"[🌐 {('Přejít na ' if language=='czech' else 'Open ')}{organization}]({website})")
+    else:
+        st.info("ℹ️ " + ("Odkaz není k dispozici, zkuste vyhledat organizaci." if language=='czech' else "No link available, please search for the organization."))
+
+    # Secondary CTA: mark as completed
+    done_label = "✅ Hotovo – označit dokončeno" if language=='czech' else "✅ Done – mark completed"
+    if st.button(done_label, use_container_width=True, key=f"done_{action.get('id','unknown')}"):
+        if 'completed_actions' not in st.session_state:
+            st.session_state.completed_actions = []
+        st.session_state.completed_actions.append({
+            'action': action,
+            'completed_at': datetime.now()
+        })
+        st.success("🎉 " + ("Skvělé! Akce označena jako dokončená." if language=='czech' else "Great! Action marked as completed."))
 
 def _render_fallback_quick_actions(language):
     """Záložní rychlé akce pokud se nepodaří načíst data"""

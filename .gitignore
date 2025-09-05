@@ -1,0 +1,24 @@
+# Node / JS
+node_modules/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Env files
+.env
+.env.*
+streamlit-app/.env
+akcelerator-landing-page/.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+
+# Todo2 - AI-powered task management directories
+.cursor/rules/todo2-overview.mdc
+.cursor/rules/todo2.mdc
+.cursor/mcp.json
+.todo2/

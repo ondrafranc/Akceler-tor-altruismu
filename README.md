@@ -187,11 +187,24 @@ streamlit run app.py
 - **Accessibility testing done via keyboard navigation and screen readers**
 - **Mobile-first responsive design** with breakpoint testing
 
+### Security (SvelteKit Landing)
+- HTTP headers enforced via Vercel and SSR hook: HSTS, CSP, Referrer-Policy, Permissions-Policy, COEP/COOP/CORP, X-Content-Type-Options, etc.
+- SvelteKit CSP configured in `akcelerator-landing-page/svelte.config.js` (mode `auto`).
+- Note: If embedding third-party iframes breaks, consider relaxing COEP/COOP.
+
 ### Environment Variables (Vercel Dashboard)
 ```bash
 PUBLIC_SUPABASE_URL=your_supabase_url
 PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+PUBLIC_STREAMLIT_BASE_URL=your_streamlit_base_url
 ```
+
+### Testing
+- E2E test route for embed: open `https://<your-domain>/test`
+- Local e2e:
+  1) In `akcelerator-landing-page`: `npm install && npm run dev`
+  2) `npx playwright install`
+  3) `npm run test:e2e`
 
 ### File Structure
 ```
@@ -204,7 +217,7 @@ PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 │   │   │   └── FeedbackModal.svelte     # Anonymous feedback
 │   │   ├── lib/
 │   │   │   └── supabase/
-│   │   │       └── client.ts            # Database configuration
+│   │   │       └── client.js            # Database configuration
 │   │   └── routes/
 │   │       ├── +layout.svelte           # App layout with analytics
 │   │       └── +page.svelte             # Main landing page

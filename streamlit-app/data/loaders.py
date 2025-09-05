@@ -3,16 +3,19 @@
 import streamlit as st
 import json
 import os
+from pathlib import Path
 
 @st.cache_data
 def load_causes_data(language='czech'):
     """Load causes data based on language"""
     try:
+        base = Path(__file__).resolve().parent.parent
+        data_dir = base / 'data'
         if language == 'czech':
-            with open('data/czech/causes_czech.json', 'r', encoding='utf-8') as f:
+            with open(data_dir / 'czech' / 'causes_czech.json', 'r', encoding='utf-8') as f:
                 data = json.load(f)
         else:
-            with open('data/international/causes.json', 'r', encoding='utf-8') as f:
+            with open(data_dir / 'international' / 'causes.json', 'r', encoding='utf-8') as f:
                 data = json.load(f)
         return data.get('causes', {})
     except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError) as e:
@@ -23,11 +26,13 @@ def load_causes_data(language='czech'):
 def load_actions_data(language='czech'):
     """Load actions data based on language"""
     try:
+        base = Path(__file__).resolve().parent.parent
+        data_dir = base / 'data'
         if language == 'czech':
-            with open('data/czech/actions_czech.json', 'r', encoding='utf-8') as f:
+            with open(data_dir / 'czech' / 'actions_czech.json', 'r', encoding='utf-8') as f:
                 data = json.load(f)
         else:
-            with open('data/international/actions.json', 'r', encoding='utf-8') as f:
+            with open(data_dir / 'international' / 'actions.json', 'r', encoding='utf-8') as f:
                 data = json.load(f)
         return data.get('actions', {})
     except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError) as e:
@@ -87,8 +92,10 @@ def load_encouragement_data(language='czech'):
     }
     
     try:
+        base = Path(__file__).resolve().parent.parent
+        data_dir = base / 'data'
         if language == 'czech':
-            with open('data/czech/encouragement_czech.json', 'r', encoding='utf-8') as f:
+            with open(data_dir / 'czech' / 'encouragement_czech.json', 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 # Validate that essential keys exist
                 if 'welcome_messages' in data and 'emotional_state_responses' in data:
@@ -97,7 +104,7 @@ def load_encouragement_data(language='czech'):
                     # File exists but missing essential data, use fallback
                     return fallback_data['czech']
         else:
-            with open('data/international/encouragement_messages.json', 'r', encoding='utf-8') as f:
+            with open(data_dir / 'international' / 'encouragement_messages.json', 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 if 'welcome_messages' in data:
                     return data

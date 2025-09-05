@@ -1,34 +1,18 @@
 import { json } from '@sveltejs/kit';
 import { createClient } from '@supabase/supabase-js';
+import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
 
 // Create server-side Supabase client using process.env for better compatibility with Vercel
 function createServerSupabaseClient() {
 	try {
-		// Access environment variables directly from process.env
-		const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-		const key = process.env.SUPABASE_SERVICE_ROLE_KEY || 
-					 process.env.SUPABASE_ANON_KEY || 
-					 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-		
-		console.log('🔍 Environment Variables Check:', {
-			hasSupabaseUrl: !!url,
-			hasSupabaseKey: !!key,
-			urlSource: process.env.SUPABASE_URL ? 'SUPABASE_URL' : 'NEXT_PUBLIC_SUPABASE_URL',
-			keySource: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SERVICE_ROLE' : 
-					  process.env.SUPABASE_ANON_KEY ? 'SUPABASE_ANON_KEY' : 'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-			availableEnvVars: Object.keys(process.env).filter(key => key.includes('SUPABASE'))
-		});
-		
+		const url = PUBLIC_SUPABASE_URL;
+		const key = PUBLIC_SUPABASE_ANON_KEY;
+
 		if (!url || !key) {
-			console.error('❌ Missing environment variables:', { 
-				hasUrl: !!url, 
-				hasKey: !!key,
-				availableSupabaseVars: Object.keys(process.env).filter(key => key.includes('SUPABASE'))
-			});
+			console.error('❌ Missing PUBLIC_SUPABASE_* environment variables');
 			throw new Error('Missing Supabase environment variables');
 		}
-		
-		console.log('✅ Creating Supabase client with URL:', url.substring(0, 30) + '...');
+
 		return createClient(url, key);
 	} catch (error) {
 		console.error('❌ Failed to create Supabase client:', error);

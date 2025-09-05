@@ -411,71 +411,50 @@ def _show_action_selection_step(language):
     </div>
     """, unsafe_allow_html=True)
     
+    # Load actions and propose the best match
+    actions = load_actions_data(language)
+    user_profile = get_user_profile()
+    best_action = _find_best_action(actions, user_profile, language)
+
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        # Sample action - in a real app this would be matched to user values
-        sample_action = action_content['sample_action']
-        
-        # Enhanced action card with animation-ready styling
+        # Impact mini-chip: today's goal + total
+        total_done = len(st.session_state.get('completed_actions', []))
+        goal_label = "Cíl dnes: 1 laskavý krok" if language=='czech' else "Today: 1 kind step"
+        total_label = f"{total_done} " + ("akcí celkem" if language=='czech' else "actions total")
         st.markdown(f"""
-        <div style="
-            background: linear-gradient(135deg, #f8fdf8 0%, #f0f8f0 100%);
-            border: 2px solid #7AB87A;
-            border-radius: 20px;
-            padding: 2.5rem;
-            text-align: center;
-            margin: 2rem 0;
-            box-shadow: 0 4px 15px rgba(122, 184, 122, 0.2);
-            transition: all 0.3s ease;
-        ">
-            <h3 style="color: #2E5D31; margin-bottom: 1rem; font-size: 1.5rem;">
-                {sample_action['title']}
-            </h3>
-            <p style="color: #5A6B5A; margin-bottom: 1.5rem; line-height: 1.6; font-size: 1.1rem;">
-                {sample_action['description']}
-            </p>
-            <div style="
-                background: linear-gradient(135deg, #e8f5e8 0%, #d4e7d4 100%);
-                padding: 1.5rem;
-                border-radius: 15px;
-                margin-bottom: 1rem;
-                border: 1px solid #c4e4c4;
-            ">
-                <strong style="color: #2E5D31; font-size: 1.1rem;">💫 Váš dopad:</strong><br>
-                <span style="color: #4A5E4A; font-size: 1rem; line-height: 1.5; margin-top: 0.5rem; display: block;">
-                    {sample_action['impact']}
-                </span>
-            </div>
+        <div style="display:flex; gap:0.5rem; justify-content:center; margin: 0.5rem 0 0.75rem 0;">
+            <span style="background:#E8F2E8; color:#2E5D31; padding:0.4rem 0.75rem; border-radius:999px; font-size:0.9rem;">{goal_label}</span>
+            <span style="background:#E8F2E8; color:#2E5D31; padding:0.4rem 0.75rem; border-radius:999px; font-size:0.9rem;">{total_label}</span>
         </div>
         """, unsafe_allow_html=True)
-        
-        # Enhanced button with better spacing
-        st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
-        
-        if st.button(action_content['start_button'], use_container_width=True, type="primary", key="start_action"):
-            # Beautiful success animation
-            st.balloons()
-            st.success(f"🎉 {action_content['completion_message']}")
-            
-            st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
-            
-            # Options for next steps
-            col_a, col_b = st.columns(2)
-            with col_a:
-                if st.button("🔄 Další akce", use_container_width=True):
-                    # Reset for new journey
-                    if 'emotional_state' in st.session_state:
-                        del st.session_state.emotional_state
-                    if 'emotion_intervention_shown' in st.session_state:
-                        del st.session_state.emotion_intervention_shown
-                    if 'selected_values' in st.session_state:
-                        del st.session_state.selected_values
-                    st.session_state.journey_step = 'welcome'
-                    st.rerun()
-            
-            with col_b:
-                if st.button("💚 Sdílet", use_container_width=True):
-                    st.info("Děkujeme za vaši pomoc! Každý krok má význam. 🌱")
+
+        if best_action:
+            _render_action_card(best_action, language)
+            # Direct primary CTA
+            url = best_action.get('organization', {}).get('website', best_action.get('url', '#'))
+            org_name = best_action.get('organization', {}).get('name', 'organizace')
+            if url and url != '#':
+                try:
+                    st.link_button(("🌐 Přejít na " if language=='czech' else "🌐 Open ") + org_name, url=url, use_container_width=True)
+                except Exception:
+                    st.markdown(f"[🌐 {( 'Přejít na ' if language=='czech' else 'Open ')}{org_name}]({url})")
+            # Mark completed
+            done_label = "✅ Hotovo – označit dokončeno" if language=='czech' else "✅ Done – mark completed"
+            if st.button(done_label, use_container_width=True, key="journey_done"):
+                if 'completed_actions' not in st.session_state:
+                    st.session_state.completed_actions = []
+                st.session_state.completed_actions.append({
+                    'action': best_action,
+                    'completed_at': datetime.now()
+                })
+                st.success("🎉 " + ("Skvělé! Akce označena jako dokončená." if language=='czech' else "Great! Action marked as completed."))
+        else:
+            st.info("ℹ️ " + ("Zatím nemáme doporučení – zkuste Rychlou pomoc." if language=='czech' else "No recommendation yet – try Quick Help."))
+
+        # Alternatives
+        if actions:
+            _show_alternative_actions(actions, user_profile, language)
 
 def _show_values_discovery_step(language):
     """Krok 3: Objevování hodnot s jemným přechodem"""

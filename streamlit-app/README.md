@@ -15,6 +15,22 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
+### Environment
+
+Create `.env` from example:
+
+```bash
+cp .env.example .env
+```
+
+Required variables:
+
+```dotenv
+SUPABASE_URL=...
+SUPABASE_ANON_KEY=...
+# optional: SUPABASE_SERVICE_ROLE_KEY (server only)
+```
+
 ## ✏️ Editing Content
 
 **All user-facing text is centralized in `content.py`** - edit this file to change any text in the app.
@@ -43,7 +59,12 @@ JOURNEY_CONTENT = {
 
 ## 📁 Project Structure
 
-See `PROJECT_STRUCTURE.md` for detailed documentation.
+Data files live under `data/` and are loaded via robust relative paths. If files are missing, loaders use safe fallbacks and show gentle notices.
+
+### Troubleshooting
+- FileNotFoundError: ensure `data/czech/*.json` and `data/international/*.json` exist, or rely on fallbacks.
+- Dependencies: `pip install -r requirements.txt` (Streamlit >= 1.34 required).
+- Healthcheck: add `?healthz=1` to the app URL to return `{status: ok}`.
 
 ## 🎯 Design Philosophy
 

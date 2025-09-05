@@ -7,7 +7,8 @@
 // ================================================================
 
 // Configuration
-const STREAMLIT_BASE_URL = 'https://akceler-tor-altruismu-gvf9tctpuuq4t4tpjmaesa.streamlit.app';
+import { PUBLIC_STREAMLIT_BASE_URL } from '$env/static/public';
+const STREAMLIT_BASE_URL = (PUBLIC_STREAMLIT_BASE_URL || 'https://akceler-tor-altruismu-gvf9tctpuuq4t4tpjmaesa.streamlit.app').replace(/\/$/, '');
 const API_ENDPOINTS = {
   stats: '/api/stats',
   actions: '/api/recent-actions',
@@ -76,14 +77,22 @@ export async function fetchStreamlitData() {
 // Health check function
 export async function checkStreamlitHealth() {
   try {
-    const response = await fetch(`${STREAMLIT_BASE_URL}/_stcore/health`, {
+    await fetch(`${STREAMLIT_BASE_URL}/?healthz=1`, {
       method: 'GET',
-      mode: 'no-cors' // Since we can't control CORS on Streamlit Cloud
+      mode: 'no-cors'
     });
-    return true; // If no error thrown, assume it's working
+    return true;
   } catch (error) {
-    console.warn('Streamlit health check failed:', error);
-    return false;
+    try {
+      await fetch(`${STREAMLIT_BASE_URL}/_stcore/health`, {
+        method: 'GET',
+        mode: 'no-cors'
+      });
+      return true;
+    } catch (err) {
+      console.warn('Streamlit health check failed:', err);
+      return false;
+    }
   }
 }
 
@@ -203,7 +212,7 @@ export function embedStreamlitApp(container, params = {}) {
   
   const urlParams = new URLSearchParams({
     lang: language,
-    embedded: 'true'
+    embed: 'true'
   });
   
   if (region) urlParams.set('region', region);
