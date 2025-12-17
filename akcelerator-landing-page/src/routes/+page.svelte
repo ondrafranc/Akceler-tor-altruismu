@@ -375,15 +375,6 @@
     background: linear-gradient(90deg, transparent 0%, rgba(212, 231, 212, 0.5) 50%, transparent 100%);
   }
   
-  /* From Empathy to Action Section Styles */
-  .quote-block {
-    background: var(--bg-accent);
-    border-left: 4px solid var(--czech-forest-light);
-    padding: 2rem 2.5rem;
-    border-radius: 12px;
-    transition: all var(--timing-medium) var(--ease-gentle);
-  }
-  
   /* POC Disclaimer - Corner Badge Styles */
   .poc-disclaimer-corner {
     position: absolute;

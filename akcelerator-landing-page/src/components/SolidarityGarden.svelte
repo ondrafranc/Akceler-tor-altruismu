@@ -764,7 +764,6 @@
       transition: none;
     }
     
-    .gentle-pulse,
     .floating-story {
       animation: none;
     }

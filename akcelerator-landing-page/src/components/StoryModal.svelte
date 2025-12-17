@@ -110,14 +110,13 @@
     <div 
         class="modal-overlay" 
         on:click={handleBackdropClick}
-        on:keydown={handleKeydown}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="story-title"
-        tabindex="-1"
+        on:keydown={(e) => { handleKeydown(e); if (e.key === 'Enter' || e.key === ' ') handleBackdropClick(e); }}
+        role="presentation"
+        aria-label="Close story modal"
+        tabindex="0"
         bind:this={modalElement}
     >
-        <div class="modal-content" role="document">
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="story-title">
             <!-- Header -->
             <div class="modal-header">
                 <div class="story-icon">

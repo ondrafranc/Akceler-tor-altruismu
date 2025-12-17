@@ -619,10 +619,6 @@
       opacity: 0.4 !important;
     }
     
-    .bounceGentle {
-      animation: none !important;
-    }
-    
     .scroll-arrow {
       animation: none !important;
     }

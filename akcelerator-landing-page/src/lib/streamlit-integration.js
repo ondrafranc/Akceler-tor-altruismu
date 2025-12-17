@@ -7,8 +7,8 @@
 // ================================================================
 
 // Configuration
-import { PUBLIC_STREAMLIT_BASE_URL } from '$env/static/public';
-const STREAMLIT_BASE_URL = (PUBLIC_STREAMLIT_BASE_URL || 'https://akceler-tor-altruismu-gvf9tctpuuq4t4tpjmaesa.streamlit.app').replace(/\/$/, '');
+import { env } from '$env/dynamic/public';
+const STREAMLIT_BASE_URL = (env.PUBLIC_STREAMLIT_BASE_URL || 'https://akceler-tor-altruismu-gvf9tctpuuq4t4tpjmaesa.streamlit.app').replace(/\/$/, '');
 const API_ENDPOINTS = {
   stats: '/api/stats',
   actions: '/api/recent-actions',

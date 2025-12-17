@@ -263,14 +263,16 @@
     <div 
         class="modal-overlay" 
         on:click={handleBackdropClick}
-        on:keydown={handleKeydown}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-title"
-        tabindex="-1"
+        on:keydown={(e) => { handleKeydown(e); if (e.key === 'Enter' || e.key === ' ') handleBackdropClick(e); }}
+        role="presentation"
+        aria-label="Close feedback modal"
+        tabindex="0"
     >
         <div 
             class="modal-content" 
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
             bind:this={modalElement}
         >
             <!-- Modal Header -->
