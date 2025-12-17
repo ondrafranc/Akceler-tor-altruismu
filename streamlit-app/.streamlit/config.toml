@@ -3,28 +3,17 @@ headless = true
 port = 8501
 baseUrlPath = "app"
 enableStaticServing = true
+enableCORS = false
+enableXsrfProtection = false
+# Reduce open file handles by disabling native file watchers (use polling)
+fileWatcherType = "none"
 
 [browser]
 gatherUsageStats = false
 
 [theme]
 primaryColor = "#2E5D31"
-backgroundColor = "#FAFBFA"
-secondaryBackgroundColor = "#F0F8F0"
-textColor = "#2E5D31"
-font = "sans serif"
-[theme]
-primaryColor = "#2E5D31"
 backgroundColor = "#F8FBF8"
 secondaryBackgroundColor = "#F0F6F0"
 textColor = "#2C3E2D"
 font = "sans serif"
-
-[server]
-headless = true
-port = 8501
-enableCORS = false
-enableXsrfProtection = false
-
-[browser]
-gatherUsageStats = false 
