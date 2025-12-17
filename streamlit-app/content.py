@@ -16,13 +16,11 @@ JOURNEY_CONTENT = {
             'journey_steps': {
                 'title': '🧭 Vaše cesta v několika krocích',
                 'steps': [
-                    '**Pocity** - Jak se teď cítíte?',
                     '**Hodnoty** - Co vám je blízké?',
-                    '**Akce** - Najdeme vám konkrétní krok',
-                    '**Reflexe** - Jak to bylo?'
+                    '**Akce** - Najdeme vám konkrétní krok'
                 ]
             },
-            'start_button': '🌟 Začít mou cestu'
+            'start_button': '🌿 Začít pomáhat po svém'
         },
         
         # Step 2: Emotional Check
@@ -92,13 +90,11 @@ JOURNEY_CONTENT = {
             'journey_steps': {
                 'title': '🧭 Your journey in a few steps',
                 'steps': [
-                    '**Feelings** - How do you feel now?',
                     '**Values** - What\'s close to your heart?',
-                    '**Action** - We\'ll find you a concrete step',
-                    '**Reflection** - How was it?'
+                    '**Action** - We\'ll find you a concrete step'
                 ]
             },
-            'start_button': '🌟 Start my journey'
+            'start_button': '🌿 Start helping your way'
         },
         
         # Step 2: Emotional Check
@@ -425,6 +421,10 @@ JOURNEY_TRANSITIONS = {
             'transition_text': 'Začneme jemně, u vašich pocitů...',
             'subtitle': 'Není to test. Je to jen způsob, jak vás lépe poznat.'
         },
+        'welcome_to_values': {
+            'transition_text': 'Začneme rychle – vybereme oblasti, které vám dávají smysl.',
+            'subtitle': 'Podle nich vám hned ukážeme konkrétní pomoc.'
+        },
         'emotional_to_values': {
             'transition_text': 'Teď, když víme, jak se cítíte...',
             'subtitle': 'Pojďme objevit, co vám je skutečně blízké.'
@@ -432,6 +432,10 @@ JOURNEY_TRANSITIONS = {
         'values_to_action': {
             'transition_text': 'Krásně. Teď už víme, kam směřovat...',
             'subtitle': 'Najdeme vám něco konkrétního, co můžete udělat.'
+        },
+        'welcome_to_action': {
+            'transition_text': 'Začneme rovnou konkrétní pomocí.',
+            'subtitle': 'Vybereme ověřenou organizaci a jasný krok.'
         }
     },
     
@@ -440,6 +444,10 @@ JOURNEY_TRANSITIONS = {
             'transition_text': 'We\'ll start gently, with your feelings...',
             'subtitle': 'This isn\'t a test. It\'s just a way to get to know you better.'
         },
+        'welcome_to_values': {
+            'transition_text': 'Let’s move quickly—choose areas that matter to you.',
+            'subtitle': 'We’ll use them to show you concrete ways to help right now.'
+        },
         'emotional_to_values': {
             'transition_text': 'Now that we know how you feel...',
             'subtitle': 'Let\'s discover what\'s truly close to your heart.'
@@ -447,6 +455,10 @@ JOURNEY_TRANSITIONS = {
         'values_to_action': {
             'transition_text': 'Beautiful. Now we know where to direct our efforts...',
             'subtitle': 'We\'ll find you something concrete you can do.'
+        },
+        'welcome_to_action': {
+            'transition_text': 'Let’s go straight to a concrete way to help.',
+            'subtitle': 'Pick a trusted organization and a clear next step.'
         }
     }
 }
@@ -459,13 +471,11 @@ VISUAL_ELEMENTS = {
     'progress_indicators': {
         'czech': [
             '🌱 Začínáme',
-            '💚 Naslouchání',
             '🎯 Objevování',
             '✨ Akce'
         ],
         'english': [
             '🌱 Starting',
-            '💚 Listening', 
             '🎯 Discovering',
             '✨ Action'
         ]

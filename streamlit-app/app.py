@@ -13,6 +13,7 @@ from components.emergency_help import render_gentle_crisis_support
 from data.loaders import load_actions_data, load_causes_data
 from content import get_content
 import json
+from datetime import datetime
 
 def main():
     """Hlavní vstupní bod aplikace - s navigací a lineární cestou"""
@@ -278,20 +279,19 @@ def _render_enhanced_navigation(language):
     
     st.markdown("""
     <div style="
-        background: linear-gradient(135deg, #7AB87A 0%, #6BAD6B 100%);
-        padding: 1rem 0;
-        margin: -1rem -1rem 2rem -1rem;
-        box-shadow: 0 2px 10px rgba(122, 184, 122, 0.3);
+        background: #F8FBF8;
+        padding: 0.5rem 0;
+        margin: -0.5rem -0.5rem 1.25rem -0.5rem;
     ">
         <div style="
             max-width: 1200px;
             margin: 0 auto;
-            padding: 0 1rem;
+            padding: 0 0.75rem;
         ">
     """, unsafe_allow_html=True)
     
     # Navigation tabs
-    cols = st.columns([1, 1, 1.5, 1, 1, 1])
+    cols = st.columns([1, 1, 1.2, 1, 1, 1])
     
     with cols[0]:
         if st.button("🧭 Cesta", use_container_width=True, 
@@ -300,6 +300,11 @@ def _render_enhanced_navigation(language):
             # Reset journey to welcome when clicking Cesta
             if 'journey_step' in st.session_state:
                 st.session_state.journey_step = 'welcome'
+            # Clear previous selections for a fresh start
+            if 'selected_values' in st.session_state:
+                st.session_state.selected_values = []
+            if 'user_profile' in st.session_state and isinstance(st.session_state.user_profile, dict):
+                st.session_state.user_profile['values'] = []
             st.rerun()
     
     with cols[1]:
@@ -309,27 +314,8 @@ def _render_enhanced_navigation(language):
             st.rerun()
     
     with cols[2]:
-        # Emphasized quick actions button
-        st.markdown(f"""
-        <style>
-        @keyframes pulse {{
-            0% {{ transform: scale(1); }}
-            50% {{ transform: scale(1.05); }}
-            100% {{ transform: scale(1); }}
-        }}
-        .stButton > button[key="quick_actions_btn"] {{
-            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%) !important;
-            color: #2E5D31 !important;
-            font-weight: 700 !important;
-            border: 2px solid #FFD700 !important;
-            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4) !important;
-            animation: pulse 2s infinite !important;
-        }}
-        </style>
-        """, unsafe_allow_html=True)
-        
         if st.button("⚡ RYCHLÁ POMOC", use_container_width=True,
-                    type="primary", key="quick_actions_btn"):
+                    type="primary" if st.session_state.current_page == 'quick_actions' else "secondary", key="quick_actions_btn"):
             st.session_state.current_page = 'quick_actions'
             st.rerun()
     

@@ -6,10 +6,11 @@ Jemný průvodce od pocitu bezmoci k smysluplné akci
 import streamlit as st
 from datetime import datetime
 from utils.localization import get_text, get_czech_proverb
-from logic.encouragement import get_random_encouragement, get_emotional_response
+from logic.encouragement import get_random_encouragement
+from logic.matching import calculate_advanced_action_score
 from core.session import get_user_profile, update_user_profile, track_page_visit
 from data.loaders import load_actions_data, load_causes_data
-from content import get_content, get_emotional_response as get_content_emotional_response, get_encouragement, get_micro_intervention, get_journey_transition, get_visual_element
+from content import get_content, get_encouragement, get_journey_transition, get_visual_element
 
 def show_journey_flow():
     """Hlavní lineární tok"""
@@ -19,12 +20,16 @@ def show_journey_flow():
     
     if journey_step == 'welcome':
         _show_welcome_step(language)
-    elif journey_step == 'emotional_check':
-        _show_emotional_check_step(language)
     elif journey_step == 'values_discovery':
         _show_values_discovery_step(language)
     elif journey_step == 'action_selection':
         _show_action_selection_step(language)
+    elif journey_step == 'action_completion':
+        _show_action_completion_step(language)
+    elif journey_step == 'reflection':
+        _show_reflection_step(language)
+    elif journey_step == 'next_steps':
+        _show_next_steps_step(language)
     else:
         st.session_state.journey_step = 'welcome' 
         st.rerun()
@@ -176,176 +181,25 @@ def _show_welcome_step(language):
             type="primary",
             key="welcome_start"
         ):
-            st.session_state.journey_step = 'emotional_check'
+            # Start with quick values selection (light, skippable)
+            st.session_state.journey_step = 'values_discovery'
             st.rerun()
 
 def _show_emotional_check_step(language):
-    """Krok 2: Emocionální check-in s mikro-intervencemi"""
-    
-    emotional_content = get_content('journey_content.emotional_check', language)
-    transition = get_journey_transition('welcome_to_emotional', language)
-    
-    # Jemný přechod
-    st.markdown(f"""
-    <div style="
-        text-align: center; 
-        padding: 1rem 0; 
-        color: #7AB87A; 
-        font-style: italic;
-        margin-bottom: 1rem;
-    ">
-        {transition.get('transition_text', '')}
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown(f"""
-    <div style="text-align: center; padding: 1rem 0 2rem 0;">
-        <h2 style="color: #2E5D31; margin-bottom: 0.5rem;">{emotional_content['title']}</h2>
-        <p style="color: #5A6B5A; font-size: 1rem; margin: 0.5rem 0;">
-            {emotional_content.get('purpose_intro', '')}
-        </p>
-        <p style="color: #7AB87A; font-size: 0.9rem; margin: 0; font-style: italic;">
-            {transition.get('subtitle', '')}
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        emotions = emotional_content['emotions']
-        
-        # Pokud už byla vybrána emoce, zobraz mikro-intervenci
-        if 'emotional_state' in st.session_state and not st.session_state.get('emotion_intervention_shown', False):
-            _show_emotional_micro_intervention(st.session_state.emotional_state, language)
-            return
-        
-        # Pokud už byla intervence ukázána, přejdi na další krok
-        if st.session_state.get('emotion_intervention_shown', False):
-            st.session_state.journey_step = 'values_discovery'
-            st.rerun()
-            return
-        
-        # Jinak zobraz výběr emocí
-        st.markdown("""
-        <div style="margin-bottom: 1.5rem;">
-        """, unsafe_allow_html=True)
-        
-        for emotion_key, title in emotions:
-            if st.button(title, key=f"emotion_{emotion_key}", use_container_width=True):
-                st.session_state.emotional_state = emotion_key
-                # Don't set emotion_intervention_shown here, let the micro-intervention function handle it
-                st.rerun()
-                break
-        
-        st.markdown("</div>", unsafe_allow_html=True)
+    """Deprecated: emotional check removed from flow."""
+    return
 
 def _show_emotional_micro_intervention(emotion_key, language):
-    """Zobrazí mikro-intervenci na základě vybrané emoce"""
+    """Deprecated: emotional micro-intervention removed from flow."""
+    return
     
-    intervention = get_micro_intervention(emotion_key, language)
-    emotional_content = get_content('journey_content.emotional_check', language)
-    
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        # Poděkování za sdílení
-        st.success(f"💚 {emotional_content['thank_you']}")
-        
-        # Pauza text
-        st.markdown(f"""
-        <div style="
-            text-align: center;
-            padding: 1.5rem;
-            background: linear-gradient(135deg, #f8fdf8 0%, #f0f8f0 100%);
-            border-radius: 15px;
-            margin: 1.5rem 0;
-            border-left: 4px solid #7AB87A;
-        ">
-            <div style="color: #2E5D31; font-size: 1.1rem; font-style: italic; margin-bottom: 1rem;">
-                {intervention.get('pause_text', '')}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Specifický průvodce podle emoce
-        if emotion_key == 'overwhelmed':
-            st.markdown(f"""
-            <div style="
-                background: #f0f8f0;
-                padding: 1.5rem;
-                border-radius: 10px;
-                margin: 1rem 0;
-                text-align: center;
-            ">
-                <div style="color: #5A6B5A; margin-bottom: 1rem;">
-                    {intervention.get('breathing_guide', '')}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Jednoduchý grounding input
-            grounding_input = st.text_input(
-                intervention.get('grounding_question', ''),
-                placeholder="Například: stůl, okno, rostlina...",
-                key="grounding_input"
-            )
-            
-        elif emotion_key in ['motivated', 'hopeful']:
-            st.markdown(f"""
-            <div style="
-                background: #f0f8f0;
-                padding: 1.5rem;
-                border-radius: 10px;
-                margin: 1rem 0;
-                text-align: center;
-            ">
-                <div style="color: #5A6B5A; margin-bottom: 1rem;">
-                    {intervention.get('focus_guide', intervention.get('nurturing_guide', ''))}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-        elif emotion_key in ['uncertain', 'lost']:
-            st.markdown(f"""
-            <div style="
-                background: #f0f8f0;
-                padding: 1.5rem;
-                border-radius: 10px;
-                margin: 1rem 0;
-                text-align: center;
-            ">
-                <div style="color: #5A6B5A; margin-bottom: 1rem;">
-                    {intervention.get('acceptance_guide', '')}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        # Jemný přechod k pokračování
-        st.markdown(f"""
-        <div style="
-            text-align: center;
-            padding: 1rem;
-            margin: 1.5rem 0;
-            color: #4A5E4A;
-            font-style: italic;
-        ">
-            {intervention.get('gentle_transition', '')}
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Tlačítko pokračování s personalizovaným textem
-        continue_button_text = intervention.get('continue_when_ready', 'Pokračovat →')
-        
-        if st.button(continue_button_text, use_container_width=True, type="primary", key="continue_after_intervention"):
-            st.session_state.emotion_intervention_shown = True
-            st.session_state.journey_step = 'values_discovery'
-            st.rerun()
-
-
 def _show_action_selection_step(language):
     """Krok 4: Výběr akce s krásným přechodem"""
     
     action_content = get_content('journey_content.action_selection', language)
-    transition = get_journey_transition('values_to_action', language)
+    has_values = bool(st.session_state.get('selected_values') or get_user_profile().get('values'))
+    transition_key = 'values_to_action' if has_values else 'welcome_to_action'
+    transition = get_journey_transition(transition_key, language)
     
     # Jemný přechod z hodnot
     st.markdown(f"""
@@ -362,14 +216,14 @@ def _show_action_selection_step(language):
     
     # Progress indicators
     progress_indicators = get_visual_element('progress_indicators', language)
-    current_step = 3  # 0-indexed
+    current_step = 2  # welcome (0), values (1), action (2)
     
     st.markdown(f"""
     <div style="text-align: center; padding: 1rem 0 2rem 0;">
         <div style="margin-bottom: 1rem;">
     """, unsafe_allow_html=True)
     
-    cols = st.columns(4)
+    cols = st.columns(len(progress_indicators))
     for i, indicator in enumerate(progress_indicators):
         with cols[i]:
             if i <= current_step:
@@ -414,8 +268,10 @@ def _show_action_selection_step(language):
     # Load actions and propose the best match
     actions = load_actions_data(language)
     user_profile = get_user_profile()
+    if st.session_state.get('selected_values'):
+        user_profile = {**user_profile, 'values': st.session_state.get('selected_values')}
     best_action = _find_best_action(actions, user_profile, language)
-
+    
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         # Impact mini-chip: today's goal + total
@@ -428,7 +284,7 @@ def _show_action_selection_step(language):
             <span style="background:#E8F2E8; color:#2E5D31; padding:0.4rem 0.75rem; border-radius:999px; font-size:0.9rem;">{total_label}</span>
         </div>
         """, unsafe_allow_html=True)
-
+        
         if best_action:
             _render_action_card(best_action, language)
             # Direct primary CTA
@@ -460,7 +316,9 @@ def _show_values_discovery_step(language):
     """Krok 3: Objevování hodnot s jemným přechodem"""
     
     values_content = get_content('journey_content.values_discovery', language)
-    transition = get_journey_transition('emotional_to_values', language)
+    came_from_emotional = bool(st.session_state.get('emotional_state'))
+    transition_key = 'emotional_to_values' if came_from_emotional else 'welcome_to_values'
+    transition = get_journey_transition(transition_key, language)
     
     # Jemný přechod z emocionálního kroku
     st.markdown(f"""
@@ -477,7 +335,7 @@ def _show_values_discovery_step(language):
     
     # Vylepšená hlavička s progress indikátorem
     progress_indicators = get_visual_element('progress_indicators', language)
-    current_step = 2  # 0-indexed
+    current_step = 1  # welcome (0), values (1), action (2)
     
     st.markdown(f"""
     <div style="text-align: center; padding: 1rem 0 2rem 0;">
@@ -485,7 +343,7 @@ def _show_values_discovery_step(language):
     """, unsafe_allow_html=True)
     
     # Progress indicators
-    cols = st.columns(4)
+    cols = st.columns(len(progress_indicators))
     for i, indicator in enumerate(progress_indicators):
         with cols[i]:
             if i <= current_step:
@@ -575,13 +433,18 @@ def _show_values_discovery_step(language):
             area_word = "oblast" if count == 1 else "oblasti" if count < 5 else "oblastí"
             st.success(values_content['guidance']['good_selection'].format(count=count, area_word=area_word))
         
-        # Pokračování
-        if count >= 1:
-            st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
-            
-            if st.button(values_content['continue_button'], use_container_width=True, type="primary"):
+        # Pokračování / přeskočení
+        st.markdown("<div style='height: 1.0rem;'></div>", unsafe_allow_html=True)
+        cols_cta = st.columns([1, 1])
+        with cols_cta[0]:
+            if st.button(values_content['continue_button'], use_container_width=True, type="primary", key="values_continue"):
                 update_user_profile({'values': st.session_state.selected_values})
-                st.session_state.journey_step = 'action_selection'  # Skip resources_check for now
+                st.session_state.journey_step = 'action_selection'
+                st.rerun()
+        with cols_cta[1]:
+            if st.button("Přeskočit a zobrazit návrhy" if language == 'czech' else "Skip and see suggestions", use_container_width=True, type="secondary", key="values_skip"):
+                update_user_profile({'values': st.session_state.selected_values})
+                st.session_state.journey_step = 'action_selection'
                 st.rerun()
 
 def _show_resources_check_step(language):
@@ -793,8 +656,11 @@ def _show_next_steps_step(language):
         
         # Možnosti pokračování
         if st.button("🔄 Udělat další akci" if language == 'czech' else "🔄 Do another action", use_container_width=True, type="primary"):
-            # Reset journey pro novou akci
-            st.session_state.journey_step = 'emotional_check'
+            # Reset journey pro novou akci – začni lehkým výběrem hodnot
+            st.session_state.selected_values = []
+            if 'user_profile' in st.session_state and isinstance(st.session_state.user_profile, dict):
+                st.session_state.user_profile['values'] = []
+            st.session_state.journey_step = 'values_discovery'
             st.rerun()
         
         if st.button("📖 Podívat se na mou cestu" if language == 'czech' else "📖 Look at my journey", use_container_width=True):
