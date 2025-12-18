@@ -14,6 +14,15 @@ from data.loaders import load_actions_data, load_causes_data
 from content import get_content
 import json
 from datetime import datetime
+import math
+
+try:
+    # Optional dependency for browser geolocation (added to requirements.txt).
+    # If unavailable, we fall back to manual city selection.
+    from streamlit_geolocation import streamlit_geolocation  # type: ignore
+    _HAS_GEOLOCATION = True
+except Exception:
+    _HAS_GEOLOCATION = False
 
 def main():
     """Hlavní vstupní bod aplikace - s navigací a lineární cestou"""
@@ -373,14 +382,14 @@ def _render_enhanced_navigation(language):
 def _show_quick_actions_page(language):
     """Stránka rychlých akcí - okamžitá pomoc"""
     
-    st.markdown("""
-    <div style="text-align: center; padding: 2rem 0;">
-        <h1 style="color: #2E5D31; margin-bottom: 0.5rem;">⚡ Rychlá pomoc</h1>
-        <p style="color: #5A6B5A; font-size: 1.2rem; margin: 0;">
-            Věci, které můžete udělat právě teď. Žádné dlouhé registrace, žádné čekání.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    title = "⚡ Rychlá pomoc" if language == "czech" else "⚡ Quick help"
+    subtitle = (
+        "Věci, které můžete udělat právě teď. Žádné dlouhé registrace, žádné čekání."
+        if language == "czech"
+        else "Things you can do right now. No long signup, no waiting."
+    )
+    st.markdown(f"<div class='main-header'>{title}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='sub-header'>{subtitle}</div>", unsafe_allow_html=True)
     
     # Filters and progress chip
     st.markdown("""
@@ -392,12 +401,112 @@ def _show_quick_actions_page(language):
     </div>
     """.format(completed=len(st.session_state.get('completed_actions', []))), unsafe_allow_html=True)
 
-    with st.expander("🎯 Filtrovat", expanded=False):
+    # Simple geo helpers (Czech city centroids) for “near you”
+    CITY_COORDS = {
+        "praha": (50.0755, 14.4378),
+        "brno": (49.1951, 16.6068),
+        "ostrava": (49.8209, 18.2625),
+        "plzen": (49.7384, 13.3736),
+        "olomouc": (49.5938, 17.2509),
+        "liberec": (50.7671, 15.0562),
+        "hradec kralove": (50.2092, 15.8328),
+        "ceske budejovice": (48.9747, 14.4743),
+        "usti nad labem": (50.6607, 14.0323),
+    }
+
+    def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        r = 6371.0
+        p1 = math.radians(lat1)
+        p2 = math.radians(lat2)
+        dlat = math.radians(lat2 - lat1)
+        dlon = math.radians(lon2 - lon1)
+        a = math.sin(dlat / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dlon / 2) ** 2
+        return 2 * r * math.asin(math.sqrt(a))
+
+    def _norm_place(action: dict) -> str:
+        # Some data uses requirements.location, some uses action.location.
+        return str(action.get("location") or action.get("requirements", {}).get("location") or "").strip().lower()
+
+    def _extract_city_key(place: str) -> str | None:
+        if not place:
+            return None
+        # Match by containment for simple city tags (praha/brno/ostrava/etc.)
+        for k in CITY_COORDS.keys():
+            if k in place:
+                return k
+        return None
+
+    near_label = "V okolí" if language == "czech" else "Near me"
+    with st.expander("🎯 " + ("Filtrovat" if language == "czech" else "Filters"), expanded=False):
         colf1, colf2 = st.columns(2)
         with colf1:
-            time_filter = st.selectbox("Čas", ["Libovolně", "Do 15 min", "Do 1 hod"], index=0)
+            time_filter = st.selectbox(
+                "Čas" if language == "czech" else "Time",
+                ["Libovolně", "Do 15 min", "Do 1 hod"] if language == "czech" else ["Any", "≤ 15 min", "≤ 1 hour"],
+                index=0,
+            )
         with colf2:
-            location_filter = st.selectbox("Místo", ["Kdekoli", "Online", "Praha", "Brno", "Ostrava"], index=0)
+            location_filter = st.selectbox(
+                "Místo" if language == "czech" else "Place",
+                ["Kdekoli", "Online", "Praha", "Brno", "Ostrava", near_label]
+                if language == "czech"
+                else ["Anywhere", "Online", "Prague", "Brno", "Ostrava", near_label],
+                index=0,
+            )
+
+        if location_filter == near_label:
+            st.markdown("<div class='section-header'>📍 " + ( "V okolí" if language=="czech" else "Near you") + "</div>", unsafe_allow_html=True)
+
+            # Keep location in session (so filters don’t reset all the time)
+            if "user_location" not in st.session_state:
+                st.session_state.user_location = None
+
+            colg1, colg2 = st.columns([2, 1])
+            with colg1:
+                city_options = ["Praha", "Brno", "Ostrava", "Plzeň", "Olomouc", "Liberec", "Hradec Králové", "České Budějovice", "Ústí nad Labem"]
+                city_choice = st.selectbox(
+                    "Město" if language == "czech" else "City",
+                    ["(vyberte)"] + city_options if language == "czech" else ["(select)"] + city_options,
+                    index=0,
+                    key="near_city_choice",
+                )
+
+            with colg2:
+                radius_km = st.slider(
+                    "Okruh (km)" if language == "czech" else "Radius (km)",
+                    min_value=5,
+                    max_value=200,
+                    value=25,
+                    step=5,
+                    key="near_radius_km",
+                )
+
+            # Optional browser geolocation (best UX) + manual fallback
+            if _HAS_GEOLOCATION:
+                if st.button("📍 " + ("Použít moji polohu (GPS)" if language == "czech" else "Use my location (GPS)"), use_container_width=True, key="near_use_gps"):
+                    try:
+                        loc = streamlit_geolocation()
+                        if loc and loc.get("latitude") and loc.get("longitude"):
+                            st.session_state.user_location = {"lat": float(loc["latitude"]), "lon": float(loc["longitude"]), "source": "gps"}
+                    except Exception:
+                        # Silent fallback; user can still choose city
+                        pass
+
+            # Manual city selection -> coordinates
+            if city_choice and not city_choice.startswith("("):
+                norm = (
+                    city_choice.lower()
+                    .replace("č", "c").replace("ě", "e").replace("š", "s").replace("ř", "r")
+                    .replace("ž", "z").replace("ý", "y").replace("á", "a").replace("í", "i")
+                    .replace("é", "e").replace("ů", "u").replace("ú", "u").replace("ň", "n")
+                    .replace("ď", "d").replace("ť", "t").replace("ó", "o")
+                )
+                norm = norm.replace("plzeň", "plzen").replace("hradec králové", "hradec kralove").replace("české budějovice", "ceske budejovice").replace("ústí nad labem", "usti nad labem")
+                # Normalize spaces
+                norm = " ".join(norm.split())
+                if norm in CITY_COORDS:
+                    lat, lon = CITY_COORDS[norm]
+                    st.session_state.user_location = {"lat": lat, "lon": lon, "source": "city"}
 
     # Load actions data
     try:
@@ -409,20 +518,40 @@ def _show_quick_actions_page(language):
         for key, action in actions.items():
             minutes = action.get('requirements', {}).get('time_minutes', 999)
             commitment = action.get('commitment_type')
-            place = action.get('location', 'online').lower()
+            place = _norm_place(action)
             if minutes <= 30 or commitment == 'one_time':
                 # Time filter
-                if time_filter == "Do 15 min" and minutes > 15:
+                if (time_filter == "Do 15 min" or time_filter == "≤ 15 min") and minutes > 15:
                     continue
-                if time_filter == "Do 1 hod" and minutes > 60:
+                if (time_filter == "Do 1 hod" or time_filter == "≤ 1 hour") and minutes > 60:
                     continue
-                # Location filter (simple contains)
-                if location_filter != "Kdekoli":
-                    lf = location_filter.lower()
-                    if lf != 'online' and lf not in place:
-                        continue
-                    if lf == 'online' and 'online' not in place:
-                        continue
+                # Location filter
+                if location_filter not in ("Kdekoli", "Anywhere"):
+                    lf = str(location_filter).lower()
+                    if lf in ("online",):
+                        if "online" not in place and place not in ("any", "remote"):
+                            continue
+                    elif location_filter == near_label:
+                        user_loc = st.session_state.get("user_location")
+                        if not user_loc:
+                            # Without a user location, don't show location-specific results
+                            continue
+                        city_key = _extract_city_key(place)
+                        if not city_key:
+                            # If action isn't city-tagged, keep only online/any actions
+                            if place not in ("any", "online", "remote"):
+                                continue
+                        else:
+                            lat2, lon2 = CITY_COORDS[city_key]
+                            dist = _haversine_km(float(user_loc["lat"]), float(user_loc["lon"]), lat2, lon2)
+                            if dist > float(st.session_state.get("near_radius_km", 25)):
+                                continue
+                            action["_distance_km"] = round(dist)
+                    else:
+                        if lf == "prague":
+                            lf = "praha"
+                        if lf not in place:
+                            continue
                 quick_actions[key] = action
         
         # Display quick actions in cards
@@ -448,16 +577,12 @@ def _render_quick_action_card(action, language):
     time_text = f"{time_req} min" if time_req < 60 else f"{time_req//60}h"
     cost_text = "Zdarma" if cost == 0 else f"~{int(cost * 25)} Kč"
     
-    # Calm card UI: no gradients, no JS hover transforms (Streamlit already handles hover)
+    distance_km = action.get("_distance_km")
+    place = str(action.get("location") or action.get("requirements", {}).get("location") or "").strip()
+
+    # Card UI aligned with global CSS classes
     st.markdown(f"""
-    <div style="
-        background: #ffffff;
-        border: 1px solid rgba(44, 62, 45, 0.12);
-        border-radius: 14px;
-        padding: 1.1rem;
-        margin: 0.75rem 0;
-        box-shadow: 0 10px 28px rgba(0,0,0,0.08);
-    ">
+    <div class="action-card">
         <div style="color:#2E5D31; font-weight:700; font-size:1.05rem; margin:0 0 0.5rem 0;">
             {action.get('title', 'Bez názvu')}
         </div>
@@ -469,7 +594,11 @@ def _render_quick_action_card(action, language):
             <span>💰 {cost_text}</span>
         </div>
         <div style="background:#F2F7F2; border:1px solid rgba(44, 62, 45, 0.12); padding:0.6rem 0.75rem; border-radius:12px; font-size:0.92rem; color:#2E5D31;">
-            <strong>Organizace:</strong> {organization}
+            <strong>{('Organizace' if language=='czech' else 'Organization')}:</strong> {organization}
+        </div>
+        <div style="margin-top:0.6rem; display:flex; gap:0.5rem; flex-wrap:wrap; font-size:0.9rem; color:#516051;">
+          {f"<span>📍 {place}</span>" if place else ""}
+          {f"<span>•</span><span>~{distance_km} km</span>" if distance_km is not None else ""}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -580,14 +709,14 @@ def _render_fallback_quick_actions(language):
 def _show_causes_page(language):
     """Stránka oblastí pomoci"""
     
-    st.markdown("""
-    <div style="text-align: center; padding: 2rem 0;">
-        <h1 style="color: #2E5D31; margin-bottom: 0.5rem;">🌍 Oblasti pomoci</h1>
-        <p style="color: #5A6B5A; font-size: 1.2rem; margin: 0;">
-            Objevte různé způsoby, jak můžete pomoci. Každá oblast má své specifické potřeby.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    title = "🌍 Oblasti pomoci" if language == "czech" else "🌍 Causes"
+    subtitle = (
+        "Objevte různé způsoby, jak můžete pomoci. Každá oblast má své specifické potřeby."
+        if language == "czech"
+        else "Explore different ways you can help."
+    )
+    st.markdown(f"<div class='main-header'>{title}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='sub-header'>{subtitle}</div>", unsafe_allow_html=True)
     
     try:
         causes_data = load_causes_data(language)
@@ -605,21 +734,14 @@ def _render_cause_card(cause, language):
     """Render karty jednotlivých oblastí"""
     
     st.markdown(f"""
-    <div style="
-        background: linear-gradient(135deg, #f8fdf8 0%, #f0f8f0 100%);
-        border: 1px solid #7AB87A;
-        border-radius: 15px;
-        padding: 2rem;
-        margin: 1.5rem 0;
-        box-shadow: 0 2px 10px rgba(122, 184, 122, 0.1);
-    ">
-        <div style="display: flex; align-items: center; margin-bottom: 1rem;">
-            <span style="font-size: 2rem; margin-right: 1rem;">{cause.get('emoji', '🌟')}</span>
-            <h2 style="color: #2E5D31; margin: 0;">{cause.get('title', 'Bez názvu')}</h2>
-        </div>
-        <p style="color: #5A6B5A; margin-bottom: 1.5rem; line-height: 1.6; font-size: 1.1rem;">
-            {cause.get('description', 'Popis není k dispozici')}
-        </p>
+    <div class="cause-card">
+      <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem;">
+        <div style="font-size:1.6rem;">{cause.get('emoji', '🌟')}</div>
+        <div style="color:#2E5D31; font-weight:750; font-size:1.15rem;">{cause.get('title', 'Bez názvu')}</div>
+      </div>
+      <div style="color:#516051; line-height:1.6;">
+        {cause.get('description', 'Popis není k dispozici')}
+      </div>
     </div>
     """, unsafe_allow_html=True)
     
@@ -680,96 +802,52 @@ def _render_fallback_causes(language):
 def _show_impact_page(language):
     """Stránka dopadu - statistiky a pokrok"""
     
-    st.markdown("""
-    <div style="text-align: center; padding: 2rem 0;">
-        <h1 style="color: #2E5D31; margin-bottom: 0.5rem;">📊 Váš dopad</h1>
-        <p style="color: #5A6B5A; font-size: 1.2rem; margin: 0;">
-            Každá akce má význam. Zde vidíte, co jste už dokázali.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    title = "📊 Váš dopad" if language == "czech" else "📊 Your impact"
+    subtitle = (
+        "Každá akce má význam. Zde vidíte, co jste už dokázali."
+        if language == "czech"
+        else "Every action matters. Here’s what you’ve done so far."
+    )
+    st.markdown(f"<div class='main-header'>{title}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='sub-header'>{subtitle}</div>", unsafe_allow_html=True)
     
     # Personal stats
     completed_actions = st.session_state.get('completed_actions', [])
     total_actions = len(completed_actions)
     
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.markdown(f"""
-        <div style="
-            background: linear-gradient(135deg, #7AB87A 0%, #6BAD6B 100%);
-            color: white;
-            padding: 2rem;
-            border-radius: 15px;
-            text-align: center;
-            margin: 1rem 0;
-        ">
-            <h2 style="margin: 0; font-size: 3rem;">{total_actions}</h2>
-            <p style="margin: 0.5rem 0 0 0; font-size: 1.1rem;">Dokončených akcí</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        # Calculate estimated people helped
-        estimated_help = total_actions * 3  # rough estimate
-        st.markdown(f"""
-        <div style="
-            background: linear-gradient(135deg, #5A9B5A 0%, #4A8A4A 100%);
-            color: white;
-            padding: 2rem;
-            border-radius: 15px;
-            text-align: center;
-            margin: 1rem 0;
-        ">
-            <h2 style="margin: 0; font-size: 3rem;">~{estimated_help}</h2>
-            <p style="margin: 0.5rem 0 0 0; font-size: 1.1rem;">Lidí jste pomohli</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        # Days since first action
-        if completed_actions:
-            first_action_date = completed_actions[0].get('completed_at')
-            if first_action_date:
-                from datetime import datetime
-                days_helping = (datetime.now() - first_action_date).days
-            else:
-                days_helping = 1
+    # Calculate estimated people helped
+    estimated_help = total_actions * 3  # rough estimate
+
+    # Days since first action
+    if completed_actions:
+        first_action_date = completed_actions[0].get('completed_at')
+        if first_action_date:
+            days_helping = (datetime.now() - first_action_date).days
         else:
-            days_helping = 0
-            
-        st.markdown(f"""
-        <div style="
-            background: linear-gradient(135deg, #4A8A4A 0%, #3A7A3A 100%);
-            color: white;
-            padding: 2rem;
-            border-radius: 15px;
-            text-align: center;
-            margin: 1rem 0;
-        ">
-            <h2 style="margin: 0; font-size: 3rem;">{days_helping}</h2>
-            <p style="margin: 0.5rem 0 0 0; font-size: 1.1rem;">Dní pomáháte</p>
-        </div>
-        """, unsafe_allow_html=True)
+            days_helping = 1
+    else:
+        days_helping = 0
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Dokončených akcí" if language == "czech" else "Completed actions", total_actions)
+    with col2:
+        st.metric("Odhadem pomohlo" if language == "czech" else "Estimated helped", f"~{estimated_help}")
+    with col3:
+        st.metric("Dní pomáháte" if language == "czech" else "Days helping", days_helping)
     
     # Recent actions
     if completed_actions:
-        st.markdown("### 📝 Vaše poslední akce")
+        st.markdown("<div class='section-header'>📝 " + ("Vaše poslední akce" if language=="czech" else "Recent actions") + "</div>", unsafe_allow_html=True)
         for action in completed_actions[-3:]:  # Show last 3 actions
             action_data = action.get('action', {})
             completed_at = action.get('completed_at')
             date_str = completed_at.strftime('%d.%m.%Y') if completed_at else 'Neznámé datum'
             
             st.markdown(f"""
-            <div style="
-                background: #f8fdf8;
-                border-left: 4px solid #7AB87A;
-                padding: 1rem;
-                margin: 0.5rem 0;
-            ">
-                <strong>{action_data.get('title', 'Neznámá akce')}</strong><br>
-                <small style="color: #5A6B5A;">Dokončeno: {date_str}</small>
+            <div class="action-card" style="border-left: 4px solid rgba(46, 93, 49, 0.35);">
+                <div style="font-weight:700; color:#2E5D31;">{action_data.get('title', 'Neznámá akce')}</div>
+                <div style="color:#516051; font-size:0.92rem;">{('Dokončeno' if language=='czech' else 'Completed')}: {date_str}</div>
             </div>
             """, unsafe_allow_html=True)
     else:
@@ -778,14 +856,14 @@ def _show_impact_page(language):
 def _show_feedback_page(language):
     """Stránka zpětné vazby"""
     
-    st.markdown("""
-    <div style="text-align: center; padding: 2rem 0;">
-        <h1 style="color: #2E5D31; margin-bottom: 0.5rem;">📝 Zpětná vazba</h1>
-        <p style="color: #5A6B5A; font-size: 1.2rem; margin: 0;">
-            Pomozte nám vylepšit Akcelerátor altruismu. Vaše zpětná vazba je pro nás cenná.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    title = "📝 Zpětná vazba" if language == "czech" else "📝 Feedback"
+    subtitle = (
+        "Pomozte nám vylepšit Akcelerátor altruismu. Vaše zpětná vazba je pro nás cenná."
+        if language == "czech"
+        else "Help us improve. Your feedback matters."
+    )
+    st.markdown(f"<div class='main-header'>{title}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='sub-header'>{subtitle}</div>", unsafe_allow_html=True)
     
     with st.form("feedback_form"):
         st.markdown("### 💭 Jak hodnotíte svou zkušenost?")
