@@ -53,7 +53,8 @@
       url: 'https://dobrokruh.cz/en/dobrovolnictvi?utm_source=openai',
       czech: {
         title: 'Dobrokruh',
-        desc: 'Ověřené dobrovolnické projekty napříč Českem (online i offline).'
+        desc: 'Ověřené dobrovolnické projekty napříč Českem (online i offline).',
+        bullets: ['Filtr podle města', 'Krátké i dlouhé zapojení', 'Dobré pro „rychlý start“']
       },
       english: {
         title: 'Dobrokruh',
@@ -65,7 +66,8 @@
       url: 'https://www.inexsda.cz/en/activities/workcamps-in-cz/?utm_source=openai',
       czech: {
         title: 'INEX – workcampy',
-        desc: 'Krátké dobrovolnické workcampy v ČR (skvělý “reset” a nový kruh lidí).'
+        desc: 'Krátké dobrovolnické workcampy v ČR (skvělý “reset” a nový kruh lidí).',
+        bullets: ['Víkend až několik týdnů', 'Skupinový zážitek', 'Konkrétní projekty v regionech']
       },
       english: {
         title: 'INEX – workcamps',
@@ -77,7 +79,8 @@
       url: 'https://adra.cz/en/homepage/get-involved/become-a-volunteer/?utm_source=openai',
       czech: {
         title: 'ADRA – dobrovolnictví',
-        desc: 'Dobrovolnické programy (senioři, děti, nemocnice, sociální podpora).'
+        desc: 'Dobrovolnické programy (senioři, děti, nemocnice, sociální podpora).',
+        bullets: ['Programy v regionech', 'Dlouhodobější zapojení', 'Silná síť organizací']
       },
       english: {
         title: 'ADRA – volunteering',
@@ -101,12 +104,21 @@
   let selectedCity = cities[0];
   let radiusKm = 5;
   let kinds = ['ngo', 'community'];
+  let query = '';
+  let sortBy = 'distance'; // distance | name
+  let visibleCount = 24;
+
+  let gpsStatus = 'idle'; // idle | requesting | ok | error
+  let gpsMessage = '';
 
   let mapEl;
   let map;
   let leaflet;
   let markersLayer;
   let userMarker;
+  let radiusCircle;
+  /** @type {Map<string, any>} */
+  let markerById = new Map();
   let isLoadingMap = true;
   let isFetching = false;
   let places = [];
@@ -144,6 +156,88 @@
     return window.L;
   }
 
+  function normalizeUrl(url) {
+    if (!url) return null;
+    const u = String(url).trim();
+    if (!u) return null;
+    if (u.startsWith('http://') || u.startsWith('https://')) return u;
+    if (u.startsWith('//')) return `https:${u}`;
+    return `https://${u}`;
+  }
+
+  function safeText(v) {
+    if (typeof v !== 'string') return '';
+    return v.trim();
+  }
+
+  function truncate(text, max = 180) {
+    const t = safeText(text);
+    if (!t) return '';
+    if (t.length <= max) return t;
+    return t.slice(0, max - 1).trimEnd() + '…';
+  }
+
+  function placeTitle(p) {
+    return p.name || (language === 'czech' ? 'Místo pomoci' : 'Place to help');
+  }
+
+  function placeAddress(p) {
+    const addr = safeText(p.address);
+    if (addr) return addr;
+    const t = p.tags || {};
+    const street = safeText(t['addr:street'] || t['addr:place']);
+    const house = safeText(t['addr:housenumber'] || t['addr:conscriptionnumber'] || t['addr:streetnumber']);
+    const city = safeText(t['addr:city'] || t['addr:town'] || t['addr:village'] || t['addr:hamlet'] || t['addr:suburb']);
+    const postcode = safeText(t['addr:postcode']);
+    const line1 = [street, house].filter(Boolean).join(' ');
+    const line2 = [postcode, city].filter(Boolean).join(' ');
+    return [line1, line2].filter(Boolean).join(', ');
+  }
+
+  function placePhone(p) {
+    return safeText(p.phone || p.tags?.phone || p.tags?.['contact:phone']);
+  }
+
+  function placeEmail(p) {
+    return safeText(p.email || p.tags?.email || p.tags?.['contact:email']);
+  }
+
+  function placeHours(p) {
+    return safeText(p.opening_hours || p.tags?.opening_hours);
+  }
+
+  function placeDescription(p) {
+    return safeText(p.description || p.tags?.description);
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function updateRadiusOverlay(lat, lon) {
+    if (!map || !leaflet) return;
+
+    if (!radiusCircle) {
+      radiusCircle = leaflet.circle([lat, lon], {
+        radius: radiusKm * 1000,
+        color: '#2E5D31',
+        weight: 2,
+        opacity: 0.55,
+        fillColor: '#2E5D31',
+        fillOpacity: 0.08
+      }).addTo(map);
+      return;
+    }
+
+    radiusCircle.setLatLng([lat, lon]);
+    radiusCircle.setRadius(radiusKm * 1000);
+  }
+
   function setUserLocation(lat, lon) {
     if (!map || !leaflet) return;
     map.setView([lat, lon], 13);
@@ -154,6 +248,8 @@
       fillColor: '#2E5D31',
       fillOpacity: 0.9
     }).addTo(map);
+
+    updateRadiusOverlay(lat, lon);
   }
 
   async function fetchNearby(lat, lon) {
@@ -168,9 +264,11 @@
       const data = await resp.json();
       places = (data?.places || []).map((p) => ({
         ...p,
+        website: normalizeUrl(p.website),
         distanceKm: Math.round(haversineKm(lat, lon, p.lat, p.lon))
       }));
       places.sort((a, b) => a.distanceKm - b.distanceKm);
+      visibleCount = 24;
       renderMarkers();
     } catch (e) {
       // keep empty list
@@ -185,6 +283,7 @@
     if (!map || !leaflet) return;
     if (markersLayer) markersLayer.remove();
     markersLayer = leaflet.layerGroup().addTo(map);
+    markerById = new Map();
 
     for (const p of places.slice(0, 250)) {
       const color =
@@ -205,11 +304,39 @@
         fillOpacity: 0.65
       });
 
-      const name = p.name || (language === 'czech' ? 'Místo pomoci' : 'Place to help');
-      const web = p.website ? `<div><a href="${p.website}" target="_blank" rel="noopener">web</a></div>` : '';
-      marker.bindPopup(`<div style="max-width:260px;"><b>${name}</b>${web}<div>~${p.distanceKm} km</div></div>`);
+      markerById.set(p.id, marker);
+
+      const name = escapeHtml(placeTitle(p));
+      const addr = escapeHtml(placeAddress(p));
+      const hours = escapeHtml(placeHours(p));
+      const phone = escapeHtml(placePhone(p));
+      const email = escapeHtml(placeEmail(p));
+      const desc = escapeHtml(truncate(placeDescription(p), 160));
+      const web = p.website ? `<a href="${escapeHtml(p.website)}" target="_blank" rel="noopener">web</a>` : '';
+      const osm = p.osm_url ? `<a href="${escapeHtml(p.osm_url)}" target="_blank" rel="noopener">OSM</a>` : '';
+      const links = [web, osm].filter(Boolean).join(' · ');
+
+      marker.bindPopup(
+        `<div style="max-width:280px;">
+          <div style="font-weight:800; margin-bottom:0.25rem;">${name}</div>
+          <div style="opacity:.85;">~${p.distanceKm} km · ${escapeHtml(UI[language].kinds[p.kind] || p.kind)}</div>
+          ${addr ? `<div style="margin-top:0.35rem;">📍 ${addr}</div>` : ''}
+          ${hours ? `<div style="margin-top:0.25rem;">🕒 ${hours}</div>` : ''}
+          ${phone ? `<div style="margin-top:0.25rem;">📞 ${phone}</div>` : ''}
+          ${email ? `<div style="margin-top:0.25rem;">✉️ ${email}</div>` : ''}
+          ${desc ? `<div style="margin-top:0.5rem; opacity:.85;">${desc}</div>` : ''}
+          ${links ? `<div style="margin-top:0.5rem;">${links}</div>` : ''}
+        </div>`
+      );
       marker.addTo(markersLayer);
     }
+  }
+
+  function focusPlace(p) {
+    if (!map) return;
+    map.setView([p.lat, p.lon], Math.max(map.getZoom(), 15));
+    const m = markerById.get(p.id);
+    if (m && typeof m.openPopup === 'function') m.openPopup();
   }
 
   async function initMap() {
@@ -236,26 +363,72 @@
   }
 
   async function useGps() {
-    if (!navigator?.geolocation) return;
+    gpsStatus = 'requesting';
+    gpsMessage = 'Čekám na povolení polohy…';
+
+    if (typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost') {
+      gpsStatus = 'error';
+      gpsMessage = 'Poloha funguje jen na HTTPS. Zvolte město nebo otevřete stránku přes https://';
+      return;
+    }
+
+    if (!navigator?.geolocation) {
+      gpsStatus = 'error';
+      gpsMessage = 'Váš prohlížeč nepodporuje polohu. Zvolte město.';
+      return;
+    }
+
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
+        gpsStatus = 'ok';
+        gpsMessage = 'Poloha načtena. Hledám místa v okolí…';
         setUserLocation(lat, lon);
         await fetchNearby(lat, lon);
+        gpsMessage = 'Hotovo. Klikněte na bod nebo na kartu pro detail.';
       },
-      () => {
-        // ignore
+      (err) => {
+        gpsStatus = 'error';
+        if (err?.code === 1) gpsMessage = 'Poloha je zablokovaná. Povolte ji v prohlížeči (ikona zámku v adresním řádku).';
+        else if (err?.code === 2) gpsMessage = 'Poloha není dostupná (GPS/Wi‑Fi). Zkuste to znovu, nebo vyberte město.';
+        else if (err?.code === 3) gpsMessage = 'Poloha trvá moc dlouho. Zkuste to znovu, nebo vyberte město.';
+        else gpsMessage = 'Nepodařilo se získat polohu. Zkuste to znovu, nebo vyberte město.';
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 }
     );
   }
 
   async function refreshFromMapCenter() {
     if (!map) return;
     const center = map.getCenter();
+    updateRadiusOverlay(center.lat, center.lng);
     await fetchNearby(center.lat, center.lng);
   }
+
+  $: filteredPlaces = (() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return places;
+    return places.filter((p) => {
+      const name = (p.name || '').toLowerCase();
+      const addr = (p.address || '').toLowerCase();
+      const desc = (p.description || '').toLowerCase();
+      return name.includes(q) || addr.includes(q) || desc.includes(q);
+    });
+  })();
+
+  $: sortedPlaces = (() => {
+    if (sortBy === 'name') {
+      return [...filteredPlaces].sort((a, b) => {
+        const an = (a.name || '').toString();
+        const bn = (b.name || '').toString();
+        return an.localeCompare(bn, 'cs', { sensitivity: 'base' });
+      });
+    }
+    return filteredPlaces;
+  })();
+
+  $: visiblePlaces = sortedPlaces.slice(0, visibleCount);
 
   onMount(() => {
     initMap();
@@ -271,7 +444,9 @@
 
   <div class="controls card">
     <div class="row">
-      <button class="btn" on:click={useGps}>{UI[language].useGps}</button>
+      <button class="btn" on:click={useGps} disabled={gpsStatus === 'requesting'}>
+        {gpsStatus === 'requesting' ? '📍 Zjišťuji polohu…' : UI[language].useGps}
+      </button>
       <div class="field">
         <label for="near_city">{UI[language].city}</label>
         <select
@@ -294,6 +469,12 @@
       </div>
     </div>
 
+    {#if gpsMessage}
+      <div class={"gps-banner " + gpsStatus} aria-live="polite">
+        {gpsMessage}
+      </div>
+    {/if}
+
     <div class="row">
       <div class="field wide">
         <div class="field-label">{UI[language].what}</div>
@@ -314,6 +495,7 @@
           {/each}
         </div>
         <div class="muted">{UI[language].disclaimer}</div>
+        <div class="muted">Tip: klikněte do mapy pro změnu místa.</div>
       </div>
     </div>
   </div>
@@ -326,34 +508,73 @@
   </div>
 
   <div class="results">
-    <div class="section-title">
-      {isFetching ? UI[language].fetching : `${places.length} ${language === 'czech' ? 'míst' : 'places'}`}
+    <div class="results-head">
+      <div class="section-title">
+        {isFetching ? UI[language].fetching : `${filteredPlaces.length} ${language === 'czech' ? 'míst' : 'places'}`}
+      </div>
+      <div class="results-controls">
+        <input class="search" type="search" placeholder="Hledat (název / adresa)" bind:value={query} />
+        <select class="sort" bind:value={sortBy}>
+          <option value="distance">Nejblíž</option>
+          <option value="name">A–Z</option>
+        </select>
+      </div>
     </div>
 
-    {#if !isFetching && places.length === 0}
+    {#if !isFetching && filteredPlaces.length === 0}
       <div class="card empty">{UI[language].nothing}</div>
     {/if}
 
     <div class="grid">
-      {#each places.slice(0, 24) as p}
+      {#each visiblePlaces as p}
         <div class="card place">
-          <div class="place-title">{p.name || (language === 'czech' ? 'Místo pomoci' : 'Place to help')}</div>
+          <div class="place-title">{placeTitle(p)}</div>
           <div class="place-meta">
             <span>~{p.distanceKm} km</span>
             <span class="dot">•</span>
             <span>{UI[language].kinds[p.kind] || p.kind}</span>
           </div>
-          {#if p.website}
-            <a class="link" href={p.website} target="_blank" rel="noopener">Otevřít web →</a>
+
+          {#if placeAddress(p)}
+            <div class="place-line"><span class="ico">📍</span><span>{placeAddress(p)}</span></div>
           {/if}
+          {#if placeHours(p)}
+            <div class="place-line"><span class="ico">🕒</span><span>{placeHours(p)}</span></div>
+          {/if}
+          {#if placePhone(p)}
+            <div class="place-line"><span class="ico">📞</span><span>{placePhone(p)}</span></div>
+          {/if}
+          {#if placeEmail(p)}
+            <div class="place-line"><span class="ico">✉️</span><span>{placeEmail(p)}</span></div>
+          {/if}
+          {#if placeDescription(p)}
+            <div class="place-desc">{truncate(placeDescription(p), 160)}</div>
+          {/if}
+
+          <div class="place-actions">
+            <button class="action secondary" type="button" on:click={() => focusPlace(p)}>Zobrazit na mapě</button>
+            {#if p.website}
+              <a class="action primary" href={p.website} target="_blank" rel="noopener">Web →</a>
+            {:else if p.osm_url}
+              <a class="action primary" href={p.osm_url} target="_blank" rel="noopener">Detail (OSM) →</a>
+            {/if}
+          </div>
         </div>
       {/each}
     </div>
+
+    {#if !isFetching && visibleCount < sortedPlaces.length}
+      <div class="more-row">
+        <button class="btn secondary-btn" type="button" on:click={() => (visibleCount += 24)}>
+          Zobrazit další
+        </button>
+      </div>
+    {/if}
   </div>
 
   <div class="results">
     <div class="section-title">
-      {language === 'czech' ? '✨ Skutečné příležitosti (portály)' : '✨ Real opportunities (portals)'}
+      {language === 'czech' ? '✨ Akce a příležitosti (portály)' : '✨ Real opportunities (portals)'}
     </div>
     <div class="grid">
       {#each OPPORTUNITY_SOURCES as src}
@@ -362,6 +583,13 @@
           <div class="place-meta">
             <span>{src[language].desc}</span>
           </div>
+          {#if src[language].bullets}
+            <ul class="bullets">
+              {#each src[language].bullets as b}
+                <li>{b}</li>
+              {/each}
+            </ul>
+          {/if}
           <a class="link" href={src.url} target="_blank" rel="noopener">
             {language === 'czech' ? 'Otevřít →' : 'Open →'}
           </a>
@@ -432,7 +660,19 @@
     cursor: pointer;
   }
   .btn:hover { filter: brightness(0.95); }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
   .muted { color: var(--text-secondary); font-size: 0.88rem; }
+  .gps-banner {
+    margin-top: 0.75rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 12px;
+    border: 1px solid rgba(44, 62, 45, 0.12);
+    background: rgba(242, 247, 242, 0.7);
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+  }
+  .gps-banner.error { background: rgba(254, 242, 242, 0.75); border-color: rgba(127, 29, 29, 0.15); }
+  .gps-banner.ok { background: rgba(236, 253, 245, 0.75); border-color: rgba(6, 95, 70, 0.15); }
 
   .kinds { display: flex; gap: 0.5rem; flex-wrap: wrap; }
   .chip {
@@ -467,12 +707,33 @@
   }
 
   .results { margin-top: 0.75rem; }
+  .results-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.4rem;
+  }
   .section-title {
     font-weight: 800;
     color: var(--czech-forest);
     margin: 0.5rem 0 0.75rem 0;
     font-family: 'Inter', sans-serif;
   }
+  .results-controls {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .search, .sort {
+    padding: 0.55rem 0.65rem;
+    border-radius: 12px;
+    border: 1px solid rgba(44, 62, 45, 0.12);
+    background: white;
+  }
+  .search { min-width: 240px; }
   .grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -482,9 +743,38 @@
   .place-title { font-weight: 800; color: var(--czech-forest); margin-bottom: 0.25rem; }
   .place-meta { color: var(--text-secondary); font-size: 0.9rem; display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap; }
   .dot { opacity: 0.5; }
+  .place-line { margin-top: 0.4rem; color: var(--text-secondary); font-size: 0.92rem; display:flex; gap: 0.45rem; align-items:flex-start; }
+  .ico { line-height: 1.2; }
+  .place-desc { margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.92rem; line-height: 1.55; }
+  .place-actions { display:flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+  .action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.55rem 0.7rem;
+    border-radius: 12px;
+    border: 1px solid rgba(44, 62, 45, 0.12);
+    text-decoration: none;
+    font-weight: 800;
+    cursor: pointer;
+    background: white;
+    color: var(--czech-forest);
+  }
+  .action.primary { background: var(--czech-forest); color: white; }
+  .action.secondary:hover { filter: brightness(0.98); }
+  .action.primary:hover { filter: brightness(0.95); }
   .link { display: inline-block; margin-top: 0.6rem; color: var(--czech-forest); font-weight: 700; text-decoration: none; }
   .link:hover { text-decoration: underline; }
+  .bullets {
+    margin: 0.6rem 0 0 1.15rem;
+    padding: 0;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
   .empty { padding: 1rem; color: var(--text-secondary); }
+  .more-row { display:flex; justify-content:center; margin-top: 0.9rem; }
+  .secondary-btn { background: white; color: var(--czech-forest); }
 
   @media (max-width: 980px) {
     .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -493,6 +783,7 @@
   @media (max-width: 640px) {
     .grid { grid-template-columns: 1fr; }
     .map { height: 420px; }
+    .search { min-width: 100%; }
   }
 </style>
 

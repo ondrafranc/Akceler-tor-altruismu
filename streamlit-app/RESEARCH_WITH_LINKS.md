@@ -111,4 +111,60 @@ Files changed:
 
 - **For map reliability in production**, avoid cross-origin isolation headers (COEP/COOP/CORP) unless you truly need SharedArrayBuffer; otherwise external tile/CDN resources may be blocked and the basemap will render gray.
 
+---
+
+## Follow-up: make /near more actionable (cards + GPS UX)
+
+### Local codebase changes (what we implemented)
+- **Richer place data from Overpass**:
+  - `akcelerator-landing-page/src/routes/api/nearby/+server.js` now derives:
+    - `address`, `phone`, `email`, `opening_hours`, `description`, `osm_url`
+- **Better map UX + card UX**:
+  - `akcelerator-landing-page/src/routes/near/+page.svelte` now:
+    - Shows **GPS status + clear error messages**
+    - Draws a **radius circle** overlay
+    - Adds **search + sorting + “show more”**
+    - Makes cards **more informational** and adds “Zobrazit na mapě”
+
+Snippet (GPS messaging pattern):
+```js
+gpsStatus = 'requesting';
+gpsMessage = 'Čekám na povolení polohy…';
+
+navigator.geolocation.getCurrentPosition(
+  async (pos) => {
+    gpsStatus = 'ok';
+    gpsMessage = 'Poloha načtena. Hledám místa v okolí…';
+    // setUserLocation(...) + fetchNearby(...)
+  },
+  (err) => {
+    gpsStatus = 'error';
+    // map error codes to user-facing hints
+  },
+  { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 }
+);
+```
+
+### Internet Research (2025) – map UX & consistency
+
+🔗 **[Consistent design (WCAG supplemental pattern)](https://www.w3.org/WAI/WCAG2/supplemental/patterns/o1p03-consistent-design/?utm_source=openai)**
+- **Found via web search:** WCAG supplemental UX pattern.
+- **Key Insights:** Consistency reduces cognitive load and improves learnability.
+- **Applicable:** Keep map controls, card layout, and CTA wording consistent across map/list.
+
+🔗 **[Interactive Map Web Accessibility Styles Tips](https://help.concept3d.com/hc/en-us/articles/115003617214-Interactive-Map-Web-Accessibility-Styles-Tips?utm_source=openai)**
+- **Found via web search:** Map accessibility styling tips.
+- **Key Insights:** Clear controls, readable labels, contrast, and accessible interactions matter on maps.
+- **Applicable:** Reinforces our focus on readable cards + obvious actions.
+
+🔗 **[The Guide to Map Implementation](https://blog.mapspeople.com/the-guide-to-map-implementation?utm_source=openai)**
+- **Found via web search:** Map implementation overview (approaches, tradeoffs).
+- **Key Insights:** Pick the approach that maximizes UX control and reliability.
+- **Applicable:** Supports SvelteKit-first approach for map-heavy UX.
+
+🔗 **[Making interactive maps in JavaScript](https://bcheung98.medium.com/making-interactive-maps-in-javascript-210f47d59a3a?utm_source=openai)**
+- **Found via web search:** JS mapping walkthrough.
+- **Key Insights:** Practical JS patterns for interactive maps (tiles, markers, popups).
+- **Applicable:** Aligns with Leaflet-based implementation patterns.
+
 

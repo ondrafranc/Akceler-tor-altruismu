@@ -25,6 +25,32 @@ function parseIntSafe(v) {
   return Number.isFinite(n) ? Math.trunc(n) : null;
 }
 
+function firstText(...vals) {
+  for (const v of vals) {
+    if (typeof v === 'string') {
+      const s = v.trim();
+      if (s) return s;
+    }
+  }
+  return null;
+}
+
+function buildAddress(tags) {
+  const street = firstText(tags['addr:street'], tags['addr:place']);
+  const house = firstText(tags['addr:housenumber'], tags['addr:conscriptionnumber'], tags['addr:streetnumber']);
+  const city = firstText(tags['addr:city'], tags['addr:town'], tags['addr:village'], tags['addr:hamlet'], tags['addr:suburb']);
+  const postcode = firstText(tags['addr:postcode']);
+
+  const line1 = [street, house].filter(Boolean).join(' ');
+  const line2 = [postcode, city].filter(Boolean).join(' ');
+  const full = [line1, line2].filter(Boolean).join(', ');
+  return full || null;
+}
+
+function osmUrl(type, id) {
+  return `https://www.openstreetmap.org/${type}/${id}`;
+}
+
 function makeOverpassQuery(lat, lon, radiusM, kinds) {
   const tagQueries = [];
 
@@ -122,6 +148,11 @@ export async function GET({ url }) {
     const tags = el.tags || {};
     const name = tags.name || tags.operator || tags.brand || null;
     const website = tags.website || tags['contact:website'] || null;
+    const phone = firstText(tags.phone, tags['contact:phone']);
+    const email = firstText(tags.email, tags['contact:email']);
+    const opening_hours = firstText(tags.opening_hours);
+    const description = firstText(tags.description);
+    const address = buildAddress(tags);
     const kind =
       tags.office === 'ngo' || tags.office === 'association'
         ? 'ngo'
@@ -135,11 +166,19 @@ export async function GET({ url }) {
 
     places.push({
       id: `${el.type}:${el.id}`,
+      osm_type: el.type,
+      osm_id: el.id,
+      osm_url: osmUrl(el.type, el.id),
       name,
       lat: ll[0],
       lon: ll[1],
       kind,
       website,
+      address,
+      phone,
+      email,
+      opening_hours,
+      description,
       tags
     });
   }
