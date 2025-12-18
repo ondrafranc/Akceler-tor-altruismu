@@ -2,7 +2,6 @@
   import { onMount } from 'svelte';
   import { gsap } from 'gsap';
   import { ScrollTrigger } from 'gsap/ScrollTrigger';
-  import { launchStreamlitApp } from '../lib/streamlit-integration.js';
   
   gsap.registerPlugin(ScrollTrigger);
   
@@ -31,18 +30,11 @@
   };
   
   function launchMainApp() {
-    launchStreamlitApp({
-      language: currentLanguage,
-      source: 'final-cta'
-    });
+    window.location.href = '/app';
   }
   
   function launchQuickAction() {
-    launchStreamlitApp({
-      language: currentLanguage,
-      section: 'quick-actions',
-      source: 'quick-cta'
-    });
+    window.location.href = '/app/online';
   }
   
   onMount(() => {

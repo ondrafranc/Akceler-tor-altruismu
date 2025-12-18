@@ -1,7 +1,6 @@
 <script>
     import { createEventDispatcher, onMount, onDestroy } from 'svelte';
     import { currentLanguage } from '../lib/stores.js';
-    import { launchStreamlitApp } from '../lib/streamlit-integration.js';
     
     const dispatch = createEventDispatcher();
     
@@ -64,13 +63,11 @@
     function handleTakeAction() {
         // Close modal first
         closeModal();
-        
-        // Launch the accelerator with language context
-        launchStreamlitApp({ 
-            language,
-            context: 'story_inspiration',
-            storyType: story?.category || 'general'
-        });
+
+        // Go to the SvelteKit app entry (SvelteKit-first UX)
+        if (typeof window !== 'undefined') {
+            window.location.href = '/app';
+        }
     }
     
     // Handle focus management
@@ -113,7 +110,7 @@
         on:keydown={(e) => { handleKeydown(e); if (e.key === 'Enter' || e.key === ' ') handleBackdropClick(e); }}
         role="presentation"
         aria-label="Close story modal"
-        tabindex="0"
+        tabindex="-1"
         bind:this={modalElement}
     >
         <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="story-title">

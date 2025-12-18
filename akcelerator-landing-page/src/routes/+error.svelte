@@ -17,10 +17,8 @@
     
     <div class="error-actions">
       <a 
-        		href="https://akceler-tor-altruismu-gvf9tctpuuq4t4tpjmaesa.streamlit.app" 
+        		href="/app" 
         class="primary-button"
-        target="_blank"
-        rel="noopener noreferrer"
       >
         🚀 Spustit akcelerátor
       </a>

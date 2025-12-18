@@ -53,12 +53,7 @@
   }
   
   function launchAccelerator() {
-    // Smooth transition to Streamlit app
-    const url = language === 'czech' ? 
-      'https://akceler-tor-altruismu-gvf9tctpuuq4t4tpjmaesa.streamlit.app?lang=czech' : 
-      'https://akceler-tor-altruismu-gvf9tctpuuq4t4tpjmaesa.streamlit.app?lang=english';
-    
-    // Add loading state animation (only on client)
+    // Smooth transition to the in-site app (SvelteKit-first)
     if (typeof window !== 'undefined' && gsap && ctaButtons) {
       gsap.to(ctaButtons, {
         scale: 0.95,
@@ -66,12 +61,12 @@
         yoyo: true,
         repeat: 1,
         onComplete: () => {
-          window.open(url, '_blank');
+          window.location.href = '/app';
         }
       });
     } else if (typeof window !== 'undefined') {
       // Fallback if GSAP not available
-      window.open(url, '_blank');
+      window.location.href = '/app';
     }
   }
 

@@ -19,7 +19,6 @@ Thank you for helping improve Akcelerátor Altruismu. This guide keeps code and 
 - Public client-side only:
   - `PUBLIC_SUPABASE_URL`
   - `PUBLIC_SUPABASE_ANON_KEY`
-  - `PUBLIC_STREAMLIT_BASE_URL`
 - Never commit secrets. `.env` files must not be committed.
 
 ## Review schedule (process)

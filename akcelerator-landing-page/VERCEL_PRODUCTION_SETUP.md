@@ -19,10 +19,6 @@ Your Supabase connection is now properly configured for Vercel production deploy
 # Variable Name: PUBLIC_SUPABASE_ANON_KEY  
 # Value: YOUR_SUPABASE_ANON_KEY
 # Environment: Production, Preview, Development
-
-# Variable Name: PUBLIC_STREAMLIT_BASE_URL
-# Value: https://your-streamlit-app.streamlit.app
-# Environment: Production, Preview, Development
 ```
 
 **⚠️ IMPORTANT:**
@@ -47,9 +43,6 @@ vercel env add PUBLIC_SUPABASE_URL production
 
 vercel env add PUBLIC_SUPABASE_ANON_KEY production
 # Enter: YOUR_SUPABASE_ANON_KEY
-
-vercel env add PUBLIC_STREAMLIT_BASE_URL production
-# Enter: https://your-streamlit-app.streamlit.app
 ```
 
 ## 🔧 **Step 2: Deploy and Test**
@@ -75,7 +68,7 @@ After deployment, test these URLs:
    
 2. **Test Page:**
    ```
-   https://your-domain.vercel.app/test
+   https://your-domain.vercel.app/app
    ```
 
 ## 🧪 **Step 3: Verify Connection**

@@ -9,8 +9,8 @@ test('root sets security headers', async ({ request, baseURL }) => {
   expect(h['x-content-type-options']).toBe('nosniff');
 });
 
-test('test route returns 200', async ({ page }) => {
-  const res = await page.goto('/test');
+test('/app route returns 200', async ({ page }) => {
+  const res = await page.goto('/app');
   expect(res?.status()).toBe(200);
 });
 

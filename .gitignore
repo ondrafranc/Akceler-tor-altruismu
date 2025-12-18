@@ -1,5 +1,13 @@
 # Node / JS
 node_modules/
+.svelte-kit/
+.vercel/
+dist/
+build/
+coverage/
+test-results/
+playwright-report/
+*.timestamp-*
 
 # Python
 .venv/

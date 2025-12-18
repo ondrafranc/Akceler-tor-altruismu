@@ -1,123 +1,33 @@
-# 🚀 Akcelerátor Altruismu - Enhancement Roadmap (LIVE MVP)
+# 🚀 Akcelerátor altruismu — Roadmap (SvelteKit-first)
 
-## ✅ **DEPLOYED MVP: Czech Platform with Crisis Support**
+This roadmap tracks the next product/tech steps after moving the primary UX to SvelteKit (`/app`, `/near`).
 
-### Recently Added (Current Session)
-- **🆘 Immediate Help Widget**: Fixed-position crisis support with real Czech resources
-- **📱 Mobile-responsive design** with accessibility features
-- **🇨🇿 Cultural sensitivity** - calm, non-intrusive presentation
-- **🌱 Interactive SolidarityGarden**: Transformed static placeholder into fully interactive garden with seasonal theming, hover animations, plant growth effects, and community stats visualization
+## Now (shipping)
+- **SvelteKit app entry**: `/app` (Near / Online / Guided)
+- **Beautiful near-you map**: `/near` + `/api/nearby` (real OSM places via Overpass)
 
-## ✅ **Phase 1-3 Complete: Full Czech Adaptation**
+## Next (highest impact)
+- **Czech-only polish**: remove English surfaces, simplify copy everywhere
+- **Opportunity depth**:
+  - Add more Czech portals / sources
+  - Add curated “starter actions” per category (1-click)
+- **Better map UX**:
+  - Filter presets per category (ngo/community/food/animals)
+  - Shareable URLs (lat/lon/radius/kinds in query)
+  - Optional clustering when zoomed out
+- **Data quality & safety**:
+  - Strong caching + backoff for Overpass
+  - Clear disclaimer + “report incorrect place” link
 
-### What We've Accomplished
-- **Expanded Actions Database**: Added 6 new high-impact actions across all cause areas
-- **Emotional Intelligence Content**: Created 80+ encouraging messages, quotes, and responses
-- **Enhanced JSON Architecture**: Structured data for scalability
-- **Celebration Systems**: Added "wow moments" and milestone tracking
-- **Success Stories**: Real examples to inspire users
+## Migration plan (Streamlit → SvelteKit)
+- Move remaining Streamlit-only flows into SvelteKit (keep Streamlit running until parity)
+- Once parity is reached:
+  - Freeze Streamlit (read-only) or remove it
+  - Remove Streamlit integration code from landing components
 
----
-
-## 🎯 **Next Low-Risk Enhancements** (Immediate Priority - Safe to Implement)
-
-### ✅ A. SolidarityGarden Interactivity (COMPLETED)
-**Was**: Static placeholder with inspiring quote  
-**Now Enhanced**: 
-- ✅ Added subtle hover animations for garden elements (GSAP-powered micro-interactions)
-- ✅ Implemented "plant growth" visual when users click CTA (animated seed planting with sparkle effects)
-- ✅ Show real-time community stats in garden metaphor (plant-themed stat cards)
-- ✅ Added seasonal changes to garden visualization (dynamic backgrounds based on current season)
-
-### B. Language Fallback Improvements (30 min)
-**Current**: Basic Czech/English switching  
-**Enhancement**:
-- Graceful fallback if Czech content missing
-- Auto-detect browser language preference
-- Smooth transitions between language states
-- Preserve language choice across sessions
-
-### C. Enhanced Hover Animations (20 min)
-**Current**: Basic CSS hover states  
-**Enhancement**:
-- GSAP-powered micro-interactions for buttons
-- Smooth card elevation on region map
-- Gentle pulsing for immediate help widget
-- Progressive disclosure animations
-
-### D. Regional Content Enhancement (60 min)
-**Current**: Generic Czech content  
-**Enhancement**:
-- Prague/Brno/Ostrava specific statistics
-- Regional organization highlights in map
-- Location-aware action recommendations
-- Local crisis resources by region
-
-**Total Implementation Time**: ~2.5 hours of low-risk improvements
-
----
-
-## 🎯 **Phase 2: Deep UX Enhancement** (Medium Priority)
-
-### A. Connect App to Real Data (HIGH PRIORITY)
-**Current Gap**: App uses embedded data instead of JSON files
-**Solution**: 
-```python
-# Replace embedded data loading with:
-@st.cache_data
-def load_causes_data():
-    with open('data/causes/causes.json', 'r') as f:
-        return json.load(f)['causes']
-```
-
-### B. Advanced Matching Algorithm
-**Current**: Simple value overlap scoring
-**Enhancement**: Multi-factor scoring including:
-- Emotional state adaptation (overwhelmed → simpler actions)
-- Skill-action matching (tech skills → coding volunteering)
-- Time/resource constraints
-- Past success patterns
-
-### C. Dynamic Content Integration
-**Add to existing app**:
-- Random encouraging quotes on each page load
-- Contextual emotional responses based on user state
-- Success stories displayed at strategic moments
-- Milestone celebrations with custom messages
-
-### D. Improved Visual Design
-**Quick Wins**:
-- Animated progress bars
-- Gradient backgrounds for cause cards
-- Hover effects on action buttons
-- Success animations (confetti, growing trees, etc.)
-
----
-
-## 🌟 **Phase 3: Engagement & Retention**
-
-### A. Streak Systems
-```python
-# Track consecutive days/weeks of action
-if user_has_action_today():
-    streak_count += 1
-    if streak_count % 7 == 0:
-        show_weekly_streak_celebration()
-```
-
-### B. Personal Impact Visualization
-- **Tree Growth**: Visual forest that grows with climate actions
-- **Student Progress**: Classroom that fills with educated students
-- **Community Map**: Local area that lights up with connections
-
-### C. Social Features (Simple Start)
-- Share impact milestones to social media
-- "Find helpers near you" based on location
-- Community leaderboard (optional participation)
-
-### D. Smart Reminders & Follow-ups
-- Email/SMS reminders for committed actions
-- "How did it go?" follow-up surveys
+## Optional later
+- Structured partnerships / APIs with Czech orgs (real opportunities feed)
+- Lightweight “done” tracking (no login) + gentle streaks (opt-in)
 - Gentle nudges for users who've been inactive
 
 ---

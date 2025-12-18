@@ -198,9 +198,9 @@
   }
   
   function openRegionalApp(region) {
-    const url = `https://akceler-tor-altruismu-gvf9tctpuuq4t4tpjmaesa.streamlit.app?lang=czech&region=${region}`;
     if (typeof window !== 'undefined') {
-      window.open(url, '_blank');
+      // SvelteKit-first: send users to the near-you map
+      window.location.href = '/near';
     }
   }
   

@@ -266,7 +266,7 @@
         on:keydown={(e) => { handleKeydown(e); if (e.key === 'Enter' || e.key === ' ') handleBackdropClick(e); }}
         role="presentation"
         aria-label="Close feedback modal"
-        tabindex="0"
+        tabindex="-1"
     >
         <div 
             class="modal-content" 

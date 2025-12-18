@@ -1,47 +1,32 @@
-# Altruism Accelerator - User Journeys
+# User journeys (v2)
 
-## Primary User Personas
+These journeys match the current **SvelteKit-first** product (`/app`, `/near`).
 
-### 1. The Overwhelmed Empath
-**Profile**: Sees suffering everywhere, feels paralyzed by the scale of problems
-**Journey**: Assessment → Clarity → Focus → Action → Impact tracking
+## Primary persona
+### The “overwhelmed teen” (19yo)
+- Low energy, low trust, easily overwhelmed
+- Needs **agency in <60s** and a “small win” that feels real
 
-### 2. The Resource-Rich Seeker
-**Profile**: Has time/money/skills but unsure where to direct them effectively
-**Journey**: Resource mapping → Cause matching → Impact optimization → Engagement
+## Core journeys
+### 1) Near you (30–90s)
+1. Open `/app`
+2. Tap **🗺️ V okolí (mapa)**
+3. Use GPS or pick a city → see places
+4. Open the place website → done
 
-### 3. The Burnt-Out Helper
-**Profile**: Previously active but now discouraged or exhausted
-**Journey**: Reflection → Renewed purpose → Sustainable approach → Re-engagement
+### 2) Online now (30–120s)
+1. Open `/app`
+2. Tap **⚡ Online teď**
+3. Pick one action (donate / register / write) → open link → done
 
-## Core User Journeys
+### 3) Guided (60–120s)
+1. Open `/app`
+2. Tap **🧭 Průvodce**
+3. Pick 1–2 areas (or skip)
+4. Choose **Map** or **Online** next step → done
 
-### Journey 1: From Overwhelm to Clarity (15-20 minutes)
-1. **Welcome & Emotional Check-in**: "How are you feeling about the world today?"
-2. **Values Assessment**: Interactive assessment to identify core values and motivations
-3. **Resource Inventory**: What do you have? (time, money, skills, connections)
-4. **Cause Exploration**: Personalized cause recommendations based on values + resources
-5. **Action Selection**: Choose 1-3 specific, actionable next steps
-6. **Commitment**: Set realistic goals and tracking preferences
+## Success criteria
+- User reaches a real external “do-good” page within 2 minutes
+- UX is calm, non-guilting, and easy to stop without shame
 
-### Journey 2: Quick Action Finder (5 minutes)
-1. **Rapid Assessment**: "I have [X time] and want to help with [Y cause]"
-2. **Instant Recommendations**: AI-curated actions matching constraints
-3. **One-Click Engagement**: Direct links to volunteer, donate, or learn
 
-### Journey 3: Impact Tracking & Growth (Ongoing)
-1. **Progress Check-ins**: Weekly/monthly reflection on actions taken
-2. **Impact Visualization**: Show cumulative effect and community progress
-3. **Next Level Suggestions**: Gradual expansion of involvement
-4. **Community Connection**: Find like-minded helpers locally and globally
-
-### Journey 4: Crisis Response (2-3 minutes)
-1. **Urgent Need Alert**: When major events happen (disasters, crises)
-2. **Immediate Actions**: Vetted, effective ways to help right now
-3. **Sustained Support**: Long-term engagement options beyond immediate crisis
-
-## Success Metrics
-- **Emotional**: Reduced overwhelm, increased hope and agency
-- **Behavioral**: Concrete actions taken within 48 hours of using tool
-- **Impact**: Measurable contributions to causes (donations, volunteer hours, awareness)
-- **Retention**: Users returning for ongoing guidance and community 

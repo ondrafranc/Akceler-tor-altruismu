@@ -238,39 +238,6 @@ export function textReveal(element, options = {}) {
   });
 }
 
-// Loading transition for Streamlit app launch
-export function streamlitTransition(element, callback) {
-  const loadingOverlay = document.createElement('div');
-  loadingOverlay.className = 'streamlit-loading';
-  loadingOverlay.innerHTML = `
-    <div class="loading-content">
-      <div class="loading-spinner"></div>
-      <p class="loading-text">Připravujeme akcelerátor...</p>
-    </div>
-  `;
-  
-  document.body.appendChild(loadingOverlay);
-  
-  gsap.fromTo(loadingOverlay,
-    { opacity: 0 },
-    { 
-      opacity: 1, 
-      duration: czechAnimations.timing.medium,
-      ease: czechAnimations.easing.gentle,
-      onComplete: () => {
-        setTimeout(() => {
-          callback();
-          gsap.to(loadingOverlay, {
-            opacity: 0,
-            duration: czechAnimations.timing.medium,
-            onComplete: () => loadingOverlay.remove()
-          });
-        }, 1000);
-      }
-    }
-  );
-}
-
 // Initialize all scroll-triggered animations
 export function initScrollAnimations() {
   // Refresh ScrollTrigger when page loads

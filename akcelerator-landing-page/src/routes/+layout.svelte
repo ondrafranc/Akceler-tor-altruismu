@@ -74,22 +74,6 @@
     // Initialize animations
     initScrollAnimations();
     
-    // Initialize language from URL or localStorage
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlLang = urlParams.get('lang');
-    const storedLang = localStorage.getItem('preferred-language');
-    
-    if (urlLang && ['czech', 'english'].includes(urlLang)) {
-      currentLanguage.set(urlLang);
-    } else if (storedLang) {
-      currentLanguage.set(storedLang);
-    }
-    
-    // Save language preference when it changes
-    const unsubscribe = currentLanguage.subscribe(lang => {
-      localStorage.setItem('preferred-language', lang);
-    });
-    
     // Google Analytics (if needed)
     if (typeof gtag !== 'undefined') {
       gtag('config', 'GA_MEASUREMENT_ID', {
@@ -114,7 +98,6 @@
     // Cleanup on destroy
     return () => {
       cleanupAnimations();
-      unsubscribe();
     };
   });
 </script>
@@ -189,47 +172,6 @@
   
   :global(*) {
     box-sizing: border-box;
-  }
-  
-  /* Loading States */
-  :global(.streamlit-loading) {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(245, 241, 232, 0.95);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    backdrop-filter: blur(4px);
-  }
-  
-  :global(.loading-content) {
-    text-align: center;
-    color: var(--czech-forest);
-  }
-  
-  :global(.loading-spinner) {
-    width: 40px;
-    height: 40px;
-    border: 3px solid var(--subtle-border);
-    border-top: 3px solid var(--czech-forest);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 1rem;
-  }
-  
-  :global(.loading-text) {
-    font-size: 1.1rem;
-    font-weight: 500;
-    margin: 0;
-  }
-  
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
   }
   
   /* Czech Celebration Styles */

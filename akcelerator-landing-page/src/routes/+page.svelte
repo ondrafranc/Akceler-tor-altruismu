@@ -7,8 +7,6 @@
   import ImmediateHelp from '../components/ImmediateHelp.svelte';
   import CTASection from '../components/CTASection.svelte';
   import FeedbackModal from '../components/FeedbackModal.svelte';
-  import LanguageToggle from '../components/LanguageToggle.svelte';
-  import { launchStreamlitApp } from '../lib/streamlit-integration.js';
   import { initScrollAnimations } from '../lib/animations.js';
 
   
@@ -29,7 +27,8 @@
         how: "Jak to funguje",
         stories: "Příběhy naděje",
         regions: "Regiony",
-        launch: "Spustit akcelerátor"
+        launch: "Spustit akcelerátor",
+        near: "Mapa v okolí"
       },
       sections: {
         story: "Od empatie k akci",
@@ -44,7 +43,8 @@
         how: "How it works",
         stories: "Stories of Hope",
         regions: "Regions", 
-        launch: "Launch accelerator"
+        launch: "Launch accelerator",
+        near: "Near you map"
       },
       sections: {
         story: "From empathy to action",
@@ -122,16 +122,16 @@
       <a href="#czech-map" class="nav-link" data-section="czech-map">
         {content[language].sections.map}
       </a>
+      <a href="/near" class="nav-link">
+        {content[language].nav.near}
+      </a>
     </div>
     
     <!-- Language Selector & CTA -->
     <div class="nav-actions">
-      <!-- Unified Language Toggle -->
-      <LanguageToggle />
-      
       <button 
         class="nav-cta"
-        on:click={() => launchStreamlitApp({ language })}
+        on:click={() => { window.location.href = '/app'; }}
       >
         {content[language].nav.launch}
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
