@@ -124,69 +124,13 @@ def _show_action_selection_step(language):
     transition_key = 'values_to_action' if has_values else 'welcome_to_action'
     transition = get_journey_transition(transition_key, language)
     
-    # Jemný přechod z hodnot
-    st.markdown(f"""
-    <div style="
-        text-align: center; 
-        padding: 1rem 0; 
-        color: #7AB87A; 
-        font-style: italic;
-        margin-bottom: 1rem;
-    ">
-        {transition.get('transition_text', '')}
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Progress indicators
-    progress_indicators = get_visual_element('progress_indicators', language)
-    current_step = 2  # welcome (0), values (1), action (2)
-    
-    st.markdown(f"""
-    <div style="text-align: center; padding: 1rem 0 2rem 0;">
-        <div style="margin-bottom: 1rem;">
-    """, unsafe_allow_html=True)
-    
-    cols = st.columns(len(progress_indicators))
-    for i, indicator in enumerate(progress_indicators):
-        with cols[i]:
-            if i <= current_step:
-                st.markdown(f"""
-                <div style="
-                    background: #7AB87A;
-                    color: white;
-                    padding: 0.5rem;
-                    border-radius: 10px;
-                    text-align: center;
-                    font-size: 0.9rem;
-                    font-weight: 600;
-                    margin: 0.25rem;
-                ">
-                    {indicator}
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div style="
-                    background: #E8F2E8;
-                    color: #5A6B5A;
-                    padding: 0.5rem;
-                    border-radius: 10px;
-                    text-align: center;
-                    font-size: 0.9rem;
-                    margin: 0.25rem;
-                ">
-                    {indicator}
-                </div>
-                """, unsafe_allow_html=True)
-    
-    st.markdown(f"""
-        </div>
-        <h2 style="color: #2E5D31; margin-bottom: 0.5rem;">{action_content['title']}</h2>
-        <p style="color: #5A6B5A; font-size: 1rem; margin: 0;">
-            {transition.get('subtitle', '')}
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"<div class='main-header'>{action_content['title']}</div>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div class='sub-header'>{transition.get('subtitle', '')}</div>",
+        unsafe_allow_html=True,
+    )
+    if transition.get("transition_text"):
+        st.caption(transition.get("transition_text"))
     
     # Load actions and propose the best match
     actions = load_actions_data(language)
@@ -197,16 +141,25 @@ def _show_action_selection_step(language):
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        # Impact mini-chip: today's goal + total
-        total_done = len(st.session_state.get('completed_actions', []))
-        goal_label = "Cíl dnes: 1 laskavý krok" if language=='czech' else "Today: 1 kind step"
-        total_label = f"{total_done} " + ("akcí celkem" if language=='czech' else "actions total")
-        st.markdown(f"""
-        <div style="display:flex; gap:0.5rem; justify-content:center; margin: 0.5rem 0 0.75rem 0;">
-            <span style="background:#E8F2E8; color:#2E5D31; padding:0.4rem 0.75rem; border-radius:999px; font-size:0.9rem;">{goal_label}</span>
-            <span style="background:#E8F2E8; color:#2E5D31; padding:0.4rem 0.75rem; border-radius:999px; font-size:0.9rem;">{total_label}</span>
-        </div>
-        """, unsafe_allow_html=True)
+        # Small “agency” reminder (teen-friendly, no guilt)
+        total_done = len(st.session_state.get("completed_actions", []))
+        st.markdown(
+            f"""
+            <div class="cta-section" style="margin-top:0;">
+              <div style="color:#2E5D31; font-weight:700;">
+                {("Dnes stačí jeden malý krok." if language=="czech" else "One small step is enough today.")}
+              </div>
+              <div style="color:#516051;">
+                {(
+                    f"Celkem dokončeno: {total_done}"
+                    if language=="czech"
+                    else f"Completed total: {total_done}"
+                )}
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         
         if best_action:
             _render_action_card(best_action, language)
@@ -243,87 +196,26 @@ def _show_values_discovery_step(language):
     transition_key = 'emotional_to_values' if came_from_emotional else 'welcome_to_values'
     transition = get_journey_transition(transition_key, language)
     
-    # Jemný přechod z emocionálního kroku
-    st.markdown(f"""
-    <div style="
-        text-align: center; 
-        padding: 1rem 0; 
-        color: #7AB87A; 
-        font-style: italic;
-        margin-bottom: 1rem;
-    ">
-        {transition.get('transition_text', '')}
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Vylepšená hlavička s progress indikátorem
-    progress_indicators = get_visual_element('progress_indicators', language)
-    current_step = 1  # welcome (0), values (1), action (2)
-    
-    st.markdown(f"""
-    <div style="text-align: center; padding: 1rem 0 2rem 0;">
-        <div style="margin-bottom: 1rem;">
-    """, unsafe_allow_html=True)
-    
-    # Progress indicators
-    cols = st.columns(len(progress_indicators))
-    for i, indicator in enumerate(progress_indicators):
-        with cols[i]:
-            if i <= current_step:
-                st.markdown(f"""
-                <div style="
-                    background: #7AB87A;
-                    color: white;
-                    padding: 0.5rem;
-                    border-radius: 10px;
-                    text-align: center;
-                    font-size: 0.9rem;
-                    font-weight: 600;
-                    margin: 0.25rem;
-                ">
-                    {indicator}
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div style="
-                    background: #E8F2E8;
-                    color: #5A6B5A;
-                    padding: 0.5rem;
-                    border-radius: 10px;
-                    text-align: center;
-                    font-size: 0.9rem;
-                    margin: 0.25rem;
-                ">
-                    {indicator}
-                </div>
-                """, unsafe_allow_html=True)
-    
-    st.markdown(f"""
-        </div>
-        <h2 style="color: #2E5D31; margin-bottom: 0.5rem;">{values_content['title']}</h2>
-        <p style="color: #5A6B5A; font-size: 1rem; margin: 0;">
-            {transition.get('subtitle', '')}
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"<div class='main-header'>{values_content['title']}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='sub-header'>{values_content['subtitle']}</div>", unsafe_allow_html=True)
+    if transition.get("transition_text"):
+        st.caption(transition.get("transition_text"))
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.markdown(f"""
-        <div style="
-            background: #f8fdf8;
-            padding: 1.5rem;
-            border-radius: 10px;
-            margin: 1rem 0;
-            text-align: center;
-            border: 1px solid #e8f5e8;
-        ">
-            <div style="color: #4A5E4A; font-style: italic;">
-                {values_content['subtitle']}
+        st.markdown(
+            f"""
+            <div class="cta-section" style="margin-top:0;">
+              <div style="color:#2E5D31; font-weight:700;">
+                {("Vyberte 1–2 oblasti. Když nevíte, stačí 1." if language=="czech" else "Pick 1–2 areas. If unsure, just pick 1.")}
+              </div>
+              <div style="color:#516051;">
+                {("Není to test. Můžete to kdykoli změnit." if language=="czech" else "Not a test. You can change this anytime.")}
+              </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """,
+            unsafe_allow_html=True,
+        )
         
         # Hodnoty/oblasti
         values = values_content['values']
@@ -349,12 +241,16 @@ def _show_values_discovery_step(language):
         # Guidance based on selection
         count = len(st.session_state.selected_values)
         if count == 0:
-            st.info("💡 " + values_content['guidance']['none_selected'])
+            msg = "💡 " + values_content["guidance"]["none_selected"]
         elif count > 4:
-            st.warning("⚠️ " + values_content['guidance']['too_many'])
+            msg = "⚠️ " + values_content["guidance"]["too_many"]
         else:
             area_word = "oblast" if count == 1 else "oblasti" if count < 5 else "oblastí"
-            st.success(values_content['guidance']['good_selection'].format(count=count, area_word=area_word))
+            msg = values_content["guidance"]["good_selection"].format(count=count, area_word=area_word)
+        st.markdown(
+            f"<div class='cta-section' style='margin-top:0.75rem;'><div style='color:#516051;'>{msg}</div></div>",
+            unsafe_allow_html=True,
+        )
         
         # Pokračování / přeskočení
         st.markdown("<div style='height: 1.0rem;'></div>", unsafe_allow_html=True)
@@ -687,39 +583,39 @@ def _render_action_card(action, language):
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.markdown(f"""
-        <div style="
-            background: linear-gradient(135deg, #f8fdf8 0%, #f0f8f0 100%);
-            border: 2px solid #7AB87A;
-            border-radius: 15px;
-            padding: 2rem;
-            margin: 1rem 0;
-            text-align: center;
-        ">
-            <h3 style="color: #2E5D31; margin-bottom: 1rem;">
+        time_req = action.get("requirements", {}).get("time_minutes")
+        cost = action.get("requirements", {}).get("cost_usd")
+        time_text = f"{int(time_req)} min" if isinstance(time_req, (int, float)) else ""
+        cost_text = ("Zdarma" if cost == 0 else f"~{int(cost * 25)} Kč") if isinstance(cost, (int, float)) else ""
+        meta = " • ".join([x for x in [time_text, cost_text] if x])
+
+        st.markdown(
+            f"""
+            <div class="action-card">
+              <div style="color:#2E5D31; font-weight:800; font-size:1.1rem; margin-bottom:0.35rem;">
                 {action.get('icon', '🌟')} {action.get('title', 'Akce')}
-            </h3>
-            
-            <p style="color: #5A6B5A; margin-bottom: 1.5rem; line-height: 1.5;">
+              </div>
+              <div style="color:#516051; line-height:1.55; margin-bottom:0.75rem;">
                 {action.get('description', 'Popis akce')}
-            </p>
-            
-            <div style="
-                background: #e8f5e8;
-                padding: 1rem;
-                border-radius: 10px;
-                margin-bottom: 1rem;
-            ">
-                <strong style="color: #2E5D31;">💫 Váš dopad:</strong><br>
-                <span style="color: #4A5E4A;">{action.get('impact', 'Pozitivní změna')}</span>
+              </div>
+              {f"<div style='color:#516051; font-size:0.92rem; margin-bottom:0.75rem;'>{meta}</div>" if meta else ""}
+              <div style="background:#F2F7F2; border:1px solid rgba(44, 62, 45, 0.12); padding:0.75rem; border-radius:12px;">
+                <div style="color:#2E5D31; font-weight:700; margin-bottom:0.15rem;">
+                  {("Proč to pomáhá" if language=="czech" else "Why it helps")}
+                </div>
+                <div style="color:#516051;">
+                  {action.get('impact', 'Pozitivní změna')}
+                </div>
+              </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """,
+            unsafe_allow_html=True,
+        )
 
 def _show_alternative_actions(actions, user_profile, language):
     """Zobrazení alternativních akcí"""
     
-    with st.expander("🔍 Další možnosti" if language == 'czech' else "🔍 More options", expanded=True):
+    with st.expander("🔍 Další možnosti" if language == 'czech' else "🔍 More options", expanded=False):
         # Zobrazit další 3 akce
         action_list = list(actions.values())
         for action in action_list[1:4]:  # Přeskočit první (už byla zobrazena)

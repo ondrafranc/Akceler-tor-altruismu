@@ -15,6 +15,8 @@ from content import get_content
 import json
 from datetime import datetime
 import math
+from typing import Any
+import requests
 
 try:
     # Optional dependency for browser geolocation (added to requirements.txt).
@@ -23,6 +25,97 @@ try:
     _HAS_GEOLOCATION = True
 except Exception:
     _HAS_GEOLOCATION = False
+
+try:
+    import folium  # type: ignore
+    from streamlit_folium import st_folium  # type: ignore
+    _HAS_FOLIUM = True
+except Exception:
+    _HAS_FOLIUM = False
+
+
+@st.cache_data(ttl=60 * 60, show_spinner=False)
+def _fetch_osm_places(lat: float, lon: float, radius_m: int, kinds: tuple[str, ...]) -> list[dict[str, Any]]:
+    """Fetch nearby places from OpenStreetMap via Overpass API.
+
+    This is best-effort. We intentionally keep it small + cached to avoid hammering public endpoints.
+    """
+
+    # Overpass endpoints (try in order)
+    endpoints = [
+        "https://overpass-api.de/api/interpreter",
+        "https://lz4.overpass-api.de/api/interpreter",
+    ]
+
+    tag_queries = []
+    for k in kinds:
+        if k == "ngo":
+            tag_queries.append('["office"="ngo"]')
+            tag_queries.append('["office"="association"]')
+        elif k == "community":
+            tag_queries.append('["amenity"="community_centre"]')
+            tag_queries.append('["amenity"="social_facility"]')
+        elif k == "animals":
+            tag_queries.append('["amenity"="animal_shelter"]')
+        elif k == "food":
+            tag_queries.append('["amenity"="food_bank"]')
+            tag_queries.append('["amenity"="social_facility"]["social_facility"="food_bank"]')
+
+    if not tag_queries:
+        return []
+
+    parts = []
+    for tq in tag_queries:
+        parts.append(f'node(around:{radius_m},{lat},{lon}){tq};')
+        parts.append(f'way(around:{radius_m},{lat},{lon}){tq};')
+        parts.append(f'relation(around:{radius_m},{lat},{lon}){tq};')
+
+    query = "[out:json][timeout:25];(" + "".join(parts) + ");out center tags 80;"
+
+    last_err: Exception | None = None
+    for url in endpoints:
+        try:
+            resp = requests.post(
+                url,
+                data=query.encode("utf-8"),
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+                    "User-Agent": "AkceleratorAltruismu/1.0 (streamlit app; contact: none)",
+                },
+                timeout=30,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            out: list[dict[str, Any]] = []
+            for el in data.get("elements", []):
+                tags = el.get("tags") or {}
+                name = tags.get("name") or tags.get("operator") or tags.get("brand")
+                website = tags.get("website") or tags.get("contact:website")
+                if "lat" in el and "lon" in el:
+                    plat, plon = el["lat"], el["lon"]
+                elif "center" in el:
+                    plat, plon = el["center"].get("lat"), el["center"].get("lon")
+                else:
+                    continue
+                if plat is None or plon is None:
+                    continue
+                out.append(
+                    {
+                        "name": name,
+                        "lat": float(plat),
+                        "lon": float(plon),
+                        "website": website,
+                        "tags": tags,
+                    }
+                )
+            return out
+        except Exception as e:
+            last_err = e
+            continue
+
+    if last_err:
+        raise last_err
+    return []
 
 def main():
     """Hlavní vstupní bod aplikace - s navigací a lineární cestou"""
@@ -554,11 +647,165 @@ def _show_quick_actions_page(language):
                             continue
                 quick_actions[key] = action
         
-        # Display quick actions in cards
-        cols = st.columns(2)
-        for i, (action_id, action) in enumerate(quick_actions.items()):
-            with cols[i % 2]:
-                _render_quick_action_card(action, language)
+        # Sort: if "near me" computed distances, show closest first
+        def _sort_key(item: tuple[str, dict]) -> tuple[int, str]:
+            _, a = item
+            d = a.get("_distance_km")
+            return (int(d) if d is not None else 10_000, str(a.get("title", "")))
+
+        items = list(quick_actions.items())
+        items.sort(key=_sort_key)
+
+        tab_list, tab_map = st.tabs(
+            ["📋 " + ("Seznam" if language == "czech" else "List"), "🗺️ " + ("Mapa" if language == "czech" else "Map")]
+        )
+
+        with tab_list:
+            cols = st.columns(2)
+            for i, (_, action) in enumerate(items):
+                with cols[i % 2]:
+                    _render_quick_action_card(action, language)
+
+        with tab_map:
+            if not _HAS_FOLIUM:
+                st.info(
+                    "🗺️ "
+                    + (
+                        "Mapa se načte po nasazení (balíčky folium/streamlit-folium se nainstalují)."
+                        if language == "czech"
+                        else "Map will work after deploy (folium/streamlit-folium will be installed)."
+                    )
+                )
+            else:
+                user_loc = st.session_state.get("user_location")
+                center_lat, center_lon = (50.0755, 14.4378)  # Prague default
+                if user_loc and user_loc.get("lat") and user_loc.get("lon"):
+                    center_lat, center_lon = float(user_loc["lat"]), float(user_loc["lon"])
+
+                # Render map (click to set location)
+                m = folium.Map(location=[center_lat, center_lon], zoom_start=12, tiles="CartoDB positron", control_scale=True)
+                folium.CircleMarker(
+                    location=[center_lat, center_lon],
+                    radius=7,
+                    color="#2E5D31",
+                    fill=True,
+                    fill_color="#2E5D31",
+                    fill_opacity=0.9,
+                    tooltip=("Vaše poloha" if language == "czech" else "Your location"),
+                ).add_to(m)
+
+                # Action markers (from app data)
+                for _, action in items[:120]:
+                    place = _norm_place(action)
+                    city_key = _extract_city_key(place)
+                    if not city_key:
+                        continue
+                    lat2, lon2 = CITY_COORDS[city_key]
+                    org = action.get("organization", {}).get("name", "")
+                    url = action.get("organization", {}).get("website", action.get("url", ""))
+                    title_txt = action.get("title", "Akce")
+                    popup_parts = [f"<b>{title_txt}</b>"]
+                    if org:
+                        popup_parts.append(f"<div>{org}</div>")
+                    if url and url != "#":
+                        popup_parts.append(f"<div><a href='{url}' target='_blank' rel='noopener'>Otevřít odkaz</a></div>")
+                    popup_html = "<div style='max-width:260px;'>" + "".join(popup_parts) + "</div>"
+                    folium.CircleMarker(
+                        location=[lat2, lon2],
+                        radius=6,
+                        color="#3E7A43",
+                        fill=True,
+                        fill_color="#3E7A43",
+                        fill_opacity=0.7,
+                        tooltip=title_txt,
+                        popup=folium.Popup(popup_html, max_width=300),
+                    ).add_to(m)
+
+                # Real nearby places (OpenStreetMap via Overpass) – optional
+                st.markdown("<div class='section-header'>🧭 " + ("Okolí na mapě" if language=="czech" else "Nearby on the map") + "</div>", unsafe_allow_html=True)
+                st.caption(
+                    "Data jsou z OpenStreetMap (může být neúplné)."
+                    if language == "czech"
+                    else "Data comes from OpenStreetMap (may be incomplete)."
+                )
+                colm1, colm2 = st.columns([2, 1])
+                with colm1:
+                    kinds = st.multiselect(
+                        "Co hledat" if language == "czech" else "What to show",
+                        options=["ngo", "community", "food", "animals"],
+                        default=["ngo", "community"],
+                        format_func=lambda x: {
+                            "ngo": "🏛️ Organizace / spolky" if language=="czech" else "🏛️ NGOs / associations",
+                            "community": "🏘️ Komunitní místa" if language=="czech" else "🏘️ Community places",
+                            "food": "🍞 Potravinová pomoc" if language=="czech" else "🍞 Food aid",
+                            "animals": "🐾 Zvířata" if language=="czech" else "🐾 Animals",
+                        }[x],
+                        key="map_kinds",
+                    )
+                with colm2:
+                    radius_km = st.slider(
+                        "Okruh (km)" if language == "czech" else "Radius (km)",
+                        min_value=1,
+                        max_value=25,
+                        value=5,
+                        step=1,
+                        key="map_radius_km",
+                    )
+
+                places: list[dict[str, Any]] = []
+                if kinds:
+                    try:
+                        places = _fetch_osm_places(center_lat, center_lon, int(radius_km) * 1000, tuple(kinds))
+                    except Exception:
+                        places = []
+
+                for p in places[:120]:
+                    nm = p.get("name") or ("Místo pomoci" if language == "czech" else "Place to help")
+                    w = p.get("website")
+                    popup_html = f"<div style='max-width:260px;'><b>{nm}</b>"
+                    if w:
+                        popup_html += f"<div><a href='{w}' target='_blank' rel='noopener'>web</a></div>"
+                    popup_html += "</div>"
+                    folium.CircleMarker(
+                        location=[p["lat"], p["lon"]],
+                        radius=5,
+                        color="#2b6cb0",
+                        fill=True,
+                        fill_color="#2b6cb0",
+                        fill_opacity=0.65,
+                        tooltip=nm,
+                        popup=folium.Popup(popup_html, max_width=300),
+                    ).add_to(m)
+
+                st.caption(
+                    "Tip: klikněte do mapy a nastavte svou polohu (pro výběr okolí)."
+                    if language == "czech"
+                    else "Tip: click the map to set your location."
+                )
+                st_data: dict[str, Any] = st_folium(m, use_container_width=True, height=520) or {}
+                last_clicked = st_data.get("last_clicked")
+                if last_clicked and last_clicked.get("lat") and last_clicked.get("lng"):
+                    st.session_state.user_location = {
+                        "lat": float(last_clicked["lat"]),
+                        "lon": float(last_clicked["lng"]),
+                        "source": "map_click",
+                    }
+                    st.rerun()
+
+                if places:
+                    st.markdown(
+                        "<div class='section-header'>📌 "
+                        + (f"Nalezeno: {len(places)} míst" if language == "czech" else f"Found: {len(places)} places")
+                        + "</div>",
+                        unsafe_allow_html=True,
+                    )
+                    for p in places[:8]:
+                        nm = p.get("name") or ("Místo pomoci" if language == "czech" else "Place to help")
+                        w = p.get("website")
+                        if w:
+                            st.link_button(nm, w, use_container_width=True)
+                        else:
+                            st.markdown(f"- **{nm}**")
                 
     except Exception as e:
         st.error(f"Chyba při načítání akcí: {e}")
