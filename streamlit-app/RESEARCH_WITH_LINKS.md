@@ -5,6 +5,7 @@ This file documents the required research phase for:
 - “Add a beautiful map with real nearby opportunities/organizations”
 - “Rewrite Values Discovery + Action Selection in Journey”
 - “Choose the best tech for a beautiful map + landing-page feel (Czech-only)”
+- “Fix broken Leaflet map tiles in production (blank/gray basemap)”
 
 ---
 
@@ -16,6 +17,23 @@ This file documents the required research phase for:
 - Streamlit Journey steps still had **legacy gradient-heavy UI** in:
   - `streamlit-app/core/journey.py` (`_show_values_discovery_step`, `_show_action_selection_step`, `_render_action_card`)
 - Quick Help had only a **basic location dropdown** (Praha/Brno/Ostrava) and the underlying data uses `requirements.location` (not consistently `action.location`).
+
+### Map bug: “tiles are blank / gray”
+We found the SvelteKit app was sending **cross-origin isolation headers** that can block loading external tile images/scripts:
+- `akcelerator-landing-page/src/hooks.server.js`
+  - `Cross-Origin-Embedder-Policy: require-corp`
+  - `Cross-Origin-Opener-Policy: same-origin`
+  - `Cross-Origin-Resource-Policy: same-origin`
+- `akcelerator-landing-page/vercel.json` also set the same headers.
+
+Symptom matched the screenshot: **markers render but basemap tiles are gray**.
+
+### Fix implemented
+We removed those headers in both places (we still keep CSP + other safe headers).
+
+Files changed:
+- `akcelerator-landing-page/src/hooks.server.js` (removed COEP/COOP/CORP)
+- `akcelerator-landing-page/vercel.json` (removed COEP/COOP/CORP)
 
 ### How that informed implementation
 - We leaned on a **calm global CSS design system** (`streamlit-app/config/styling.py`) and removed local gradients in Journey steps.
@@ -72,6 +90,16 @@ This file documents the required research phase for:
 - **Key Insights:** Organize experiences into clear pages to reduce overwhelm.
 - **Applicable:** Informed the “Map vs List” tab split in Quick Help.
 
+🔗 **[7 Visual Debugging Techniques for Web Maps](https://www.maplibrary.org/10248/7-visual-debugging-techniques-for-web-maps/?utm_source=openai)**
+- **Found via web search:** Web map debugging checklist (console + network).
+- **Key Insights:** Check browser console + network failures (tiles/layers) first.
+- **Applicable:** Used to reason about “gray tiles” = blocked/failed tile requests.
+
+🔗 **[How to get Chrome to reload source maps (hard reload)](https://www.codegenes.net/blog/how-to-get-chrome-to-reload-source-maps/?utm_source=openai)**
+- **Found via web search:** Browser cache/hard reload guidance.
+- **Key Insights:** Hard reload can eliminate cache artifacts while debugging.
+- **Applicable:** Useful for validating header/CSP changes after deployment.
+
 ---
 
 ## Synthesis & Recommendation
@@ -80,5 +108,7 @@ This file documents the required research phase for:
 - **For real local data**, OpenStreetMap-derived places are a practical first step. If you want true “opportunities” (events/volunteer slots), we’ll likely need:
   - A dedicated dataset + moderation, or
   - A partner/API (often requires keys, ToS, and ongoing maintenance)
+
+- **For map reliability in production**, avoid cross-origin isolation headers (COEP/COOP/CORP) unless you truly need SharedArrayBuffer; otherwise external tile/CDN resources may be blocked and the basemap will render gray.
 
 
