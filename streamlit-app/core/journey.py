@@ -11,6 +11,7 @@ from logic.matching import calculate_advanced_action_score
 from core.session import get_user_profile, update_user_profile, track_page_visit
 from data.loaders import load_actions_data, load_causes_data
 from content import get_content, get_encouragement, get_journey_transition, get_visual_element
+from config.settings import CZECH_ORGANIZATIONS
 
 def show_journey_flow():
     """Hlavní lineární tok"""
@@ -35,153 +36,75 @@ def show_journey_flow():
         st.rerun()
 
 def _show_welcome_step(language):
-    """Krok 1: Uvítání s krásným designem"""
+    """Welcome screen: two clear paths (direct org help vs guided journey), calm UI."""
     
     welcome_content = get_content('journey_content.welcome', language)
-    
-    # Beautiful gradient header with responsive typography
-    st.markdown(f"""
-    <div style="
-        background: linear-gradient(135deg, #7AB87A 0%, #5A9B5A 50%, #4A8A4A 100%);
-        padding: 3rem 1rem 2rem 1rem;
-        border-radius: 0 0 30px 30px;
-        text-align: center;
-        margin: -1rem -1rem 2rem -1rem;
-        box-shadow: 0 8px 25px rgba(122, 184, 122, 0.3);
-    ">
-        <h1 style="
-            color: white; 
-            margin: 0; 
-            font-size: clamp(2rem, 5vw, 3rem);
-            font-weight: 300;
-            letter-spacing: -0.02em;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        ">
-            {welcome_content['title']}
-        </h1>
-        <div style="
-            color: rgba(255,255,255,0.95); 
-            margin-top: 1rem; 
-            font-size: clamp(1rem, 3vw, 1.2rem);
-            line-height: 1.5;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-            font-weight: 300;
-        ">
-            {welcome_content['subtitle']}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Centered content with better spacing
-    col1, col2, col3 = st.columns([1, 3, 1])
-    with col2:
-        # Journey preview with enhanced styling
-        journey_steps = welcome_content['journey_steps']
-        
-        st.markdown(f"""
-        <div style="
-            background: linear-gradient(135deg, #f8fdf8 0%, #f0f8f0 100%);
-            padding: 2rem;
-            border-radius: 20px;
-            margin: 2rem 0;
-            border: 1px solid #e8f5e8;
-            box-shadow: 0 4px 15px rgba(122, 184, 122, 0.1);
-        ">
-            <h3 style="
-                color: #2E5D31; 
-                text-align: center; 
-                margin-bottom: 1.5rem;
-                font-size: 1.3rem;
-                font-weight: 500;
-            ">
-                {journey_steps['title']}
-            </h3>
-        """, unsafe_allow_html=True)
-        
-        # Enhanced step visualization
-        for i, step in enumerate(journey_steps['steps'], 1):
-            st.markdown(f"""
-            <div style="
-                display: flex;
-                align-items: center;
-                margin: 1rem 0;
-                padding: 1rem;
-                background: white;
-                border-radius: 12px;
-                border-left: 4px solid #7AB87A;
-                box-shadow: 0 2px 8px rgba(122, 184, 122, 0.1);
-                transition: all 0.3s ease;
-            ">
-                <div style="
-                    background: linear-gradient(135deg, #7AB87A 0%, #5A9B5A 100%);
-                    color: white;
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-weight: 600;
-                    font-size: 0.9rem;
-                    margin-right: 1rem;
-                    flex-shrink: 0;
-                ">
-                    {i}
-                </div>
-                <div style="
-                    color: #2E5D31;
-                    font-size: 1rem;
-                    line-height: 1.4;
-                    flex-grow: 1;
-                ">
-                    {step}
-                </div>
+
+    st.markdown(f"<div class='main-header'>{welcome_content['title']}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='sub-header'>{welcome_content['subtitle']}</div>", unsafe_allow_html=True)
+
+    left, right = st.columns(2)
+
+    with left:
+        st.markdown(
+            f"""
+            <div class="cta-section">
+              <div style="color:#2E5D31; font-weight:750; font-size:1.05rem; margin-bottom:0.25rem;">
+                {'🏛️ Rovnou na organizace' if language=='czech' else '🏛️ Go straight to organizations'}
+              </div>
+              <div style="color:#516051; margin-bottom:0.75rem;">
+                {'Jeden klik a jste na stránce pomoci. Žádné další kroky.' if language=='czech' else 'One click and you’re on the help page. No extra steps.'}
+              </div>
             </div>
-            """, unsafe_allow_html=True)
-        
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-        # Time expectation with gentle styling
-        st.markdown(f"""
-        <div style="
-            text-align: center;
-            padding: 1.5rem;
-            margin: 1.5rem 0;
-            color: #5A6B5A;
-            font-style: italic;
-            background: rgba(122, 184, 122, 0.05);
-            border-radius: 15px;
-            border: 1px solid rgba(122, 184, 122, 0.1);
-        ">
-            ⏱️ Celá cesta zabere jen 3-5 minut vašeho času
-        </div>
-        """ if language == 'czech' else f"""
-        <div style="
-            text-align: center;
-            padding: 1.5rem;
-            margin: 1.5rem 0;
-            color: #5A6B5A;
-            font-style: italic;
-            background: rgba(122, 184, 122, 0.05);
-            border-radius: 15px;
-            border: 1px solid rgba(122, 184, 122, 0.1);
-        ">
-            ⏱️ The entire journey takes just 3-5 minutes of your time
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Enhanced start button with better spacing
-        st.markdown("<div style='height: 2rem;'></div>", unsafe_allow_html=True)
-        
+            """,
+            unsafe_allow_html=True,
+        )
+
+        # Small curated list (low friction)
+        if language == "czech":
+            org_links = [
+                ("🌳 Sázejme budoucnost", CZECH_ORGANIZATIONS.get("tree_planting")),
+                ("✉️ Dopisy seniorům", CZECH_ORGANIZATIONS.get("senior_letters")),
+                ("🍞 Naděje (jídlo)", CZECH_ORGANIZATIONS.get("homeless_support")),
+            ]
+        else:
+            org_links = [
+                ("🌳 Plant trees", CZECH_ORGANIZATIONS.get("tree_planting")),
+                ("✉️ Letters to seniors", CZECH_ORGANIZATIONS.get("senior_letters")),
+                ("🍞 Homeless support", CZECH_ORGANIZATIONS.get("homeless_support")),
+            ]
+        for label, url in org_links:
+            if url:
+                try:
+                    st.link_button(label, url=url, use_container_width=True)
+                except Exception:
+                    st.markdown(f"[{label}]({url})")
+
+        if st.button("➡️ " + ("Zobrazit další možnosti" if language == "czech" else "See more options"), use_container_width=True, type="secondary", key="welcome_more_orgs"):
+            st.session_state.current_page = "quick_actions"
+            st.rerun()
+
+    with right:
+        st.markdown(
+            f"""
+            <div class="cta-section">
+              <div style="color:#2E5D31; font-weight:750; font-size:1.05rem; margin-bottom:0.25rem;">
+                {'🧭 Najít moji cestu (3–5 min)' if language=='czech' else '🧭 Find my way (3–5 min)'}
+              </div>
+              <div style="color:#516051; margin-bottom:0.75rem;">
+                {'Vyberete 1–2 oblasti a my doporučíme konkrétní akci.' if language=='czech' else 'Pick 1–2 areas and we’ll recommend a concrete action.'}
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
         if st.button(
-            welcome_content['start_button'], 
-            use_container_width=True, 
+            welcome_content['start_button'],
+            use_container_width=True,
             type="primary",
-            key="welcome_start"
+            key="welcome_start",
         ):
-            # Start with quick values selection (light, skippable)
             st.session_state.journey_step = 'values_discovery'
             st.rerun()
 

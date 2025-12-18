@@ -45,18 +45,19 @@ def main():
     
     # Get language for the entire app
     language = st.session_state.get('language', 'czech')
-    
-    # First-visit quick start chooser
-    _render_first_visit_chooser()
+
+    # First-visit intro screen: render it as a real page (avoid stacking multiple top bars)
+    if _render_first_visit_chooser(language):
+        st.stop()
 
     # Top navigace
     _render_enhanced_navigation(language)
 
-    # Onboarding pomocník – zviditelní příští krok a přidá jasné CTA
-    _render_onboarding_helper(language)
-
-    # Mini impact widget – posiluje smysl a cíl (1 krok denně)
-    _render_mini_impact(language)
+    # Onboarding helper + mini impact can be visually noisy on the Journey welcome screen.
+    # Show them only after the user has started the journey.
+    if st.session_state.current_page != 'journey' or st.session_state.get('journey_step') != 'welcome':
+        _render_onboarding_helper(language)
+        _render_mini_impact(language)
     
     # Hlavní obsah na základě vybrané stránky
     if st.session_state.current_page == 'journey':
@@ -79,40 +80,70 @@ def main():
     # Jemná krizová podpora - vždy přítomná
     render_gentle_crisis_support(language)
 
-def _render_first_visit_chooser():
-    """Offer a simple choice for first-time visitors: Quick Help vs Guided Journey."""
+def _render_first_visit_chooser(language: str) -> bool:
+    """True intro page shown on first visit. Returns True if it rendered (caller should st.stop())."""
     if st.session_state.get('onboarding_completed'):
-        return
+        return False
     # Only show once per session
     if st.session_state.get('first_visit_prompt_shown'):
-        return
+        return False
     st.session_state.first_visit_prompt_shown = True
 
-    with st.container():
-        st.markdown("""
-        <div style="
-            background: linear-gradient(135deg, #f8fdf8 0%, #f0f8f0 100%);
-            border: 1px solid #e2efe2;
-            border-radius: 16px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-        ">
-            <div style="color:#2E5D31; font-weight:600;">Jak chcete začít?</div>
-            <div style="color:#5A6B5A; font-size:0.95rem;">Zvolte rychlou pomoc, nebo krátkého průvodce (3–5 min).</div>
-        </div>
-        """, unsafe_allow_html=True)
-        col_a, col_b = st.columns(2)
-        with col_a:
-            if st.button("⚡ Rychlá pomoc", use_container_width=True, key="chooser_quick"):
-                st.session_state.current_page = 'quick_actions'
-                st.session_state.onboarding_completed = True
-                st.rerun()
-        with col_b:
-            if st.button("🧭 Průvodce (3–5 min)", use_container_width=True, key="chooser_guide"):
-                st.session_state.current_page = 'journey'
-                st.session_state.journey_step = 'welcome'
-                st.session_state.onboarding_completed = True
-                st.rerun()
+    title = "🌿 Začít pomáhat" if language == "czech" else "🌿 Start helping"
+    subtitle = (
+        "Vyberte si: rovnou na ověřené organizace, nebo krátký průvodce (3–5 min)."
+        if language == "czech"
+        else "Choose: go straight to trusted organizations, or a short guide (3–5 min)."
+    )
+    direct_title = "🏛️ Ověřené organizace" if language == "czech" else "🏛️ Trusted organizations"
+    direct_body = (
+        "Jeden klik → web organizace. Nejnižší tření."
+        if language == "czech"
+        else "One click → organization website. Lowest friction."
+    )
+    guide_title = "🧭 Průvodce (na míru)" if language == "czech" else "🧭 Guided (tailored)"
+    guide_body = (
+        "Vyberete 1–2 oblasti a my doporučíme konkrétní akci."
+        if language == "czech"
+        else "Pick 1–2 areas and we’ll recommend a concrete action."
+    )
+
+    st.markdown(f"<div class='main-header'>{title}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='sub-header'>{subtitle}</div>", unsafe_allow_html=True)
+
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.markdown(
+            f"""
+            <div class="cta-section">
+              <div style="color:#2E5D31; font-weight:700; font-size:1.05rem; margin-bottom:0.25rem;">{direct_title}</div>
+              <div style="color:#516051; margin-bottom:0.75rem;">{direct_body}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if st.button("🚀 " + ("Jít rovnou" if language == "czech" else "Go now"), use_container_width=True, type="primary", key="chooser_quick"):
+            st.session_state.current_page = 'quick_actions'
+            st.session_state.onboarding_completed = True
+            st.rerun()
+
+    with col_b:
+        st.markdown(
+            f"""
+            <div class="cta-section">
+              <div style="color:#2E5D31; font-weight:700; font-size:1.05rem; margin-bottom:0.25rem;">{guide_title}</div>
+              <div style="color:#516051; margin-bottom:0.75rem;">{guide_body}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if st.button("🌿 " + ("Najít moji cestu" if language == "czech" else "Find my way"), use_container_width=True, type="secondary", key="chooser_guide"):
+            st.session_state.current_page = 'journey'
+            st.session_state.journey_step = 'welcome'
+            st.session_state.onboarding_completed = True
+            st.rerun()
+
+    return True
 
 def _render_onboarding_helper(language: str):
     """Jasná vodítka: kde právě jsem a co je další krok.

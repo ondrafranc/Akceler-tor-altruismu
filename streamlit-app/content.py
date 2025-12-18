@@ -12,7 +12,7 @@ JOURNEY_CONTENT = {
         # Step 1: Welcome
         'welcome': {
             'title': '🌱 Vítejte',
-            'subtitle': 'Možná se cítíte zahlceni tím, co se děje kolem vás.<br/>Je v pořádku nevědět, kde začít.',
+            'subtitle': 'Vyberte si, jak chcete začít.<br/>Rovnou na ověřené organizace, nebo krátký průvodce (3–5 min).',
             'journey_steps': {
                 'title': '🧭 Vaše cesta v několika krocích',
                 'steps': [
@@ -86,7 +86,7 @@ JOURNEY_CONTENT = {
         # Step 1: Welcome
         'welcome': {
             'title': '🌱 Welcome',
-            'subtitle': 'You\'re here because you care about the world around you.<br/>That\'s a beautiful beginning.',
+            'subtitle': 'Choose how you want to start.<br/>Go straight to trusted organizations, or a short guide (3–5 min).',
             'journey_steps': {
                 'title': '🧭 Your journey in a few steps',
                 'steps': [
