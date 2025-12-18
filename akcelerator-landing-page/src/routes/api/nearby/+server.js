@@ -51,13 +51,15 @@ function osmUrl(type, id) {
   return `https://www.openstreetmap.org/${type}/${id}`;
 }
 
-function makeOverpassQuery(lat, lon, radiusM, kinds) {
+function makeOverpassQuery(lat, lon, radiusM, kinds, includeAssociations) {
   const tagQueries = [];
 
   for (const k of kinds) {
     if (k === 'ngo') {
       tagQueries.push('["office"="ngo"]');
-      tagQueries.push('["office"="association"]');
+      if (includeAssociations) {
+        tagQueries.push('["office"="association"]');
+      }
     }
     if (k === 'community') {
       tagQueries.push('["amenity"="community_centre"]');
@@ -122,6 +124,7 @@ export async function GET({ url }) {
   const lon = parseFloatSafe(url.searchParams.get('lon'));
   const radius = parseIntSafe(url.searchParams.get('radius_m')) ?? 3000;
   const kindsRaw = (url.searchParams.get('kinds') || '').split(',').map(s => s.trim()).filter(Boolean);
+  const includeAssociations = url.searchParams.get('include_associations') === '1';
 
   if (lat == null || lon == null) {
     return json({ error: 'Missing lat/lon' }, { status: 400 });
@@ -131,14 +134,14 @@ export async function GET({ url }) {
   const radiusM = clamp(radius, 250, 12_000);
   const kinds = kindsRaw.filter(k => ['ngo', 'community', 'food', 'animals'].includes(k));
 
-  const cacheKey = `${lat.toFixed(4)}:${lon.toFixed(4)}:${radiusM}:${kinds.sort().join(',')}`;
+  const cacheKey = `${lat.toFixed(4)}:${lon.toFixed(4)}:${radiusM}:${includeAssociations ? 'assoc1' : 'assoc0'}:${kinds.sort().join(',')}`;
   const cached = CACHE.get(cacheKey);
   const now = Date.now();
   if (cached && cached.expiresAt > now) {
     return json(cached.data);
   }
 
-  const query = makeOverpassQuery(lat, lon, radiusM, kinds);
+  const query = makeOverpassQuery(lat, lon, radiusM, kinds, includeAssociations);
   const data = await postOverpass(query);
 
   const places = [];

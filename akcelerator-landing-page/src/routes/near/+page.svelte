@@ -104,6 +104,7 @@
   let selectedCity = cities[0];
   let radiusKm = 5;
   let kinds = ['ngo', 'community'];
+  let includeAssociations = false;
   let query = '';
   let sortBy = 'distance'; // distance | name
   let visibleCount = 24;
@@ -259,7 +260,7 @@
       const resp = await fetch(
         `/api/nearby?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&radius_m=${encodeURIComponent(
           radiusKm * 1000
-        )}&kinds=${encodeURIComponent(kinds.join(','))}`
+        )}&kinds=${encodeURIComponent(kinds.join(','))}&include_associations=${includeAssociations ? '1' : '0'}`
       );
       const data = await resp.json();
       places = (data?.places || []).map((p) => ({
@@ -285,6 +286,14 @@
     markersLayer = leaflet.layerGroup().addTo(map);
     markerById = new Map();
 
+    function emojiForKind(kind) {
+      if (kind === 'ngo') return '🏛️';
+      if (kind === 'community') return '🏘️';
+      if (kind === 'food') return '🍞';
+      if (kind === 'animals') return '🐾';
+      return '✨';
+    }
+
     for (const p of places.slice(0, 250)) {
       const color =
         p.kind === 'ngo'
@@ -297,12 +306,14 @@
                 ? '#1d4ed8'
                 : '#475569';
 
-      const marker = leaflet.circleMarker([p.lat, p.lon], {
-        radius: 6,
-        color,
-        fillColor: color,
-        fillOpacity: 0.65
+      const icon = leaflet.divIcon({
+        className: 'place-pin',
+        html: `<div class="pin pin-${p.kind}" style="border-color:${color}; color:${color}">${emojiForKind(p.kind)}</div>`,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17]
       });
+
+      const marker = leaflet.marker([p.lat, p.lon], { icon, riseOnHover: true });
 
       markerById.set(p.id, marker);
 
@@ -345,7 +356,7 @@
     map = leaflet.map(mapEl, { zoomControl: true });
 
     leaflet
-      .tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      .tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         maxZoom: 19,
         attribution:
           '&copy; OpenStreetMap contributors &copy; CARTO'
@@ -494,6 +505,17 @@
             </label>
           {/each}
         </div>
+        <label class="assoc">
+          <input
+            type="checkbox"
+            checked={includeAssociations}
+            on:change={() => {
+              includeAssociations = !includeAssociations;
+              refreshFromMapCenter();
+            }}
+          />
+          <span>Zahrnout i obecné spolky (víc výsledků, občas šum)</span>
+        </label>
         <div class="muted">{UI[language].disclaimer}</div>
         <div class="muted">Tip: klikněte do mapy pro změnu místa.</div>
       </div>
@@ -687,6 +709,8 @@
     user-select: none;
   }
   .chip input { margin: 0; }
+  .assoc { display:flex; gap: 0.5rem; align-items:center; margin-top: 0.6rem; color: var(--text-secondary); font-size: 0.92rem; }
+  .assoc input { margin: 0; }
 
   .map-card { overflow: hidden; margin-bottom: 1rem; position: relative; }
   .map {
@@ -784,6 +808,36 @@
     .grid { grid-template-columns: 1fr; }
     .map { height: 420px; }
     .search { min-width: 100%; }
+  }
+
+  /* Leaflet polish (coherent + playful) */
+  :global(.place-pin) { background: transparent; border: none; }
+  :global(.place-pin .pin) {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.92);
+    border: 2px solid rgba(44, 62, 45, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+    transform: translateZ(0);
+  }
+  :global(.leaflet-control-zoom a) {
+    border-radius: 10px !important;
+    border: 1px solid rgba(44, 62, 45, 0.12) !important;
+    color: var(--czech-forest) !important;
+    background: rgba(255,255,255,0.92) !important;
+    box-shadow: 0 10px 22px rgba(0,0,0,0.08);
+  }
+  :global(.leaflet-popup-content-wrapper) {
+    border-radius: 16px;
+    border: 1px solid rgba(44, 62, 45, 0.12);
+    box-shadow: 0 16px 34px rgba(0,0,0,0.12);
+  }
+  :global(.leaflet-popup-tip) {
+    box-shadow: 0 16px 34px rgba(0,0,0,0.10);
   }
 </style>
 
