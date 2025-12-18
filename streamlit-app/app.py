@@ -120,16 +120,15 @@ def _render_onboarding_helper(language: str):
     """
     journey_step = st.session_state.get('journey_step', 'welcome')
 
-    steps = ['welcome', 'emotional_check', 'values_discovery', 'action_selection']
+    # Journey flow was simplified (emotional_check removed)
+    steps = ['welcome', 'values_discovery', 'action_selection']
     titles_cs = {
         'welcome': 'Vítejte',
-        'emotional_check': 'Jak se cítíte?',
         'values_discovery': 'Co je pro vás důležité?',
         'action_selection': 'Vyberte si první akci'
     }
     titles_en = {
         'welcome': 'Welcome',
-        'emotional_check': 'How do you feel?',
         'values_discovery': 'What matters to you?',
         'action_selection': 'Pick your first action'
     }
@@ -142,12 +141,10 @@ def _render_onboarding_helper(language: str):
         next_label = (
             {
                 'welcome': 'Pokračovat →',
-                'emotional_check': 'Pokračovat →',
                 'values_discovery': 'Najít moji akci →',
                 'action_selection': 'Spustit akci →'
             } if language == 'czech' else {
                 'welcome': 'Continue →',
-                'emotional_check': 'Continue →',
                 'values_discovery': 'Find my action →',
                 'action_selection': 'Start action →'
             }
@@ -156,20 +153,23 @@ def _render_onboarding_helper(language: str):
         st.markdown(
             f"""
             <div style="
-                margin: 0 -1rem 1rem -1rem;
-                padding: 0.75rem 1rem;
-                background: linear-gradient(90deg, #f0f8f0, #e8f5e8);
-                border-bottom: 1px solid #dbe8db;
+                margin: 0 0 0.75rem 0;
+                padding: 0.75rem 0.9rem;
+                background: #ffffff;
+                border: 1px solid rgba(44, 62, 45, 0.12);
+                border-radius: 14px;
+                box-shadow: 0 10px 28px rgba(0,0,0,0.08);
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
+                gap: 0.75rem;
                 flex-wrap: wrap;
             ">
-                <div style="color:#2E5D31; font-weight:600;">
+                <div style="color:#2E5D31; font-weight:650;">
                     {('Krok' if language=='czech' else 'Step')} {idx+1}/{total}: {title}
                 </div>
-                <div style="color:#5A6B5A; font-size:0.95rem;">
-                    {('Tip: Klikněte na tlačítko níže pro další krok' if language=='czech' else 'Tip: Use the button to move forward')}
+                <div style="color:#516051; font-size:0.92rem;">
+                    {('Tip: pokračujte jedním tlačítkem' if language=='czech' else 'Tip: continue with one button')}
                 </div>
             </div>
             """,
@@ -417,40 +417,27 @@ def _render_quick_action_card(action, language):
     time_text = f"{time_req} min" if time_req < 60 else f"{time_req//60}h"
     cost_text = "Zdarma" if cost == 0 else f"~{int(cost * 25)} Kč"
     
+    # Calm card UI: no gradients, no JS hover transforms (Streamlit already handles hover)
     st.markdown(f"""
     <div style="
-        background: linear-gradient(135deg, #f8fdf8 0%, #f0f8f0 100%);
-        border: 2px solid #7AB87A;
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        box-shadow: 0 4px 15px rgba(122, 184, 122, 0.2);
-        transition: transform 0.3s ease;
-    " onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
-        <h3 style="color: #2E5D31; margin-bottom: 1rem;">
+        background: #ffffff;
+        border: 1px solid rgba(44, 62, 45, 0.12);
+        border-radius: 14px;
+        padding: 1.1rem;
+        margin: 0.75rem 0;
+        box-shadow: 0 10px 28px rgba(0,0,0,0.08);
+    ">
+        <div style="color:#2E5D31; font-weight:700; font-size:1.05rem; margin:0 0 0.5rem 0;">
             {action.get('title', 'Bez názvu')}
-        </h3>
-        <p style="color: #5A6B5A; margin-bottom: 1rem; line-height: 1.5;">
+        </div>
+        <div style="color:#516051; margin:0 0 0.9rem 0; line-height:1.5;">
             {action.get('description', 'Popis není k dispozici')}
-        </p>
-        <div style="
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 1rem;
-            font-size: 0.9rem;
-            color: #4A5E4A;
-        ">
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:0.75rem; flex-wrap:wrap; margin-bottom:0.75rem; font-size:0.92rem; color:#516051;">
             <span>⏱️ {time_text}</span>
             <span>💰 {cost_text}</span>
         </div>
-        <div style="
-            background: #e8f5e8;
-            padding: 0.75rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            font-size: 0.9rem;
-            color: #2E5D31;
-        ">
+        <div style="background:#F2F7F2; border:1px solid rgba(44, 62, 45, 0.12); padding:0.6rem 0.75rem; border-radius:12px; font-size:0.92rem; color:#2E5D31;">
             <strong>Organizace:</strong> {organization}
         </div>
     </div>
