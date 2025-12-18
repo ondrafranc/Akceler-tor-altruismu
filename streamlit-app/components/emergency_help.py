@@ -18,29 +18,29 @@ def render_gentle_crisis_support(language='czech'):
     <div class="gentle-crisis-support" role="complementary" aria-label="Okamžitá pomoc">
         <div style="
             position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #F8F3FF 0%, #E8E3F3 100%);
-            color: #5A4B6B;
-            padding: 1rem;
-            border-radius: 15px;
-            box-shadow: 0 2px 8px rgba(90, 75, 107, 0.15);
-            max-width: 280px;
+            bottom: 16px;
+            right: 16px;
+            background: #FFFFFF;
+            color: #2E5D31;
+            padding: 0.9rem 1rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.10);
+            max-width: 260px;
             z-index: 1000;
-            border: 1px solid rgba(139, 123, 139, 0.2);
+            border: 1px solid #E3E8E3;
             font-size: 0.9rem;
             line-height: 1.4;
         ">
-            <div style="margin-bottom: 0.5rem; font-weight: 500;">
+            <div style="margin-bottom: 0.35rem; font-weight: 600; color: #1E4D21;">
                 💜 {crisis_content['title']}
             </div>
-            <div style="margin-bottom: 0.8rem; opacity: 0.8;">
+            <div style="margin-bottom: 0.6rem; opacity: 0.85;">
                 {crisis_content['subtitle']}
             </div>
-            <div style="font-size: 0.8rem;">
+            <div style="font-size: 0.85rem;">
                 <strong>{crisis_content['help_label']}</strong><br/>
                 <a href="tel:116111" 
-                   style="color: #7B6B8B; text-decoration: none; font-weight: 500;">
+                   style="color: #2E5D31; text-decoration: none; font-weight: 600;">
                     {crisis_content['crisis_line']}
                 </a>
             </div>

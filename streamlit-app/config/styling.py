@@ -116,14 +116,13 @@ def apply_styles():
         
         /* Enhanced Card System with better alignment */
         .cause-card {
-            border: 1px solid #A8D5A8;
-            border-radius: 16px;
-            padding: 2rem;
-            margin: 1.5rem 0;
-            background: linear-gradient(135deg, #F8FDF8 0%, #F0F8F0 100%);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.1);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-top: 3px solid transparent;
+            border: 1px solid #D8E5D8;
+            border-radius: 14px;
+            padding: 1.5rem;
+            margin: 1.25rem 0;
+            background: #F8FAF7;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+            transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease;
             height: 100%;
             display: flex;
             flex-direction: column;
@@ -131,11 +130,10 @@ def apply_styles():
             position: relative;
         }
         .cause-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.12), 0 3px 6px rgba(0,0,0,0.08);
-            border-color: #7AB87A;
-            border-top-color: #7AB87A;
-            background: linear-gradient(135deg, #F9FEF9 0%, #F2F9F2 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+            border-color: #C7D9C7;
+            background: #FFFFFF;
         }
         .cause-card:focus-within {
             outline: 2px solid #7AB87A !important;
@@ -143,13 +141,13 @@ def apply_styles():
         }
         
         .action-card {
-            border: 1px solid #C4E4C4;
+            border: 1px solid #DFE8DF;
             border-radius: 12px;
-            padding: 1.5rem;
-            margin: 1rem 0;
-            background: linear-gradient(135deg, #FAFBFA 0%, #F5F7F5 100%);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+            padding: 1.25rem;
+            margin: 0.9rem 0;
+            background: #FDFEFC;
+            transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
             border-left: 4px solid transparent;
             height: 100%;
             display: flex;
@@ -158,11 +156,11 @@ def apply_styles():
             position: relative;
         }
         .action-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);
-            border-color: #9BC89B;
-            border-left-color: #7AB87A;
-            background: linear-gradient(135deg, #FBFCFB 0%, #F6F8F6 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            border-color: #C9DCC9;
+            border-left-color: #6EA86E;
+            background: #FFFFFF;
         }
         .action-card:focus-within {
             outline: 2px solid #7AB87A !important;
@@ -171,15 +169,15 @@ def apply_styles():
         
         /* Enhanced Button System with Better Accessibility */
         .stButton > button {
-            background: linear-gradient(135deg, #7AB87A 0%, #5A9B5A 100%) !important;
+            background: #2E5D31 !important;
             color: white !important;
             border: none !important;
-            border-radius: 10px !important;
-            padding: 0.75rem 1.5rem !important;
+            border-radius: 12px !important;
+            padding: 0.75rem 1.25rem !important;
             font-weight: 600 !important;
             font-size: 0.95rem !important;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-            box-shadow: 0 3px 6px rgba(122, 184, 122, 0.3) !important;
+            transition: background 0.2s ease, box-shadow 0.2s ease !important;
+            box-shadow: 0 4px 10px rgba(46, 93, 49, 0.18) !important;
             text-transform: none !important;
             letter-spacing: 0.01em !important;
             width: 100% !important;
@@ -187,13 +185,11 @@ def apply_styles():
             position: relative !important;
         }
         .stButton > button:hover {
-            transform: translateY(-2px) !important;
-            box-shadow: 0 6px 12px rgba(122, 184, 122, 0.4) !important;
-            background: linear-gradient(135deg, #8BC88B 0%, #6BAC6B 100%) !important;
+            box-shadow: 0 6px 14px rgba(46, 93, 49, 0.22) !important;
+            background: #264C28 !important;
         }
         .stButton > button:active {
-            transform: translateY(0) !important;
-            box-shadow: 0 2px 4px rgba(122, 184, 122, 0.3) !important;
+            box-shadow: 0 3px 8px rgba(46, 93, 49, 0.2) !important;
         }
         .stButton > button:disabled {
             opacity: 0.6 !important;
@@ -281,43 +277,31 @@ def apply_styles():
         /* Gentle emergency help widget */
         .emergency-help-gentle {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #F3F0F7 0%, #E8E3ED 100%);
-            color: #5D4E75;
-            padding: 1rem;
-            border-radius: 16px;
+            bottom: 16px;
+            right: 16px;
+            background: #FFFFFF;
+            color: #2E5D31;
+            padding: 0.85rem 1rem;
+            border-radius: 12px;
             font-weight: 500;
             z-index: 1000;
-            box-shadow: 0 6px 20px rgba(93, 78, 117, 0.15), 0 2px 6px rgba(93, 78, 117, 0.1);
-            max-width: 300px;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(184, 169, 201, 0.3);
-            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.10);
+            max-width: 260px;
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
+            border: 1px solid #E3E8E3;
+            backdrop-filter: blur(6px);
         }
         .emergency-help-gentle:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(93, 78, 117, 0.2), 0 4px 10px rgba(93, 78, 117, 0.15);
-            background: linear-gradient(135deg, #F5F2F9 0%, #EAE5F0 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.12);
         }
         .emergency-help-gentle a {
-            color: #5D4E75 !important;
-            transition: color 0.2s ease !important;
+            color: #2E5D31 !important;
+            transition: color 0.15s ease !important;
         }
         .emergency-help-gentle a:hover {
-            color: #4A3D5C !important;
-            border-bottom-color: #5D4E75 !important;
-        }
-        .emergency-help-gentle details summary {
-            margin-bottom: 8px;
-            transition: color 0.2s ease;
-        }
-        .emergency-help-gentle details[open] summary {
-            margin-bottom: 12px;
-            color: #5D4E75;
-        }
-        .emergency-help-gentle details summary:hover {
-            color: #4A3D5C;
+            color: #1E4D21 !important;
+            border-bottom-color: #2E5D31 !important;
         }
         
         /* Progress text styling */
