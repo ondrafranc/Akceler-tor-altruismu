@@ -1,8 +1,7 @@
 [server]
 headless = true
 port = 8501
-baseUrlPath = "app"
-enableStaticServing = true
+enableStaticServing = false
 enableCORS = false
 enableXsrfProtection = false
 # Reduce open file handles by disabling native file watchers (use polling)
