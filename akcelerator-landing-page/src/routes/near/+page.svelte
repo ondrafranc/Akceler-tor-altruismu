@@ -109,7 +109,15 @@
   let kinds = ['ngo', 'community'];
   let includeAssociations = false;
   let query = '';
-  let sortBy = 'distance'; // distance | name
+  let sortBy = 'easy'; // easy | distance | name
+  let prefTime = 'any'; // any | 5 | 15 | 45
+  let prefSocial = 'any'; // any | solo | group
+  /** @type {string[]} */
+  let userValues = [];
+  /** @type {Set<string>} */
+  let boostedKinds = new Set();
+  let activePlaceId = null;
+  let activeMarkerEl = null;
   let visibleCount = 24;
   let onlyWithWebsite = false;
 
@@ -240,6 +248,8 @@
     const kindsFiltered = kindsRaw.filter((k) => ['ngo', 'community', 'food', 'animals'].includes(k));
 
     const sort = sp.get('sort');
+    const time = (sp.get('t') || '').toString();
+    const social = (sp.get('social') || '').toString();
 
     return {
       lat: Number.isFinite(lat) ? lat : null,
@@ -248,7 +258,10 @@
       kinds: kindsFiltered.length ? kindsFiltered : null,
       includeAssociations: sp.get('include_associations') === '1',
       onlyWithWebsite: sp.get('only_web') === '1',
-      sortBy: sort === 'name' ? 'name' : 'distance',
+      sortBy:
+        sort === 'name' ? 'name' : sort === 'distance' ? 'distance' : sort === 'easy' ? 'easy' : null,
+      prefTime: ['any', '5', '15', '45'].includes(time) ? time : null,
+      prefSocial: ['any', 'solo', 'group'].includes(social) ? social : null,
       query: (sp.get('q') || '').toString()
     };
   }
@@ -271,8 +284,14 @@
     if (onlyWithWebsite) sp.set('only_web', '1');
     else sp.delete('only_web');
 
-    if (sortBy && sortBy !== 'distance') sp.set('sort', sortBy);
+    if (sortBy && sortBy !== 'easy') sp.set('sort', sortBy);
     else sp.delete('sort');
+
+    if (prefTime && prefTime !== 'any') sp.set('t', prefTime);
+    else sp.delete('t');
+
+    if (prefSocial && prefSocial !== 'any') sp.set('social', prefSocial);
+    else sp.delete('social');
 
     if (query.trim()) sp.set('q', query.trim());
     else sp.delete('q');
@@ -426,6 +445,123 @@
     return safeText(p.description || p.tags?.description);
   }
 
+  function boostedKindsFromValues(values) {
+    const set = new Set();
+    if (!Array.isArray(values)) return set;
+    for (const v of values) {
+      if (v === 'animals') set.add('animals');
+      if (v === 'community') set.add('community');
+      if (v === 'poverty') {
+        set.add('food');
+        set.add('community');
+        set.add('ngo');
+      }
+      if (['children', 'elderly', 'health', 'education'].includes(v)) {
+        set.add('ngo');
+        set.add('community');
+      }
+      if (v === 'environment') {
+        set.add('ngo');
+        set.add('community');
+      }
+    }
+    return set;
+  }
+
+  function clamp(n, min, max) {
+    if (!Number.isFinite(n)) return min;
+    return Math.min(max, Math.max(min, n));
+  }
+
+  function placeTrustScore(p) {
+    let s = 0;
+    if (p?.website) s += 0.35;
+    if (placePhone(p)) s += 0.12;
+    if (placeEmail(p)) s += 0.12;
+    if (placeHours(p)) s += 0.08;
+    if (placeAddress(p)) s += 0.08;
+    if (placeDescription(p)) s += 0.06;
+    if (p?.osm_url) s += 0.03;
+    return clamp(s, 0, 1);
+  }
+
+  function placeEaseScore(p) {
+    const d = Number.isFinite(p?.distanceKm) ? p.distanceKm : 9999;
+    const distNorm = clamp(d / Math.max(1, radiusKm), 0, 2.5);
+
+    const hasWeb = !!p?.website;
+    const hasPhone = !!placePhone(p);
+    const hasEmail = !!placeEmail(p);
+    const hasAddress = !!placeAddress(p);
+    const hasHours = !!placeHours(p);
+
+    const trust = placeTrustScore(p);
+
+    // Lower = better (less effort / higher confidence).
+    let score = 0;
+
+    // Distance dominates for in-person actions, but we keep it soft.
+    score += distNorm * 0.55;
+
+    // “Trust / clarity” signals reduce uncertainty.
+    score += (1 - trust) * 0.35;
+
+    // Contact friction.
+    if (hasWeb) score -= 0.12;
+    if (!hasWeb && hasPhone) score += 0.07; // calling is more effort than clicking
+    if (!hasWeb && !hasEmail && !hasPhone) score += 0.22; // unclear how to act
+
+    // Missing context adds friction.
+    if (!hasAddress) score += 0.06;
+    if (!hasHours) score += 0.03;
+
+    // Stage 1 preferences (tiny, explainable boosts)
+    if (prefTime === '5') {
+      if (!hasWeb) score += 1.2;
+      else score -= 0.12;
+    } else if (prefTime === '15') {
+      if (!(hasWeb || hasEmail)) score += 0.6;
+    }
+
+    if (prefSocial === 'group') {
+      if (p?.kind !== 'community') score += 0.12;
+      else score -= 0.05;
+    } else if (prefSocial === 'solo') {
+      if (p?.kind === 'community') score += 0.08;
+    }
+
+    if (boostedKinds?.has(p?.kind)) score -= 0.08;
+
+    return score;
+  }
+
+  function whyBadges(p) {
+    const show =
+      sortBy === 'easy' ||
+      prefTime !== 'any' ||
+      prefSocial !== 'any' ||
+      (boostedKinds && boostedKinds.size > 0);
+    if (!show) return [];
+
+    const badges = [];
+    const score = placeEaseScore(p);
+
+    if (score <= 0.35) badges.push('⚡ bez námahy');
+    else if (score <= 0.75) badges.push('🙂 pár kroků');
+    else badges.push('🧱 víc kroků');
+
+    const d = Number.isFinite(p?.distanceKm) ? p.distanceKm : null;
+    if (prefTime === '5' && p?.website) badges.push('do 5 min');
+    else if (prefTime === '15' && (p?.website || placeEmail(p))) badges.push('do 15 min');
+
+    if (p?.website) badges.push('má web');
+    if (d !== null && d <= Math.max(2, Math.round(radiusKm * 0.35))) badges.push('blízko');
+    if (placeHours(p)) badges.push('otevírací doba');
+    if (boostedKinds?.has(p?.kind)) badges.push('sedí na tvůj výběr');
+
+    return badges.slice(0, 3);
+  }
+
   function escapeHtml(s) {
     return String(s)
       .replace(/&/g, '&amp;')
@@ -484,7 +620,8 @@
 
   function focusLatLon(lat, lon) {
     if (!map || typeof lat !== 'number' || typeof lon !== 'number') return;
-    map.setView([lat, lon], Math.max(map.getZoom(), 15));
+    if (typeof map.flyTo === 'function') map.flyTo([lat, lon], Math.max(map.getZoom(), 15), { duration: 0.55 });
+    else map.setView([lat, lon], Math.max(map.getZoom(), 15));
   }
 
   function updateRadiusOverlay(lat, lon) {
@@ -510,7 +647,8 @@
     if (!map || !leaflet) return;
     centerLat = lat;
     centerLon = lon;
-    map.setView([lat, lon], 13);
+    if (typeof map.flyTo === 'function') map.flyTo([lat, lon], 13, { duration: 0.55 });
+    else map.setView([lat, lon], 13);
     if (userMarker) userMarker.remove();
     userMarker = leaflet.circleMarker([lat, lon], {
       radius: 7,
@@ -521,6 +659,40 @@
 
     updateRadiusOverlay(lat, lon);
     scheduleUrlSync();
+  }
+
+  function placeDomId(id) {
+    return `place-${String(id || '').replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+  }
+
+  function scrollToPlace(id) {
+    if (typeof document === 'undefined') return;
+    const el = document.getElementById(placeDomId(id));
+    if (!el) return;
+    try {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch {
+      el.scrollIntoView();
+    }
+  }
+
+  function updateActiveMarkerClass() {
+    if (activeMarkerEl && typeof activeMarkerEl.classList?.remove === 'function') {
+      activeMarkerEl.classList.remove('is-active');
+    }
+    activeMarkerEl = null;
+    if (!activePlaceId) return;
+    const m = markerById.get(activePlaceId);
+    const el = m?.getElement?.();
+    if (!el) return;
+    el.classList.add('is-active');
+    activeMarkerEl = el;
+  }
+
+  function setActivePlace(id, opts = undefined) {
+    activePlaceId = id || null;
+    if (opts?.scroll) scrollToPlace(activePlaceId);
+    updateActiveMarkerClass();
   }
 
   async function fetchNearby(lat, lon) {
@@ -596,6 +768,7 @@
       : leaflet.layerGroup();
     markersLayer.addTo(map);
     markerById = new Map();
+    activeMarkerEl = null;
 
     for (const p of places.slice(0, 250)) {
       const color =
@@ -619,6 +792,9 @@
       const marker = leaflet.marker([p.lat, p.lon], { icon, riseOnHover: true });
 
       markerById.set(p.id, marker);
+      marker.on('click', () => {
+        setActivePlace(p.id, { scroll: true });
+      });
 
       const name = escapeHtml(placeTitle(p));
       const addr = escapeHtml(placeAddress(p));
@@ -644,11 +820,15 @@
       );
       marker.addTo(markersLayer);
     }
+
+    updateActiveMarkerClass();
   }
 
   function focusPlace(p) {
     if (!map) return;
-    map.setView([p.lat, p.lon], Math.max(map.getZoom(), 15));
+    setActivePlace(p?.id || null);
+    if (typeof map.flyTo === 'function') map.flyTo([p.lat, p.lon], Math.max(map.getZoom(), 15), { duration: 0.55 });
+    else map.setView([p.lat, p.lon], Math.max(map.getZoom(), 15));
     const m = markerById.get(p.id);
     if (m && typeof m.openPopup === 'function') {
       if (markersLayer && typeof markersLayer.zoomToShowLayer === 'function') {
@@ -736,6 +916,49 @@
     scheduleUrlSync();
   }
 
+  function loadSavedPrefs() {
+    try {
+      const raw = localStorage.getItem('aa_prefs_near');
+      if (!raw) return;
+      const p = JSON.parse(raw);
+      if (p?.t && ['any', '5', '15', '45'].includes(p.t)) prefTime = p.t;
+      if (p?.social && ['any', 'solo', 'group'].includes(p.social)) prefSocial = p.social;
+    } catch {}
+  }
+
+  function savePrefs() {
+    try {
+      localStorage.setItem('aa_prefs_near', JSON.stringify({ t: prefTime, social: prefSocial }));
+    } catch {}
+  }
+
+  function setPrefTime(v) {
+    if (!['any', '5', '15', '45'].includes(v)) return;
+    prefTime = v;
+    visibleCount = 24;
+    savePrefs();
+    trackEvent('aa_near_pref_change', { t: prefTime, social: prefSocial });
+    scheduleUrlSync();
+  }
+
+  function setPrefSocial(v) {
+    if (!['any', 'solo', 'group'].includes(v)) return;
+    prefSocial = v;
+    visibleCount = 24;
+    savePrefs();
+    trackEvent('aa_near_pref_change', { t: prefTime, social: prefSocial });
+    scheduleUrlSync();
+  }
+
+  function loadUserValues() {
+    try {
+      const s = JSON.parse(localStorage.getItem('aa_values') || '[]');
+      if (Array.isArray(s)) userValues = s;
+    } catch {}
+  }
+
+  $: boostedKinds = boostedKindsFromValues(userValues);
+
   $: filteredPlaces = (() => {
     const q = query.trim().toLowerCase();
     const base = onlyWithWebsite ? places.filter((p) => !!p.website) : places;
@@ -756,18 +979,37 @@
         return an.localeCompare(bn, 'cs', { sensitivity: 'base' });
       });
     }
+    if (sortBy === 'easy') {
+      return [...filteredPlaces]
+        .map((p) => ({ p, score: placeEaseScore(p) }))
+        .sort((a, b) => {
+          if (a.score !== b.score) return a.score - b.score;
+          const ad = Number.isFinite(a.p?.distanceKm) ? a.p.distanceKm : 9999;
+          const bd = Number.isFinite(b.p?.distanceKm) ? b.p.distanceKm : 9999;
+          if (ad !== bd) return ad - bd;
+          const an = (a.p?.name || '').toString();
+          const bn = (b.p?.name || '').toString();
+          return an.localeCompare(bn, 'cs', { sensitivity: 'base' });
+        })
+        .map((x) => x.p);
+    }
     return filteredPlaces;
   })();
 
   $: visiblePlaces = sortedPlaces.slice(0, visibleCount);
 
   onMount(() => {
+    loadSavedPrefs();
+    loadUserValues();
+
     const s = readUrlState();
     if (typeof s.radiusKm === 'number') radiusKm = s.radiusKm;
     if (Array.isArray(s.kinds)) kinds = s.kinds;
     includeAssociations = !!s.includeAssociations;
     onlyWithWebsite = !!s.onlyWithWebsite;
-    sortBy = s.sortBy || 'distance';
+    sortBy = s.sortBy || 'easy';
+    if (typeof s.prefTime === 'string') prefTime = s.prefTime;
+    if (typeof s.prefSocial === 'string') prefSocial = s.prefSocial;
     query = (s.query || '').toString();
 
     if (typeof s.lat === 'number' && typeof s.lon === 'number') {
@@ -795,6 +1037,8 @@
       includeAssociations ? 1 : 0,
       onlyWithWebsite ? 1 : 0,
       sortBy,
+      prefTime,
+      prefSocial,
       query.trim()
     ].join('|');
     if (_key) scheduleUrlSync();
@@ -953,6 +1197,7 @@
           <div class="results-controls">
             <input class="search" type="search" placeholder="Hledat (název / adresa)" bind:value={query} />
             <select class="sort" bind:value={sortBy}>
+              <option value="easy">Nejlehčí</option>
               <option value="distance">Nejblíž</option>
               <option value="name">A–Z</option>
             </select>
@@ -963,13 +1208,61 @@
           </div>
         </div>
 
+        <div class="prefs-row" aria-label="Lehké přizpůsobení">
+          <div class="pref">
+            <div class="pref-label">⏱️ Čas</div>
+            <div class="kinds pref-chips">
+              <label class="chip pref-chip" class:selected={prefTime === 'any'}>
+                <input type="radio" name="prefTime" checked={prefTime === 'any'} on:change={() => setPrefTime('any')} />
+                <span>Cokoliv</span>
+              </label>
+              <label class="chip pref-chip" class:selected={prefTime === '5'}>
+                <input type="radio" name="prefTime" checked={prefTime === '5'} on:change={() => setPrefTime('5')} />
+                <span>5 min</span>
+              </label>
+              <label class="chip pref-chip" class:selected={prefTime === '15'}>
+                <input type="radio" name="prefTime" checked={prefTime === '15'} on:change={() => setPrefTime('15')} />
+                <span>15 min</span>
+              </label>
+              <label class="chip pref-chip" class:selected={prefTime === '45'}>
+                <input type="radio" name="prefTime" checked={prefTime === '45'} on:change={() => setPrefTime('45')} />
+                <span>45+ min</span>
+              </label>
+            </div>
+          </div>
+          <div class="pref">
+            <div class="pref-label">👥 Styl</div>
+            <div class="kinds pref-chips">
+              <label class="chip pref-chip" class:selected={prefSocial === 'any'}>
+                <input type="radio" name="prefSocial" checked={prefSocial === 'any'} on:change={() => setPrefSocial('any')} />
+                <span>Cokoliv</span>
+              </label>
+              <label class="chip pref-chip" class:selected={prefSocial === 'solo'}>
+                <input type="radio" name="prefSocial" checked={prefSocial === 'solo'} on:change={() => setPrefSocial('solo')} />
+                <span>Spíš sám</span>
+              </label>
+              <label class="chip pref-chip" class:selected={prefSocial === 'group'}>
+                <input type="radio" name="prefSocial" checked={prefSocial === 'group'} on:change={() => setPrefSocial('group')} />
+                <span>S lidmi</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
         {#if !isFetching && filteredPlaces.length === 0}
           <div class="card empty">{UI[language].nothing}</div>
         {/if}
 
         <div class="grid places-grid">
           {#each visiblePlaces as p}
-            <div class="card place">
+            <div
+              class={"card place" + (activePlaceId === p.id ? ' is-active' : '')}
+              id={placeDomId(p.id)}
+              role="group"
+              aria-label={placeTitle(p)}
+              on:mouseenter={() => setActivePlace(p.id)}
+              on:focusin={() => setActivePlace(p.id)}
+            >
               <div class="place-title">{placeTitle(p)}</div>
 
               <div class="badges">
@@ -978,6 +1271,14 @@
                   <span class="badge sub">{p.subcategory}</span>
                 {/if}
               </div>
+
+              {#if whyBadges(p).length}
+                <div class="badges why-badges" aria-label="Proč je to výš">
+                  {#each whyBadges(p) as w}
+                    <span class="badge why">{w}</span>
+                  {/each}
+                </div>
+              {/if}
 
               <div class="place-meta">
                 <span>~{p.distanceKm} km</span>
@@ -1442,6 +1743,33 @@
     align-items: center;
     flex-wrap: wrap;
   }
+  .prefs-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin: 0.15rem 0 0.85rem 0;
+  }
+  .pref {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .pref-label {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    font-weight: 900;
+  }
+  .pref-chips .chip input { display: none; }
+  .pref-chips .chip {
+    background: rgba(255,255,255,0.92);
+  }
+  .pref-chips .chip.selected {
+    border-color: rgba(46, 93, 49, 0.28);
+    background: rgba(46, 93, 49, 0.10);
+  }
+  .pref-chips .chip.selected span { color: var(--czech-forest); font-weight: 900; }
   .search, .sort {
     padding: 0.55rem 0.65rem;
     border-radius: 12px;
@@ -1457,6 +1785,11 @@
   .places-grid { grid-template-columns: 1fr; }
   .portals-grid { grid-template-columns: 1fr; }
   .place { padding: 0.9rem; }
+  .place.is-active {
+    border-color: rgba(46, 93, 49, 0.28);
+    box-shadow: 0 18px 40px rgba(0,0,0,0.10);
+    background: rgba(255,255,255,0.98);
+  }
   .place-title { font-weight: 800; color: var(--czech-forest); margin-bottom: 0.25rem; }
   .place-meta { color: var(--text-secondary); font-size: 0.9rem; display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap; }
   .dot { opacity: 0.5; }
@@ -1476,6 +1809,7 @@
     line-height: 1.5;
   }
   .badges { display:flex; gap: 0.45rem; flex-wrap: wrap; margin: 0.35rem 0 0.35rem 0; }
+  .why-badges { margin-top: 0; }
   .badge {
     display: inline-flex;
     align-items: center;
@@ -1490,6 +1824,7 @@
   }
   .badge.kind { color: var(--czech-forest); background: rgba(242, 247, 242, 0.85); }
   .badge.sub { background: rgba(255,255,255,0.85); }
+  .badge.why { background: rgba(46, 93, 49, 0.06); }
   .place-actions { display:flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
   .action {
     display: inline-flex;
@@ -1552,6 +1887,10 @@
   :global(.place-pin:hover .pin) {
     transform: scale(1.08);
     box-shadow: 0 14px 26px rgba(0,0,0,0.16);
+  }
+  :global(.place-pin.is-active .pin) {
+    transform: scale(1.18);
+    box-shadow: 0 0 0 10px rgba(46, 93, 49, 0.14), 0 18px 34px rgba(0,0,0,0.18);
   }
   :global(.place-pin .pin-ngo) { background: rgba(46, 93, 49, 0.08); }
   :global(.place-pin .pin-community) { background: rgba(62, 122, 67, 0.08); }
