@@ -167,4 +167,269 @@ navigator.geolocation.getCurrentPosition(
 - **Key Insights:** Practical JS patterns for interactive maps (tiles, markers, popups).
 - **Applicable:** Aligns with Leaflet-based implementation patterns.
 
+🔗 **[Website UX Best Practices — Top 10](https://www.roastmyweb.com/blog/website-ux-best-practices-top-10?utm_source=openai)**
+- **Found via web search:** General UX best practices list.
+- **Key Insights:** Clear hierarchy, speed, and consistency help users act.
+- **Applicable:** Informed the “3-step” header (Poloha → Kategorie → Kontakt) and split map/list layout.
+
+🔗 **[Website layouts that improve user flow](https://webdesign.digital/best-practices-for-website-layouts-that-improve-user-flow/?utm_source=openai)**
+- **Found via web search:** Layout & user-flow guidance.
+- **Key Insights:** Reduce choices per screen; keep primary action visible.
+- **Applicable:** Split view keeps “where am I” (map) and “what do I do” (cards) visible together.
+
+
+---
+
+## Strategic analysis (Dec 2025): what to do next
+
+### Local Codebase Analysis (current product reality)
+
+**What the app is (implemented):**
+- The “core experience” in `CONCEPT_V2.md` is now real as SvelteKit routes:
+  - `/app` (3 choices: Near / Online / Guided)
+  - `/near` (map + real places)
+  - `/app/online` (fast online actions)
+  - `/app/guided` (values → next step)
+
+Snippet (the 3-choice “start screen” is the product hub):
+```svelte
+// akcelerator-landing-page/src/routes/app/+page.svelte
+near: { title: '🗺️ V okolí (mapa)', ... href: '/near' },
+online: { title: '⚡ Online teď', ... href: '/app/online' },
+guided: { title: '🧭 Průvodce (1–2 min)', ... href: '/app/guided' },
+```
+
+**Key constraint (reliability):**
+- `/api/nearby` is a best-effort Overpass proxy with **in-memory caching**:
+```js
+// akcelerator-landing-page/src/routes/api/nearby/+server.js
+const CACHE = new Map();
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://lz4.overpass-api.de/api/interpreter'
+];
+```
+- On serverless (Vercel), this cache can reset on cold starts → **strategic next step is production-grade caching** (headers + persistent store).
+
+**Key mismatch vs. “Czech-only”:**
+- A language store still exists and many pages include EN copy/meta:
+```js
+// akcelerator-landing-page/src/lib/stores.js
+export const currentLanguage = writable('czech');
+```
+
+### Internet Research (2025) – strategy enablers
+
+🔗 **[SvelteKit performance](https://svelte.dev/docs/kit/performance?utm_source=openai)**
+- **Found via web search:** Official SvelteKit guidance.
+- **Key Insights:** Measure and reduce client work; keep the app fast by default.
+- **Applicable to Next Steps:** Performance is a core UX feature for “overwhelmed” users; guides us to keep map/list snappy while adding more data.
+
+🔗 **[Sentry for Svelte](https://sentry.io/for/svelte/?utm_source=openai)**
+- **Found via web search:** Monitoring product page.
+- **Key Insights:** Capture real errors + performance issues in production.
+- **Applicable to Next Steps:** Useful once we start adding caching/geocoding/portal integrations (more failure modes).
+
+🔗 **[SvelteKit XSS vulnerability (CVE-2025-32388)](https://www.wiz.io/vulnerability-database/cve/cve-2025-32388?utm_source=openai)**
+- **Found via web search:** Security advisory summary.
+- **Key Insights:** Keep SvelteKit updated; be careful around URL/search params handling.
+- **Applicable to Next Steps:** If we add shareable URLs and more query params to `/near`, we should stay current and sanitize/escape correctly.
+
+🔗 **[Website UX Best Practices — Top 10](https://www.roastmyweb.com/blog/website-ux-best-practices-top-10?utm_source=openai)**
+- **Found via web search:** UX best practices overview.
+- **Key Insights:** Hierarchy + clarity + speed = action.
+- **Applicable to Next Steps:** Reinforces “one primary action” and clean funnel measurement.
+
+🔗 **[Website layouts that improve user flow](https://webdesign.digital/best-practices-for-website-layouts-that-improve-user-flow/?utm_source=openai)**
+- **Found via web search:** Layout & flow patterns.
+- **Key Insights:** Keep the primary content visible; reduce context switching.
+- **Applicable to Next Steps:** Supports keeping split map/list and adding “done” states without adding screens.
+
+### Synthesis & Recommendation (next steps, in order)
+
+1) **Measure the funnel (fastest learning)**
+   - Track: Landing → `/app` → (Near/Online/Guided) → click-out (`Web →` / `Trasa →`) → “done”.
+   - This tells us what to build next without guessing.
+
+2) **Make it truly Czech-only (reduce cognitive load)**
+   - Remove EN surfaces + language store, or hard-lock Czech for now.
+   - Keep copy short, teen-friendly, and “stop-anytime” friendly.
+
+3) **Production reliability for `/api/nearby`**
+   - Add proper caching headers and/or persistent cache (to survive cold starts).
+   - Add graceful backoff + “try again” messaging when Overpass is slow.
+
+4) **Opportunity depth (events/shifts) without heavy integration**
+   - Start with: better portal cards + city-filtered links + curated “starter actions”.
+   - Only later: API partnerships or ingestion pipelines.
+
+5) **Location UX upgrade**
+   - Free-form “search location” (town/ZIP) + better defaults.
+   - Keep privacy-first, no account.
+
+---
+
+## Follow-up (Dec 2025): Funnel analytics instrumentation (Vercel Web Analytics)
+
+### Objective
+Measure the core promise: **“user reaches a real external action within 2 minutes”**.
+
+### What we implemented (local codebase changes)
+- Added a tiny helper that is:
+  - **safe in SSR/dev** (no-ops)
+  - **privacy-safe** (no lat/lon, no user identifiers)
+  - uses the Vercel Web Analytics API when available
+
+Snippet:
+```js
+// akcelerator-landing-page/src/lib/analytics.js
+export function trackEvent(name, data = undefined) {
+  // browser-only, dev no-op
+  // uses window.va('event', { name, data }) when available
+  // falls back to importing track() from @vercel/analytics
+}
+```
+
+- Instrumented the funnel events:
+  - Landing CTAs → **`aa_launch`**
+  - `/app` choices → **`aa_app_choice`** (`near|online|guided`)
+  - click-outs from `/near` + portals + `/app/online` → **`aa_clickout`**
+  - GPS reliability signals on `/near` → **`aa_near_gps_request`**, **`aa_near_gps_result`**
+  - Overpass fetch failures on `/near` → **`aa_near_fetch_error`**
+
+### Internet research (implementation API)
+
+🔗 **[Vercel Analytics: Custom Events](https://vercel.com/docs/analytics/custom-events)**
+- **Found via Context7 (official Vercel docs):** How to send custom events with `track()` or `va('event', ...)`.
+- **Key Insights:** `track('EventName', { ...data })` is supported across frameworks; `va('event', { name, data })` works via the global API.
+- **Applicable:** We use a helper that prefers `window.va` and falls back to importing `track()` so events fire reliably.
+
+🔗 **[Vercel Feature Flags integration: Track with flags (client-side)](https://vercel.com/docs/feature-flags/integrate-with-web-analytics)**
+- **Found via Context7 (official Vercel docs):** Shows `track()` signature and options object usage.
+- **Key Insights:** Confirms the `track()` import path and call shape.
+- **Applicable:** Validated our event call style and payload shape.
+
+---
+
+## Follow-up (Dec 2025): `/api/nearby` edge caching (Vercel CDN)
+
+### Why
+Overpass is a shared public upstream; caching reduces latency and protects the upstream during spikes.
+
+### What we implemented (local codebase changes)
+- We set CDN-focused caching directives on successful `/api/nearby` responses:
+  - `s-maxage=3600` (1 hour fresh on CDN)
+  - `stale-while-revalidate=86400` (serve stale while refreshing in background)
+- We explicitly **do not cache** bad requests:
+  - `cache-control: no-store` on missing `lat/lon` (400)
+
+### Internet research (Vercel caching behavior)
+
+🔗 **[Vercel Edge Network caching](https://vercel.com/docs/edge-network/caching)**
+- **Found via Context7 (official Vercel docs):** Explains edge caching and headers behavior.
+- **Key Insights:** Vercel consumes `s-maxage` + `stale-while-revalidate` at the CDN.
+- **Applicable:** Confirms our approach of caching API results at the edge.
+
+🔗 **[Vercel Cache-Control headers](https://vercel.com/docs/headers/cache-control-headers)**
+- **Found via Context7 (official Vercel docs):** Details `s-maxage` and `stale-while-revalidate`.
+- **Key Insights:** SWR serves cached responses while revalidating asynchronously.
+- **Applicable:** Matches our “fast even when Overpass is slow” reliability goal.
+
+---
+
+## Follow-up (Dec 2025): Location search (town/ZIP) + shareable `/near` URLs + community submissions
+
+### Local Codebase Analysis (what we implemented)
+
+**A) Shareable `/near` URLs**
+- `/near` now:
+  - reads initial state from URL params (`lat`, `lon`, `radius_km`, `kinds`, `include_associations`, `q`, `sort`, `only_web`)
+  - keeps the URL updated via `history.replaceState` (rounded coordinates for privacy/stability)
+  - exposes a “🔗 Zkopírovat odkaz” CTA
+
+Key snippet:
+```js
+// akcelerator-landing-page/src/routes/near/+page.svelte
+const sp = new URLSearchParams(window.location.search);
+history.replaceState({}, '', url.toString());
+```
+
+**B) Town/ZIP geocoding (Czech-only)**
+- Added `/api/geocode` (Nominatim proxy) with:
+  - country restriction (`countrycodes=cz`)
+  - caching + inflight de-dupe + simple throttling (best-effort)
+
+Key snippet:
+```js
+// akcelerator-landing-page/src/routes/api/geocode/+server.js
+url.searchParams.set('format', 'jsonv2');
+url.searchParams.set('countrycodes', 'cz');
+```
+
+**C) “Add your org/event” submission flow**
+- New public page: `/submit`
+- New endpoint: `POST /api/submissions` → inserts into Supabase table `community_submissions` as `pending`
+- New endpoint: `GET /api/community-nearby` → returns **approved** items near current `/near` location
+- `/near` now shows an “✅ Ověřené od komunity” section (cards) and a link to submit.
+
+Key snippet:
+```js
+// akcelerator-landing-page/src/routes/api/submissions/+server.js
+await supabase.from('community_submissions').insert([{ status: 'pending', kind, name, lat, lon, ... }])
+```
+
+### Internet Research (2025) – links we used
+
+> Note: Web search results were not able to reliably surface official Nominatim policy/docs links in this environment.
+> We still used Nominatim best-effort with caching + throttling, and documented the behavior in code/comments.
+
+🔗 **[Google Maps: Full-stack store locator codelab](https://developers.google.com/codelabs/maps-platform/full-stack-store-locator/?utm_source=openai)**
+- **Found via web search:** Example of location search + radius patterns (product locator UX).
+- **Key Insights:** “location input → geocode → radius results” is a standard UX pattern users understand.
+- **Applicable:** Mirrors our “město/PSČ → geocode → nearby results” flow.
+
+🔗 **[ASP.NET: Creating readable URLs (routing)](https://learn.microsoft.com/en-us/aspnet/web-pages/overview/routing/creating-readable-urls-in-aspnet-web-pages-sites?utm_source=openai)**
+- **Found via web search:** URL parameterization / readable URL concepts.
+- **Key Insights:** URLs can encode state so a page can be re-created from a link.
+- **Applicable:** Supports our “shareable /near URL state” approach.
+
+🔗 **[Address geocoding (concept)](https://en.wikipedia.org/wiki/Address_geocoding?utm_source=openai)**
+- **Found via web search:** Conceptual overview of geocoding.
+- **Key Insights:** Town/ZIP → lat/lon is the foundational operation behind “near me” experiences.
+- **Applicable:** Baseline justification for using a geocoder endpoint.
+
+🔗 **[Google Maps URLs – get started](https://developers.google.com/maps/documentation/urls/get-started?utm_source=openai)**
+- **Found via web search:** How URL parameters can represent map/search state.
+- **Key Insights:** A URL can encode destination/search intent in a shareable way.
+- **Applicable:** Reinforced our shareable-link UX pattern (even though we implement it inside our own app).
+
+---
+
+## Bugfix (Dec 2025): `social_facility=soup_kitchen` was misclassified as `community`
+
+### Local Codebase Analysis (verification)
+
+In `akcelerator-landing-page/src/routes/api/nearby/+server.js`, the `kind` logic included:
+- `tags.amenity === 'soup_kitchen'` ✅
+- `tags.social_facility === 'food_bank'` ✅
+- but **missed** `tags.social_facility === 'soup_kitchen'` ❌
+
+This caused elements tagged as `amenity=social_facility` + `social_facility=soup_kitchen` to fall through to `community`, even though `deriveSubcategory()` already treated `sf === 'soup_kitchen'` as “Výdej jídla”.
+
+### Fix implemented
+
+We updated the `kind` classification to include:
+- `tags.social_facility === 'soup_kitchen'` → `kind = 'food'`
+
+### Internet Research (2025)
+
+🔗 **[SvelteKit routing](https://svelte.dev/docs/kit/routing?utm_source=openai)**
+- **Found via web search:** SvelteKit routing docs.
+- **Key Insights:** Confirms server endpoints are implemented in `+server.js`.
+- **Applicable:** Used as a reference while patching the API endpoint safely.
+
+🔗 **[SvelteKit load docs](https://svelte.dev/docs/kit/load?utm_source=openai)**
+- **Found via web search:** SvelteKit load & server patterns docs.
+- **Key Insights:** Reinforces correct server-side handler patterns and error handling.
+- **Applicable:** Used as a sanity reference during endpoint changes.
 

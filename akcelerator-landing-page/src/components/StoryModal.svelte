@@ -1,6 +1,7 @@
 <script>
     import { createEventDispatcher, onMount, onDestroy } from 'svelte';
     import { currentLanguage } from '../lib/stores.js';
+    import { trackEvent } from '../lib/analytics.js';
     
     const dispatch = createEventDispatcher();
     
@@ -63,6 +64,8 @@
     function handleTakeAction() {
         // Close modal first
         closeModal();
+
+        trackEvent('aa_launch', { from: 'story_modal' });
 
         // Go to the SvelteKit app entry (SvelteKit-first UX)
         if (typeof window !== 'undefined') {

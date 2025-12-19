@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { currentLanguage } from '../../../lib/stores.js';
+  import { trackEvent } from '../../../lib/analytics.js';
 
   let language = 'czech';
   currentLanguage.subscribe((v) => (language = v));
@@ -73,8 +74,12 @@
     else selected = [...selected, k].slice(0, 2);
   }
 
-  function goResult() {
+  function goResult(mode) {
     stage = 'result';
+    trackEvent('aa_guided_to_result', {
+      mode: mode || 'unknown',
+      selected_count: Array.isArray(selected) ? selected.length : 0
+    });
     try {
       localStorage.setItem('aa_values', JSON.stringify(selected));
     } catch {}
@@ -116,10 +121,10 @@
         {/each}
       </div>
       <div class="cta-row">
-        <button class="primary" type="button" on:click={goResult}>
+        <button class="primary" type="button" on:click={() => goResult('continue')}>
           {UI[language].continue}
         </button>
-        <button class="secondary" type="button" on:click={goResult}>
+        <button class="secondary" type="button" on:click={() => goResult('skip')}>
           {UI[language].skip}
         </button>
       </div>
@@ -133,8 +138,12 @@
           : 'Pick just one thing. If it’s too much, you can stop.'}
       </div>
       <div class="cta-row">
-        <a class="primary linkbtn" href="/near">{UI[language].near}</a>
-        <a class="secondary linkbtn" href="/app/online">{UI[language].online}</a>
+        <a class="primary linkbtn" href="/near" on:click={() => trackEvent('aa_guided_next', { next: 'near' })}>
+          {UI[language].near}
+        </a>
+        <a class="secondary linkbtn" href="/app/online" on:click={() => trackEvent('aa_guided_next', { next: 'online' })}>
+          {UI[language].online}
+        </a>
       </div>
       <div style="height: 0.75rem;"></div>
       <button class="ghost" type="button" on:click={reset}>{UI[language].reset}</button>

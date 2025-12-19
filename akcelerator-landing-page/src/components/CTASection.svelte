@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { gsap } from 'gsap';
   import { ScrollTrigger } from 'gsap/ScrollTrigger';
+  import { trackEvent } from '../lib/analytics.js';
   
   gsap.registerPlugin(ScrollTrigger);
   
@@ -30,10 +31,12 @@
   };
   
   function launchMainApp() {
+    trackEvent('aa_launch', { from: 'cta_section_primary' });
     window.location.href = '/app';
   }
   
   function launchQuickAction() {
+    trackEvent('aa_launch', { from: 'cta_section_quick' });
     window.location.href = '/app/online';
   }
   

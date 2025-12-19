@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { currentLanguage } from '../../lib/stores.js';
+  import { trackEvent } from '../../lib/analytics.js';
 
   let language = 'czech';
   currentLanguage.subscribe((v) => (language = v));
@@ -102,12 +103,27 @@
   ];
 
   let selectedCity = cities[0];
+  let centerLat = selectedCity.lat;
+  let centerLon = selectedCity.lon;
   let radiusKm = 5;
   let kinds = ['ngo', 'community'];
   let includeAssociations = false;
   let query = '';
   let sortBy = 'distance'; // distance | name
   let visibleCount = 24;
+  let onlyWithWebsite = false;
+
+  let urlSyncEnabled = false;
+  let urlSyncTimer;
+
+  let shareStatus = 'idle'; // idle | ok | error
+  let shareMessage = '';
+
+  let locationQuery = '';
+  let geoStatus = 'idle'; // idle | loading | ok | error
+  let geoMessage = '';
+  /** @type {Array<{label: string, lat: number, lon: number, type?: string, class?: string}>} */
+  let geoResults = [];
 
   let gpsStatus = 'idle'; // idle | requesting | ok | error
   let gpsMessage = '';
@@ -123,6 +139,10 @@
   let isLoadingMap = true;
   let isFetching = false;
   let places = [];
+  let isFetchingCommunity = false;
+  let communityError = false;
+  /** @type {Array<any>} */
+  let communityItems = [];
 
   function haversineKm(lat1, lon1, lat2, lon2) {
     const R = 6371;
@@ -154,6 +174,27 @@
       document.body.appendChild(s);
     });
 
+    // Marker clustering (helps when there are many places)
+    if (!window.L?.markerClusterGroup) {
+      const mcCss = document.createElement('link');
+      mcCss.rel = 'stylesheet';
+      mcCss.href = 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css';
+      document.head.appendChild(mcCss);
+
+      const mcCss2 = document.createElement('link');
+      mcCss2.rel = 'stylesheet';
+      mcCss2.href = 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css';
+      document.head.appendChild(mcCss2);
+
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.body.appendChild(s);
+      });
+    }
+
     return window.L;
   }
 
@@ -176,6 +217,180 @@
     if (!t) return '';
     if (t.length <= max) return t;
     return t.slice(0, max - 1).trimEnd() + '…';
+  }
+
+  function roundCoord(n, digits = 3) {
+    if (!Number.isFinite(n)) return null;
+    const p = 10 ** digits;
+    return Math.round(n * p) / p;
+  }
+
+  function readUrlState() {
+    if (typeof window === 'undefined') return {};
+    const sp = new URLSearchParams(window.location.search);
+
+    const lat = Number(sp.get('lat'));
+    const lon = Number(sp.get('lon'));
+    const radius_km = Number(sp.get('radius_km'));
+
+    const kindsRaw = (sp.get('kinds') || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const kindsFiltered = kindsRaw.filter((k) => ['ngo', 'community', 'food', 'animals'].includes(k));
+
+    const sort = sp.get('sort');
+
+    return {
+      lat: Number.isFinite(lat) ? lat : null,
+      lon: Number.isFinite(lon) ? lon : null,
+      radiusKm: Number.isFinite(radius_km) && radius_km >= 1 && radius_km <= 25 ? Math.round(radius_km) : null,
+      kinds: kindsFiltered.length ? kindsFiltered : null,
+      includeAssociations: sp.get('include_associations') === '1',
+      onlyWithWebsite: sp.get('only_web') === '1',
+      sortBy: sort === 'name' ? 'name' : 'distance',
+      query: (sp.get('q') || '').toString()
+    };
+  }
+
+  function syncUrl(force = false) {
+    if ((!force && !urlSyncEnabled) || typeof window === 'undefined') return;
+    if (!Number.isFinite(centerLat) || !Number.isFinite(centerLon)) return;
+
+    const url = new URL(window.location.href);
+    const sp = url.searchParams;
+
+    sp.set('lat', String(roundCoord(centerLat, 3)));
+    sp.set('lon', String(roundCoord(centerLon, 3)));
+    sp.set('radius_km', String(Math.round(radiusKm)));
+    sp.set('kinds', Array.isArray(kinds) && kinds.length ? kinds.join(',') : '');
+
+    if (includeAssociations) sp.set('include_associations', '1');
+    else sp.delete('include_associations');
+
+    if (onlyWithWebsite) sp.set('only_web', '1');
+    else sp.delete('only_web');
+
+    if (sortBy && sortBy !== 'distance') sp.set('sort', sortBy);
+    else sp.delete('sort');
+
+    if (query.trim()) sp.set('q', query.trim());
+    else sp.delete('q');
+
+    history.replaceState({}, '', url.toString());
+  }
+
+  function scheduleUrlSync() {
+    if (!urlSyncEnabled) return;
+    clearTimeout(urlSyncTimer);
+    urlSyncTimer = setTimeout(() => syncUrl(false), 250);
+  }
+
+  async function copyShareLink() {
+    shareStatus = 'idle';
+    shareMessage = '';
+    try {
+      syncUrl(true);
+      const link = window.location.href;
+      await navigator.clipboard.writeText(link);
+      shareStatus = 'ok';
+      shareMessage = 'Odkaz zkopírován. Můžete ho poslat kamarádovi nebo organizaci.';
+      trackEvent('aa_share_link', { surface: 'near' });
+      setTimeout(() => {
+        shareStatus = 'idle';
+        shareMessage = '';
+      }, 4500);
+    } catch (e) {
+      shareStatus = 'error';
+      shareMessage = 'Nepodařilo se zkopírovat odkaz. Zkuste to prosím znovu.';
+    }
+  }
+
+  function clearGeocodeUi() {
+    geoStatus = 'idle';
+    geoMessage = '';
+    geoResults = [];
+  }
+
+  function firstText(v) {
+    const s = safeText(v);
+    if (!s) return '';
+    return s.split(',')[0] || s;
+  }
+
+  async function searchLocation() {
+    const q = safeText(locationQuery);
+    if (!q) return;
+    if (q.length < 2) {
+      geoStatus = 'error';
+      geoMessage = 'Zadejte aspoň 2 znaky (město nebo PSČ).';
+      geoResults = [];
+      return;
+    }
+
+    geoStatus = 'loading';
+    geoMessage = 'Hledám…';
+    geoResults = [];
+    trackEvent('aa_near_geocode_request', { len: q.length });
+
+    try {
+      const resp = await fetch(`/api/geocode?q=${encodeURIComponent(q)}&limit=6`);
+      const data = await resp.json();
+      const results = Array.isArray(data?.results) ? data.results : [];
+
+      geoResults = results;
+      if (!results.length) {
+        geoStatus = 'error';
+        geoMessage = 'Nic jsem nenašel. Zkuste jiné město/PSČ.';
+        return;
+      }
+
+      geoStatus = 'ok';
+      geoMessage = 'Vyberte výsledek:';
+    } catch (e) {
+      geoStatus = 'error';
+      geoMessage = 'Geokódování se nepovedlo. Zkuste to prosím znovu.';
+    }
+  }
+
+  async function applyGeocodeResult(r) {
+    if (!r || typeof r.lat !== 'number' || typeof r.lon !== 'number') return;
+    clearGeocodeUi();
+    locationQuery = firstText(r.label);
+    setUserLocation(r.lat, r.lon);
+    await fetchNearby(r.lat, r.lon);
+    trackEvent('aa_near_geocode_apply');
+  }
+
+  function emojiForKind(kind) {
+    if (kind === 'ngo') return '🏛️';
+    if (kind === 'community') return '🏘️';
+    if (kind === 'food') return '🍞';
+    if (kind === 'animals') return '🐾';
+    return '✨';
+  }
+
+  function kindLabel(kind) {
+    if (kind === 'ngo') return 'Organizace';
+    if (kind === 'community') return 'Komunita';
+    if (kind === 'food') return 'Potraviny';
+    if (kind === 'animals') return 'Zvířata';
+    return 'Další';
+  }
+
+  function nextStepHint(p) {
+    const hasWeb = !!p?.website;
+    const hasPhone = !!placePhone(p);
+    const hasEmail = !!placeEmail(p);
+
+    if (p?.kind === 'food') return 'Tip: ověřte co přijímají a kdy (potraviny/hygiena).';
+    if (p?.kind === 'animals') return 'Tip: často jde o venčení, dočasnou péči nebo dary.';
+    if (p?.kind === 'community') return 'Tip: často pomůže výpomoc na akci, doprovod nebo sousedská pomoc.';
+    if (p?.kind === 'ngo') {
+      if (hasWeb) return 'Tip: na webu hledejte „Jak pomoci“ / dobrovolnictví.';
+      if (hasPhone || hasEmail) return 'Tip: krátce zavolejte/napište: „Chci pomoci – co se teď hodí?“';
+    }
+    return '';
   }
 
   function placeTitle(p) {
@@ -220,6 +435,58 @@
       .replace(/'/g, '&#39;');
   }
 
+  function phoneHref(phone) {
+    const p = safeText(phone);
+    if (!p) return null;
+    // Keep + and digits; drop other chars/spaces
+    const normalized = p.replace(/[^\d+]/g, '');
+    return normalized ? `tel:${normalized}` : null;
+  }
+
+  function emailHref(email) {
+    const e = safeText(email);
+    if (!e) return null;
+    return `mailto:${e}`;
+  }
+
+  function directionsHref(p) {
+    if (typeof p?.lat !== 'number' || typeof p?.lon !== 'number') return null;
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${p.lat},${p.lon}`)}`;
+  }
+
+  function communityEmoji(it) {
+    if (it?.kind === 'event') return '📅';
+    return '🏛️';
+  }
+
+  function communityKindLabel(it) {
+    if (it?.kind === 'event') return language === 'czech' ? 'Akce' : 'Event';
+    return language === 'czech' ? 'Organizace' : 'Organization';
+  }
+
+  function communityWhen(it) {
+    const s = safeText(it?.event_start);
+    if (!s) return '';
+    const d = new Date(s);
+    if (!Number.isFinite(d.getTime())) return '';
+    try {
+      return d.toLocaleString(language === 'czech' ? 'cs-CZ' : 'en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return '';
+    }
+  }
+
+  function focusLatLon(lat, lon) {
+    if (!map || typeof lat !== 'number' || typeof lon !== 'number') return;
+    map.setView([lat, lon], Math.max(map.getZoom(), 15));
+  }
+
   function updateRadiusOverlay(lat, lon) {
     if (!map || !leaflet) return;
 
@@ -241,6 +508,8 @@
 
   function setUserLocation(lat, lon) {
     if (!map || !leaflet) return;
+    centerLat = lat;
+    centerLon = lon;
     map.setView([lat, lon], 13);
     if (userMarker) userMarker.remove();
     userMarker = leaflet.circleMarker([lat, lon], {
@@ -251,11 +520,37 @@
     }).addTo(map);
 
     updateRadiusOverlay(lat, lon);
+    scheduleUrlSync();
   }
 
   async function fetchNearby(lat, lon) {
     isFetching = true;
     places = [];
+    isFetchingCommunity = true;
+    communityError = false;
+    communityItems = [];
+
+    // Fetch verified community items in parallel (if table exists)
+    const communityPromise = fetch(
+      `/api/community-nearby?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&radius_m=${encodeURIComponent(
+        radiusKm * 1000
+      )}`
+    )
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`community ${r.status}`);
+        return await r.json();
+      })
+      .then((d) => {
+        communityItems = Array.isArray(d?.items) ? d.items : [];
+      })
+      .catch(() => {
+        communityError = true;
+        communityItems = [];
+      })
+      .finally(() => {
+        isFetchingCommunity = false;
+      });
+
     try {
       const resp = await fetch(
         `/api/nearby?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&radius_m=${encodeURIComponent(
@@ -272,10 +567,17 @@
       visibleCount = 24;
       renderMarkers();
     } catch (e) {
+      trackEvent('aa_near_fetch_error', {
+        radius_km: radiusKm,
+        kinds: Array.isArray(kinds) ? kinds.join(',') : '',
+        include_associations: includeAssociations ? 1 : 0
+      });
       // keep empty list
       places = [];
       renderMarkers();
     } finally {
+      // ensure community finished too (so UI doesn't flicker between empty/loading)
+      await communityPromise.catch(() => {});
       isFetching = false;
     }
   }
@@ -283,16 +585,17 @@
   function renderMarkers() {
     if (!map || !leaflet) return;
     if (markersLayer) markersLayer.remove();
-    markersLayer = leaflet.layerGroup().addTo(map);
+    const useCluster = places.length >= 60 && typeof leaflet.markerClusterGroup === 'function';
+    markersLayer = useCluster
+      ? leaflet.markerClusterGroup({
+          showCoverageOnHover: false,
+          spiderfyOnMaxZoom: true,
+          disableClusteringAtZoom: 16,
+          maxClusterRadius: 52
+        })
+      : leaflet.layerGroup();
+    markersLayer.addTo(map);
     markerById = new Map();
-
-    function emojiForKind(kind) {
-      if (kind === 'ngo') return '🏛️';
-      if (kind === 'community') return '🏘️';
-      if (kind === 'food') return '🍞';
-      if (kind === 'animals') return '🐾';
-      return '✨';
-    }
 
     for (const p of places.slice(0, 250)) {
       const color =
@@ -330,7 +633,7 @@
       marker.bindPopup(
         `<div style="max-width:280px;">
           <div style="font-weight:800; margin-bottom:0.25rem;">${name}</div>
-          <div style="opacity:.85;">~${p.distanceKm} km · ${escapeHtml(UI[language].kinds[p.kind] || p.kind)}</div>
+          <div style="opacity:.85;">~${p.distanceKm} km · ${emojiForKind(p.kind)} ${escapeHtml(kindLabel(p.kind))}${p.subcategory ? ` · ${escapeHtml(p.subcategory)}` : ''}</div>
           ${addr ? `<div style="margin-top:0.35rem;">📍 ${addr}</div>` : ''}
           ${hours ? `<div style="margin-top:0.25rem;">🕒 ${hours}</div>` : ''}
           ${phone ? `<div style="margin-top:0.25rem;">📞 ${phone}</div>` : ''}
@@ -347,10 +650,16 @@
     if (!map) return;
     map.setView([p.lat, p.lon], Math.max(map.getZoom(), 15));
     const m = markerById.get(p.id);
-    if (m && typeof m.openPopup === 'function') m.openPopup();
+    if (m && typeof m.openPopup === 'function') {
+      if (markersLayer && typeof markersLayer.zoomToShowLayer === 'function') {
+        markersLayer.zoomToShowLayer(m, () => m.openPopup());
+      } else {
+        m.openPopup();
+      }
+    }
   }
 
-  async function initMap() {
+  async function initMap(initialLat, initialLon) {
     leaflet = await loadLeaflet();
     isLoadingMap = false;
     map = leaflet.map(mapEl, { zoomControl: true });
@@ -363,8 +672,10 @@
       })
       .addTo(map);
 
-    setUserLocation(selectedCity.lat, selectedCity.lon);
-    await fetchNearby(selectedCity.lat, selectedCity.lon);
+    const lat = typeof initialLat === 'number' ? initialLat : selectedCity.lat;
+    const lon = typeof initialLon === 'number' ? initialLon : selectedCity.lon;
+    setUserLocation(lat, lon);
+    await fetchNearby(lat, lon);
 
     map.on('click', async (e) => {
       const { lat, lng } = e.latlng;
@@ -376,16 +687,19 @@
   async function useGps() {
     gpsStatus = 'requesting';
     gpsMessage = 'Čekám na povolení polohy…';
+    trackEvent('aa_near_gps_request');
 
     if (typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost') {
       gpsStatus = 'error';
       gpsMessage = 'Poloha funguje jen na HTTPS. Zvolte město nebo otevřete stránku přes https://';
+      trackEvent('aa_near_gps_result', { result: 'error', reason: 'insecure_context' });
       return;
     }
 
     if (!navigator?.geolocation) {
       gpsStatus = 'error';
       gpsMessage = 'Váš prohlížeč nepodporuje polohu. Zvolte město.';
+      trackEvent('aa_near_gps_result', { result: 'error', reason: 'no_geolocation' });
       return;
     }
 
@@ -395,12 +709,14 @@
         const lon = pos.coords.longitude;
         gpsStatus = 'ok';
         gpsMessage = 'Poloha načtena. Hledám místa v okolí…';
+        trackEvent('aa_near_gps_result', { result: 'ok' });
         setUserLocation(lat, lon);
         await fetchNearby(lat, lon);
         gpsMessage = 'Hotovo. Klikněte na bod nebo na kartu pro detail.';
       },
       (err) => {
         gpsStatus = 'error';
+        trackEvent('aa_near_gps_result', { result: 'error', code: err?.code ?? 0 });
         if (err?.code === 1) gpsMessage = 'Poloha je zablokovaná. Povolte ji v prohlížeči (ikona zámku v adresním řádku).';
         else if (err?.code === 2) gpsMessage = 'Poloha není dostupná (GPS/Wi‑Fi). Zkuste to znovu, nebo vyberte město.';
         else if (err?.code === 3) gpsMessage = 'Poloha trvá moc dlouho. Zkuste to znovu, nebo vyberte město.';
@@ -413,14 +729,18 @@
   async function refreshFromMapCenter() {
     if (!map) return;
     const center = map.getCenter();
+    centerLat = center.lat;
+    centerLon = center.lng;
     updateRadiusOverlay(center.lat, center.lng);
     await fetchNearby(center.lat, center.lng);
+    scheduleUrlSync();
   }
 
   $: filteredPlaces = (() => {
     const q = query.trim().toLowerCase();
-    if (!q) return places;
-    return places.filter((p) => {
+    const base = onlyWithWebsite ? places.filter((p) => !!p.website) : places;
+    if (!q) return base;
+    return base.filter((p) => {
       const name = (p.name || '').toLowerCase();
       const addr = (p.address || '').toLowerCase();
       const desc = (p.description || '').toLowerCase();
@@ -442,8 +762,43 @@
   $: visiblePlaces = sortedPlaces.slice(0, visibleCount);
 
   onMount(() => {
-    initMap();
+    const s = readUrlState();
+    if (typeof s.radiusKm === 'number') radiusKm = s.radiusKm;
+    if (Array.isArray(s.kinds)) kinds = s.kinds;
+    includeAssociations = !!s.includeAssociations;
+    onlyWithWebsite = !!s.onlyWithWebsite;
+    sortBy = s.sortBy || 'distance';
+    query = (s.query || '').toString();
+
+    if (typeof s.lat === 'number' && typeof s.lon === 'number') {
+      centerLat = s.lat;
+      centerLon = s.lon;
+    } else {
+      centerLat = selectedCity.lat;
+      centerLon = selectedCity.lon;
+    }
+
+    initMap(centerLat, centerLon).finally(() => {
+      urlSyncEnabled = true;
+      scheduleUrlSync();
+    });
   });
+
+  $: if (urlSyncEnabled) {
+    // Re-sync URL whenever relevant state changes.
+    // We only store rounded coordinates (privacy + stable URLs).
+    const _key = [
+      roundCoord(centerLat, 3),
+      roundCoord(centerLon, 3),
+      Math.round(radiusKm),
+      Array.isArray(kinds) ? kinds.join(',') : '',
+      includeAssociations ? 1 : 0,
+      onlyWithWebsite ? 1 : 0,
+      sortBy,
+      query.trim()
+    ].join('|');
+    if (_key) scheduleUrlSync();
+  }
 </script>
 
 <div class="near-page">
@@ -451,6 +806,20 @@
     <a class="back" href="/">{UI[language].back}</a>
     <div class="title">{UI[language].title}</div>
     <div class="subtitle">{UI[language].subtitle}</div>
+    <div class="steps" aria-label="3 kroky">
+      <div class="step"><span class="step-n">1</span><span>Poloha</span></div>
+      <div class="step"><span class="step-n">2</span><span>Kategorie</span></div>
+      <div class="step"><span class="step-n">3</span><span>Kontakt</span></div>
+    </div>
+    <div class="header-actions">
+      <button class="btn secondary-btn small" type="button" on:click={copyShareLink}>🔗 Zkopírovat odkaz</button>
+      <a class="btn secondary-btn small" href="/submit">➕ Přidat organizaci / akci</a>
+    </div>
+    {#if shareMessage}
+      <div class={"share-banner " + shareStatus} aria-live="polite">
+        {shareMessage}
+      </div>
+    {/if}
   </div>
 
   <div class="controls card">
@@ -477,6 +846,49 @@
         <label for="near_radius">{UI[language].radius}</label>
         <input id="near_radius" type="range" min="1" max="25" step="1" bind:value={radiusKm} on:change={refreshFromMapCenter} />
         <div class="muted">{radiusKm} km</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field wide">
+        <label for="near_location">Město / PSČ (hledat)</label>
+        <div class="loc-search">
+          <input
+            id="near_location"
+            class="text"
+            type="text"
+            placeholder="Např. Zlín, 760 01, Jihlava…"
+            bind:value={locationQuery}
+            on:input={() => {
+              if (geoStatus !== 'idle') clearGeocodeUi();
+            }}
+            on:keydown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                searchLocation();
+              }
+            }}
+            disabled={geoStatus === 'loading'}
+          />
+          <button class="btn secondary-btn" type="button" on:click={searchLocation} disabled={geoStatus === 'loading' || !locationQuery.trim()}>
+            {geoStatus === 'loading' ? 'Hledám…' : 'Najít'}
+          </button>
+        </div>
+
+        {#if geoMessage}
+          <div class={"geo-banner " + geoStatus} aria-live="polite">{geoMessage}</div>
+        {/if}
+
+        {#if geoResults.length}
+          <div class="geo-results">
+            {#each geoResults as r}
+              <button class="geo-item" type="button" on:click={() => applyGeocodeResult(r)}>
+                <span class="geo-title">{firstText(r.label)}</span>
+                <span class="geo-sub">{r.label}</span>
+              </button>
+            {/each}
+          </div>
+        {/if}
       </div>
     </div>
 
@@ -522,101 +934,278 @@
     </div>
   </div>
 
-  <div class="map-card card">
-    {#if isLoadingMap}
-      <div class="loading">{UI[language].loading}</div>
-    {/if}
-    <div bind:this={mapEl} class="map"></div>
-  </div>
-
-  <div class="results">
-    <div class="results-head">
-      <div class="section-title">
-        {isFetching ? UI[language].fetching : `${filteredPlaces.length} ${language === 'czech' ? 'míst' : 'places'}`}
-      </div>
-      <div class="results-controls">
-        <input class="search" type="search" placeholder="Hledat (název / adresa)" bind:value={query} />
-        <select class="sort" bind:value={sortBy}>
-          <option value="distance">Nejblíž</option>
-          <option value="name">A–Z</option>
-        </select>
+  <div class="split">
+    <div class="left">
+      <div class="map-card card">
+        {#if isLoadingMap}
+          <div class="loading">{UI[language].loading}</div>
+        {/if}
+        <div bind:this={mapEl} class="map"></div>
       </div>
     </div>
 
-    {#if !isFetching && filteredPlaces.length === 0}
-      <div class="card empty">{UI[language].nothing}</div>
-    {/if}
-
-    <div class="grid">
-      {#each visiblePlaces as p}
-        <div class="card place">
-          <div class="place-title">{placeTitle(p)}</div>
-          <div class="place-meta">
-            <span>~{p.distanceKm} km</span>
-            <span class="dot">•</span>
-            <span>{UI[language].kinds[p.kind] || p.kind}</span>
+    <div class="right">
+      <div class="results">
+        <div class="results-head">
+          <div class="section-title">
+            {isFetching ? UI[language].fetching : `${filteredPlaces.length} ${language === 'czech' ? 'míst' : 'places'}`}
           </div>
-
-          {#if placeAddress(p)}
-            <div class="place-line"><span class="ico">📍</span><span>{placeAddress(p)}</span></div>
-          {/if}
-          {#if placeHours(p)}
-            <div class="place-line"><span class="ico">🕒</span><span>{placeHours(p)}</span></div>
-          {/if}
-          {#if placePhone(p)}
-            <div class="place-line"><span class="ico">📞</span><span>{placePhone(p)}</span></div>
-          {/if}
-          {#if placeEmail(p)}
-            <div class="place-line"><span class="ico">✉️</span><span>{placeEmail(p)}</span></div>
-          {/if}
-          {#if placeDescription(p)}
-            <div class="place-desc">{truncate(placeDescription(p), 160)}</div>
-          {/if}
-
-          <div class="place-actions">
-            <button class="action secondary" type="button" on:click={() => focusPlace(p)}>Zobrazit na mapě</button>
-            {#if p.website}
-              <a class="action primary" href={p.website} target="_blank" rel="noopener">Web →</a>
-            {:else if p.osm_url}
-              <a class="action primary" href={p.osm_url} target="_blank" rel="noopener">Detail (OSM) →</a>
-            {/if}
+          <div class="results-controls">
+            <input class="search" type="search" placeholder="Hledat (název / adresa)" bind:value={query} />
+            <select class="sort" bind:value={sortBy}>
+              <option value="distance">Nejblíž</option>
+              <option value="name">A–Z</option>
+            </select>
+            <label class="onlyweb">
+              <input type="checkbox" bind:checked={onlyWithWebsite} />
+              <span>Pouze s webem</span>
+            </label>
           </div>
         </div>
-      {/each}
-    </div>
 
-    {#if !isFetching && visibleCount < sortedPlaces.length}
-      <div class="more-row">
-        <button class="btn secondary-btn" type="button" on:click={() => (visibleCount += 24)}>
-          Zobrazit další
-        </button>
-      </div>
-    {/if}
-  </div>
+        {#if !isFetching && filteredPlaces.length === 0}
+          <div class="card empty">{UI[language].nothing}</div>
+        {/if}
 
-  <div class="results">
-    <div class="section-title">
-      {language === 'czech' ? '✨ Akce a příležitosti (portály)' : '✨ Real opportunities (portals)'}
-    </div>
-    <div class="grid">
-      {#each OPPORTUNITY_SOURCES as src}
-        <div class="card place">
-          <div class="place-title">{src[language].title}</div>
-          <div class="place-meta">
-            <span>{src[language].desc}</span>
-          </div>
-          {#if src[language].bullets}
-            <ul class="bullets">
-              {#each src[language].bullets as b}
-                <li>{b}</li>
-              {/each}
-            </ul>
-          {/if}
-          <a class="link" href={src.url} target="_blank" rel="noopener">
-            {language === 'czech' ? 'Otevřít →' : 'Open →'}
-          </a>
+        <div class="grid places-grid">
+          {#each visiblePlaces as p}
+            <div class="card place">
+              <div class="place-title">{placeTitle(p)}</div>
+
+              <div class="badges">
+                <span class={"badge kind k-" + (p.kind || 'other')}>{emojiForKind(p.kind)} {kindLabel(p.kind)}</span>
+                {#if p.subcategory}
+                  <span class="badge sub">{p.subcategory}</span>
+                {/if}
+              </div>
+
+              <div class="place-meta">
+                <span>~{p.distanceKm} km</span>
+              </div>
+
+              {#if placeAddress(p)}
+                <div class="place-line"><span class="ico">📍</span><span>{placeAddress(p)}</span></div>
+              {/if}
+              {#if placeHours(p)}
+                <div class="place-line"><span class="ico">🕒</span><span>{placeHours(p)}</span></div>
+              {/if}
+              {#if placePhone(p)}
+                <div class="place-line">
+                  <span class="ico">📞</span>
+                  {#if phoneHref(placePhone(p))}
+                    <a class="inline-link" href={phoneHref(placePhone(p))}>{placePhone(p)}</a>
+                  {:else}
+                    <span>{placePhone(p)}</span>
+                  {/if}
+                </div>
+              {/if}
+              {#if placeEmail(p)}
+                <div class="place-line">
+                  <span class="ico">✉️</span>
+                  {#if emailHref(placeEmail(p))}
+                    <a class="inline-link" href={emailHref(placeEmail(p))}>{placeEmail(p)}</a>
+                  {:else}
+                    <span>{placeEmail(p)}</span>
+                  {/if}
+                </div>
+              {/if}
+              {#if placeDescription(p)}
+                <div class="place-desc">{truncate(placeDescription(p), 160)}</div>
+              {/if}
+              {#if nextStepHint(p)}
+                <div class="place-hint">💡 {nextStepHint(p)}</div>
+              {/if}
+
+              <div class="place-actions">
+                <button class="action secondary" type="button" on:click={() => focusPlace(p)}>Zobrazit na mapě</button>
+                {#if directionsHref(p)}
+                  <a
+                    class="action secondary"
+                    href={directionsHref(p)}
+                    target="_blank"
+                    rel="noopener"
+                    on:click={() => trackEvent('aa_clickout', { surface: 'near', type: 'directions', kind: p.kind || 'other' })}
+                  >
+                    Trasa →
+                  </a>
+                {/if}
+                {#if p.website}
+                  <a
+                    class="action primary"
+                    href={p.website}
+                    target="_blank"
+                    rel="noopener"
+                    on:click={() => trackEvent('aa_clickout', { surface: 'near', type: 'website', kind: p.kind || 'other' })}
+                  >
+                    Web →
+                  </a>
+                {:else if p.osm_url}
+                  <a
+                    class="action primary"
+                    href={p.osm_url}
+                    target="_blank"
+                    rel="noopener"
+                    on:click={() => trackEvent('aa_clickout', { surface: 'near', type: 'osm', kind: p.kind || 'other' })}
+                  >
+                    Detail (OSM) →
+                  </a>
+                {/if}
+              </div>
+            </div>
+          {/each}
         </div>
-      {/each}
+
+        {#if !isFetching && visibleCount < sortedPlaces.length}
+          <div class="more-row">
+            <button class="btn secondary-btn" type="button" on:click={() => (visibleCount += 24)}>
+              Zobrazit další
+            </button>
+          </div>
+        {/if}
+      </div>
+
+      <div class="results">
+        <div class="section-title">{language === 'czech' ? '✅ Ověřené od komunity' : '✅ Community verified'}</div>
+        <div class="muted">
+          {language === 'czech'
+            ? 'Organizace a akce, které nám lidé poslali a my je ručně ověřili.'
+            : 'Organizations and events submitted by people and manually verified.'}
+        </div>
+
+        {#if isFetchingCommunity}
+          <div class="card empty">{language === 'czech' ? 'Načítám…' : 'Loading…'}</div>
+        {:else if communityItems.length === 0}
+          <div class="card empty">
+            {language === 'czech'
+              ? 'Zatím tu nic není. Pokud chcete, pošlete tip – ověříme a přidáme.'
+              : 'Nothing here yet. You can submit a tip — we’ll verify and add.'}
+            <div style="height:0.6rem;"></div>
+            <a class="inline-link" href="/submit" on:click={() => trackEvent('aa_submit_open', { from: 'near_community_empty' })}>
+              ➕ Přidat organizaci / akci →
+            </a>
+          </div>
+        {:else}
+          <div class="grid places-grid">
+            {#each communityItems as it}
+              <div class="card place">
+                <div class="place-title">{communityEmoji(it)} {it.name}</div>
+
+                <div class="badges">
+                  <span class="badge kind">✅ Ověřené</span>
+                  <span class="badge sub">{communityKindLabel(it)}</span>
+                  {#if it.category}
+                    <span class="badge sub">{it.category}</span>
+                  {/if}
+                </div>
+
+                <div class="place-meta">
+                  <span>~{it.distanceKm} km</span>
+                  {#if it.kind === 'event' && communityWhen(it)}
+                    <span class="dot">•</span>
+                    <span>{communityWhen(it)}</span>
+                  {/if}
+                </div>
+
+                {#if it.address_label}
+                  <div class="place-line"><span class="ico">📍</span><span>{it.address_label}</span></div>
+                {/if}
+
+                {#if it.phone}
+                  <div class="place-line">
+                    <span class="ico">📞</span>
+                    {#if phoneHref(it.phone)}
+                      <a class="inline-link" href={phoneHref(it.phone)}>{it.phone}</a>
+                    {:else}
+                      <span>{it.phone}</span>
+                    {/if}
+                  </div>
+                {/if}
+                {#if it.email}
+                  <div class="place-line">
+                    <span class="ico">✉️</span>
+                    {#if emailHref(it.email)}
+                      <a class="inline-link" href={emailHref(it.email)}>{it.email}</a>
+                    {:else}
+                      <span>{it.email}</span>
+                    {/if}
+                  </div>
+                {/if}
+                {#if it.description}
+                  <div class="place-desc">{truncate(it.description, 160)}</div>
+                {/if}
+
+                <div class="place-actions">
+                  <button class="action secondary" type="button" on:click={() => focusLatLon(it.lat, it.lon)}>
+                    {language === 'czech' ? 'Zobrazit na mapě' : 'Show on map'}
+                  </button>
+
+                  {#if it.kind === 'event' && it.event_url}
+                    <a
+                      class="action primary"
+                      href={it.event_url}
+                      target="_blank"
+                      rel="noopener"
+                      on:click={() => trackEvent('aa_clickout', { surface: 'community', type: 'event_url' })}
+                    >
+                      {language === 'czech' ? 'Detail / přihlášení →' : 'Details / signup →'}
+                    </a>
+                  {:else if it.website}
+                    <a
+                      class="action primary"
+                      href={it.website}
+                      target="_blank"
+                      rel="noopener"
+                      on:click={() => trackEvent('aa_clickout', { surface: 'community', type: 'website' })}
+                    >
+                      Web →
+                    </a>
+                  {/if}
+                </div>
+              </div>
+            {/each}
+          </div>
+        {/if}
+
+        {#if communityError}
+          <div class="muted" style="margin-top:0.5rem;">
+            {language === 'czech'
+              ? 'Pozn.: komunitní tipy nejsou momentálně dostupné (je potřeba nastavit tabulku v Supabase).'
+              : 'Note: community tips are not available right now (Supabase table setup required).'}
+          </div>
+        {/if}
+      </div>
+
+      <div class="results">
+        <div class="section-title">
+          {language === 'czech' ? '✨ Akce a příležitosti (portály)' : '✨ Real opportunities (portals)'}
+        </div>
+        <div class="grid portals-grid">
+          {#each OPPORTUNITY_SOURCES as src}
+            <div class="card place">
+              <div class="place-title">{src[language].title}</div>
+              <div class="place-meta">
+                <span>{src[language].desc}</span>
+              </div>
+              {#if src[language].bullets}
+                <ul class="bullets">
+                  {#each src[language].bullets as b}
+                    <li>{b}</li>
+                  {/each}
+                </ul>
+              {/if}
+              <a
+                class="link"
+                href={src.url}
+                target="_blank"
+                rel="noopener"
+                on:click={() => trackEvent('aa_clickout', { surface: 'near_portals', id: src.id })}
+              >
+                {language === 'czech' ? 'Otevřít →' : 'Open →'}
+              </a>
+            </div>
+          {/each}
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -650,6 +1239,59 @@
     color: var(--text-secondary);
     margin-top: 0.35rem;
   }
+  .steps {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 0.85rem;
+  }
+  .step {
+    display: inline-flex;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.35rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid rgba(44, 62, 45, 0.12);
+    background: rgba(242, 247, 242, 0.75);
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    font-weight: 700;
+  }
+  .step-n {
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: var(--czech-forest);
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.82rem;
+    font-weight: 900;
+  }
+  .header-actions {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 0.85rem;
+  }
+  .btn.small {
+    padding: 0.55rem 0.75rem;
+    font-size: 0.92rem;
+  }
+  .share-banner {
+    margin-top: 0.75rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 12px;
+    border: 1px solid rgba(44, 62, 45, 0.12);
+    background: rgba(242, 247, 242, 0.7);
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+  }
+  .share-banner.error { background: rgba(254, 242, 242, 0.75); border-color: rgba(127, 29, 29, 0.15); }
+  .share-banner.ok { background: rgba(236, 253, 245, 0.75); border-color: rgba(6, 95, 70, 0.15); }
 
   .card {
     background: rgba(255,255,255,0.92);
@@ -683,6 +1325,44 @@
   }
   .btn:hover { filter: brightness(0.95); }
   .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .loc-search { display:flex; gap: 0.6rem; align-items:center; flex-wrap: wrap; }
+  .text {
+    flex: 1;
+    min-width: 220px;
+    padding: 0.55rem 0.65rem;
+    border-radius: 12px;
+    border: 1px solid rgba(44, 62, 45, 0.12);
+    background: white;
+  }
+  .geo-banner {
+    margin-top: 0.6rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 12px;
+    border: 1px solid rgba(44, 62, 45, 0.12);
+    background: rgba(242, 247, 242, 0.7);
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+  }
+  .geo-banner.error { background: rgba(254, 242, 242, 0.75); border-color: rgba(127, 29, 29, 0.15); }
+  .geo-banner.ok { background: rgba(236, 253, 245, 0.75); border-color: rgba(6, 95, 70, 0.15); }
+  .geo-banner.loading { background: rgba(255, 251, 235, 0.8); border-color: rgba(180, 83, 9, 0.14); }
+  .geo-results {
+    margin-top: 0.6rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  .geo-item {
+    text-align: left;
+    padding: 0.65rem 0.75rem;
+    border-radius: 14px;
+    border: 1px solid rgba(44, 62, 45, 0.12);
+    background: rgba(255,255,255,0.92);
+    cursor: pointer;
+  }
+  .geo-item:hover { filter: brightness(0.985); }
+  .geo-title { display:block; font-weight: 900; color: var(--czech-forest); }
+  .geo-sub { display:block; margin-top: 0.15rem; color: var(--text-secondary); font-size: 0.9rem; }
   .muted { color: var(--text-secondary); font-size: 0.88rem; }
   .gps-banner {
     margin-top: 0.75rem;
@@ -711,6 +1391,17 @@
   .chip input { margin: 0; }
   .assoc { display:flex; gap: 0.5rem; align-items:center; margin-top: 0.6rem; color: var(--text-secondary); font-size: 0.92rem; }
   .assoc input { margin: 0; }
+  .onlyweb { display:flex; gap: 0.45rem; align-items:center; color: var(--text-secondary); font-size: 0.92rem; }
+  .onlyweb input { margin: 0; }
+
+  .split {
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 0.9rem;
+    align-items: start;
+  }
+  .left { position: sticky; top: 88px; }
+  .right { min-width: 0; }
 
   .map-card { overflow: hidden; margin-bottom: 1rem; position: relative; }
   .map {
@@ -763,13 +1454,42 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.8rem;
   }
+  .places-grid { grid-template-columns: 1fr; }
+  .portals-grid { grid-template-columns: 1fr; }
   .place { padding: 0.9rem; }
   .place-title { font-weight: 800; color: var(--czech-forest); margin-bottom: 0.25rem; }
   .place-meta { color: var(--text-secondary); font-size: 0.9rem; display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap; }
   .dot { opacity: 0.5; }
   .place-line { margin-top: 0.4rem; color: var(--text-secondary); font-size: 0.92rem; display:flex; gap: 0.45rem; align-items:flex-start; }
   .ico { line-height: 1.2; }
+  .inline-link { color: var(--czech-forest); font-weight: 800; text-decoration: none; }
+  .inline-link:hover { text-decoration: underline; }
   .place-desc { margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.92rem; line-height: 1.55; }
+  .place-hint {
+    margin-top: 0.55rem;
+    padding: 0.55rem 0.65rem;
+    border-radius: 12px;
+    border: 1px solid rgba(44, 62, 45, 0.10);
+    background: rgba(242, 247, 242, 0.65);
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+  .badges { display:flex; gap: 0.45rem; flex-wrap: wrap; margin: 0.35rem 0 0.35rem 0; }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid rgba(44, 62, 45, 0.12);
+    background: rgba(255,255,255,0.9);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 800;
+  }
+  .badge.kind { color: var(--czech-forest); background: rgba(242, 247, 242, 0.85); }
+  .badge.sub { background: rgba(255,255,255,0.85); }
   .place-actions { display:flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
   .action {
     display: inline-flex;
@@ -801,8 +1521,12 @@
   .secondary-btn { background: white; color: var(--czech-forest); }
 
   @media (max-width: 980px) {
+    .split { grid-template-columns: 1fr; }
+    .left { position: static; }
     .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .map { height: 460px; }
+    .places-grid { grid-template-columns: 1fr; }
+    .portals-grid { grid-template-columns: 1fr; }
   }
   @media (max-width: 640px) {
     .grid { grid-template-columns: 1fr; }
@@ -823,7 +1547,16 @@
     justify-content: center;
     box-shadow: 0 10px 20px rgba(0,0,0,0.12);
     transform: translateZ(0);
+    transition: transform 0.12s ease, box-shadow 0.15s ease, background 0.15s ease;
   }
+  :global(.place-pin:hover .pin) {
+    transform: scale(1.08);
+    box-shadow: 0 14px 26px rgba(0,0,0,0.16);
+  }
+  :global(.place-pin .pin-ngo) { background: rgba(46, 93, 49, 0.08); }
+  :global(.place-pin .pin-community) { background: rgba(62, 122, 67, 0.08); }
+  :global(.place-pin .pin-food) { background: rgba(180, 83, 9, 0.08); }
+  :global(.place-pin .pin-animals) { background: rgba(29, 78, 216, 0.08); }
   :global(.leaflet-control-zoom a) {
     border-radius: 10px !important;
     border: 1px solid rgba(44, 62, 45, 0.12) !important;
@@ -838,6 +1571,21 @@
   }
   :global(.leaflet-popup-tip) {
     box-shadow: 0 16px 34px rgba(0,0,0,0.10);
+  }
+
+  /* Cluster styling (keeps dense areas readable + playful) */
+  :global(.marker-cluster) {
+    background: rgba(46, 93, 49, 0.14);
+    border: 2px solid rgba(46, 93, 49, 0.18);
+    border-radius: 999px;
+    box-shadow: 0 14px 26px rgba(0,0,0,0.14);
+  }
+  :global(.marker-cluster div) {
+    background: rgba(255,255,255,0.92);
+    color: var(--czech-forest);
+    font-weight: 900;
+    border-radius: 999px;
+    border: 1px solid rgba(44, 62, 45, 0.12);
   }
 </style>
 

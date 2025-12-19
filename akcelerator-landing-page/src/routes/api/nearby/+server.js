@@ -51,6 +51,34 @@ function osmUrl(type, id) {
   return `https://www.openstreetmap.org/${type}/${id}`;
 }
 
+function deriveSubcategory(tags) {
+  const amenity = tags.amenity;
+  const office = tags.office;
+  const sf = tags.social_facility;
+
+  if (amenity === 'animal_shelter') return 'Útulek';
+
+  if (amenity === 'food_bank' || sf === 'food_bank') return 'Potravinová banka';
+  if (amenity === 'soup_kitchen' || sf === 'soup_kitchen') return 'Výdej jídla';
+
+  if (amenity === 'community_centre') return 'Komunitní centrum';
+
+  if (amenity === 'social_facility') {
+    if (sf === 'shelter') return 'Azyl / ubytování';
+    if (sf === 'outreach') return 'Terénní služba';
+    if (sf === 'day_care') return 'Denní centrum';
+    if (sf === 'nursing_home') return 'Domov pro seniory';
+    if (sf === 'group_home') return 'Chráněné bydlení';
+    if (sf === 'clothing_bank') return 'Oblečení';
+    return 'Sociální služba';
+  }
+
+  if (office === 'ngo') return 'Neziskovka';
+  if (office === 'association') return 'Spolek';
+
+  return null;
+}
+
 function makeOverpassQuery(lat, lon, radiusM, kinds, includeAssociations) {
   const tagQueries = [];
 
@@ -67,7 +95,9 @@ function makeOverpassQuery(lat, lon, radiusM, kinds, includeAssociations) {
     }
     if (k === 'food') {
       tagQueries.push('["amenity"="food_bank"]');
+      tagQueries.push('["amenity"="soup_kitchen"]');
       tagQueries.push('["amenity"="social_facility"]["social_facility"="food_bank"]');
+      tagQueries.push('["amenity"="social_facility"]["social_facility"="soup_kitchen"]');
     }
     if (k === 'animals') {
       tagQueries.push('["amenity"="animal_shelter"]');
@@ -127,7 +157,15 @@ export async function GET({ url }) {
   const includeAssociations = url.searchParams.get('include_associations') === '1';
 
   if (lat == null || lon == null) {
-    return json({ error: 'Missing lat/lon' }, { status: 400 });
+    return json(
+      { error: 'Missing lat/lon' },
+      {
+        status: 400,
+        headers: {
+          'cache-control': 'no-store'
+        }
+      }
+    );
   }
 
   // Czech-only product, but still validate inputs
@@ -138,7 +176,13 @@ export async function GET({ url }) {
   const cached = CACHE.get(cacheKey);
   const now = Date.now();
   if (cached && cached.expiresAt > now) {
-    return json(cached.data);
+    return json(cached.data, {
+      headers: {
+        // Cache at the CDN; avoid long browser caching (privacy + freshness).
+        // On Vercel, s-maxage / stale-while-revalidate are consumed by the edge cache.
+        'cache-control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400'
+      }
+    });
   }
 
   const query = makeOverpassQuery(lat, lon, radiusM, kinds, includeAssociations);
@@ -157,15 +201,19 @@ export async function GET({ url }) {
     const description = firstText(tags.description);
     const address = buildAddress(tags);
     const kind =
-      tags.office === 'ngo' || tags.office === 'association'
-        ? 'ngo'
-        : tags.amenity === 'community_centre' || tags.amenity === 'social_facility'
-          ? 'community'
-          : tags.amenity === 'food_bank'
-            ? 'food'
-            : tags.amenity === 'animal_shelter'
-              ? 'animals'
+      tags.amenity === 'animal_shelter'
+        ? 'animals'
+        : tags.amenity === 'food_bank' ||
+            tags.amenity === 'soup_kitchen' ||
+            tags.social_facility === 'food_bank' ||
+            tags.social_facility === 'soup_kitchen'
+          ? 'food'
+          : tags.amenity === 'community_centre' || tags.amenity === 'social_facility'
+            ? 'community'
+            : tags.office === 'ngo' || tags.office === 'association'
+              ? 'ngo'
               : 'other';
+    const subcategory = deriveSubcategory(tags);
 
     places.push({
       id: `${el.type}:${el.id}`,
@@ -176,6 +224,7 @@ export async function GET({ url }) {
       lat: ll[0],
       lon: ll[1],
       kind,
+      subcategory,
       website,
       address,
       phone,
@@ -189,7 +238,13 @@ export async function GET({ url }) {
   const payload = { places, radius_m: radiusM, lat, lon };
   CACHE.set(cacheKey, { expiresAt: now + 60 * 60 * 1000, data: payload });
 
-  return json(payload);
+  return json(payload, {
+    headers: {
+      // Cache at the CDN; avoid long browser caching (privacy + freshness).
+      // On Vercel, s-maxage / stale-while-revalidate are consumed by the edge cache.
+      'cache-control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400'
+    }
+  });
 }
 
 

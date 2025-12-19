@@ -1,5 +1,6 @@
 <script>
   import { currentLanguage } from '../../../lib/stores.js';
+  import { trackEvent } from '../../../lib/analytics.js';
 
   let language = 'czech';
   currentLanguage.subscribe((v) => (language = v));
@@ -84,7 +85,13 @@
         <div class="card-title">{o.title[language]}</div>
         <div class="card-desc">{o.desc[language]}</div>
         <div class="meta">{o.meta[language]}</div>
-        <a class="cta" href={o.url} target="_blank" rel="noopener">
+        <a
+          class="cta"
+          href={o.url}
+          target="_blank"
+          rel="noopener"
+          on:click={() => trackEvent('aa_clickout', { surface: 'online', id: o.id })}
+        >
           {language === 'czech' ? 'Otevřít →' : 'Open →'}
         </a>
       </div>

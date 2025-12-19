@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { gsap } from 'gsap';
   import { scrollToSection } from '../lib/animations.js';
+  import { trackEvent } from '../lib/analytics.js';
 
   import { currentLanguage } from '../lib/stores.js';
   
@@ -53,6 +54,7 @@
   }
   
   function launchAccelerator() {
+    trackEvent('aa_launch', { from: 'hero_primary' });
     // Smooth transition to the in-site app (SvelteKit-first)
     if (typeof window !== 'undefined' && gsap && ctaButtons) {
       gsap.to(ctaButtons, {

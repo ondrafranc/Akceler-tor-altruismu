@@ -1,5 +1,6 @@
 <script>
   import { currentLanguage } from '../../lib/stores.js';
+  import { trackEvent } from '../../lib/analytics.js';
 
   let language = 'czech';
   currentLanguage.subscribe((v) => (language = v));
@@ -32,19 +33,19 @@
   </div>
 
   <div class="grid">
-    <a class="card" href={UI[language].near.href}>
+    <a class="card" href={UI[language].near.href} on:click={() => trackEvent('aa_app_choice', { choice: 'near' })}>
       <div class="card-title">{UI[language].near.title}</div>
       <div class="card-desc">{UI[language].near.desc}</div>
       <div class="card-cta">{language === 'czech' ? 'Otevřít →' : 'Open →'}</div>
     </a>
 
-    <a class="card" href={UI[language].online.href}>
+    <a class="card" href={UI[language].online.href} on:click={() => trackEvent('aa_app_choice', { choice: 'online' })}>
       <div class="card-title">{UI[language].online.title}</div>
       <div class="card-desc">{UI[language].online.desc}</div>
       <div class="card-cta">{language === 'czech' ? 'Otevřít →' : 'Open →'}</div>
     </a>
 
-    <a class="card" href={UI[language].guided.href}>
+    <a class="card" href={UI[language].guided.href} on:click={() => trackEvent('aa_app_choice', { choice: 'guided' })}>
       <div class="card-title">{UI[language].guided.title}</div>
       <div class="card-desc">{UI[language].guided.desc}</div>
       <div class="card-cta">{language === 'czech' ? 'Začít →' : 'Start →'}</div>

@@ -238,6 +238,86 @@ export const supabase = createClient(
 );
 ```
 
+---
+
+## ➕ Community submissions (organizations + events) — setup
+
+This enables a public **“submit an org/event”** flow where:
+- Users can **submit** (anonymous) → stored as `pending`
+- Admins **review** in Supabase → set `status = 'approved'`
+- Approved items are visible on the site via `/api/community-nearby`
+
+### 1) Create the table
+
+Run in Supabase SQL Editor:
+
+```sql
+CREATE TABLE community_submissions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  kind TEXT NOT NULL CHECK (kind IN ('org', 'event')),
+  name TEXT NOT NULL,
+  category TEXT,
+  description TEXT,
+  website TEXT,
+  email TEXT,
+  phone TEXT,
+  address_label TEXT,
+  city TEXT,
+  postcode TEXT,
+  lat DOUBLE PRECISION NOT NULL,
+  lon DOUBLE PRECISION NOT NULL,
+  event_url TEXT,
+  event_start TIMESTAMP WITH TIME ZONE,
+  event_end TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE community_submissions ENABLE ROW LEVEL SECURITY;
+
+-- Anonymous users can ONLY insert pending submissions (cannot self-approve)
+CREATE POLICY "Allow anonymous inserts (pending only)" ON community_submissions
+  FOR INSERT
+  TO anon
+  WITH CHECK (status = 'pending');
+
+-- Public can read ONLY approved items (to show on /near)
+CREATE POLICY "Allow public reads of approved submissions" ON community_submissions
+  FOR SELECT
+  TO anon
+  USING (status = 'approved');
+
+-- Admin reads (Supabase Auth authenticated role)
+CREATE POLICY "Allow authenticated admin reads" ON community_submissions
+  FOR SELECT
+  TO authenticated
+  USING (true);
+
+-- Admin updates (approve/reject)
+CREATE POLICY "Allow authenticated admin updates" ON community_submissions
+  FOR UPDATE
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+CREATE INDEX idx_comm_submissions_status ON community_submissions(status);
+CREATE INDEX idx_comm_submissions_created_at ON community_submissions(created_at DESC);
+CREATE INDEX idx_comm_submissions_lat_lon ON community_submissions(lat, lon);
+```
+
+### 2) How admins verify
+
+In Supabase dashboard → Table editor → `community_submissions`:
+- Review row
+- Set `status`:
+  - `approved` → shows on the site (nearby)
+  - `rejected` → hidden (not public)
+
+### 3) Where it is in the app
+
+- Public form: `/submit`
+- Public approved feed near a location: `/api/community-nearby?lat=…&lon=…&radius_m=…`
+
 ## ✅ 11. Success Checklist
 
 - [ ] Supabase table created with RLS policies

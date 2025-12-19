@@ -1,5 +1,6 @@
 <script>
   import { page } from '$app/stores';
+  import { trackEvent } from '../lib/analytics.js';
 </script>
 
 <svelte:head>
@@ -19,6 +20,7 @@
       <a 
         		href="/app" 
         class="primary-button"
+        on:click={() => trackEvent('aa_launch', { from: 'error_page' })}
       >
         🚀 Spustit akcelerátor
       </a>

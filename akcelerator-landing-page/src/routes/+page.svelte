@@ -8,6 +8,7 @@
   import CTASection from '../components/CTASection.svelte';
   import FeedbackModal from '../components/FeedbackModal.svelte';
   import { initScrollAnimations } from '../lib/animations.js';
+  import { trackEvent } from '../lib/analytics.js';
 
   
   /** @type {import('./$types').PageData} */
@@ -131,7 +132,10 @@
     <div class="nav-actions">
       <button 
         class="nav-cta"
-        on:click={() => { window.location.href = '/app'; }}
+        on:click={() => {
+          trackEvent('aa_launch', { from: 'nav_cta' });
+          window.location.href = '/app';
+        }}
       >
         {content[language].nav.launch}
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
