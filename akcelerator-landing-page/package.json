@@ -3,6 +3,9 @@
   "version": "2.0.0",
   "description": "Akcelerátor altruismu — Česká platforma pro rychlou a praktickou pomoc bez přetížení",
   "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
