@@ -48,12 +48,12 @@
   });
 
   function cleanTitle(str) {
-    return String(str || '').replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\s]+/u, '').trim() || str;
+    return String(str || '').replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u, '').trim() || str;
   }
 
   function cleanMeta(str) {
     return String(str || '')
-      .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F]/gu, '')
+      .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642]/gu, '')
       .replace(/\s{2,}/g, ' ')
       .trim();
   }

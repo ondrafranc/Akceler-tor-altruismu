@@ -876,6 +876,7 @@
                   recordSmallWin({
                     id: p.id,
                     title: `Místní krok: ${p.name}`,
+                    category: p.kind,
                     surface: 'near'
                   })}
               >

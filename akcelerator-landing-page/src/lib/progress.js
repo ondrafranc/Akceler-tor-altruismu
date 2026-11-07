@@ -209,6 +209,17 @@ export function inferStepElement(step) {
   return 'care';
 }
 
+const LEADING_EMOJI_RE = /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u;
+
+/**
+ * Odstraní úvodní emoji (včetně složených ZWJ sekvencí jako 🧑‍🏫 nebo 💇‍♀️) z názvu skutku.
+ * @param {string} str
+ */
+export function stripLeadingEmoji(str) {
+  const cleaned = String(str || '').replace(LEADING_EMOJI_RE, '').trim();
+  return cleaned || String(str || '').trim();
+}
+
 function loadSteps() {
   if (typeof window === 'undefined') return [];
   try {
@@ -216,10 +227,14 @@ function loadSteps() {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.map((item) => ({
-      ...item,
-      element: inferStepElement(item)
-    }));
+    return parsed.map((item) => {
+      const element = inferStepElement(item);
+      return {
+        ...item,
+        title: stripLeadingEmoji(item?.title || 'Malý dobrý krok'),
+        element
+      };
+    });
   } catch {
     return [];
   }
@@ -238,7 +253,11 @@ function loadWishes() {
     const raw = localStorage.getItem(WISHES_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((item) => ({
+      ...item,
+      title: stripLeadingEmoji(item?.title || 'Drobný osobní skutek v běžném dni')
+    }));
   } catch {
     return [];
   }
@@ -318,10 +337,12 @@ export function recordSmallWin(step) {
     step?.lightType ||
     (catalogMatch?.recipientMacro === 'people' && catalogMatch?.social === 'group' ? 'wave' : 'lantern');
 
+  const cleanedTitle = stripLeadingEmoji(step?.title || 'Malý dobrý krok') || 'Malý dobrý krok';
+
   const entry = {
     uid: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     id: stepId,
-    title: step?.title || 'Malý dobrý krok',
+    title: cleanedTitle,
     surface: step?.surface || 'app',
     category: step?.category || '',
     element,
@@ -420,7 +441,7 @@ export function addSanctuaryWish(item) {
   const explicitType = item?.lightType || (item?.kind === 'wave' ? 'wave' : item?.kind === 'star' ? 'star' : undefined);
   const zone = explicitType === 'star' ? 'sky' : explicitType === 'wave' || explicitType === 'lantern' ? 'water' : clampedY < 0.53 ? 'sky' : 'water';
   const lightType = explicitType || (zone === 'sky' ? 'star' : 'lantern');
-  const rawTitle = String(item?.title || '').trim();
+  const rawTitle = stripLeadingEmoji(item?.title || '');
   const inferredEl = item?.element || inferStepElement({ title: rawTitle });
   const defaultTitle =
     lightType === 'wave'

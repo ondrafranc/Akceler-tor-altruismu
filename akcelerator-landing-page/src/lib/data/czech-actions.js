@@ -135,7 +135,7 @@ export const MICRO_ACTIONS = [
       'Otevři stránku Click and Feed.',
       'Klikni na tlačítko „Klikni zdarma a naplň misku“ – sponzor Brit za tvůj klik pošle ~25 g krmiva do českých útulků.'
     ],
-    cta: 'Začít pomáhat (Click and Feed)',
+    cta: 'Začít pomáhat',
     url: 'https://clickandfeed.cz/',
     reassurance: 'Zdarma a bez registrace — zabere to asi 15 vteřin.',
     selfBenefit: 'Okamžitá radost, že jsi i v náročném dni někomu konkrétně pomohl/a',
@@ -1562,6 +1562,7 @@ for (const action of MICRO_ACTIONS) {
   action.impactBasis = impactBasis;
   action.impactChain = custom.impactChain || buildDefaultImpactChain(action, impactEvidence);
   action.instructions = action.steps || [];
+  action.ctaLabel = 'Začít pomáhat';
   action.quickTagsLabel = `${action.timeMinutes} min · ${costLabel} · ${locationLabel} · ${commitLabel}`;
 }
 

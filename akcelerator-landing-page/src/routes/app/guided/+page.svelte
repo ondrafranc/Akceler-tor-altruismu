@@ -183,7 +183,7 @@
     return (
       String(str || "")
         .replace(
-          /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\s]+/u,
+          /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u,
           "",
         )
         .trim() || str
@@ -192,7 +192,7 @@
 
   function cleanMeta(str) {
     return String(str || "")
-      .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F]/gu, "")
+      .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642]/gu, "")
       .replace(/\s{2,}/g, " ")
       .trim();
   }
@@ -832,30 +832,40 @@
           </div>
 
           {#if bestAction.steps?.length}
-            <ol class="clean-steps">
-              {#each bestAction.steps as step}
-                <li>{step}</li>
-              {/each}
-            </ol>
-          {/if}
+            <details class="how-toggle">
+              <summary
+                >Jak se zapojit ({bestAction.steps.length}
+                {bestAction.steps.length === 1
+                  ? "krok"
+                  : bestAction.steps.length < 5
+                    ? "kroky"
+                    : "kroků"}) a řetězec dopadu</summary
+              >
+              <ol class="clean-steps">
+                {#each bestAction.steps as step}
+                  <li>{step}</li>
+                {/each}
+              </ol>
 
-          {#if bestAction.impactChain}
-            <div class="rec-impact-chain">
-              <span
-                ><strong>Aktivita:</strong>
-                {bestAction.impactChain.activity}</span
-              >
-              <span class="chain-sep">→</span>
-              <span
-                ><strong>Výsledek:</strong>
-                {bestAction.impactChain.immediateOutput}</span
-              >
-              <span class="chain-sep">→</span>
-              <span
-                ><strong>Skutečný dopad:</strong>
-                {bestAction.impactChain.realImpact}</span
-              >
-            </div>
+              {#if bestAction.impactChain}
+                <div class="rec-impact-chain">
+                  <span
+                    ><strong>Aktivita:</strong>
+                    {bestAction.impactChain.activity}</span
+                  >
+                  <span class="chain-sep">→</span>
+                  <span
+                    ><strong>Výsledek:</strong>
+                    {bestAction.impactChain.immediateOutput}</span
+                  >
+                  <span class="chain-sep">→</span>
+                  <span
+                    ><strong>Skutečný dopad:</strong>
+                    {bestAction.impactChain.realImpact}</span
+                  >
+                </div>
+              {/if}
+            </details>
           {/if}
 
           <div class="cta-row">
@@ -872,7 +882,7 @@
                 });
               }}
             >
-              <span>Začít pomáhat ({bestAction.cta || "Otevřít"})</span>
+              <span>Začít pomáhat</span>
               <span>↗</span>
             </a>
 
@@ -1373,8 +1383,8 @@
   }
 
   .rec-impact-chain {
-    margin: 0 0 1.2rem;
-    padding-top: 0.6rem;
+    margin: 0.6rem 0 0;
+    padding-top: 0.55rem;
     border-top: 1px dashed rgba(22, 82, 56, 0.14);
     display: flex;
     align-items: center;
@@ -1582,7 +1592,7 @@
   }
 
   .rec-impact-line {
-    margin: 0 0 1.1rem;
+    margin: 0 0 0.3rem;
     padding-left: 0.85rem;
     border-left: 2.5px solid #10b981;
     font-size: 0.88rem;
@@ -1591,13 +1601,43 @@
     font-weight: 600;
   }
 
+  .how-toggle {
+    margin: 0 0 1.15rem 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .how-toggle summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--forest-800);
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .how-toggle summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .how-toggle summary::before {
+    content: "▸";
+    color: var(--emerald-600);
+    transition: transform 0.18s ease;
+  }
+
+  .how-toggle[open] summary::before {
+    transform: rotate(90deg);
+  }
+
   .clean-steps {
-    margin: 0 0 1.35rem;
+    margin: 0.55rem 0 0;
     padding-left: 1.2rem;
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
-    font-size: 0.88rem;
+    font-size: 0.86rem;
     color: var(--text-secondary);
     line-height: 1.5;
   }
@@ -1610,7 +1650,7 @@
 
   .btn-gold-action {
     flex: 1;
-    min-width: 190px;
+    min-width: 160px;
     display: inline-flex;
     align-items: center;
     justify-content: center;

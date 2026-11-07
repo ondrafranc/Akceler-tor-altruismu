@@ -11,7 +11,8 @@ const BANNED_RENDERED_COPY = [
   'KLIDNÝ KOMPAS',
   'bloudivý nerv',
   'stěna úkolů',
-  'Pustit starost po vodě'
+  'Pustit starost po vodě',
+  'Začít pomáhat (Začít pomáhat'
 ];
 
 test('root sets strict security headers without unsafe-eval', async ({ request, baseURL }) => {
@@ -79,9 +80,13 @@ test('home mood tabs start with shelter bowl, rotate 4 distinct actions, and con
   expect(seenTitles.size).toBe(4);
 
   // Complete a step -> Calm Non-Pressuring Celebration Modal -> Krajina dobra (/svet)
+  const homePrimaryBtnText = await page.locator('.instant-card .btn-studio-primary').innerText();
+  expect(homePrimaryBtnText).not.toContain('Začít pomáhat (Začít pomáhat');
   await page.locator('.instant-card .done-btn').click();
   await expect(page.locator('.celebration-card')).toBeVisible();
   await expect(page.locator('.celebration-card')).toContainText('Klidné poděkování');
+  const winTitleText = (await page.locator('.celebration-card .win-title').innerText()).trim();
+  expect(winTitleText).not.toMatch(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u);
 
   const svetBtn = page.locator('.celebration-card a[href*="/svet"]');
   await expect(svetBtn).toBeVisible();
@@ -173,6 +178,13 @@ test('guided live compass rotates recommendations, auto-opens local places when 
 
   await page.locator('.link-show-all').click();
   await expect(cards).toHaveCount(45);
+
+  // Verify all 45 card titles strip leading emojis cleanly (including ZWJ sequences like 🧑‍🏫 and 💇‍♀️)
+  const allOnlineTitles = await page.locator('.grid .card .card-title').allInnerTexts();
+  expect(allOnlineTitles.length).toBe(45);
+  for (const t of allOnlineTitles) {
+    expect(t.trim(), `Title "${t}" still has leading emoji/ZWJ`).toMatch(/^[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ0-9]/i);
+  }
 
   const onlineHtml = await page.content();
   for (const deadDomain of ['dobrokruh.cz', 'knihobudka.cz', 'novovlasko.cz', 'knihovnaveci.cz', 'zmapujto.cz', 'mapamisto.cz', 'redukuj.cz']) {
@@ -283,6 +295,12 @@ test('/near never renders 0 míst v okolí, preserves verified orgs with website
 test('/app/guided adaptive parameters, Evidence Tier A filter, and methodology table work', async ({ page }) => {
   await page.goto('/app/guided');
 
+  // Guided primary CTA is clean (never double-wrapped) and how-toggle starts collapsed
+  const guidedCtaText = await page.locator('.highlight-card .btn-gold-action').innerText();
+  expect(guidedCtaText).not.toContain('Začít pomáhat (Začít pomáhat');
+  await expect(page.locator('.highlight-card details.how-toggle')).toBeVisible();
+  await expect(page.locator('.highlight-card details.how-toggle')).not.toHaveAttribute('open', '');
+
   // Contextual Step 3 question adapts when topic is selected
   const adaptiveBlock = page.locator('.adaptive-step-block');
   await expect(adaptiveBlock).toContainText('3. Komu chceš dnes nejvíc pomoct?');
@@ -303,6 +321,23 @@ test('/app/guided adaptive parameters, Evidence Tier A filter, and methodology t
   await expect(methDrawer.locator('.meth-table tbody tr')).toHaveCount(5);
   await expect(methDrawer).toContainText('GiveWell');
   await expect(methDrawer).toContainText('Efektivní altruismus ČR');
+
+  // Saved topic from /app/guided renders non-empty topic label on homepage .personal-values-pill
+  await page.goto('/');
+  const personalPill = page.locator('.instant-card .personal-values-pill');
+  await expect(personalPill).toBeVisible();
+  await personalPill.click();
+  await expect(personalPill).toContainText('Tvoje témata (Zvířata)');
+
+  // Narrow 320px mobile viewport on /app/guided with how-toggle expanded has zero horizontal overflow
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.goto('/app/guided');
+  await page.locator('.highlight-card details.how-toggle summary').click();
+  await expect(page.locator('.highlight-card details.how-toggle')).toHaveAttribute('open', '');
+  const hasHorizontalOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+  );
+  expect(hasHorizontalOverflow).toBe(false);
 });
 
 test('/app/online Evidence A filter and /svet 3 semantic light types + post-deed rest reassurance work', async ({ page }) => {

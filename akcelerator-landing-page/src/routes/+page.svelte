@@ -198,7 +198,7 @@
     return (
       String(str || "")
         .replace(
-          /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\s]+/u,
+          /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u,
           "",
         )
         .trim() || str
@@ -206,11 +206,11 @@
   }
 
   function getSavedValueLabels(ids) {
-    return VALUES.filter((v) => ids.includes(v.id))
+    return VALUES.filter((v) => ids.includes(v.key || v.id))
       .map((v) =>
-        v.label
+        (v.shortLabel || v.label)
           .replace(
-            /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\s]+/u,
+            /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u,
             "",
           )
           .trim(),
@@ -475,9 +475,7 @@
                 class="btn-studio-primary"
                 on:click={() => handleStartQuickAction(currentQuickAction)}
               >
-                <span
-                  >Začít pomáhat ({currentQuickAction.cta || "Otevřít"})</span
-                >
+                <span>Začít pomáhat</span>
                 <svg
                   width="15"
                   height="15"
@@ -1031,6 +1029,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
+    flex-wrap: wrap;
     margin-bottom: 0.65rem;
   }
 
@@ -1342,6 +1341,7 @@
     display: flex;
     gap: 0.55rem;
     align-items: center;
+    flex-wrap: wrap;
     padding-top: 0.25rem;
   }
 

@@ -172,7 +172,7 @@ export const feedbackReportRequest = writable(null);
  */
 export function openBrokenLinkReport(item = {}) {
   const cleanTitle = String(item?.title || item?.org || 'aktivita')
-    .replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\s]+/u, '')
+    .replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u, '')
     .trim();
   const urlPart = item?.url ? ` (${item.url})` : '';
   feedbackReportRequest.set({

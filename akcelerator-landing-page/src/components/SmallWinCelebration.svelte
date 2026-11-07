@@ -33,9 +33,17 @@
     closeCelebration();
   }
 
+  function cleanTitle(str) {
+    return (
+      String(str || '')
+        .replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u, '')
+        .trim() || str
+    );
+  }
+
   async function handleShareWithFriend() {
     if (!$activeCelebration) return;
-    const shareTitle = $activeCelebration.title || 'Malý dobrý skutek';
+    const shareTitle = cleanTitle($activeCelebration.title || 'Malý dobrý skutek');
     const shareUrl = typeof window !== 'undefined' ? window.location.origin : 'https://akcelerator-altruismu.cz';
     const shareText = `Tip na jednoduchou pomoc, která zabere jen chvilku („${shareTitle}“): ${shareUrl}`;
 
@@ -81,7 +89,7 @@
       <div class="celebration-glow" aria-hidden="true"></div>
       {#if !restingMode}
         <div class="win-overline">{activeElementMeta.icon} Klidné poděkování</div>
-        <h3 id="win-title" class="win-title">{$activeCelebration.title}</h3>
+        <h3 id="win-title" class="win-title">{cleanTitle($activeCelebration.title)}</h3>
         <p class="win-rest-reassurance">
           Dnes jsi udělal něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.
         </p>

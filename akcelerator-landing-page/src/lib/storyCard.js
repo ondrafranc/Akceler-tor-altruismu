@@ -64,7 +64,7 @@ export async function renderStoryCardPng(opts = {}) {
   const stepsCount = Math.max(1, Number(opts.stepsCount) || 1);
   const healPercent = Math.max(32, Math.min(100, Number(opts.healPercent) || 32));
   const cleanAction = String(opts.actionTitle || '1 malý krok pro druhé v Česku')
-    .replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\s]+/u, '')
+    .replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u, '')
     .trim();
 
   const W = 1080;

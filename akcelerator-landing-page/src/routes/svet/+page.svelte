@@ -62,7 +62,7 @@
   }
 
   function cleanTitle(str) {
-    return String(str || '').replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\s]+/u, '').trim() || str;
+    return String(str || '').replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u, '').trim() || str;
   }
 
   function showGentleToast(msg) {
