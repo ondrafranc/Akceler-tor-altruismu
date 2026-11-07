@@ -391,6 +391,8 @@ export function recordSmallWin(step) {
   if (!step?.silent) {
     activeCelebration.set({
       open: true,
+      id: entry.id,
+      category: entry.category,
       title: entry.title,
       message: getRandomEncouragement(),
       surface: entry.surface,

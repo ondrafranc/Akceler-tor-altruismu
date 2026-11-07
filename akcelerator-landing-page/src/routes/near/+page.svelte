@@ -16,6 +16,17 @@
   } from '../../lib/data/czech-actions.js';
   import { recordSmallWin } from '../../lib/progress.js';
   import { haversineKm, sanitizeHttpUrl as normalizeUrl, safeText } from '../../lib/security.js';
+  import {
+    isSoundMuted,
+    toggleSoundMuted,
+    holdSpark,
+    impactCanvas,
+    getActionEffectMeta,
+    playPayoffAsmr,
+    savePendingPartnerReturn,
+    consumePendingPartnerReturn,
+    fetchAmbientPulse
+  } from '../../lib/sensoryEngine.js';
 
   const CATEGORY_PRESETS = [
     { id: 'all', label: '✨ Vše smysluplné v okolí', kinds: ['ngo', 'community', 'food', 'animals'], onlyWeb: false },
@@ -168,6 +179,51 @@
   // First-contact template
   let openTemplateId = null;
   let copiedTemplateId = null;
+  let copiedPlaceLinkId = null;
+  let soundMuted = false;
+  let activeEffectPlaceId = null;
+  let placeEffectMetric = 0;
+  let nearReturnPlace = null;
+  let nearReturnMetric = 0;
+  let awaitingNearPlace = null;
+  let nearLeaveTimestamp = 0;
+  let ambientPulseText = 'Před chvílí někdo v Brně naplnil misku v útulku';
+
+  function toPlaceAction(p) {
+    if (!p) return null;
+    return {
+      id: p.id,
+      title: p.name || 'Místo pomoci',
+      category: p.kind || 'ngo',
+      subcategory: p.subcategory || ''
+    };
+  }
+
+  function handleToggleSound() {
+    soundMuted = toggleSoundMuted();
+    trackEvent('aa_sound_toggle', { surface: 'near', muted: soundMuted });
+  }
+
+  function togglePlaceEffect(p) {
+    if (activeEffectPlaceId === p.id) {
+      activeEffectPlaceId = null;
+      return;
+    }
+    placeEffectMetric = 0;
+    activeEffectPlaceId = p.id;
+    playPayoffAsmr(toPlaceAction(p));
+    trackEvent('aa_effect_preview_toggle', { surface: 'near', id: p.id });
+  }
+
+  function handleStartNearPlace(p) {
+    const act = toPlaceAction(p);
+    awaitingNearPlace = act;
+    nearLeaveTimestamp = Date.now();
+    nearReturnPlace = null;
+    savePendingPartnerReturn(act, 'near');
+    markActionStarted(p.id, 'near_place');
+    trackEvent('aa_clickout', { surface: 'near_place', id: p.id });
+  }
 
   $: nearestVerifiedOrgs = CURATED_FALLBACK_PLACES.map((p) => ({
     ...p,
@@ -653,6 +709,29 @@
     } catch {}
   }
 
+  async function sharePlaceLink(p) {
+    if (!p || typeof window === 'undefined') return;
+    const shareUrl = `${window.location.origin}/near?place=${encodeURIComponent(p.id)}&lat=${encodeURIComponent(Number(p.lat || centerLat).toFixed(4))}&lon=${encodeURIComponent(Number(p.lon || centerLon).toFixed(4))}`;
+    let ok = false;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        ok = true;
+      }
+    } catch {}
+    if (!ok && navigator.share) {
+      try {
+        await navigator.share({ title: p.name, url: shareUrl });
+        ok = true;
+      } catch {}
+    }
+    copiedPlaceLinkId = p.id;
+    setTimeout(() => {
+      if (copiedPlaceLinkId === p.id) copiedPlaceLinkId = null;
+    }, 2600);
+    trackEvent('aa_share_direct_action', { surface: 'near', id: p.id });
+  }
+
   async function setMobileMode(mode) {
     mobileView = mode;
     await tick();
@@ -664,10 +743,57 @@
   onMount(() => {
     let destroyed = false;
     let resizeTimer = null;
+    soundMuted = isSoundMuted();
+
+    const checkNearReturn = () => {
+      if (nearReturnPlace) return;
+      const elapsedMem = awaitingNearPlace ? Date.now() - nearLeaveTimestamp : 0;
+      const persisted = consumePendingPartnerReturn(3000);
+      if (elapsedMem >= 3000 || persisted) {
+        if (awaitingNearPlace && !persisted) {
+          consumePendingPartnerReturn(0);
+        }
+        const targetId = persisted?.id || awaitingNearPlace?.id;
+        const foundPlace = places.find((pl) => pl.id === targetId);
+        const resolved = foundPlace
+          ? toPlaceAction(foundPlace)
+          : awaitingNearPlace || (persisted ? { id: persisted.id, title: persisted.title || 'Místo pomoci', category: persisted.category || 'ngo' } : null);
+        if (resolved) {
+          nearReturnPlace = resolved;
+          nearReturnMetric = 0;
+          awaitingNearPlace = null;
+          playPayoffAsmr(resolved);
+          trackEvent('aa_partner_return_prompt', { surface: 'near', id: resolved.id });
+        }
+      }
+    };
+
+    const onVis = () => {
+      if (document.visibilityState === 'visible') checkNearReturn();
+    };
+    checkNearReturn();
+
+    const pulseTimer = setTimeout(async () => {
+      const pulse = await fetchAmbientPulse();
+      if (pulse?.message) ambientPulseText = pulse.message;
+    }, 300);
+
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('focus', checkNearReturn);
+    window.addEventListener('pageshow', checkNearReturn);
 
     (async () => {
       try {
         const sp = new URLSearchParams(window.location.search);
+        const placeP = sp.get('place');
+        if (placeP) {
+          activePlaceId = placeP;
+          const curatedMatch = CURATED_FALLBACK_PLACES.find((c) => c.id === placeP);
+          if (curatedMatch) {
+            centerLat = curatedMatch.lat;
+            centerLon = curatedMatch.lon;
+          }
+        }
         const latP = Number(sp.get('lat'));
         const lonP = Number(sp.get('lon'));
         const rP = Number(sp.get('radius_km') || sp.get('r'));
@@ -733,6 +859,10 @@
 
     return () => {
       destroyed = true;
+      clearTimeout(pulseTimer);
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('focus', checkNearReturn);
+      window.removeEventListener('pageshow', checkNearReturn);
       if (resizeTimer) clearTimeout(resizeTimer);
       if (nearbyAbortController) nearbyAbortController.abort();
       if (map) {
@@ -942,6 +1072,61 @@
         </div>
       </div>
 
+      {#if nearReturnPlace}
+        <div
+          class="return-dopamine-strip"
+          role="status"
+          aria-live="polite"
+          data-scene={getActionEffectMeta(nearReturnPlace, nearReturnMetric).scene}
+        >
+          <div class="return-dopamine-head">
+            <span class="return-dopamine-title">
+              ✨ Vítej zpět z místa {nearReturnPlace.title}! Povedlo se?
+            </span>
+            <span class="impact-payoff-badge">
+              {getActionEffectMeta(nearReturnPlace, nearReturnMetric, { isReturnStrip: true }).badge}
+            </span>
+          </div>
+          <canvas
+            class="impact-payoff-canvas"
+            width="300"
+            height="92"
+            aria-label="Fyzikální vizualizace dopadu dobrého skutku"
+            use:impactCanvas={{
+              action: nearReturnPlace,
+              onProgress: (v) => {
+                nearReturnMetric = v;
+              }
+            }}
+          ></canvas>
+          <div class="return-dopamine-actions">
+            <button
+              type="button"
+              class="btn-return-complete"
+              on:click={() => {
+                const done = nearReturnPlace;
+                nearReturnPlace = null;
+                recordSmallWin({
+                  id: done.id,
+                  title: `Místní krok: ${done.title}`,
+                  category: done.category,
+                  surface: 'near'
+                });
+              }}
+            >
+              ✓ Hotovo – rozsvítit stopu
+            </button>
+            <button
+              type="button"
+              class="btn-return-dismiss"
+              on:click={() => (nearReturnPlace = null)}
+            >
+              Později
+            </button>
+          </div>
+        </div>
+      {/if}
+
       <!-- PLACES CARDS (CLEAN, ZERO BOX-IN-BOX) -->
       <div class="places-stack places-grid">
         {#each visiblePlaces as p, idx (p.id)}
@@ -986,10 +1171,8 @@
                   target="_blank"
                   rel="noopener noreferrer"
                   class="pc-btn primary"
-                  on:click={() => {
-                    markActionStarted(p.id, 'near_place');
-                    trackEvent('aa_clickout', { surface: 'near_place', id: p.id });
-                  }}
+                  use:holdSpark={{ id: p.id, surface: 'near_place' }}
+                  on:click={() => handleStartNearPlace(p)}
                 >
                   Web ↗
                 </a>
@@ -1012,6 +1195,18 @@
 
               <button
                 type="button"
+                class="pc-btn ghost effect-spark-btn"
+                class:active={activeEffectPlaceId === p.id}
+                aria-pressed={activeEffectPlaceId === p.id}
+                aria-label="Vyzkoušet interaktivní fyzikální a zvukový efekt místa"
+                title="Vyzkoušet interaktivní fyzikální a zvukový efekt místa"
+                on:click={() => togglePlaceEffect(p)}
+              >
+                ✨
+              </button>
+
+              <button
+                type="button"
                 class="pc-btn done"
                 class:initiated={Array.isArray($startedActionIds) && $startedActionIds.includes(p.id)}
                 on:click={() =>
@@ -1025,6 +1220,33 @@
                 {Array.isArray($startedActionIds) && $startedActionIds.includes(p.id) ? '✓ Dokončeno' : '✓ Hotovo'}
               </button>
             </div>
+
+            {#if activeEffectPlaceId === p.id}
+              {@const placeAction = toPlaceAction(p)}
+              <div
+                class="card-effect-stage"
+                data-scene={getActionEffectMeta(placeAction, placeEffectMetric).scene}
+              >
+                <div class="card-effect-head">
+                  <span class="impact-payoff-badge">
+                    {getActionEffectMeta(placeAction, placeEffectMetric).badge}
+                  </span>
+                  <span class="card-effect-hint">Klepni do plátna pro interakci</span>
+                </div>
+                <canvas
+                  class="impact-payoff-canvas"
+                  width="300"
+                  height="92"
+                  aria-label="Fyzikální vizualizace dopadu dobrého skutku"
+                  use:impactCanvas={{
+                    action: placeAction,
+                    onProgress: (v) => {
+                      placeEffectMetric = v;
+                    }
+                  }}
+                ></canvas>
+              </div>
+            {/if}
 
             {#if openTemplateId === p.id}
               {@const tpl = buildFirstContactTemplate(p)}
@@ -1059,19 +1281,29 @@
               <span>
                 {p.curated ? `Zdroj: Ověřený katalog (${p.verifiedAt || '11/2026'})` : 'Zdroj: OpenStreetMap ČR'}
               </span>
-              <button
-                type="button"
-                class="pc-report-btn"
-                on:click={() =>
-                  openBrokenLinkReport({
-                    id: p.id,
-                    title: p.name,
-                    org: p.subcategory || 'Místo na mapě',
-                    url: webUrl || ''
-                  })}
-              >
-                Nahlásit nefunkční údaj
-              </button>
+              <span class="pc-footer-links">
+                <button
+                  type="button"
+                  class="pc-report-btn pc-share-btn"
+                  on:click={() => sharePlaceLink(p)}
+                >
+                  {copiedPlaceLinkId === p.id ? '✓ Odkaz zkopírován' : '🔗 Sdílet místo'}
+                </button>
+                ·
+                <button
+                  type="button"
+                  class="pc-report-btn"
+                  on:click={() =>
+                    openBrokenLinkReport({
+                      id: p.id,
+                      title: p.name,
+                      org: p.subcategory || 'Místo na mapě',
+                      url: webUrl || ''
+                    })}
+                >
+                  Nahlásit nefunkční údaj
+                </button>
+              </span>
             </div>
           </article>
         {:else}
@@ -1125,6 +1357,23 @@
             {/if}
           </div>
         {/each}
+      </div>
+
+      <div class="near-pulse-wrap">
+        <div class="ambient-pulse-pill" role="status" aria-live="off">
+          <span class="pulse-dot-live" aria-hidden="true"></span>
+          <span class="pulse-msg-text">{ambientPulseText}</span>
+        </div>
+        <button
+          type="button"
+          class="sound-mute-btn near-sound-btn"
+          on:click={handleToggleSound}
+          aria-pressed={soundMuted}
+          aria-label={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
+          title={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
+        >
+          {soundMuted ? '🔇' : '🔊'}
+        </button>
       </div>
 
       {#if filteredPlaces.length > visibleCount}
@@ -1560,6 +1809,25 @@
   }
 
   /* List Column */
+  .near-sound-btn {
+    padding: 0.34rem 0.58rem;
+    border-radius: 999px;
+    border: 1px solid rgba(22, 66, 48, 0.14);
+    background: rgba(255, 255, 255, 0.92);
+    font-size: 0.8rem;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .near-pulse-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+    margin-top: 0.9rem;
+  }
+
   .list-toolbar {
     display: flex;
     justify-content: space-between;

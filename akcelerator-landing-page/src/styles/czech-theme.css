@@ -275,6 +275,211 @@ select:focus-visible {
   }
 }
 
+/* ==========================================================================
+   SHARED SENSORY ENGINE & BESPOKE ACTIVITY EFFECT SURFACES
+   Across /, /app/online, /app/guided, /near, SmallWinCelebration
+   ========================================================================== */
+[data-hold-spark='true'] {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+[data-hold-spark='true']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: calc(var(--spark-charge, 0) * 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(251, 191, 36, 0.32) 0%,
+    rgba(52, 211, 153, 0.42) 60%,
+    rgba(253, 230, 138, 0.58) 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+  transition: width 0.05s linear;
+}
+
+[data-hold-spark='true'].spark-ready {
+  box-shadow:
+    0 0 0 3px rgba(251, 191, 36, 0.55),
+    0 12px 28px -6px rgba(16, 185, 129, 0.45) !important;
+}
+
+.impact-payoff-canvas {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: 92px;
+  border-radius: 14px;
+  background: radial-gradient(circle at 50% 42%, rgba(16, 185, 129, 0.16), rgba(9, 29, 20, 0.55));
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.impact-payoff-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.77rem;
+  font-weight: 800;
+  padding: 0.26rem 0.68rem;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #065f46;
+  border: 1px solid rgba(16, 185, 129, 0.32);
+  line-height: 1.25;
+}
+
+.card-effect-stage {
+  margin-top: 0.65rem;
+  padding: 0.68rem 0.78rem;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(11, 38, 26, 0.94), rgba(18, 59, 41, 0.92));
+  border: 1px solid rgba(52, 211, 153, 0.32);
+  color: #ecfdf5;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  box-shadow: 0 12px 28px -12px rgba(6, 24, 16, 0.42);
+}
+
+.card-effect-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.card-effect-stage .impact-payoff-badge {
+  background: rgba(52, 211, 153, 0.2);
+  color: #fde68a;
+  border-color: rgba(251, 191, 36, 0.38);
+}
+
+.card-effect-hint {
+  font-size: 0.72rem;
+  color: rgba(209, 250, 229, 0.82);
+  font-weight: 600;
+}
+
+.effect-spark-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  padding: 0.36rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 185, 129, 0.32);
+  background: rgba(236, 253, 245, 0.9);
+  color: #065f46;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.effect-spark-btn:hover,
+.effect-spark-btn.active {
+  background: linear-gradient(135deg, #0d2e20 0%, #174933 100%);
+  color: #fde68a;
+  border-color: rgba(251, 191, 36, 0.5);
+}
+
+.return-dopamine-strip {
+  margin: 0.65rem 0 0.85rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(11, 38, 26, 0.96), rgba(18, 59, 41, 0.94));
+  border: 1px solid rgba(52, 211, 153, 0.38);
+  color: #f0fdf4;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  box-shadow: 0 16px 34px -14px rgba(6, 24, 16, 0.45);
+}
+
+.return-dopamine-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.return-dopamine-title {
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: #ecfdf5;
+}
+
+.return-dopamine-strip .impact-payoff-badge {
+  background: rgba(52, 211, 153, 0.2);
+  color: #fde68a;
+  border-color: rgba(251, 191, 36, 0.42);
+}
+
+.return-dopamine-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-return-complete {
+  flex: 1;
+  min-width: 170px;
+  padding: 0.58rem 0.9rem;
+  border-radius: 11px;
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #0b2419;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn-return-dismiss {
+  padding: 0.52rem 0.78rem;
+  border-radius: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  color: #d1fae5;
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ambient-pulse-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.32rem 0.72rem;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  color: #065f46;
+  font-size: 0.76rem;
+  font-weight: 700;
+  max-width: 100%;
+}
+
+.pulse-dot-live {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.24);
+  flex-shrink: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

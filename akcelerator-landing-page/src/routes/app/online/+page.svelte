@@ -14,6 +14,17 @@
     EVIDENCE_METHODOLOGY
   } from '../../../lib/data/czech-actions.js';
   import { recordSmallWin, completedSteps } from '../../../lib/progress.js';
+  import {
+    isSoundMuted,
+    toggleSoundMuted,
+    holdSpark,
+    impactCanvas,
+    getActionEffectMeta,
+    playPayoffAsmr,
+    savePendingPartnerReturn,
+    consumePendingPartnerReturn,
+    fetchAmbientPulse
+  } from '../../../lib/sensoryEngine.js';
 
   let activeFilter = 'all';
   let searchQuery = '';
@@ -22,6 +33,14 @@
   let copiedId = '';
   let spotlightId = '';
   let visibleLimit = 3;
+  let soundMuted = false;
+  let activeEffectCardId = '';
+  let cardEffectMetric = 0;
+  let returnPromptAction = null;
+  let returnMetric = 0;
+  let awaitingReturnAction = null;
+  let leaveTimestamp = 0;
+  let ambientPulseText = 'Před chvílí někdo v Brně naplnil misku v útulku';
 
   const FILTERS = [
     { id: 'all', label: '✨ Doporučené' },
@@ -35,6 +54,7 @@
   ];
 
   onMount(() => {
+    soundMuted = isSoundMuted();
     try {
       const sp = new URLSearchParams(window.location.search);
       const fParam = sp.get('filter');
@@ -42,10 +62,86 @@
         activeFilter = fParam;
         visibleLimit = 6;
       }
+      const actionParam = sp.get('action') || window.location.hash.replace(/^#(?:action=)?/, '');
+      if (actionParam) {
+        const matched = MICRO_ACTIONS.find(
+          (a) => a.id === actionParam || a.id.replace(/_/g, '-') === actionParam
+        );
+        if (matched) {
+          spotlightId = matched.id;
+          visibleLimit = MICRO_ACTIONS.length;
+        }
+      }
       const s = JSON.parse(localStorage.getItem('aa_values') || localStorage.getItem('aa_guided_values_v2') || '[]');
       if (Array.isArray(s)) savedValues = s;
     } catch {}
+
+    const checkPartnerReturn = () => {
+      if (returnPromptAction) return;
+      const elapsedMem = awaitingReturnAction ? Date.now() - leaveTimestamp : 0;
+      const persisted = consumePendingPartnerReturn(3000);
+      if (elapsedMem >= 3000 || persisted) {
+        if (awaitingReturnAction && !persisted) {
+          consumePendingPartnerReturn(0);
+        }
+        const targetId = persisted?.id || awaitingReturnAction?.id;
+        const matched = MICRO_ACTIONS.find((a) => a.id === targetId) || awaitingReturnAction;
+        if (matched) {
+          returnPromptAction = matched;
+          returnMetric = 0;
+          awaitingReturnAction = null;
+          playPayoffAsmr(matched);
+          trackEvent('aa_partner_return_prompt', { surface: 'online', id: matched.id });
+        }
+      }
+    };
+
+    const onVis = () => {
+      if (document.visibilityState === 'visible') checkPartnerReturn();
+    };
+    checkPartnerReturn();
+
+    const pulseTimer = setTimeout(async () => {
+      const pulse = await fetchAmbientPulse();
+      if (pulse?.message) ambientPulseText = pulse.message;
+    }, 300);
+
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('focus', checkPartnerReturn);
+    window.addEventListener('pageshow', checkPartnerReturn);
+
+    return () => {
+      clearTimeout(pulseTimer);
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('focus', checkPartnerReturn);
+      window.removeEventListener('pageshow', checkPartnerReturn);
+    };
   });
+
+  function handleToggleSound() {
+    soundMuted = toggleSoundMuted();
+    trackEvent('aa_sound_toggle', { surface: 'online', muted: soundMuted });
+  }
+
+  function toggleCardEffect(action) {
+    if (activeEffectCardId === action.id) {
+      activeEffectCardId = '';
+      return;
+    }
+    cardEffectMetric = 0;
+    activeEffectCardId = action.id;
+    playPayoffAsmr(action);
+    trackEvent('aa_effect_preview_toggle', { surface: 'online', id: action.id });
+  }
+
+  function handleStartOnlineAction(action) {
+    awaitingReturnAction = action;
+    leaveTimestamp = Date.now();
+    returnPromptAction = null;
+    savePendingPartnerReturn(action, 'online');
+    markActionStarted(action.id, 'online');
+    trackEvent('aa_clickout', { surface: 'online', id: action.id });
+  }
 
   function cleanTitle(str) {
     return String(str || '').replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u, '').trim() || str;
@@ -59,20 +155,24 @@
   }
 
   async function shareAction(action) {
-    const shareText = `Tip na drobný dobrý skutek (${cleanTitle(action.title)} – ${action.org}): ${action.url}`;
+    const directUrl =
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/?action=${encodeURIComponent(action.id)}`
+        : action.url;
+    const shareText = `Tip na drobný dobrý skutek (${cleanTitle(action.title)} – ${action.org}): ${directUrl}`;
     try {
-      if (navigator.share) {
-        await navigator.share({
-          title: cleanTitle(action.title),
-          text: shareText,
-          url: action.url
-        });
-      } else if (navigator.clipboard) {
-        await navigator.clipboard.writeText(shareText);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(directUrl);
         copiedId = action.id;
         setTimeout(() => {
           if (copiedId === action.id) copiedId = '';
         }, 2500);
+      } else if (navigator.share) {
+        await navigator.share({
+          title: cleanTitle(action.title),
+          text: shareText,
+          url: directUrl
+        });
       }
       trackEvent('aa_online_share', { id: action.id });
     } catch {}
@@ -164,8 +264,72 @@
       <button type="button" class="btn-random-spark" on:click={pickRandomSpark}>
         ✨ Náhodný tip
       </button>
+      <button
+        type="button"
+        class="sound-mute-btn online-sound-btn"
+        on:click={handleToggleSound}
+        aria-pressed={soundMuted}
+        aria-label={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
+        title={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
+      >
+        {soundMuted ? '🔇' : '🔊'}
+      </button>
     </div>
   </header>
+
+  {#if returnPromptAction}
+    <div
+      class="return-dopamine-strip"
+      role="status"
+      aria-live="polite"
+      data-scene={getActionEffectMeta(returnPromptAction, returnMetric).scene}
+    >
+      <div class="return-dopamine-head">
+        <span class="return-dopamine-title">
+          ✨ Vítej zpět z projektu {cleanTitle(returnPromptAction.title)}! Povedlo se?
+        </span>
+        <span class="impact-payoff-badge">
+          {getActionEffectMeta(returnPromptAction, returnMetric, { isReturnStrip: true }).badge}
+        </span>
+      </div>
+      <canvas
+        class="impact-payoff-canvas"
+        width="300"
+        height="92"
+        aria-label="Fyzikální vizualizace dopadu dobrého skutku"
+        use:impactCanvas={{
+          action: returnPromptAction,
+          onProgress: (v) => {
+            returnMetric = v;
+          }
+        }}
+      ></canvas>
+      <div class="return-dopamine-actions">
+        <button
+          type="button"
+          class="btn-return-complete"
+          on:click={() => {
+            const doneAction = returnPromptAction;
+            returnPromptAction = null;
+            recordSmallWin({
+              id: doneAction.id,
+              title: doneAction.title,
+              surface: 'online'
+            });
+          }}
+        >
+          ✓ Hotovo – rozsvítit stopu
+        </button>
+        <button
+          type="button"
+          class="btn-return-dismiss"
+          on:click={() => (returnPromptAction = null)}
+        >
+          Později
+        </button>
+      </div>
+    </div>
+  {/if}
 
   <div class="filters-bar filter-toolbar" role="group" aria-label="Filtrovat mikro-kroky">
     {#each FILTERS as f}
@@ -266,10 +430,8 @@
               href={o.url}
               target="_blank"
               rel="noopener noreferrer"
-              on:click={() => {
-                markActionStarted(o.id, 'online');
-                trackEvent('aa_clickout', { surface: 'online', id: o.id });
-              }}
+              use:holdSpark={{ id: o.id, surface: 'online' }}
+              on:click={() => handleStartOnlineAction(o)}
             >
               Začít pomáhat ↗
             </a>
@@ -288,14 +450,51 @@
             </button>
             <button
               type="button"
+              class="cta share-btn effect-spark-btn"
+              class:active={activeEffectCardId === o.id}
+              title="Vyzkoušet interaktivní fyzikální a zvukový efekt aktivity"
+              aria-label="Vyzkoušet interaktivní fyzikální a zvukový efekt aktivity"
+              aria-pressed={activeEffectCardId === o.id}
+              on:click={() => toggleCardEffect(o)}
+            >
+              ✨
+            </button>
+            <button
+              type="button"
               class="cta share-btn"
-              title="Sdílet odkaz"
-              aria-label="Sdílet odkaz"
+              title="Sdílet přímý odkaz"
+              aria-label="Sdílet přímý odkaz"
               on:click={() => shareAction(o)}
             >
               {copiedId === o.id ? '✓' : '↗'}
             </button>
           </div>
+
+          {#if activeEffectCardId === o.id}
+            <div
+              class="card-effect-stage"
+              data-scene={getActionEffectMeta(o, cardEffectMetric).scene}
+            >
+              <div class="card-effect-head">
+                <span class="impact-payoff-badge">
+                  {getActionEffectMeta(o, cardEffectMetric).badge}
+                </span>
+                <span class="card-effect-hint">Klepni do plátna pro interakci</span>
+              </div>
+              <canvas
+                class="impact-payoff-canvas"
+                width="300"
+                height="92"
+                aria-label="Fyzikální vizualizace dopadu dobrého skutku"
+                use:impactCanvas={{
+                  action: o,
+                  onProgress: (v) => {
+                    cardEffectMetric = v;
+                  }
+                }}
+              ></canvas>
+            </div>
+          {/if}
 
           <!-- 5. Patička ověření + Nahlásit nefunkční odkaz -->
           <div class="card-verify-footer">
@@ -326,6 +525,13 @@
           </div>
         </article>
       {/each}
+    </div>
+
+    <div class="online-pulse-wrap">
+      <div class="ambient-pulse-pill" role="status" aria-live="off">
+        <span class="pulse-dot-live" aria-hidden="true"></span>
+        <span class="pulse-msg-text">{ambientPulseText}</span>
+      </div>
     </div>
 
     {#if remainingCount > 0}
@@ -453,6 +659,23 @@
 
   .btn-random-spark:hover {
     transform: translateY(-2px);
+  }
+
+  .online-sound-btn {
+    padding: 0.58rem 0.78rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+    font-size: 0.88rem;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .online-pulse-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.15rem;
   }
 
   .filters-bar {

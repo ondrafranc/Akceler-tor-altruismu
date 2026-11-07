@@ -5,18 +5,37 @@
     SANCTUARY_ELEMENTS
   } from '../lib/progress.js';
   import { trackEvent } from '../lib/analytics.js';
+  import {
+    impactCanvas,
+    getActionEffectMeta,
+    playPayoffAsmr
+  } from '../lib/sensoryEngine.js';
 
   let restingMode = false;
   let sharedCopied = false;
+  let impactMetricValue = 0;
+  let lastCelebratedKey = '';
 
   $: if ($activeCelebration) {
     restingMode = false;
     sharedCopied = false;
+    const key = `${$activeCelebration.id || ''}:${$activeCelebration.title || ''}`;
+    if (key !== lastCelebratedKey) {
+      lastCelebratedKey = key;
+      impactMetricValue = 0;
+      playPayoffAsmr($activeCelebration);
+    }
+  } else {
+    lastCelebratedKey = '';
   }
 
   $: activeElementMeta = $activeCelebration
     ? SANCTUARY_ELEMENTS.find((e) => e.key === $activeCelebration.element) || SANCTUARY_ELEMENTS[0]
     : SANCTUARY_ELEMENTS[0];
+
+  $: effectMeta = $activeCelebration
+    ? getActionEffectMeta($activeCelebration, impactMetricValue)
+    : null;
 
   function handleStopHere() {
     restingMode = true;
@@ -44,7 +63,9 @@
   async function handleShareWithFriend() {
     if (!$activeCelebration) return;
     const shareTitle = cleanTitle($activeCelebration.title || 'Malý dobrý skutek');
-    const shareUrl = typeof window !== 'undefined' ? window.location.origin : 'https://akcelerator-altruismu.cz';
+    const baseOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://akcelerator-altruismu.cz';
+    const actionId = $activeCelebration.id && $activeCelebration.id !== 'step' ? $activeCelebration.id : '';
+    const shareUrl = actionId ? `${baseOrigin}/?action=${encodeURIComponent(actionId)}` : baseOrigin;
     const shareText = `Tip na jednoduchou pomoc, která zabere jen chvilku („${shareTitle}“): ${shareUrl}`;
 
     trackEvent('aa_after_done_choice', { choice: 'share_friend' });
@@ -90,6 +111,24 @@
       {#if !restingMode}
         <div class="win-overline">{activeElementMeta.icon} Klidné poděkování</div>
         <h3 id="win-title" class="win-title">{cleanTitle($activeCelebration.title)}</h3>
+        <div class="win-sensory-stage" data-scene={effectMeta?.scene || 'light'}>
+          <div class="win-sensory-head">
+            <span class="impact-payoff-badge">{effectMeta?.badge || '✨ Světelná stopa'}</span>
+            <span class="win-sensory-hint">Klepni do plátna pro jiskru</span>
+          </div>
+          <canvas
+            class="impact-payoff-canvas"
+            width="300"
+            height="92"
+            aria-hidden="true"
+            use:impactCanvas={{
+              action: $activeCelebration,
+              onProgress: (v) => {
+                impactMetricValue = v;
+              }
+            }}
+          ></canvas>
+        </div>
         <p class="win-rest-reassurance">
           Dnes jsi udělal něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.
         </p>
@@ -191,6 +230,38 @@
     letter-spacing: -0.02em;
     color: #0b2419;
     line-height: 1.25;
+  }
+
+  .win-sensory-stage {
+    margin: 0 0 0.75rem 0;
+    padding: 0.65rem 0.75rem;
+    border-radius: 16px;
+    background: linear-gradient(145deg, rgba(11, 38, 26, 0.94), rgba(18, 59, 41, 0.92));
+    border: 1px solid rgba(52, 211, 153, 0.3);
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 0.42rem;
+  }
+
+  .win-sensory-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .win-sensory-stage .impact-payoff-badge {
+    background: rgba(52, 211, 153, 0.22);
+    color: #fde68a;
+    border-color: rgba(251, 191, 36, 0.42);
+  }
+
+  .win-sensory-hint {
+    font-size: 0.72rem;
+    color: rgba(209, 250, 229, 0.8);
+    font-weight: 600;
   }
 
   .win-rest-reassurance {

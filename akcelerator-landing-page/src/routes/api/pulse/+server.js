@@ -8,7 +8,12 @@ const PULSE_TEMPLATES = [
   { actionId: 'birdlife_ptaci_pasti', verb: 'nahlásil skleněnou zastávku v Ptačích pastech', icon: '🐦' },
   { actionId: 'letters_seniors', verb: 'napsal dopis osamělému seniorovi', icon: '✉️' },
   { actionId: 'estudanky_pramen', verb: 'zkontroloval lesní studánku v okolí', icon: '💧' },
-  { actionId: 'remobil_telefon', verb: 'poslal starý telefon ze šuplíku přes Remobil', icon: '📱' }
+  { actionId: 'remobil_telefon', verb: 'poslal starý telefon ze šuplíku přes Remobil', icon: '📱' },
+  { actionId: 'freerice_ryze', verb: 'daroval 50 zrn rýže v kvízu Freerice', icon: '🍚' },
+  { actionId: 'wikipedie_cz', verb: 'doplnil článek na české Wikipedii', icon: '📝' },
+  { actionId: 'sazime_budoucnost', verb: 'podpořil výsadbu stromu v krajině', icon: '🌳' },
+  { actionId: 'darovani_krve', verb: 'se objednal na odběr krve v nemocnici', icon: '🩸' },
+  { actionId: 'zooniverse_veda', verb: 'klasifikoval snímek v občanské vědě Zooniverse', icon: '🔭' }
 ];
 
 const CITY_LOCATIVES = {

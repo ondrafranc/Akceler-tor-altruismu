@@ -22,6 +22,7 @@
     isSoundMuted,
     toggleSoundMuted,
     isAnimalAction,
+    getActionEffectMeta,
     startHoldSpark,
     playPayoffAsmr,
     savePendingPartnerReturn,
@@ -94,6 +95,7 @@
   let copyLinkTimer = null;
   let soundMuted = false;
   let kibbleGrams = 0;
+  let showEffectPreview = false;
   let ambientPulseText = "Před chvílí někdo v Brně naplnil misku v útulku";
   let stopHoldSpark = null;
 
@@ -393,21 +395,25 @@
   }
 
   function impactCanvas(node, action) {
-    const animal = isAnimalAction(action);
-    kibbleGrams = animal ? 0 : 25;
-    playPayoffAsmr(animal ? "kibble" : "light");
+    let currentId = action?.id || "";
+    kibbleGrams = 0;
+    playPayoffAsmr(action);
     let destroy = mountImpactCanvas(node, {
-      mode: animal ? "kibble" : "light",
+      action,
       onWeightUpdate: (g) => {
         kibbleGrams = g;
       },
     });
     return {
       update(nextAction) {
+        const nextId = nextAction?.id || "";
+        if (nextId === currentId) return;
+        currentId = nextId;
         destroy?.();
-        const nextAnimal = isAnimalAction(nextAction);
+        kibbleGrams = 0;
+        playPayoffAsmr(nextAction);
         destroy = mountImpactCanvas(node, {
-          mode: nextAnimal ? "kibble" : "light",
+          action: nextAction,
           onWeightUpdate: (g) => {
             kibbleGrams = g;
           },
@@ -598,6 +604,23 @@
                   : "🎯 Podle mých témat"}
               </button>
             {/if}
+            <button
+              type="button"
+              class="effect-spark-btn"
+              class:active={showEffectPreview}
+              on:click={() => {
+                showEffectPreview = !showEffectPreview;
+                trackEvent("aa_effect_preview_toggle", {
+                  id: currentQuickAction?.id,
+                  open: showEffectPreview,
+                });
+              }}
+              aria-pressed={showEffectPreview}
+              aria-label="Zobrazit interaktivní efekt dopadu"
+              title="Vyzkoušet interaktivní fyzikální a zvukový efekt této aktivity"
+            >
+              ✨ Efekt
+            </button>
             <button
               type="button"
               class="sound-mute-btn"
@@ -830,15 +853,14 @@
                 class="celebration-card inline-celebration-card"
                 role="status"
                 aria-live="polite"
+                data-scene={getActionEffectMeta(currentQuickAction, kibbleGrams).scene}
               >
                 <div class="inline-celebration-head">
                   <span class="kicker"
                     >Klidné poděkování · +1 rozsvícené světlo</span
                   >
                   <span class="impact-payoff-badge">
-                    {isAnimalAction(currentQuickAction)
-                      ? `+${kibbleGrams || 25} g v misce 🐾`
-                      : "✨ Nové světlo v Krajině dobra"}
+                    {getActionEffectMeta(currentQuickAction, kibbleGrams).badge}
                   </span>
                 </div>
                 <h3 class="win-title">{cleanTitle(currentQuickAction.title)}</h3>
@@ -866,15 +888,20 @@
                 </div>
               </div>
             {:else if partnerReturnPromptVisible}
-              <div class="return-dopamine-strip" role="status" aria-live="polite">
+              <div
+                class="return-dopamine-strip"
+                role="status"
+                aria-live="polite"
+                data-scene={getActionEffectMeta(currentQuickAction, kibbleGrams).scene}
+              >
                 <div class="inline-celebration-head">
                   <div class="return-dopamine-text">
                     ✨ <strong>Vítej zpět! Povedlo se?</strong> Klikni na „✓ Hotovo“ a rozsviť svou lucernu v Krajině dobra.
                   </div>
                   <span class="impact-payoff-badge">
-                    {isAnimalAction(currentQuickAction)
-                      ? `+${kibbleGrams || 25} g v misce 🐾`
-                      : "✨ Světelná stopa"}
+                    {getActionEffectMeta(currentQuickAction, kibbleGrams, {
+                      isReturnStrip: true,
+                    }).badge}
                   </span>
                 </div>
                 <canvas
@@ -909,6 +936,7 @@
                   target="_blank"
                   rel="noopener noreferrer"
                   class="btn-studio-primary"
+                  data-hold-spark="true"
                   on:pointerdown={handlePrimaryPointerDown}
                   on:pointerup={() => handlePrimaryPointerEnd(true)}
                   on:pointerleave={() => handlePrimaryPointerEnd(false)}
@@ -950,6 +978,27 @@
                   </button>
                 {/if}
               </div>
+
+              {#if showEffectPreview && !partnerReturnPromptVisible}
+                <div
+                  class="card-effect-stage"
+                  data-scene={getActionEffectMeta(currentQuickAction, kibbleGrams).scene}
+                >
+                  <div class="card-effect-head">
+                    <span class="impact-payoff-badge">
+                      {getActionEffectMeta(currentQuickAction, kibbleGrams).badge}
+                    </span>
+                    <span class="card-effect-hint">Klepni do plátna pro interakci</span>
+                  </div>
+                  <canvas
+                    class="impact-payoff-canvas"
+                    width="300"
+                    height="92"
+                    use:impactCanvas={currentQuickAction}
+                    aria-label="Fyzikální vizualizace dopadu dobrého skutku"
+                  ></canvas>
+                </div>
+              {/if}
             {/if}
 
             <div class="ambient-pulse-pill" role="status" aria-live="off">

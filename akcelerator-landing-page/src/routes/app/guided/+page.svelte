@@ -13,10 +13,22 @@
     CURATED_FALLBACK_PLACES,
     EVIDENCE_TIERS,
     EVIDENCE_METHODOLOGY,
+    MICRO_ACTIONS,
     recommendActions,
     buildFirstContactTemplate,
   } from "../../../lib/data/czech-actions.js";
   import { recordSmallWin, completedSteps } from "../../../lib/progress.js";
+  import {
+    isSoundMuted,
+    toggleSoundMuted,
+    holdSpark,
+    impactCanvas,
+    getActionEffectMeta,
+    playPayoffAsmr,
+    savePendingPartnerReturn,
+    consumePendingPartnerReturn,
+    fetchAmbientPulse,
+  } from "../../../lib/sensoryEngine.js";
 
   const SITUATIONS = [
     {
@@ -82,6 +94,15 @@
   let copiedTemplateId = null;
   let planFlash = false;
   let localDrawerOpen = false;
+  let soundMuted = false;
+  let showGuidedEffect = false;
+  let guidedEffectMetric = 0;
+  let guidedReturnAction = null;
+  let guidedReturnMetric = 0;
+  let awaitingGuidedAction = null;
+  let guidedLeaveTimestamp = 0;
+  let copiedDirectLink = false;
+  let ambientPulseText = "Před chvílí někdo v Brně naplnil misku v útulku";
 
   // Adaptivní parametry průvodce (sekce 4.2 + 5.2)
   let commitment = "any"; // 'any' | 'one_off' | 'long_term'
@@ -308,23 +329,24 @@
   }
 
   onMount(() => {
+    soundMuted = isSoundMuted();
     try {
       const sp = new URLSearchParams(window.location.search);
       const topicParam = sp.get("topic");
       if (topicParam && VALUES.some((v) => v.key === topicParam)) {
         selectedTopics = [topicParam];
         localStorage.setItem("aa_values", JSON.stringify(selectedTopics));
-        return;
-      }
-      const s = JSON.parse(
-        localStorage.getItem("aa_values") ||
-          localStorage.getItem("aa_guided_values_v2") ||
-          "[]",
-      );
-      if (Array.isArray(s) && s.length) {
-        selectedTopics = s
-          .filter((k) => VALUES.some((v) => v.key === k))
-          .slice(0, 2);
+      } else {
+        const s = JSON.parse(
+          localStorage.getItem("aa_values") ||
+            localStorage.getItem("aa_guided_values_v2") ||
+            "[]",
+        );
+        if (Array.isArray(s) && s.length) {
+          selectedTopics = s
+            .filter((k) => VALUES.some((v) => v.key === k))
+            .slice(0, 2);
+        }
       }
       const nearSaved = JSON.parse(
         localStorage.getItem("aa_prefs_near") || "{}",
@@ -336,7 +358,92 @@
         cityId = nearSaved.cityId;
       }
     } catch {}
+
+    const checkGuidedReturn = () => {
+      if (guidedReturnAction) return;
+      const elapsedMem = awaitingGuidedAction
+        ? Date.now() - guidedLeaveTimestamp
+        : 0;
+      const persisted = consumePendingPartnerReturn(3000);
+      if (elapsedMem >= 3000 || persisted) {
+        if (awaitingGuidedAction && !persisted) {
+          consumePendingPartnerReturn(0);
+        }
+        const targetId = persisted?.id || awaitingGuidedAction?.id;
+        const matched =
+          MICRO_ACTIONS.find((a) => a.id === targetId) ||
+          awaitingGuidedAction ||
+          bestAction;
+        if (matched) {
+          guidedReturnAction = matched;
+          guidedReturnMetric = 0;
+          awaitingGuidedAction = null;
+          playPayoffAsmr(matched);
+          trackEvent("aa_partner_return_prompt", {
+            surface: "guided",
+            id: matched.id,
+          });
+        }
+      }
+    };
+
+    const onVis = () => {
+      if (document.visibilityState === "visible") checkGuidedReturn();
+    };
+    checkGuidedReturn();
+
+    const pulseTimer = setTimeout(async () => {
+      const pulse = await fetchAmbientPulse();
+      if (pulse?.message) ambientPulseText = pulse.message;
+    }, 300);
+
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", checkGuidedReturn);
+    window.addEventListener("pageshow", checkGuidedReturn);
+
+    return () => {
+      clearTimeout(pulseTimer);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", checkGuidedReturn);
+      window.removeEventListener("pageshow", checkGuidedReturn);
+    };
   });
+
+  function handleToggleSound() {
+    soundMuted = toggleSoundMuted();
+    trackEvent("aa_sound_toggle", { surface: "guided", muted: soundMuted });
+  }
+
+  function handleStartGuidedAction(action, surfaceLabel = "guided_best") {
+    if (!action) return;
+    awaitingGuidedAction = action;
+    guidedLeaveTimestamp = Date.now();
+    guidedReturnAction = null;
+    savePendingPartnerReturn(action, surfaceLabel);
+    markActionStarted(action.id, surfaceLabel);
+    trackEvent("aa_clickout", {
+      surface: surfaceLabel,
+      id: action.id,
+    });
+  }
+
+  async function shareGuidedDirectLink(action) {
+    if (!action || typeof window === "undefined") return;
+    const directUrl = `${window.location.origin}/?action=${encodeURIComponent(action.id)}`;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(directUrl);
+        copiedDirectLink = true;
+        setTimeout(() => (copiedDirectLink = false), 2500);
+      } else if (navigator.share) {
+        await navigator.share({
+          title: cleanTitle(action.title),
+          url: directUrl,
+        });
+      }
+      trackEvent("aa_share_direct_action", { surface: "guided", id: action.id });
+    } catch {}
+  }
 </script>
 
 <svelte:head>
@@ -803,14 +910,101 @@
               {/if}
             </div>
 
-            <button
-              type="button"
-              class="btn-cycle-inline"
-              on:click={cycleRecommendation}
-            >
-              ↻ Jiný nápad
-            </button>
+            <div class="rec-top-actions">
+              <button
+                type="button"
+                class="effect-spark-btn"
+                class:active={showGuidedEffect}
+                aria-pressed={showGuidedEffect}
+                on:click={() => {
+                  showGuidedEffect = !showGuidedEffect;
+                  guidedEffectMetric = 0;
+                  if (showGuidedEffect) playPayoffAsmr(bestAction);
+                  trackEvent("aa_effect_preview_toggle", {
+                    surface: "guided",
+                    id: bestAction.id,
+                    open: showGuidedEffect,
+                  });
+                }}
+                title="Vyzkoušet interaktivní fyzikální a zvukový efekt této aktivity"
+              >
+                ✨ Efekt
+              </button>
+              <button
+                type="button"
+                class="sound-mute-btn guided-sound-btn"
+                on:click={handleToggleSound}
+                aria-pressed={soundMuted}
+                aria-label={soundMuted ? "Zapnout jemné zvuky" : "Ztlumit zvuky"}
+                title={soundMuted ? "Zapnout jemné zvuky" : "Ztlumit zvuky"}
+              >
+                {soundMuted ? "🔇" : "🔊"}
+              </button>
+              <button
+                type="button"
+                class="btn-cycle-inline"
+                on:click={cycleRecommendation}
+              >
+                ↻ Jiný nápad
+              </button>
+            </div>
           </div>
+
+          {#if guidedReturnAction}
+            <div
+              class="return-dopamine-strip"
+              role="status"
+              aria-live="polite"
+              data-scene={getActionEffectMeta(guidedReturnAction, guidedReturnMetric).scene}
+            >
+              <div class="return-dopamine-head">
+                <span class="return-dopamine-title">
+                  ✨ Vítej zpět! Povedlo se?
+                </span>
+                <span class="impact-payoff-badge">
+                  {getActionEffectMeta(guidedReturnAction, guidedReturnMetric, {
+                    isReturnStrip: true,
+                  }).badge}
+                </span>
+              </div>
+              <canvas
+                class="impact-payoff-canvas"
+                width="300"
+                height="92"
+                aria-label="Fyzikální vizualizace dopadu dobrého skutku"
+                use:impactCanvas={{
+                  action: guidedReturnAction,
+                  onProgress: (v) => {
+                    guidedReturnMetric = v;
+                  },
+                }}
+              ></canvas>
+              <div class="return-dopamine-actions">
+                <button
+                  type="button"
+                  class="btn-return-complete"
+                  on:click={() => {
+                    const done = guidedReturnAction;
+                    guidedReturnAction = null;
+                    recordSmallWin({
+                      id: done.id,
+                      title: done.title,
+                      surface: "guided",
+                    });
+                  }}
+                >
+                  ✓ Hotovo – rozsvítit stopu
+                </button>
+                <button
+                  type="button"
+                  class="btn-return-dismiss"
+                  on:click={() => (guidedReturnAction = null)}
+                >
+                  Později
+                </button>
+              </div>
+            </div>
+          {/if}
 
           <h2 class="rec-title">{cleanTitle(bestAction.title)}</h2>
           <p class="rec-desc">{bestAction.desc}</p>
@@ -874,13 +1068,8 @@
               href={bestAction.url}
               target="_blank"
               rel="noopener noreferrer"
-              on:click={() => {
-                markActionStarted(bestAction.id, "guided_best");
-                trackEvent("aa_clickout", {
-                  surface: "guided_best",
-                  id: bestAction.id,
-                });
-              }}
+              use:holdSpark={{ id: bestAction.id, surface: "guided_best" }}
+              on:click={() => handleStartGuidedAction(bestAction, "guided_best")}
             >
               <span>Začít pomáhat</span>
               <span>↗</span>
@@ -901,6 +1090,39 @@
             </button>
           </div>
 
+          {#if showGuidedEffect && !guidedReturnAction}
+            <div
+              class="card-effect-stage"
+              data-scene={getActionEffectMeta(bestAction, guidedEffectMetric).scene}
+            >
+              <div class="card-effect-head">
+                <span class="impact-payoff-badge">
+                  {getActionEffectMeta(bestAction, guidedEffectMetric).badge}
+                </span>
+                <span class="card-effect-hint">Klepni do plátna pro interakci</span>
+              </div>
+              <canvas
+                class="impact-payoff-canvas"
+                width="300"
+                height="92"
+                aria-label="Fyzikální vizualizace dopadu dobrého skutku"
+                use:impactCanvas={{
+                  action: bestAction,
+                  onProgress: (v) => {
+                    guidedEffectMetric = v;
+                  },
+                }}
+              ></canvas>
+            </div>
+          {/if}
+
+          <div class="guided-pulse-row">
+            <div class="ambient-pulse-pill" role="status" aria-live="off">
+              <span class="pulse-dot-live" aria-hidden="true"></span>
+              <span class="pulse-msg-text">{ambientPulseText}</span>
+            </div>
+          </div>
+
           <div class="rec-verify-footer">
             <span>
               Ověřeno: <strong>{bestAction.lastVerifiedAt || "11/2026"}</strong>
@@ -914,19 +1136,28 @@
                 {bestAction.org} ↗
               </a>
             </span>
-            <button
-              type="button"
-              class="rec-broken-btn"
-              on:click={() =>
-                openBrokenLinkReport({
-                  id: bestAction.id,
-                  title: cleanTitle(bestAction.title),
-                  org: bestAction.org,
-                  url: bestAction.url,
-                })}
-            >
-              Nahlásit nefunkční odkaz
-            </button>
+            <div class="rec-footer-btns">
+              <button
+                type="button"
+                class="rec-broken-btn"
+                on:click={() => shareGuidedDirectLink(bestAction)}
+              >
+                {copiedDirectLink ? "✓ Odkaz zkopírován" : "🔗 Sdílet odkaz"}
+              </button>
+              <button
+                type="button"
+                class="rec-broken-btn"
+                on:click={() =>
+                  openBrokenLinkReport({
+                    id: bestAction.id,
+                    title: cleanTitle(bestAction.title),
+                    org: bestAction.org,
+                    url: bestAction.url,
+                  })}
+              >
+                Nahlásit nefunkční odkaz
+              </button>
+            </div>
           </div>
         </div>
       {/if}
@@ -957,13 +1188,8 @@
                     target="_blank"
                     rel="noopener noreferrer"
                     class="alt-open"
-                    on:click={() => {
-                      markActionStarted(alt.id, "guided_alt");
-                      trackEvent("aa_clickout", {
-                        surface: "guided_alt",
-                        id: alt.id,
-                      });
-                    }}
+                    use:holdSpark={{ id: alt.id, surface: "guided_alt" }}
+                    on:click={() => handleStartGuidedAction(alt, "guided_alt")}
                   >
                     Začít pomáhat ↗
                   </a>
@@ -1083,6 +1309,17 @@
                   target="_blank"
                   rel="noopener noreferrer"
                   class="lc-btn primary"
+                  use:holdSpark={{ id: place.id, surface: "guided_local" }}
+                  on:click={() =>
+                    handleStartGuidedAction(
+                      {
+                        id: place.id,
+                        title: place.name,
+                        category: place.kind,
+                        subcategory: place.subcategory,
+                      },
+                      "guided_local",
+                    )}
                 >
                   Web ↗
                 </a>
@@ -1427,6 +1664,33 @@
     flex-wrap: wrap;
     font-size: 0.76rem;
     color: var(--text-muted);
+  }
+
+  .rec-top-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .guided-sound-btn {
+    padding: 0.34rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid rgba(22, 66, 48, 0.14);
+    background: rgba(255, 255, 255, 0.9);
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+
+  .guided-pulse-row {
+    margin-top: 0.65rem;
+  }
+
+  .rec-footer-btns {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
   }
 
   .rec-source-link {

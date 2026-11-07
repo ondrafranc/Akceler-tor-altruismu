@@ -616,3 +616,150 @@ test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #actio
   );
   expect(narrowOverflow).toBe(false);
 });
+
+test('bespoke 2D Canvas + Web Audio special effects work for all activity types across Desktop, Tablet, and Mobile and all surfaces (/, /app/online, /app/guided, /near, SmallWinCelebration)', async ({
+  page
+}) => {
+  // 1. Verify bespoke scenes and dynamic Czech badges across diverse activities
+  const activityExpectations = [
+    { id: 'zvirata_utulek_online', scene: 'kibble', badgePart: 'v misce' },
+    { id: 'freerice_ryze', scene: 'rice', badgePart: 'zrnek rýže' },
+    { id: 'birdlife_ptaci_pasti', scene: 'birds_glass', badgePart: 'ochranných bodů skla' },
+    { id: 'zvire_v_nouzi', scene: 'wildlife_rescue', badgePart: 'stanic v pohotovosti' },
+    { id: 'missing_maps', scene: 'satellite_map', badgePart: 'budov v mapě' },
+    { id: 'cesko_digital_micro', scene: 'code_nodes', badgePart: 'propojených uzlů' },
+    { id: 'chodci_sobe', scene: 'safe_crosswalk', badgePart: 'opravená bariéra' },
+    { id: 'darovani_krve', scene: 'blood_drop', badgePart: 'zachráněné životy' },
+    { id: 'daruj_vlasy', scene: 'hair_silk', badgePart: 'vlasů na paruku' },
+    { id: 'opatruj_se_nudz', scene: 'breath_lotus', badgePart: 'min klidu mysli' },
+    { id: 'sazime_budoucnost', scene: 'forest_bloom', badgePart: 'strom pro krajinu' },
+    { id: 'trash_hero_uklid', scene: 'eco_cleanup', badgePart: 'sebraných kusů' },
+    { id: 'letters_seniors', scene: 'senior_letter', badgePart: 'rozhovor proti samotě' },
+    { id: 'knihobudka_kniha', scene: 'book_booth', badgePart: 'kniha pro sousedy' },
+    { id: 'zooniverse_veda', scene: 'cosmos_science', badgePart: 'snímků pro vědu' },
+    { id: 'wikipedie_cz', scene: 'wiki_ink', badgePart: 'zpřesněný článek' },
+    { id: 'estudanky_pramen', scene: 'water_spring', badgePart: 'vyčištěná studánka' },
+    { id: 'potravinova_banka', scene: 'food_bank', badgePart: 'porcí jídla' },
+    { id: 'kola_pro_afriku', scene: 'wheels_motion', badgePart: 'kolo pro školáka' },
+    { id: 'krabice_od_bot', scene: 'shoebox_gift', badgePart: 'dárek pro dítě' },
+    { id: 'dobry_andel', scene: 'angel_wings', badgePart: 'přímo rodině' }
+  ];
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/?action=zvirata_utulek_online');
+  await expect(page.locator('.instant-card .btn-studio-primary')).toHaveAttribute('data-hold-spark', 'true');
+
+  // Open on-demand special effect preview on homepage
+  await page.locator('.instant-card .effect-spark-btn').click();
+  await expect(page.locator('.instant-card .card-effect-stage')).toBeVisible();
+
+  for (const exp of activityExpectations) {
+    await page.goto(`/?action=${exp.id}`);
+    const stage = page.locator('.instant-card .card-effect-stage');
+    if (!(await stage.isVisible())) {
+      await page.locator('.instant-card .effect-spark-btn').click();
+    }
+    await expect(stage).toHaveAttribute('data-scene', exp.scene);
+    await expect(stage.locator('.impact-payoff-badge')).toContainText(exp.badgePart);
+    const canvas = stage.locator('canvas.impact-payoff-canvas');
+    await expect(canvas).toBeVisible();
+
+    // Verify non-empty rendered 2D canvas pixels and pointer tap burst
+    await canvas.click({ position: { x: 150, y: 46 } });
+    const hasPixels = await canvas.evaluate((c: HTMLCanvasElement) => {
+      const ctx = c.getContext('2d');
+      if (!ctx) return false;
+      const data = ctx.getImageData(0, 0, c.width, c.height).data;
+      for (let i = 3; i < data.length; i += 16) {
+        if (data[i] > 0) return true;
+      }
+      return false;
+    });
+    expect(hasPixels, `Canvas should draw non-empty pixels for ${exp.id}`).toBe(true);
+  }
+
+  // 2. Verify all surfaces (/app/online, /app/guided, /near, SmallWinCelebration) across Desktop (1280x900), Tablet (820x1180), and Mobile (360x800)
+  const viewports = [
+    { name: 'Desktop', width: 1280, height: 900 },
+    { name: 'Tablet', width: 820, height: 1180 },
+    { name: 'Mobile', width: 360, height: 800 }
+  ];
+
+  for (const vp of viewports) {
+    await page.setViewportSize({ width: vp.width, height: vp.height });
+
+    // A) /app/online: Hold-to-Spark attribute, ✨ effect stage, ambient pulse, and SmallWinCelebration canvas
+    await page.goto('/app/online');
+    const firstCard = page.locator('.grid .card').first();
+    await expect(firstCard.locator('.cta.primary')).toHaveAttribute('data-hold-spark', 'true');
+    await expect(page.locator('.ambient-pulse-pill').first()).toBeVisible();
+
+    await firstCard.locator('.effect-spark-btn').click();
+    await expect(firstCard.locator('.card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
+    await expect(firstCard.locator('.card-effect-stage .impact-payoff-badge')).toBeVisible();
+
+    const onlineOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+    );
+    expect(onlineOverflow, `Overflow on /app/online (${vp.name})`).toBe(false);
+
+    // Trigger SmallWinCelebration modal from /app/online and verify its bespoke 2D Canvas payoff
+    await firstCard.locator('.cta.secondary').click();
+    const modal = page.locator('.celebration-backdrop');
+    await expect(modal).toBeVisible();
+    await expect(modal.locator('canvas.impact-payoff-canvas')).toBeVisible();
+    await expect(modal.locator('.impact-payoff-badge')).toBeVisible();
+    await modal.locator('.btn-more').click();
+    await expect(modal).toBeHidden();
+
+    // B) /app/guided: Hold-to-Spark attribute, ✨ effect stage, ambient pulse, partner-return strip
+    await page.goto('/app/guided');
+    const highlightCard = page.locator('.highlight-card');
+    await expect(highlightCard.locator('.btn-gold-action')).toHaveAttribute('data-hold-spark', 'true');
+    await expect(highlightCard.locator('.ambient-pulse-pill')).toBeVisible();
+
+    await highlightCard.locator('.effect-spark-btn').click();
+    await expect(highlightCard.locator('.card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
+
+    const guidedOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+    );
+    expect(guidedOverflow, `Overflow on /app/guided (${vp.name})`).toBe(false);
+
+    // C) /near: Hold-to-Spark attribute, ✨ effect stage on place cards, direct place share, ambient pulse
+    await page.goto('/near');
+    const firstPlaceCard = page.locator('.place-card').first();
+    await expect(firstPlaceCard).toBeVisible();
+    await firstPlaceCard.locator('.effect-spark-btn').click();
+    await expect(firstPlaceCard.locator('.card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
+    await expect(page.locator('.ambient-pulse-pill').first()).toBeVisible();
+    await firstPlaceCard.locator('.pc-share-btn').click();
+    await expect(firstPlaceCard.locator('.pc-share-btn')).toContainText('✓ Odkaz zkopírován');
+
+    const nearOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+    );
+    expect(nearOverflow, `Overflow on /near (${vp.name})`).toBe(false);
+  }
+
+  // 3. Partner-return dopamine loop on /app/online, /app/guided, and /near
+  for (const surfaceRoute of ['/app/online', '/app/guided', '/near']) {
+    await page.evaluate(() => {
+      const payload = JSON.stringify({
+        id: 'freerice_ryze',
+        title: 'Darovat rýži lidem v nouzi hraním slovního kvízu',
+        category: 'poverty',
+        ts: Date.now() - 5000
+      });
+      sessionStorage.setItem('aa_pending_return_v1', payload);
+      localStorage.setItem('aa_pending_return_v1', payload);
+    });
+    await page.goto(surfaceRoute);
+    const strip = page.locator('.return-dopamine-strip');
+    await expect(strip).toBeVisible();
+    await expect(strip.locator('canvas.impact-payoff-canvas')).toBeVisible();
+    await expect(strip.locator('.impact-payoff-badge')).toContainText('zrnek rýže');
+    await strip.locator('.btn-return-dismiss').click();
+    await expect(strip).toBeHidden();
+  }
+});
