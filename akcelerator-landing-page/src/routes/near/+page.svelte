@@ -427,8 +427,11 @@
     places = curatedInstant;
     syncUrlState(lat, lon);
 
+    const qLat = Number(lat).toFixed(2);
+    const qLon = Number(lon).toFixed(2);
+
     const communityPromise = fetch(
-      `/api/community-nearby?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&radius_m=${encodeURIComponent(radiusKm * 1000)}`,
+      `/api/community-nearby?lat=${encodeURIComponent(qLat)}&lon=${encodeURIComponent(qLon)}&radius_m=${encodeURIComponent(radiusKm * 1000)}`,
       { signal: controller.signal }
     )
       .then((r) => (r.ok ? r.json() : { items: [] }))
@@ -443,7 +446,7 @@
 
     try {
       const resp = await fetch(
-        `/api/nearby?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&radius_m=${encodeURIComponent(
+        `/api/nearby?lat=${encodeURIComponent(qLat)}&lon=${encodeURIComponent(qLon)}&radius_m=${encodeURIComponent(
           radiusKm * 1000
         )}&kinds=${encodeURIComponent(ALL_KINDS.join(','))}&include_associations=${includeAssociations ? '1' : '0'}`,
         { signal: controller.signal }
@@ -481,8 +484,8 @@
     if (typeof window === 'undefined') return;
     try {
       const url = new URL(window.location.href);
-      url.searchParams.set('lat', String(Math.round(lat * 1000) / 1000));
-      url.searchParams.set('lon', String(Math.round(lon * 1000) / 1000));
+      url.searchParams.set('lat', String(Math.round(lat * 100) / 100));
+      url.searchParams.set('lon', String(Math.round(lon * 100) / 100));
       url.searchParams.set('r', String(radiusKm));
       url.searchParams.set('kinds', kinds.join(','));
       history.replaceState({}, '', url.toString());

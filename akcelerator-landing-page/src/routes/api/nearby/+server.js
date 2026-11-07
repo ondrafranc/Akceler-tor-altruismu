@@ -148,7 +148,7 @@ async function fetchOneOverpass(url, query, timeoutMs = 2200) {
 }
 
 async function postOverpass(query) {
-  return await Promise.any(OVERPASS_ENDPOINTS.map((url) => fetchOneOverpass(url, query, 2200)));
+  return await Promise.any(OVERPASS_ENDPOINTS.map((url) => fetchOneOverpass(url, query, 1600)));
 }
 
 function extractLatLon(el) {
@@ -200,7 +200,7 @@ export async function GET({ url, request, getClientAddress }) {
   const radiusM = clamp(radius, 250, 25_000);
   const kinds = [...new Set(kindsRaw.filter((k) => ['ngo', 'community', 'food', 'animals'].includes(k)))].sort();
 
-  const cacheKey = `v26:${lat.toFixed(4)}:${lon.toFixed(4)}:${radiusM}:${includeAssociations ? 'a1' : 'a0'}:${kinds.join(',')}`;
+  const cacheKey = `v27:${lat.toFixed(2)}:${lon.toFixed(2)}:${radiusM}:${includeAssociations ? 'a1' : 'a0'}:${kinds.join(',')}`;
   const cached = CACHE.get(cacheKey);
   const now = Date.now();
   if (cached && cached.expiresAt > now) {

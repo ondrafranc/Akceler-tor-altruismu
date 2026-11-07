@@ -183,12 +183,17 @@ export function checkRateLimit(bucket, clientId, maxRequests, windowMs) {
   const key = `${bucket}:${clientId || 'anon'}`;
 
   if (RATE_LIMIT_BUCKETS.size >= MAX_RATE_BUCKETS) {
+    let singleHitKey;
     for (const [k, v] of RATE_LIMIT_BUCKETS) {
-      if (v.resetAt <= now) RATE_LIMIT_BUCKETS.delete(k);
+      if (v.resetAt <= now) {
+        RATE_LIMIT_BUCKETS.delete(k);
+      } else if (singleHitKey === undefined && v.count <= 1) {
+        singleHitKey = k;
+      }
     }
     if (RATE_LIMIT_BUCKETS.size >= MAX_RATE_BUCKETS) {
-      const oldest = RATE_LIMIT_BUCKETS.keys().next().value;
-      if (oldest !== undefined) RATE_LIMIT_BUCKETS.delete(oldest);
+      const victim = singleHitKey ?? RATE_LIMIT_BUCKETS.keys().next().value;
+      if (victim !== undefined) RATE_LIMIT_BUCKETS.delete(victim);
     }
   }
 
@@ -214,10 +219,19 @@ export function checkRateLimit(bucket, clientId, maxRequests, windowMs) {
  * @returns {string}
  */
 export function resolveClientKey(request, getClientAddress) {
+  const vercelIp = request.headers.get('x-vercel-forwarded-for');
+  if (vercelIp) {
+    const parts = vercelIp.split(',').map((s) => s.trim()).filter(Boolean);
+    const last = parts[parts.length - 1];
+    if (last) return last.slice(0, 64);
+  }
+  const cfIp = request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip');
+  if (cfIp?.trim()) return cfIp.trim().slice(0, 64);
   const forwarded = request.headers.get('x-forwarded-for');
   if (forwarded) {
-    const first = forwarded.split(',')[0]?.trim();
-    if (first) return first.slice(0, 64);
+    const parts = forwarded.split(',').map((s) => s.trim()).filter(Boolean);
+    const last = parts[parts.length - 1];
+    if (last) return last.slice(0, 64);
   }
   try {
     if (typeof getClientAddress === 'function') {

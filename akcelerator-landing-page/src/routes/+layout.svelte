@@ -81,26 +81,6 @@
         </span>
       </a>
 
-      <div class="mobile-header-actions">
-        <a href="/submit" class="mh-btn" class:active={pathname.startsWith('/submit')} aria-label="Přidat tip">➕ Tip</a>
-        <button
-          type="button"
-          class="mh-btn mh-crisis"
-          on:click={() => window.dispatchEvent(new CustomEvent('akcelerator:toggle-crisis'))}
-          aria-label="Krizové kontakty a okamžitá opora"
-        >
-          🛡️ Opora
-        </button>
-        <button
-          type="button"
-          class="mh-btn"
-          on:click={() => window.dispatchEvent(new CustomEvent('akcelerator:open-feedback'))}
-          aria-label="Poslat zpětnou vazbu"
-        >
-          💬 Názor
-        </button>
-      </div>
-
       <nav class="nav-links" aria-label="Hlavní navigace">
         <a href="/" class="nav-pill" class:active={pathname === '/' || pathname === '/app'}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -163,6 +143,27 @@
           <a href="/app/online">Online mikro-kroky</a>
           <a href="/near">Mapa pomoci v okolí</a>
           <a href="/submit">Přidat místní organizaci nebo akci</a>
+        </div>
+        <div class="footer-calm-actions" aria-label="Rychlá opora a zpětná vazba">
+          <a href="/submit" class="fc-btn" class:active={pathname.startsWith('/submit')} aria-label="Přidat tip">
+            ➕ Přidat tip
+          </a>
+          <button
+            type="button"
+            class="fc-btn fc-crisis"
+            on:click={() => window.dispatchEvent(new CustomEvent('akcelerator:toggle-crisis'))}
+            aria-label="Krizové kontakty a okamžitá opora"
+          >
+            🛡️ Tichá opora 24/7
+          </button>
+          <button
+            type="button"
+            class="fc-btn fc-feedback"
+            on:click={() => window.dispatchEvent(new CustomEvent('akcelerator:open-feedback'))}
+            aria-label="Poslat zpětnou vazbu"
+          >
+            💬 Napsat názor
+          </button>
         </div>
       </div>
     </div>
@@ -441,6 +442,45 @@
     transform: translateX(3px);
   }
 
+  .footer-calm-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-top: 0.45rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid rgba(22, 82, 56, 0.12);
+  }
+
+  .fc-btn {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.36rem 0.65rem;
+    border-radius: 999px;
+    border: 1px solid rgba(22, 82, 56, 0.16);
+    background: rgba(255, 255, 255, 0.85);
+    color: #163a2a;
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .fc-btn.fc-crisis {
+    border-color: rgba(180, 83, 9, 0.24);
+    background: rgba(254, 243, 199, 0.58);
+    color: #78350f;
+  }
+
+  .fc-btn.active {
+    background: #bbf7d0;
+    border-color: rgba(5, 150, 105, 0.32);
+  }
+
   @media (max-width: 820px) {
     .top-nav {
       padding: 0.4rem 0.55rem 0.25rem;
@@ -481,7 +521,6 @@
     }
   }
 
-  .mobile-header-actions,
   .mobile-bottom-nav {
     display: none;
   }
@@ -493,22 +532,23 @@
     }
 
     .top-nav {
-      padding: 0.25rem 0.5rem;
+      padding: 0.3rem 0.65rem 0.2rem;
     }
 
     .nav-capsule {
-      padding: 0.32rem 0.48rem;
+      padding: 0.36rem 0.85rem;
       border-radius: 999px;
       flex-wrap: nowrap;
-      gap: 0.28rem;
+      justify-content: center;
+      gap: 0.4rem;
       max-width: 100%;
       box-sizing: border-box;
       overflow: hidden;
     }
 
     .brand {
-      font-size: 0.82rem;
-      gap: 0.32rem;
+      font-size: 0.92rem;
+      gap: 0.42rem;
       white-space: nowrap;
       min-width: 0;
       overflow: hidden;
@@ -526,56 +566,19 @@
     }
 
     .brand-mark {
-      width: 22px;
-      height: 22px;
+      width: 24px;
+      height: 24px;
       flex-shrink: 0;
     }
 
     .brand-accent {
-      font-size: 0.94rem;
+      font-size: 1.05rem;
     }
 
     .brand-sub,
     .brand-claim,
     .nav-links {
       display: none !important;
-    }
-
-    .mobile-header-actions {
-      display: flex;
-      align-items: center;
-      gap: 0.2rem;
-      flex-shrink: 0;
-    }
-
-    .mh-btn {
-      appearance: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.16rem;
-      padding: 0.24rem 0.42rem;
-      border-radius: 999px;
-      border: 1px solid rgba(22, 82, 56, 0.16);
-      background: rgba(255, 255, 255, 0.86);
-      color: #163a2a;
-      font-family: inherit;
-      font-size: 0.68rem;
-      font-weight: 700;
-      text-decoration: none;
-      cursor: pointer;
-      line-height: 1.1;
-      white-space: nowrap;
-    }
-
-    .mh-btn.mh-crisis {
-      border-color: rgba(180, 83, 9, 0.24);
-      background: rgba(254, 243, 199, 0.55);
-      color: #78350f;
-    }
-
-    .mh-btn.active {
-      background: #bbf7d0;
-      border-color: rgba(5, 150, 105, 0.32);
     }
 
     .mobile-bottom-nav {

@@ -47,7 +47,7 @@ const config = {
 			mode: 'auto',
 			directives: {
 				'default-src': ['self'],
-				'script-src': ['self', 'unsafe-inline', 'https:'],
+				'script-src': ['self', 'https://va.vercel-scripts.com'],
 				'style-src': ['self', 'unsafe-inline', 'https:'],
 				'img-src': ['self', 'data:', 'blob:', 'https:'],
 				'font-src': ['self', 'https:', 'data:'],

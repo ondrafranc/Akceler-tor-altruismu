@@ -3,7 +3,8 @@ import { build, files, version } from '$service-worker';
 
 const CACHE = `akcelerator-cache-${version}`;
 const PRECACHE_ASSETS = ['/manifest.webmanifest', '/favicon.svg', '/icon-192.png', '/icon-512.png'];
-const KNOWN_ASSETS = new Set([...build, ...files]);
+const KNOWN_ASSETS = new Set([...build, ...files].filter((p) => p !== '/'));
+const MAX_CACHE_ENTRIES = 80;
 
 self.addEventListener('install', (event) => {
   async function addFilesToCache() {
@@ -44,20 +45,35 @@ self.addEventListener('fetch', (event) => {
 
   async function respond() {
     const cache = await caches.open(CACHE);
+    const isNavigate = event.request.mode === 'navigate';
 
-    if (KNOWN_ASSETS.has(url.pathname)) {
+    if (!isNavigate && KNOWN_ASSETS.has(url.pathname)) {
       const cachedAsset = await cache.match(url.pathname);
       if (cachedAsset) return cachedAsset;
     }
 
+    const controller = isNavigate ? new AbortController() : null;
+    const navTimer = controller ? setTimeout(() => controller.abort(), 2500) : null;
+
     try {
-      const response = await fetch(event.request);
+      const response = await fetch(
+        event.request,
+        controller ? { signal: controller.signal } : undefined
+      );
+      if (navTimer) clearTimeout(navTimer);
       if (response && response.status === 200 && response.type === 'basic') {
+        const keys = await cache.keys();
+        if (keys.length >= MAX_CACHE_ENTRIES && keys[0]) {
+          await cache.delete(keys[0]);
+        }
         cache.put(event.request, response.clone());
       }
       return response;
     } catch (err) {
-      const cached = await cache.match(event.request);
+      if (navTimer) clearTimeout(navTimer);
+      const cached =
+        (await cache.match(event.request)) ||
+        (isNavigate ? (await cache.match(url.pathname)) || (await cache.match('/')) : null);
       if (cached) return cached;
       throw err;
     }

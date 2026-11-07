@@ -30,6 +30,8 @@ test('root sets strict security headers without unsafe-eval', async ({ request, 
   const h = res.headers();
   expect(h['content-security-policy']).toBeDefined();
   expect(h['content-security-policy']).not.toContain('unsafe-eval');
+  expect(h['content-security-policy']).toMatch(/script-src[^;]*'nonce-/);
+  expect(h['content-security-policy']).not.toMatch(/script-src[^;]*'unsafe-inline'/);
   expect(h['content-security-policy']).toContain("frame-ancestors 'none'");
   expect(h['referrer-policy']).toBe('strict-origin-when-cross-origin');
   expect(h['x-content-type-options']).toBe('nosniff');
@@ -263,6 +265,7 @@ test('standardized GoodAction cards, Evidence A/B/C badges, verified sources, an
   // Action initiation tracking: clicking primary CTA highlights completion button and updates 6-stage funnel
   const doneBtn = page.locator('.instant-card .done-btn');
   await expect(doneBtn).not.toHaveClass(/initiated/);
+  await expect(doneBtn).toContainText('Už mám hotovo');
   await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
   await expect(doneBtn).toHaveClass(/initiated/);
   await expect(doneBtn).toContainText('Dokončeno');
@@ -437,11 +440,30 @@ test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #actio
   expect(doneBox!.x + doneBox!.width).toBeLessThanOrEqual(360);
   expect((ctaBox?.y || 0) + (ctaBox?.height || 0)).toBeLessThan(740);
 
-  // Header Opora button toggles crisis panel above bottom nav
-  await page.locator('.mobile-header-actions .mh-crisis').click();
+  // Úkol 1: Top bar is clean on mobile (.mobile-header-actions removed; moved to .footer-calm-actions)
+  await expect(page.locator('.mobile-header-actions')).toHaveCount(0);
+  await expect(page.locator('.instant-body > .action-impact-summary')).toBeHidden();
+  await expect(page.locator('.instant-body > .action-verify-footer')).toBeHidden();
+
+  // Footer calm actions toggle crisis panel above bottom nav
+  await page.locator('.footer-calm-actions .fc-crisis').click();
   await expect(page.locator('.crisis-panel')).toBeVisible();
   await page.locator('.crisis-panel .close-btn').click();
   await expect(page.locator('.crisis-panel')).toBeHidden();
+
+  // Úkol 2: Sound mute toggle & ambient pulse pill
+  await expect(page.locator('.instant-card .ambient-pulse-pill')).toBeVisible();
+  const muteBtn = page.locator('.instant-card .sound-mute-btn');
+  await expect(muteBtn).toBeVisible();
+  await muteBtn.click();
+  const isMutedVal = await page.evaluate(() => localStorage.getItem('aa_sound_muted'));
+  expect(isMutedVal).toBe('1');
+
+  // Úkol 2: Hold-to-Spark 600ms charge sets --spark-charge and .spark-ready
+  await page.locator('.instant-card .btn-studio-primary').dispatchEvent('pointerdown');
+  await page.waitForTimeout(640);
+  await expect(page.locator('.instant-card .btn-studio-primary')).toHaveClass(/spark-ready/);
+  await page.locator('.instant-card .btn-studio-primary').dispatchEvent('pointerleave');
 
   // 3. Deep-link /?action=click-and-feed, #action=wikipedie_cz, and interaction with personal values filter
   await page.evaluate(() => localStorage.setItem('aa_values', JSON.stringify(['animals'])));
@@ -466,13 +488,16 @@ test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #actio
   });
   await expect(page.locator('.instant-card .action-title')).toContainText('Opravit překlep nebo doplnit fakt na české Wikipedii');
 
-  // Direct link copy button
-  const shareBtn = page.locator('.instant-card .direct-link-share-btn');
+  // Direct link copy button (inside <details class="how-toggle"> on mobile)
+  await page.locator('.instant-card details.how-toggle summary').click();
+  const shareBtn = page.locator('.instant-card .mobile-details-extra .mde-share-btn');
   await expect(shareBtn).toBeVisible();
   await shareBtn.click();
   await expect(shareBtn).toContainText('✓ Odkaz zkopírován');
+  await page.locator('.instant-card details.how-toggle summary').click();
 
-  // 4. Return-tab instant dopamine prompt on visibilitychange (with >3s guard)
+  // 4. Return-tab instant dopamine prompt on visibilitychange (with >3s guard + 2D canvas kibble physics)
+  await page.goto('/?action=click-and-feed');
   await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
   const returnStrip = page.locator('.return-dopamine-strip');
   // Immediate return (< 3s) does NOT trigger the prompt
@@ -481,16 +506,38 @@ test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #actio
   });
   await expect(returnStrip).toBeHidden();
 
-  // Return after > 3 seconds triggers the celebratory prompt
+  // Return after > 3 seconds triggers the celebratory prompt with 2D canvas kibble payoff
   await page.waitForTimeout(3050);
   await page.evaluate(() => {
     document.dispatchEvent(new Event('visibilitychange'));
   });
   await expect(returnStrip).toBeVisible();
   await expect(returnStrip).toContainText('Vítej zpět!');
+  await expect(returnStrip.locator('canvas.impact-payoff-canvas')).toBeVisible();
+  await expect(returnStrip.locator('.impact-payoff-badge')).toContainText('v misce');
   const returnStripBox = await returnStrip.boundingBox();
   expect(returnStripBox).not.toBeNull();
   expect(returnStripBox!.x + returnStripBox!.width).toBeLessThanOrEqual(360);
+  await returnStrip.locator('.return-dopamine-btn').click();
+  await expect(returnStrip).toBeHidden();
+  await expect(page.locator('.celebration-backdrop')).toHaveCount(0);
+
+  // In-App Browser full page reload return loop: restores non-default action from sessionStorage('aa_pending_return_v1')
+  await page.evaluate(() => {
+    const payload = JSON.stringify({
+      id: 'wikipedie_cz',
+      title: 'Opravit překlep nebo doplnit fakt na české Wikipedii',
+      category: 'education',
+      ts: Date.now() - 4500
+    });
+    sessionStorage.setItem('aa_pending_return_v1', payload);
+    localStorage.setItem('aa_pending_return_v1', payload);
+  });
+  await page.goto('/');
+  await expect(page.locator('.instant-card .action-title')).toContainText('Opravit překlep nebo doplnit fakt na české Wikipedii');
+  await expect(returnStrip).toBeVisible();
+  await expect(returnStrip.locator('canvas.impact-payoff-canvas')).toBeVisible();
+  await expect(returnStrip.locator('.impact-payoff-badge')).toContainText('Světelná stopa');
   await returnStrip.locator('.return-dopamine-btn').click();
   await expect(returnStrip).toBeHidden();
 

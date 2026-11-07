@@ -21,6 +21,16 @@ export async function handle({ event, resolve }) {
     headers.set('Content-Security-Policy', `${csp}; frame-ancestors 'none'`);
   }
 
+  if (
+    event.request.method === 'GET' &&
+    response.status === 200 &&
+    !event.url.pathname.startsWith('/api/') &&
+    !headers.has('cache-control') &&
+    (headers.get('content-type') || '').includes('text/html')
+  ) {
+    headers.set('Cache-Control', 'public, max-age=0, s-maxage=300, stale-while-revalidate=86400');
+  }
+
   return new Response(response.body, {
     status: response.status,
     headers

@@ -99,3 +99,51 @@ test('APIs reject dangerous URLs, invalid coordinates, and out-of-range inputs',
   });
   expect(badFb.status()).toBe(400);
 });
+
+test('pulse API (JSON + SSE), edge Cache-Control headers, and unverified submission isolation', async ({ request, baseURL }) => {
+  // 1. /api/pulse JSON
+  const pulseJsonRes = await request.get(baseURL! + '/api/pulse');
+  expect(pulseJsonRes.status()).toBe(200);
+  expect(pulseJsonRes.headers()['cache-control']).toContain('s-maxage=30');
+  const pulseJson = await pulseJsonRes.json();
+  expect(typeof pulseJson.message).toBe('string');
+  expect(pulseJson.message.length).toBeGreaterThan(10);
+
+  // 2. /api/pulse SSE
+  const pulseSseRes = await request.get(baseURL! + '/api/pulse', {
+    headers: { accept: 'text/event-stream' }
+  });
+  expect(pulseSseRes.status()).toBe(200);
+  expect(pulseSseRes.headers()['content-type']).toContain('text/event-stream');
+  const sseText = await pulseSseRes.text();
+  expect(sseText).toContain('event: pulse');
+
+  // 3. Public HTML GET response has edge Cache-Control header & /api/feedback alias works
+  const homeRes = await request.get(baseURL! + '/');
+  expect(homeRes.status()).toBe(200);
+  expect(homeRes.headers()['cache-control']).toContain('s-maxage=300');
+
+  const fbAliasRes = await request.post(baseURL! + '/api/feedback', {
+    data: { feedback_text: 'Skvělý nový mobilní zen režim!', rating: 5 }
+  });
+  expect(fbAliasRes.status()).toBe(200);
+  const fbAliasBody = await fbAliasRes.json();
+  expect(fbAliasBody.success).toBe(true);
+
+  // 4. Unverified pending submission does NOT poison public /api/community-nearby response
+  await request.post(baseURL! + '/api/submissions', {
+    data: {
+      hp: '',
+      started_at: Date.now() - 5000,
+      kind: 'org',
+      name: 'Nepotvrzený spolek Test 123',
+      category: '🌱 Příroda a úklid',
+      lat: 50.08,
+      lon: 14.43,
+      address_label: 'Praha'
+    }
+  });
+  const commRes = await request.get(baseURL! + '/api/community-nearby?lat=50.08&lon=14.43&radius_m=15000');
+  const commBody = await commRes.json();
+  expect(commBody.items.some((i: any) => i.name === 'Nepotvrzený spolek Test 123')).toBe(false);
+});

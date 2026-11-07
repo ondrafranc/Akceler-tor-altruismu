@@ -17,6 +17,9 @@
   import { MICRO_ACTIONS } from '../../lib/data/czech-actions.js';
   import { renderStoryCardPng } from '../../lib/storyCard.js';
   import { trackEvent } from '../../lib/analytics.js';
+  import { fetchAmbientPulse } from '../../lib/sensoryEngine.js';
+
+  let ambientPulseText = 'Před chvílí někdo v Brně naplnil misku v útulku';
 
   /** @type {Record<string, typeof SANCTUARY_ELEMENTS[0]>} */
   const ELEMENT_MAP = Object.fromEntries(SANCTUARY_ELEMENTS.map((e) => [e.key, e]));
@@ -1707,14 +1710,44 @@
           }
         }
       }
-      rafId = requestAnimationFrame(render);
+      if (!isOffscreen) {
+        rafId = requestAnimationFrame(render);
+      }
     }
+
+    let isOffscreen = false;
+    let io = null;
+    if (typeof IntersectionObserver !== 'undefined' && stageWrapEl) {
+      io = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          if (!entry) return;
+          if (!entry.isIntersecting) {
+            isOffscreen = true;
+            cancelAnimationFrame(rafId);
+            rafId = 0;
+          } else if (isOffscreen) {
+            isOffscreen = false;
+            if (!rafId) rafId = requestAnimationFrame(render);
+          }
+        },
+        { threshold: 0.02 }
+      );
+      io.observe(stageWrapEl);
+    }
+
+    const pulseTimer = setTimeout(async () => {
+      const pulse = await fetchAmbientPulse();
+      if (pulse?.message) ambientPulseText = pulse.message;
+    }, 300);
 
     rafId = requestAnimationFrame(render);
 
     return () => {
       cancelAnimationFrame(rafId);
       if (ro) ro.disconnect();
+      if (io) io.disconnect();
+      clearTimeout(pulseTimer);
       if (breathInterval) clearInterval(breathInterval);
       if (toastTimer) clearTimeout(toastTimer);
       if (audioCtx && typeof audioCtx.close === 'function') {
@@ -1741,6 +1774,10 @@
         <p class="lead">
           Klikni na kterékoliv světlo pro inspiraci na dnešní skutek — nebo klikni na hladinu či oblohu a rozsviť ten svůj.
         </p>
+        <div class="ambient-pulse-pill" role="status" aria-live="off">
+          <span class="ambient-pulse-dot" aria-hidden="true"></span>
+          <span class="ambient-pulse-text">{ambientPulseText}</span>
+        </div>
       </div>
 
       <div class="atmosphere-controls" aria-label="Nastavení atmosféry a zvuku">
@@ -3388,5 +3425,46 @@
       font-size: 0.72rem;
       white-space: nowrap;
     }
+  }
+
+  .sanctuary-intro {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .ambient-pulse-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 0.55rem;
+    padding: 0.32rem 0.72rem;
+    border-radius: 999px;
+    background: rgba(16, 185, 129, 0.14);
+    border: 1px solid rgba(110, 231, 183, 0.28);
+    color: #d1fae5;
+    font-size: 0.75rem;
+    font-weight: 600;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .ambient-pulse-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #34d399;
+    box-shadow: 0 0 8px rgba(52, 211, 153, 0.75);
+    flex-shrink: 0;
+  }
+
+  .ambient-pulse-text {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 </style>

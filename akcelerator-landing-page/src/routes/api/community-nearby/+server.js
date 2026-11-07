@@ -9,8 +9,12 @@ import {
   haversineKm,
   sanitizeHttpUrl,
   sanitizeEmail,
-  sanitizePhone
+  sanitizePhone,
+  setBoundedCache
 } from '$lib/security.js';
+
+const CACHE = new Map();
+const CACHE_TTL_MS = 1000 * 60 * 10;
 
 function createServerSupabaseClient() {
   if (!env.PUBLIC_SUPABASE_URL || !env.PUBLIC_SUPABASE_ANON_KEY) return null;
@@ -33,6 +37,7 @@ function getLocalCommunityNearby(lat, lon, radiusM) {
   const allWithDist = [];
   for (const r of LOCAL_COMMUNITY_ITEMS) {
     if (r?.name === 'Testovací komunitní zahrada Praha') continue;
+    if (r?.status === 'pending' || String(r?.id || '').startsWith('comm-local-')) continue;
     if (!isValidLatLon(r?.lat, r?.lon)) continue;
     const dKm = haversineKm(lat, lon, r.lat, r.lon);
     allWithDist.push(sanitizeCommunityRecord(r, dKm));
@@ -52,6 +57,16 @@ export async function GET({ url }) {
     return json({ error: 'Invalid or missing lat/lon' }, { status: 400, headers: { 'cache-control': 'no-store' } });
   }
 
+  const cacheKey = `comm:v2:${lat.toFixed(2)}:${lon.toFixed(2)}:${radiusM}`;
+  const cached = CACHE.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return json(cached.data, {
+      headers: {
+        'cache-control': 'public, max-age=0, s-maxage=600, stale-while-revalidate=86400'
+      }
+    });
+  }
+
   const supabase = createServerSupabaseClient();
   if (supabase) {
     try {
@@ -63,7 +78,7 @@ export async function GET({ url }) {
       const minLon = lon - deltaLon;
       const maxLon = lon + deltaLon;
 
-      const { data, error } = await supabase
+      const queryPromise = supabase
         .from('community_submissions')
         .select(
           'id, kind, name, category, description, website, email, phone, address_label, city, postcode, lat, lon, event_url, event_start, event_end'
@@ -74,6 +89,12 @@ export async function GET({ url }) {
         .gte('lon', minLon)
         .lte('lon', maxLon)
         .limit(150);
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Supabase timeout')), 1800)
+      );
+
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
       if (!error && Array.isArray(data)) {
         const items = [];
@@ -91,14 +112,14 @@ export async function GET({ url }) {
         }
         items.sort((a, b) => a.distanceKm - b.distanceKm);
 
-        return json(
-          { items, lat, lon, radius_m: radiusM, fallback: false },
-          {
-            headers: {
-              'cache-control': 'public, max-age=0, s-maxage=600, stale-while-revalidate=86400'
-            }
+        const payload = { items, lat, lon, radius_m: radiusM, fallback: false };
+        setBoundedCache(CACHE, cacheKey, payload, CACHE_TTL_MS, 250);
+
+        return json(payload, {
+          headers: {
+            'cache-control': 'public, max-age=0, s-maxage=600, stale-while-revalidate=86400'
           }
-        );
+        });
       }
     } catch {
       // Fall through to local curated community items
@@ -106,12 +127,11 @@ export async function GET({ url }) {
   }
 
   const items = getLocalCommunityNearby(lat, lon, radiusM);
-  return json(
-    { items, lat, lon, radius_m: radiusM, fallback: true },
-    {
-      headers: {
-        'cache-control': 'public, max-age=0, s-maxage=300, stale-while-revalidate=3600'
-      }
+  const fallbackPayload = { items, lat, lon, radius_m: radiusM, fallback: true };
+  setBoundedCache(CACHE, cacheKey, fallbackPayload, CACHE_TTL_MS, 250);
+  return json(fallbackPayload, {
+    headers: {
+      'cache-control': 'public, max-age=0, s-maxage=300, stale-while-revalidate=3600'
     }
-  );
+  });
 }

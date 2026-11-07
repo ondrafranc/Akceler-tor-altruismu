@@ -18,6 +18,17 @@
     startedActionIds,
     openBrokenLinkReport,
   } from "../lib/analytics.js";
+  import {
+    isSoundMuted,
+    toggleSoundMuted,
+    isAnimalAction,
+    startHoldSpark,
+    playPayoffAsmr,
+    savePendingPartnerReturn,
+    consumePendingPartnerReturn,
+    mountImpactCanvas,
+    fetchAmbientPulse,
+  } from "../lib/sensoryEngine.js";
 
   const HOME_MODES = {
     couch: {
@@ -81,6 +92,10 @@
   let justCompleted = false;
   let copiedDirectLink = false;
   let copyLinkTimer = null;
+  let soundMuted = false;
+  let kibbleGrams = 0;
+  let ambientPulseText = "Před chvílí někdo v Brně naplnil misku v útulku";
+  let stopHoldSpark = null;
 
   function resolveActionFromParam(rawParam) {
     if (!rawParam) return null;
@@ -167,22 +182,38 @@
     } catch {}
 
     applyUrlDeepLink();
+    soundMuted = isSoundMuted();
 
     const handleHashChange = () => applyUrlDeepLink(undefined, true);
 
     const triggerPartnerReturnIfReady = () => {
-      if (!awaitingPartnerReturn || partnerReturnPromptVisible || justCompleted) return;
-      const elapsed = Date.now() - partnerLeaveTimestamp;
-      if (elapsed >= 3000) {
+      if (partnerReturnPromptVisible || justCompleted) return;
+      const elapsedMem = awaitingPartnerReturn
+        ? Date.now() - partnerLeaveTimestamp
+        : 0;
+      const persisted = consumePendingPartnerReturn(3000);
+      if (elapsedMem >= 3000 || persisted) {
+        if (awaitingPartnerReturn && !persisted) {
+          consumePendingPartnerReturn(0);
+        }
+        if (persisted?.id) {
+          const matched = resolveActionFromParam(persisted.id);
+          if (matched) {
+            energyMode = inferEnergyModeForAction(matched);
+            pinnedActionId = matched.id;
+            lastQuickActionId = matched.id;
+          }
+        }
         awaitingPartnerReturn = false;
         partnerReturnPromptVisible = true;
+        const elapsed = persisted?.elapsedMs || elapsedMem;
         try {
           if (typeof navigator !== "undefined" && navigator.vibrate) {
             navigator.vibrate(40);
           }
         } catch {}
         trackEvent("aa_partner_return_prompt", {
-          id: currentQuickAction?.id || lastQuickActionId,
+          id: persisted?.id || currentQuickAction?.id || lastQuickActionId,
           elapsedMs: elapsed,
         });
       }
@@ -198,14 +229,24 @@
       triggerPartnerReturnIfReady();
     };
 
+    triggerPartnerReturnIfReady();
+
+    const pulseTimer = setTimeout(async () => {
+      const pulse = await fetchAmbientPulse();
+      if (pulse?.message) ambientPulseText = pulse.message;
+    }, 250);
+
     window.addEventListener("hashchange", handleHashChange);
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("focus", handleWindowFocus);
+    window.addEventListener("pageshow", handleWindowFocus);
 
     return () => {
       window.removeEventListener("hashchange", handleHashChange);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handleWindowFocus);
+      window.removeEventListener("pageshow", handleWindowFocus);
+      clearTimeout(pulseTimer);
       if (copyLinkTimer) clearTimeout(copyLinkTimer);
     };
   });
@@ -331,12 +372,61 @@
     });
   }
 
+  function handleToggleSound() {
+    soundMuted = toggleSoundMuted();
+    trackEvent("aa_sound_toggle", { muted: soundMuted });
+  }
+
+  function handlePrimaryPointerDown(e) {
+    if (e.button && e.button !== 0) return;
+    if (stopHoldSpark) stopHoldSpark(false);
+    stopHoldSpark = startHoldSpark(e.currentTarget, () => {
+      trackEvent("aa_hold_spark_ready", { id: currentQuickAction?.id });
+    });
+  }
+
+  function handlePrimaryPointerEnd(released = false) {
+    if (stopHoldSpark) {
+      stopHoldSpark(released);
+      stopHoldSpark = null;
+    }
+  }
+
+  function impactCanvas(node, action) {
+    const animal = isAnimalAction(action);
+    kibbleGrams = animal ? 0 : 25;
+    playPayoffAsmr(animal ? "kibble" : "light");
+    let destroy = mountImpactCanvas(node, {
+      mode: animal ? "kibble" : "light",
+      onWeightUpdate: (g) => {
+        kibbleGrams = g;
+      },
+    });
+    return {
+      update(nextAction) {
+        destroy?.();
+        const nextAnimal = isAnimalAction(nextAction);
+        destroy = mountImpactCanvas(node, {
+          mode: nextAnimal ? "kibble" : "light",
+          onWeightUpdate: (g) => {
+            kibbleGrams = g;
+          },
+        });
+      },
+      destroy() {
+        destroy?.();
+      },
+    };
+  }
+
   function handleStartQuickAction(action) {
     if (!action) return;
+    handlePrimaryPointerEnd(true);
     awaitingPartnerReturn = true;
     partnerLeaveTimestamp = Date.now();
     partnerReturnPromptVisible = false;
     justCompleted = false;
+    savePendingPartnerReturn(action);
     markActionStarted(action.id, "home_instant");
     trackEvent("aa_clickout", { surface: "home_instant", id: action.id });
   }
@@ -350,6 +440,7 @@
       id: action.id,
       title: action.title,
       surface: "home_instant",
+      silent: true,
     });
     trackEvent("aa_small_win_done", {
       surface: "home_instant",
@@ -509,6 +600,16 @@
             {/if}
             <button
               type="button"
+              class="sound-mute-btn"
+              on:click={handleToggleSound}
+              aria-pressed={soundMuted}
+              aria-label={soundMuted ? "Zapnout jemné zvuky" : "Ztlumit zvuky"}
+              title={soundMuted ? "Zapnout jemné zvuky" : "Ztlumit zvuky"}
+            >
+              {soundMuted ? "🔇" : "🔊"}
+            </button>
+            <button
+              type="button"
               class="cycle-link cycle-btn"
               on:click={nextQuickIdea}
               title="Ukázat další ověřenou příležitost"
@@ -580,7 +681,7 @@
                 >{currentQuickAction.quickTagsLabel ||
                   "2 min · Zdarma · Online"}</span
               >
-              <span>·</span>
+              <span class="meta-sep">·</span>
               <span
                 class="evidence-pill tier-{currentQuickAction.impactEvidence ||
                   'B'}"
@@ -622,48 +723,167 @@
               </div>
             </div>
 
-            {#if currentQuickAction.steps?.length}
-              <details class="how-toggle">
-                <summary
-                  >Jak se zapojit ({currentQuickAction.steps.length}
-                  {currentQuickAction.steps.length === 1
-                    ? "krok"
-                    : currentQuickAction.steps.length < 5
-                      ? "kroky"
-                      : "kroků"}) a řetězec dopadu</summary
-                >
+            <details class="how-toggle">
+              <summary
+                >Jak se zapojit ({currentQuickAction.steps?.length || 1}
+                {(currentQuickAction.steps?.length || 1) === 1
+                  ? "krok"
+                  : (currentQuickAction.steps?.length || 1) < 5
+                    ? "kroky"
+                    : "kroků"}) a řetězec dopadu</summary
+              >
+              {#if currentQuickAction.steps?.length}
                 <ol class="how-steps">
                   {#each currentQuickAction.steps as step}
                     <li>{step}</li>
                   {/each}
                 </ol>
-                {#if currentQuickAction.impactChain}
-                  <div class="impact-chain-row">
-                    <span
-                      ><strong>Aktivita:</strong>
-                      {currentQuickAction.impactChain.activity}</span
+              {/if}
+              {#if currentQuickAction.impactChain}
+                <div class="impact-chain-row">
+                  <span
+                    ><strong>Aktivita:</strong>
+                    {currentQuickAction.impactChain.activity}</span
+                  >
+                  <span class="chain-arrow">→</span>
+                  <span
+                    ><strong>Výsledek:</strong>
+                    {currentQuickAction.impactChain.immediateOutput}</span
+                  >
+                  <span class="chain-arrow">→</span>
+                  <span
+                    ><strong>Skutečný dopad:</strong>
+                    {currentQuickAction.impactChain.realImpact}</span
+                  >
+                </div>
+              {/if}
+              <div class="mobile-details-extra">
+                <div class="mde-row">
+                  <span
+                    class="mde-evidence-pill tier-{currentQuickAction.impactEvidence ||
+                      'B'}"
+                  >
+                    Důkazy {currentQuickAction.impactEvidence || "B"} · {EVIDENCE_TIERS[
+                      currentQuickAction.impactEvidence || "B"
+                    ]?.shortLabel}
+                  </span>
+                  <span class="mde-partner"
+                    >Partner: <strong>{currentQuickAction.org}</strong> ({currentQuickAction.registrationRequired
+                      ? "krátká registrace"
+                      : "bez registrace"})</span
+                  >
+                </div>
+                <div class="mde-impact">
+                  <strong
+                    >Přínos ({currentQuickAction.impactBasis ||
+                      "doložený"}):</strong
+                  >
+                  {currentQuickAction.concreteImpact}
+                </div>
+                <div class="mde-verify">
+                  <span>
+                    Ověřeno: <strong
+                      >{currentQuickAction.lastVerifiedAt || "11/2026"}</strong
                     >
-                    <span class="chain-arrow">→</span>
-                    <span
-                      ><strong>Výsledek:</strong>
-                      {currentQuickAction.impactChain.immediateOutput}</span
+                    · Zdroj:
+                    <a
+                      href={currentQuickAction.sourceUrl ||
+                        currentQuickAction.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="verify-source-link"
                     >
-                    <span class="chain-arrow">→</span>
-                    <span
-                      ><strong>Skutečný dopad:</strong>
-                      {currentQuickAction.impactChain.realImpact}</span
+                      {currentQuickAction.org} ↗
+                    </a>
+                  </span>
+                  <div class="verify-footer-actions">
+                    <button
+                      type="button"
+                      class="mde-share-btn"
+                      on:click={() => shareDirectActionLink(currentQuickAction)}
                     >
+                      {copiedDirectLink
+                        ? "✓ Odkaz zkopírován"
+                        : "🔗 Zkopírovat přímý odkaz na tento skutek"}
+                    </button>
+                    <button
+                      type="button"
+                      class="mde-broken-btn"
+                      on:click={() =>
+                        openBrokenLinkReport({
+                          id: currentQuickAction.id,
+                          title: cleanTitle(currentQuickAction.title),
+                          org: currentQuickAction.org,
+                          url: currentQuickAction.url,
+                        })}
+                    >
+                      Nahlásit nefunkční odkaz
+                    </button>
                   </div>
-                {/if}
-              </details>
-            {/if}
+                </div>
+              </div>
+            </details>
 
             <!-- 5. Primární akce (Začít pomáhat) + potvrzení dokončení -->
-            {#if partnerReturnPromptVisible && !justCompleted}
-              <div class="return-dopamine-strip" role="status" aria-live="polite">
-                <div class="return-dopamine-text">
-                  ✨ <strong>Vítej zpět! Povedlo se?</strong> Klikni na „✓ Hotovo“ a rozsviť svou lucernu v Krajině dobra.
+            {#if justCompleted}
+              <div
+                class="celebration-card inline-celebration-card"
+                role="status"
+                aria-live="polite"
+              >
+                <div class="inline-celebration-head">
+                  <span class="kicker"
+                    >Klidné poděkování · +1 rozsvícené světlo</span
+                  >
+                  <span class="impact-payoff-badge">
+                    {isAnimalAction(currentQuickAction)
+                      ? `+${kibbleGrams || 25} g v misce 🐾`
+                      : "✨ Nové světlo v Krajině dobra"}
+                  </span>
                 </div>
+                <h3 class="win-title">{cleanTitle(currentQuickAction.title)}</h3>
+                <canvas
+                  class="impact-payoff-canvas"
+                  width="300"
+                  height="92"
+                  use:impactCanvas={currentQuickAction}
+                  aria-label="Fyzikální vizualizace dopadu dobrého skutku"
+                ></canvas>
+                <div class="return-dopamine-actions">
+                  <a
+                    href={`/svet?just_lit=1&ritual=lantern&seed=${encodeURIComponent(currentQuickAction.id)}&title=${encodeURIComponent(cleanTitle(currentQuickAction.title))}`}
+                    class="return-dopamine-btn btn-world"
+                  >
+                    ✨ Rozsvítit tenhle skutek v Krajině dobra →
+                  </a>
+                  <button
+                    type="button"
+                    class="return-dopamine-svet-link inline-celebration-next"
+                    on:click={nextQuickIdea}
+                  >
+                    Další dobrý skutek →
+                  </button>
+                </div>
+              </div>
+            {:else if partnerReturnPromptVisible}
+              <div class="return-dopamine-strip" role="status" aria-live="polite">
+                <div class="inline-celebration-head">
+                  <div class="return-dopamine-text">
+                    ✨ <strong>Vítej zpět! Povedlo se?</strong> Klikni na „✓ Hotovo“ a rozsviť svou lucernu v Krajině dobra.
+                  </div>
+                  <span class="impact-payoff-badge">
+                    {isAnimalAction(currentQuickAction)
+                      ? `+${kibbleGrams || 25} g v misce 🐾`
+                      : "✨ Světelná stopa"}
+                  </span>
+                </div>
+                <canvas
+                  class="impact-payoff-canvas"
+                  width="300"
+                  height="92"
+                  use:impactCanvas={currentQuickAction}
+                  aria-label="Fyzikální vizualizace dopadu dobrého skutku"
+                ></canvas>
                 <div class="return-dopamine-actions">
                   <button
                     type="button"
@@ -682,46 +902,60 @@
               </div>
             {/if}
 
-            <div class="instant-actions">
-              <a
-                href={currentQuickAction.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="btn-studio-primary"
-                on:click={() => handleStartQuickAction(currentQuickAction)}
-              >
-                <span>Začít pomáhat</span>
-                <svg
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.4"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"><path d="M7 17L17 7M7 7h10v10" /></svg
+            {#if !justCompleted}
+              <div class="instant-actions">
+                <a
+                  href={currentQuickAction.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="btn-studio-primary"
+                  on:pointerdown={handlePrimaryPointerDown}
+                  on:pointerup={() => handlePrimaryPointerEnd(true)}
+                  on:pointerleave={() => handlePrimaryPointerEnd(false)}
+                  on:pointercancel={() => handlePrimaryPointerEnd(false)}
+                  on:click={() => handleStartQuickAction(currentQuickAction)}
                 >
-              </a>
+                  <span>Začít pomáhat</span>
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.4"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"><path d="M7 17L17 7M7 7h10v10" /></svg
+                  >
+                </a>
 
-              <button
-                type="button"
-                class="btn-studio-done done-btn"
-                class:initiated={isCurrentStarted || partnerReturnPromptVisible}
-                on:click={() => completeQuickAction(currentQuickAction)}
-              >
-                <svg
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.6"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  ><polyline points="20 6 9 17 4 12" /></svg
-                >
-                <span>{isCurrentStarted ? "Dokončeno" : "Hotovo"}</span>
-              </button>
+                {#if !partnerReturnPromptVisible}
+                  <button
+                    type="button"
+                    class="btn-studio-done done-btn"
+                    class:initiated={isCurrentStarted}
+                    on:click={() => completeQuickAction(currentQuickAction)}
+                  >
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      ><polyline points="20 6 9 17 4 12" /></svg
+                    >
+                    <span>{isCurrentStarted ? "Dokončeno" : "Už mám hotovo"}</span>
+                  </button>
+                {/if}
+              </div>
+            {/if}
+
+            <div class="ambient-pulse-pill" role="status" aria-live="off">
+              <span class="ambient-pulse-wave" aria-hidden="true"></span>
+              <span class="ambient-pulse-dot" aria-hidden="true"></span>
+              <span class="ambient-pulse-text">{ambientPulseText}</span>
             </div>
 
             <!-- 6. Transparentní patička ověření + přímý odkaz + nahlášení nefunkčního odkazu -->
@@ -928,6 +1162,7 @@
           src="/art/sanctuary-dawn.jpg"
           alt="Malovaná česká krajina ve zlatém svítání se světly dobrých skutků"
           loading="lazy"
+          decoding="async"
         />
         <span class="spw-enter">Vyzkoušet živou krajinu →</span>
       </a>
@@ -1563,6 +1798,27 @@
     gap: 0.3rem;
   }
 
+  .sound-mute-btn {
+    appearance: none;
+    border: 1px solid rgba(22, 82, 56, 0.16);
+    background: rgba(255, 255, 255, 0.85);
+    color: #163a2a;
+    border-radius: 999px;
+    padding: 0.24rem 0.48rem;
+    font-size: 0.78rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .sound-mute-btn:hover {
+    background: rgba(16, 185, 129, 0.12);
+  }
+
+  .mobile-details-extra {
+    display: none;
+  }
+
   .instant-actions {
     display: flex;
     gap: 0.55rem;
@@ -1571,6 +1827,10 @@
   }
 
   .btn-studio-primary {
+    --spark-charge: 0;
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
     flex: 1;
     display: inline-flex;
     align-items: center;
@@ -1585,6 +1845,27 @@
     text-decoration: none;
     box-shadow: 0 10px 22px -6px rgba(13, 46, 32, 0.38);
     transition: all 0.2s var(--ease-gentle);
+  }
+
+  .btn-studio-primary::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(
+      90deg,
+      rgba(251, 191, 36, 0.42) 0%,
+      rgba(52, 211, 153, 0.48) 100%
+    );
+    transform: scaleX(var(--spark-charge, 0));
+    transform-origin: left center;
+    pointer-events: none;
+  }
+
+  .btn-studio-primary.spark-ready {
+    box-shadow:
+      0 0 0 3px rgba(251, 191, 36, 0.55),
+      0 14px 28px -6px rgba(16, 185, 129, 0.58);
   }
 
   .btn-studio-primary:hover {
@@ -2076,7 +2357,8 @@
     text-decoration: underline;
   }
 
-  .return-dopamine-strip {
+  .return-dopamine-strip,
+  .inline-celebration-card {
     display: flex;
     flex-direction: column;
     gap: 0.45rem;
@@ -2092,6 +2374,117 @@
     font-size: 0.84rem;
     line-height: 1.38;
     animation: returnPulse 0.35s ease-out;
+  }
+
+  .inline-celebration-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+  }
+
+  .inline-celebration-card .kicker {
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #047857;
+  }
+
+  .inline-celebration-card .win-title {
+    margin: 0;
+    font-size: 0.96rem;
+    font-weight: 800;
+    color: #064e3b;
+  }
+
+  .impact-payoff-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.16rem 0.52rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(5, 150, 105, 0.28);
+    color: #065f46;
+    font-size: 0.72rem;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .impact-payoff-canvas {
+    width: 100%;
+    height: 76px;
+    display: block;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(16, 185, 129, 0.18);
+  }
+
+  .inline-celebration-next {
+    appearance: none;
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .ambient-pulse-pill {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 0.42rem;
+    margin-top: 0.45rem;
+    padding: 0.32rem 0.65rem;
+    border-radius: 999px;
+    background: rgba(236, 253, 245, 0.72);
+    border: 1px solid rgba(16, 185, 129, 0.18);
+    color: #1e4633;
+    font-size: 0.74rem;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .ambient-pulse-wave {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(16, 185, 129, 0.12) 50%,
+      transparent 100%
+    );
+    transform: translateX(-100%);
+    animation: ambientWave 6s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  @keyframes ambientWave {
+    0%,
+    100% {
+      transform: translateX(-100%);
+    }
+    50% {
+      transform: translateX(100%);
+    }
+  }
+
+  .ambient-pulse-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+    flex-shrink: 0;
+  }
+
+  .ambient-pulse-text {
+    position: relative;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   @keyframes returnPulse {
@@ -2123,6 +2516,7 @@
     padding: 0.42rem 0.78rem;
     border-radius: 999px;
     cursor: pointer;
+    text-decoration: none;
     box-shadow: 0 4px 12px rgba(5, 150, 105, 0.24);
   }
 
@@ -2171,14 +2565,24 @@
   }
 
   @media (max-width: 680px) {
+    .hero-painted-backdrop {
+      display: none !important;
+    }
+
     .hero-stage {
       margin-top: -3.2rem;
-      padding: 3.45rem 0.65rem 0.9rem;
+      padding: 3.55rem 0.75rem 1.35rem;
+      min-height: calc(100dvh - 58px - env(safe-area-inset-bottom, 0px));
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
     }
 
     .hero-inner {
       grid-template-columns: minmax(0, 1fr);
-      gap: 0.32rem;
+      gap: 0.45rem;
+      width: 100%;
     }
 
     .hero-copy {
@@ -2193,17 +2597,17 @@
     }
 
     .hero-title {
-      font-size: 1.05rem;
-      line-height: 1.15;
-      margin: 0 0 0.08rem 0;
+      font-size: 1.08rem;
+      line-height: 1.18;
+      margin: 0 0 0.1rem 0;
       letter-spacing: -0.02em;
       overflow-wrap: break-word;
     }
 
     .hero-serif {
       display: block;
-      font-size: 1.08rem;
-      line-height: 1.15;
+      font-size: 1.1rem;
+      line-height: 1.18;
       margin-top: 0.04rem;
     }
 
@@ -2211,22 +2615,22 @@
       min-width: 0;
       max-width: 100%;
       box-sizing: border-box;
-      padding: 0.64rem 0.74rem;
-      border-radius: 20px;
+      padding: 0.85rem 0.92rem;
+      border-radius: 22px;
     }
 
     .studio-head {
-      margin-bottom: 0.26rem;
-      padding-bottom: 0.16rem;
+      margin-bottom: 0.35rem;
+      padding-bottom: 0.22rem;
     }
 
     .studio-label {
-      font-size: 0.76rem;
+      font-size: 0.78rem;
     }
 
     .cycle-link {
-      padding: 0.2rem 0.42rem;
-      font-size: 0.73rem;
+      padding: 0.22rem 0.48rem;
+      font-size: 0.74rem;
     }
 
     .energy-tabs {
@@ -2236,9 +2640,9 @@
       box-sizing: border-box;
       overflow-x: auto;
       flex-wrap: nowrap;
-      gap: 0.22rem;
-      padding: 0.18rem;
-      margin-bottom: 0.34rem;
+      gap: 0.25rem;
+      padding: 0.2rem;
+      margin-bottom: 0.45rem;
       border-radius: 14px;
       scrollbar-width: none;
       -webkit-overflow-scrolling: touch;
@@ -2250,8 +2654,8 @@
 
     .energy-tab {
       flex: 0 0 auto;
-      padding: 0.3rem 0.46rem;
-      font-size: 0.72rem;
+      padding: 0.34rem 0.52rem;
+      font-size: 0.74rem;
       white-space: nowrap;
       border-radius: 10px;
     }
@@ -2259,102 +2663,146 @@
     .instant-body {
       min-width: 0;
       max-width: 100%;
-      gap: 0.24rem;
-    }
-
-    .action-meta-line {
-      font-size: 0.69rem;
-      gap: 0.22rem;
-      margin-bottom: 0.22rem;
-    }
-
-    .quick-tags-pill,
-    .evidence-pill {
-      padding: 0.1rem 0.38rem;
-      font-size: 0.67rem;
-    }
-
-    .action-title {
-      font-size: 1.02rem;
-      line-height: 1.18;
-      margin: 0.04rem 0 0.18rem 0;
-    }
-
-    .action-desc {
-      font-size: 0.78rem;
-      line-height: 1.28;
-      margin: 0 0 0.26rem 0;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    .action-impact-summary {
-      margin: 0 0 0.3rem 0;
-      padding: 0.28rem 0.45rem;
-      gap: 0.1rem;
-      border-radius: 12px;
-    }
-
-    .impact-benefit-line {
-      font-size: 0.74rem;
-      line-height: 1.24;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    .partner-trust-line {
-      font-size: 0.68rem;
-      line-height: 1.16;
-    }
-
-    .how-toggle {
-      margin: 0 0 0.3rem 0;
-      padding: 0.2rem 0.4rem;
-      border-radius: 10px;
-    }
-
-    .how-toggle summary {
-      font-size: 0.72rem;
-    }
-
-    .return-dopamine-strip {
-      margin-bottom: 0.32rem;
-      padding: 0.45rem 0.62rem;
-      font-size: 0.75rem;
       gap: 0.32rem;
     }
 
-    .instant-actions {
-      padding-top: 0.08rem;
+    .action-meta-line {
+      font-size: 0.72rem;
+      gap: 0.24rem;
+      margin-bottom: 0.24rem;
+    }
+
+    .action-meta-line > .meta-sep,
+    .action-meta-line > .evidence-pill,
+    .instant-body > .action-impact-summary,
+    .instant-body > .action-verify-footer {
+      display: none !important;
+    }
+
+    .quick-tags-pill,
+    .evidence-pill,
+    .mde-evidence-pill {
+      padding: 0.14rem 0.44rem;
+      font-size: 0.7rem;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.12);
+      color: #065f46;
+      font-weight: 700;
+    }
+
+    .mde-share-btn,
+    .mde-broken-btn {
+      appearance: none;
+      background: none;
+      border: none;
+      padding: 0;
+      color: #047857;
+      font-family: inherit;
+      font-size: 0.7rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .action-title {
+      font-size: 1.12rem;
+      line-height: 1.22;
+      margin: 0.06rem 0 0.24rem 0;
+    }
+
+    .action-desc {
+      font-size: 0.84rem;
+      line-height: 1.38;
+      margin: 0 0 0.38rem 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .how-toggle {
+      margin: 0 0 0.45rem 0;
+      padding: 0.32rem 0.5rem;
+      border-radius: 12px;
+    }
+
+    .how-toggle summary {
+      font-size: 0.76rem;
+    }
+
+    .mobile-details-extra {
+      display: flex;
+      flex-direction: column;
+      gap: 0.38rem;
+      margin-top: 0.5rem;
+      padding-top: 0.45rem;
+      border-top: 1px dashed rgba(22, 82, 56, 0.18);
+      font-size: 0.74rem;
+      line-height: 1.35;
+    }
+
+    .mde-row {
+      display: flex;
+      align-items: center;
       gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+
+    .mde-verify {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    .return-dopamine-strip,
+    .inline-celebration-card {
+      margin-bottom: 0.38rem;
+      padding: 0.48rem 0.65rem;
+      font-size: 0.76rem;
+      gap: 0.32rem;
+    }
+
+    .impact-payoff-canvas {
+      height: 64px;
+    }
+
+    .instant-actions {
+      flex-direction: column;
+      align-items: stretch;
+      padding-top: 0.12rem;
+      gap: 0.38rem;
     }
 
     .btn-studio-primary {
-      padding: 0.56rem 0.78rem;
-      font-size: 0.85rem;
-      border-radius: 12px;
+      width: 100%;
+      box-sizing: border-box;
+      min-height: 46px;
+      padding: 0.68rem 0.9rem;
+      font-size: 0.9rem;
+      border-radius: 14px;
     }
 
     .btn-studio-done {
-      padding: 0.56rem 0.68rem;
-      font-size: 0.79rem;
+      width: 100%;
+      box-sizing: border-box;
+      justify-content: center;
+      padding: 0.44rem 0.68rem;
+      font-size: 0.78rem;
       border-radius: 12px;
+      background: rgba(238, 247, 241, 0.75);
     }
 
-    .action-verify-footer {
-      margin-top: 0.32rem;
-      padding-top: 0.24rem;
-      font-size: 0.66rem;
-      gap: 0.2rem;
+    .ambient-pulse-pill {
+      margin-top: 0.35rem;
+      padding: 0.26rem 0.52rem;
+      font-size: 0.69rem;
     }
 
     .direct-link-share-btn,
     .broken-link-btn {
-      font-size: 0.67rem;
+      font-size: 0.7rem;
     }
 
     .sanctuary-portal-card {
