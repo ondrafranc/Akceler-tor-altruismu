@@ -27,6 +27,7 @@
     playPayoffAsmr,
     savePendingPartnerReturn,
     consumePendingPartnerReturn,
+    triggerCanvasBurst,
     fetchAmbientPulse,
   } from "../../../lib/sensoryEngine.js";
 
@@ -95,7 +96,9 @@
   let planFlash = false;
   let localDrawerOpen = false;
   let soundMuted = false;
-  let showGuidedEffect = false;
+  let showGuidedEffect = true;
+  let guidedSparkBoosted = false;
+  let guidedCanvasNode = null;
   let guidedEffectMetric = 0;
   let guidedReturnAction = null;
   let guidedReturnMetric = 0;
@@ -913,35 +916,6 @@
             <div class="rec-top-actions">
               <button
                 type="button"
-                class="effect-spark-btn"
-                class:active={showGuidedEffect}
-                aria-pressed={showGuidedEffect}
-                on:click={() => {
-                  showGuidedEffect = !showGuidedEffect;
-                  guidedEffectMetric = 0;
-                  if (showGuidedEffect) playPayoffAsmr(bestAction);
-                  trackEvent("aa_effect_preview_toggle", {
-                    surface: "guided",
-                    id: bestAction.id,
-                    open: showGuidedEffect,
-                  });
-                }}
-                title="Vyzkoušet interaktivní fyzikální a zvukový efekt této aktivity"
-              >
-                ✨ Efekt
-              </button>
-              <button
-                type="button"
-                class="sound-mute-btn guided-sound-btn"
-                on:click={handleToggleSound}
-                aria-pressed={soundMuted}
-                aria-label={soundMuted ? "Zapnout jemné zvuky" : "Ztlumit zvuky"}
-                title={soundMuted ? "Zapnout jemné zvuky" : "Ztlumit zvuky"}
-              >
-                {soundMuted ? "🔇" : "🔊"}
-              </button>
-              <button
-                type="button"
                 class="btn-cycle-inline"
                 on:click={cycleRecommendation}
               >
@@ -969,11 +943,12 @@
               </div>
               <canvas
                 class="impact-payoff-canvas"
-                width="300"
-                height="92"
+                width="320"
+                height="118"
                 aria-label="Fyzikální vizualizace dopadu dobrého skutku"
                 use:impactCanvas={{
                   action: guidedReturnAction,
+                  climax: true,
                   onProgress: (v) => {
                     guidedReturnMetric = v;
                   },
@@ -1062,6 +1037,68 @@
             </details>
           {/if}
 
+          {#if showGuidedEffect && !guidedReturnAction}
+            <div
+              class="card-effect-stage"
+              data-scene={getActionEffectMeta(bestAction, guidedEffectMetric).scene}
+            >
+              <div class="card-effect-head">
+                <span class="impact-payoff-badge">
+                  {getActionEffectMeta(bestAction, guidedEffectMetric).badge}
+                </span>
+                <div class="card-effect-controls">
+                  <button
+                    type="button"
+                    class="effect-spark-btn"
+                    class:active={guidedSparkBoosted}
+                    aria-pressed={guidedSparkBoosted}
+                    on:click={() => {
+                      showGuidedEffect = true;
+                      guidedSparkBoosted = true;
+                      if (guidedCanvasNode) {
+                        triggerCanvasBurst(guidedCanvasNode, true);
+                      } else {
+                        playPayoffAsmr(bestAction);
+                      }
+                      trackEvent("aa_effect_preview_toggle", {
+                        surface: "guided",
+                        id: bestAction.id,
+                        open: true,
+                      });
+                    }}
+                    title="Spustit vlnu dopadu na plátně"
+                  >
+                    ✨ Impuls
+                  </button>
+                  <button
+                    type="button"
+                    class="sound-mute-btn"
+                    on:click={handleToggleSound}
+                    aria-pressed={soundMuted}
+                    aria-label={soundMuted ? "Zapnout jemné zvuky" : "Ztlumit zvuky"}
+                    title={soundMuted ? "Zapnout jemné zvuky" : "Ztlumit zvuky"}
+                  >
+                    {soundMuted ? "🔇" : "🔊"}
+                  </button>
+                </div>
+              </div>
+              <canvas
+                bind:this={guidedCanvasNode}
+                class="impact-payoff-canvas"
+                width="320"
+                height="118"
+                aria-label="Fyzikální vizualizace dopadu dobrého skutku"
+                use:impactCanvas={{
+                  action: bestAction,
+                  climax: false,
+                  onProgress: (v) => {
+                    guidedEffectMetric = v;
+                  },
+                }}
+              ></canvas>
+            </div>
+          {/if}
+
           <div class="cta-row">
             <a
               class="btn-gold-action"
@@ -1089,32 +1126,6 @@
               {isBestStarted ? "✓ Dokončeno" : "✓ Hotovo"}
             </button>
           </div>
-
-          {#if showGuidedEffect && !guidedReturnAction}
-            <div
-              class="card-effect-stage"
-              data-scene={getActionEffectMeta(bestAction, guidedEffectMetric).scene}
-            >
-              <div class="card-effect-head">
-                <span class="impact-payoff-badge">
-                  {getActionEffectMeta(bestAction, guidedEffectMetric).badge}
-                </span>
-                <span class="card-effect-hint">Klepni do plátna pro interakci</span>
-              </div>
-              <canvas
-                class="impact-payoff-canvas"
-                width="300"
-                height="92"
-                aria-label="Fyzikální vizualizace dopadu dobrého skutku"
-                use:impactCanvas={{
-                  action: bestAction,
-                  onProgress: (v) => {
-                    guidedEffectMetric = v;
-                  },
-                }}
-              ></canvas>
-            </div>
-          {/if}
 
           <div class="guided-pulse-row">
             <div class="ambient-pulse-pill" role="status" aria-live="off">
@@ -1671,15 +1682,6 @@
     align-items: center;
     gap: 0.4rem;
     flex-wrap: wrap;
-  }
-
-  .guided-sound-btn {
-    padding: 0.34rem 0.6rem;
-    border-radius: 999px;
-    border: 1px solid rgba(22, 66, 48, 0.14);
-    background: rgba(255, 255, 255, 0.9);
-    font-size: 0.8rem;
-    cursor: pointer;
   }
 
   .guided-pulse-row {

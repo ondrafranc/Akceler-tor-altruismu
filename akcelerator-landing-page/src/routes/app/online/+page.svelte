@@ -23,6 +23,7 @@
     playPayoffAsmr,
     savePendingPartnerReturn,
     consumePendingPartnerReturn,
+    triggerCanvasBurst,
     fetchAmbientPulse
   } from '../../../lib/sensoryEngine.js';
 
@@ -35,7 +36,8 @@
   let visibleLimit = 3;
   let soundMuted = false;
   let activeEffectCardId = '';
-  let cardEffectMetric = 0;
+  /** @type {Record<string, number>} */
+  let cardMetrics = {};
   let returnPromptAction = null;
   let returnMetric = 0;
   let awaitingReturnAction = null;
@@ -123,14 +125,15 @@
     trackEvent('aa_sound_toggle', { surface: 'online', muted: soundMuted });
   }
 
-  function toggleCardEffect(action) {
-    if (activeEffectCardId === action.id) {
-      activeEffectCardId = '';
-      return;
-    }
-    cardEffectMetric = 0;
+  function toggleCardEffect(action, event) {
     activeEffectCardId = action.id;
-    playPayoffAsmr(action);
+    const stage = event?.currentTarget?.closest?.('.card-effect-stage');
+    const canvas = stage?.querySelector?.('canvas.impact-payoff-canvas');
+    if (canvas) {
+      triggerCanvasBurst(canvas, true);
+    } else {
+      playPayoffAsmr(action);
+    }
     trackEvent('aa_effect_preview_toggle', { surface: 'online', id: action.id });
   }
 
@@ -264,16 +267,6 @@
       <button type="button" class="btn-random-spark" on:click={pickRandomSpark}>
         ✨ Náhodný tip
       </button>
-      <button
-        type="button"
-        class="sound-mute-btn online-sound-btn"
-        on:click={handleToggleSound}
-        aria-pressed={soundMuted}
-        aria-label={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
-        title={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
-      >
-        {soundMuted ? '🔇' : '🔊'}
-      </button>
     </div>
   </header>
 
@@ -294,11 +287,12 @@
       </div>
       <canvas
         class="impact-payoff-canvas"
-        width="300"
-        height="92"
+        width="320"
+        height="118"
         aria-label="Fyzikální vizualizace dopadu dobrého skutku"
         use:impactCanvas={{
           action: returnPromptAction,
+          climax: true,
           onProgress: (v) => {
             returnMetric = v;
           }
@@ -423,7 +417,7 @@
             </details>
           {/if}
 
-          <!-- 4. Akční tlačítka -->
+          <!-- 4. Akční tlačítka (čisté 2 akce bez přeplácání) -->
           <div class="actions-row">
             <a
               class="cta primary"
@@ -448,55 +442,56 @@
             >
               {Array.isArray($startedActionIds) && $startedActionIds.includes(o.id) ? '✓ Dokončeno' : '✓ Hotovo'}
             </button>
-            <button
-              type="button"
-              class="cta share-btn effect-spark-btn"
-              class:active={activeEffectCardId === o.id}
-              title="Vyzkoušet interaktivní fyzikální a zvukový efekt aktivity"
-              aria-label="Vyzkoušet interaktivní fyzikální a zvukový efekt aktivity"
-              aria-pressed={activeEffectCardId === o.id}
-              on:click={() => toggleCardEffect(o)}
-            >
-              ✨
-            </button>
-            <button
-              type="button"
-              class="cta share-btn"
-              title="Sdílet přímý odkaz"
-              aria-label="Sdílet přímý odkaz"
-              on:click={() => shareAction(o)}
-            >
-              {copiedId === o.id ? '✓' : '↗'}
-            </button>
           </div>
 
-          {#if activeEffectCardId === o.id}
-            <div
-              class="card-effect-stage"
-              data-scene={getActionEffectMeta(o, cardEffectMetric).scene}
-            >
-              <div class="card-effect-head">
-                <span class="impact-payoff-badge">
-                  {getActionEffectMeta(o, cardEffectMetric).badge}
-                </span>
-                <span class="card-effect-hint">Klepni do plátna pro interakci</span>
+          <div
+            class="card-effect-stage"
+            data-scene={getActionEffectMeta(o, cardMetrics[o.id] || 0).scene}
+          >
+            <div class="card-effect-head">
+              <span class="impact-payoff-badge">
+                {getActionEffectMeta(o, cardMetrics[o.id] || 0).badge}
+              </span>
+              <div class="card-effect-controls">
+                <button
+                  type="button"
+                  class="effect-spark-btn"
+                  class:active={activeEffectCardId === o.id}
+                  title="Spustit vlnu dopadu na plátně"
+                  aria-label="Vyzkoušet interaktivní fyzikální a zvukový efekt aktivity"
+                  aria-pressed={activeEffectCardId === o.id}
+                  on:click={(e) => toggleCardEffect(o, e)}
+                >
+                  ✨ Impuls
+                </button>
+                <button
+                  type="button"
+                  class="sound-mute-btn"
+                  on:click={handleToggleSound}
+                  aria-pressed={soundMuted}
+                  aria-label={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
+                  title={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
+                >
+                  {soundMuted ? '🔇' : '🔊'}
+                </button>
               </div>
-              <canvas
-                class="impact-payoff-canvas"
-                width="300"
-                height="92"
-                aria-label="Fyzikální vizualizace dopadu dobrého skutku"
-                use:impactCanvas={{
-                  action: o,
-                  onProgress: (v) => {
-                    cardEffectMetric = v;
-                  }
-                }}
-              ></canvas>
             </div>
-          {/if}
+            <canvas
+              class="impact-payoff-canvas"
+              width="320"
+              height="118"
+              aria-label="Fyzikální vizualizace dopadu dobrého skutku"
+              use:impactCanvas={{
+                action: o,
+                climax: false,
+                onProgress: (v) => {
+                  cardMetrics = { ...cardMetrics, [o.id]: v };
+                }
+              }}
+            ></canvas>
+          </div>
 
-          <!-- 5. Patička ověření + Nahlásit nefunkční odkaz -->
+          <!-- 5. Patička ověření + Sdílení + Nahlásit nefunkční odkaz -->
           <div class="card-verify-footer">
             <span>
               Ověřeno: <strong>{o.lastVerifiedAt || '11/2026'}</strong> · Zdroj:
@@ -509,19 +504,29 @@
                 {o.org} ↗
               </a>
             </span>
-            <button
-              type="button"
-              class="card-broken-btn"
-              on:click={() =>
-                openBrokenLinkReport({
-                  id: o.id,
-                  title: cleanTitle(o.title),
-                  org: o.org,
-                  url: o.url
-                })}
-            >
-              Nahlásit chybu
-            </button>
+            <span class="card-footer-actions">
+              <button
+                type="button"
+                class="card-broken-btn"
+                on:click={() => shareAction(o)}
+              >
+                {copiedId === o.id ? '✓ Odkaz zkopírován' : '🔗 Sdílet'}
+              </button>
+              ·
+              <button
+                type="button"
+                class="card-broken-btn"
+                on:click={() =>
+                  openBrokenLinkReport({
+                    id: o.id,
+                    title: cleanTitle(o.title),
+                    org: o.org,
+                    url: o.url
+                  })}
+              >
+                Nahlásit chybu
+              </button>
+            </span>
           </div>
         </article>
       {/each}
@@ -659,17 +664,6 @@
 
   .btn-random-spark:hover {
     transform: translateY(-2px);
-  }
-
-  .online-sound-btn {
-    padding: 0.58rem 0.78rem;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.28);
-    background: rgba(255, 255, 255, 0.14);
-    color: #ffffff;
-    font-size: 0.88rem;
-    cursor: pointer;
-    flex-shrink: 0;
   }
 
   .online-pulse-wrap {

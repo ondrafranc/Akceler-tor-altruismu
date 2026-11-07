@@ -28,6 +28,7 @@
     savePendingPartnerReturn,
     consumePendingPartnerReturn,
     mountImpactCanvas,
+    triggerCanvasBurst,
     fetchAmbientPulse,
   } from "../lib/sensoryEngine.js";
 
@@ -95,7 +96,9 @@
   let copyLinkTimer = null;
   let soundMuted = false;
   let kibbleGrams = 0;
-  let showEffectPreview = false;
+  let showEffectPreview = true;
+  let sparkBoosted = false;
+  let cardCanvasNode = null;
   let ambientPulseText = "Před chvílí někdo v Brně naplnil misku v útulku";
   let stopHoldSpark = null;
 
@@ -244,6 +247,7 @@
     window.addEventListener("pageshow", handleWindowFocus);
 
     return () => {
+      handlePrimaryPointerEnd(false);
       window.removeEventListener("hashchange", handleHashChange);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handleWindowFocus);
@@ -336,6 +340,7 @@
   $: activeHope = HOPE_FACTS[hopeIdx % HOPE_FACTS.length];
 
   function setEnergyMode(mode) {
+    handlePrimaryPointerEnd(false);
     pinnedActionId = "";
     awaitingPartnerReturn = false;
     partnerReturnPromptVisible = false;
@@ -357,6 +362,7 @@
   }
 
   function nextQuickIdea() {
+    handlePrimaryPointerEnd(false);
     pinnedActionId = "";
     awaitingPartnerReturn = false;
     partnerReturnPromptVisible = false;
@@ -394,26 +400,37 @@
     }
   }
 
-  function impactCanvas(node, action) {
-    let currentId = action?.id || "";
+  function impactCanvas(node, params) {
+    const resolve = (p) =>
+      p && typeof p === "object" && "action" in p
+        ? p
+        : { action: p, climax: false };
+    let cfg = resolve(params);
+    let currentId = cfg.action?.id || "";
+    let currentClimax = Boolean(cfg.climax);
     kibbleGrams = 0;
-    playPayoffAsmr(action);
+    if (currentClimax) playPayoffAsmr(cfg.action);
     let destroy = mountImpactCanvas(node, {
-      action,
+      action: cfg.action,
+      climax: currentClimax,
       onWeightUpdate: (g) => {
         kibbleGrams = g;
       },
     });
     return {
-      update(nextAction) {
-        const nextId = nextAction?.id || "";
-        if (nextId === currentId) return;
+      update(nextParams) {
+        const nextCfg = resolve(nextParams);
+        const nextId = nextCfg.action?.id || "";
+        const nextClimax = Boolean(nextCfg.climax);
+        if (nextId === currentId && nextClimax === currentClimax) return;
         currentId = nextId;
+        currentClimax = nextClimax;
         destroy?.();
         kibbleGrams = 0;
-        playPayoffAsmr(nextAction);
+        if (currentClimax) playPayoffAsmr(nextCfg.action);
         destroy = mountImpactCanvas(node, {
-          action: nextAction,
+          action: nextCfg.action,
+          climax: currentClimax,
           onWeightUpdate: (g) => {
             kibbleGrams = g;
           },
@@ -423,6 +440,20 @@
         destroy?.();
       },
     };
+  }
+
+  function triggerHomeEffectSpark() {
+    showEffectPreview = true;
+    sparkBoosted = true;
+    if (cardCanvasNode) {
+      triggerCanvasBurst(cardCanvasNode, true);
+    } else {
+      playPayoffAsmr(currentQuickAction);
+    }
+    trackEvent("aa_effect_preview_toggle", {
+      id: currentQuickAction?.id,
+      open: true,
+    });
   }
 
   function handleStartQuickAction(action) {
@@ -583,78 +614,29 @@
 
         <div class="studio-head">
           <span class="studio-label">Chci pomoct právě teď:</span>
-          <div class="studio-head-actions">
-            {#if savedValues.length > 0}
-              <button
-                type="button"
-                class="personal-values-pill"
-                class:active={usePersonalValues}
-                on:click={() => {
-                  pinnedActionId = "";
-                  usePersonalValues = !usePersonalValues;
-                  suggestionIndex = 0;
-                  trackEvent("aa_home_personal_filter", {
-                    enabled: usePersonalValues,
-                  });
-                }}
-                title="Přizpůsobit podle témat, která sis dříve vybral/a v průvodci"
-              >
-                {usePersonalValues
-                  ? `✦ Tvoje témata (${getSavedValueLabels(savedValues)})`
-                  : "🎯 Podle mých témat"}
-              </button>
-            {/if}
-            <button
-              type="button"
-              class="effect-spark-btn"
-              class:active={showEffectPreview}
-              on:click={() => {
-                showEffectPreview = !showEffectPreview;
-                trackEvent("aa_effect_preview_toggle", {
-                  id: currentQuickAction?.id,
-                  open: showEffectPreview,
-                });
-              }}
-              aria-pressed={showEffectPreview}
-              aria-label="Zobrazit interaktivní efekt dopadu"
-              title="Vyzkoušet interaktivní fyzikální a zvukový efekt této aktivity"
+          <button
+            type="button"
+            class="cycle-link cycle-btn"
+            on:click={nextQuickIdea}
+            title="Ukázat další ověřenou příležitost"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.3"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              ><path
+                d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
+              /><path d="M3 3v5h5" /><path
+                d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"
+              /><path d="M16 16h5v5" /></svg
             >
-              ✨ Efekt
-            </button>
-            <button
-              type="button"
-              class="sound-mute-btn"
-              on:click={handleToggleSound}
-              aria-pressed={soundMuted}
-              aria-label={soundMuted ? "Zapnout jemné zvuky" : "Ztlumit zvuky"}
-              title={soundMuted ? "Zapnout jemné zvuky" : "Ztlumit zvuky"}
-            >
-              {soundMuted ? "🔇" : "🔊"}
-            </button>
-            <button
-              type="button"
-              class="cycle-link cycle-btn"
-              on:click={nextQuickIdea}
-              title="Ukázat další ověřenou příležitost"
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.3"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                ><path
-                  d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
-                /><path d="M3 3v5h5" /><path
-                  d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"
-                /><path d="M16 16h5v5" /></svg
-              >
-              <span>Jiný tip</span>
-            </button>
-          </div>
+            <span>Jiný tip</span>
+          </button>
         </div>
 
         <div
@@ -715,6 +697,26 @@
                   currentQuickAction.impactEvidence || "B"
                 ]?.shortLabel}
               </span>
+              {#if savedValues.length > 0}
+                <button
+                  type="button"
+                  class="personal-values-pill"
+                  class:active={usePersonalValues}
+                  on:click={() => {
+                    pinnedActionId = "";
+                    usePersonalValues = !usePersonalValues;
+                    suggestionIndex = 0;
+                    trackEvent("aa_home_personal_filter", {
+                      enabled: usePersonalValues,
+                    });
+                  }}
+                  title="Přizpůsobit podle témat, která sis dříve vybral/a v průvodci"
+                >
+                  {usePersonalValues
+                    ? `✦ Tvoje témata (${getSavedValueLabels(savedValues)})`
+                    : "🎯 Moje témata"}
+                </button>
+              {/if}
             </div>
 
             <!-- 2. Název příležitosti -->
@@ -866,9 +868,9 @@
                 <h3 class="win-title">{cleanTitle(currentQuickAction.title)}</h3>
                 <canvas
                   class="impact-payoff-canvas"
-                  width="300"
-                  height="92"
-                  use:impactCanvas={currentQuickAction}
+                  width="320"
+                  height="118"
+                  use:impactCanvas={{ action: currentQuickAction, climax: true }}
                   aria-label="Fyzikální vizualizace dopadu dobrého skutku"
                 ></canvas>
                 <div class="return-dopamine-actions">
@@ -906,9 +908,9 @@
                 </div>
                 <canvas
                   class="impact-payoff-canvas"
-                  width="300"
-                  height="92"
-                  use:impactCanvas={currentQuickAction}
+                  width="320"
+                  height="118"
+                  use:impactCanvas={{ action: currentQuickAction, climax: true }}
                   aria-label="Fyzikální vizualizace dopadu dobrého skutku"
                 ></canvas>
                 <div class="return-dopamine-actions">
@@ -988,13 +990,36 @@
                     <span class="impact-payoff-badge">
                       {getActionEffectMeta(currentQuickAction, kibbleGrams).badge}
                     </span>
-                    <span class="card-effect-hint">Klepni do plátna pro interakci</span>
+                    <div class="card-effect-controls">
+                      <button
+                        type="button"
+                        class="effect-spark-btn"
+                        class:active={sparkBoosted}
+                        on:click={triggerHomeEffectSpark}
+                        aria-pressed={sparkBoosted}
+                        aria-label="Spustit interaktivní efekt dopadu"
+                        title="Klikni pro vlnu dopadu na plátně (nebo klepni přímo do scény)"
+                      >
+                        ✨ Impuls
+                      </button>
+                      <button
+                        type="button"
+                        class="sound-mute-btn"
+                        on:click={handleToggleSound}
+                        aria-pressed={soundMuted}
+                        aria-label={soundMuted ? "Zapnout jemné zvuky" : "Ztlumit zvuky"}
+                        title={soundMuted ? "Zapnout jemné zvuky" : "Ztlumit zvuky"}
+                      >
+                        {soundMuted ? "🔇" : "🔊"}
+                      </button>
+                    </div>
                   </div>
                   <canvas
+                    bind:this={cardCanvasNode}
                     class="impact-payoff-canvas"
-                    width="300"
-                    height="92"
-                    use:impactCanvas={currentQuickAction}
+                    width="320"
+                    height="118"
+                    use:impactCanvas={{ action: currentQuickAction, climax: false }}
                     aria-label="Fyzikální vizualizace dopadu dobrého skutku"
                   ></canvas>
                 </div>
@@ -1032,7 +1057,7 @@
                 >
                   {copiedDirectLink
                     ? "✓ Odkaz zkopírován"
-                    : "🔗 Zkopírovat přímý odkaz na tento skutek"}
+                    : "🔗 Sdílet odkaz"}
                 </button>
                 <button
                   type="button"
@@ -1624,13 +1649,18 @@
   }
 
   .personal-values-pill {
+    margin-left: auto;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     border: 1px solid rgba(16, 185, 129, 0.25);
     background: rgba(236, 253, 245, 0.8);
     color: #065f46;
     font-family: var(--font-sans);
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 700;
-    padding: 0.2rem 0.55rem;
+    padding: 0.14rem 0.5rem;
     border-radius: 999px;
     cursor: pointer;
     transition: all 0.16s ease;
@@ -1847,21 +1877,25 @@
     gap: 0.3rem;
   }
 
-  .sound-mute-btn {
-    appearance: none;
-    border: 1px solid rgba(22, 82, 56, 0.16);
-    background: rgba(255, 255, 255, 0.85);
-    color: #163a2a;
-    border-radius: 999px;
-    padding: 0.24rem 0.48rem;
-    font-size: 0.78rem;
-    line-height: 1;
-    cursor: pointer;
-    transition: background 0.15s ease;
+  .instant-body {
+    display: flex;
+    flex-direction: column;
   }
 
-  .sound-mute-btn:hover {
-    background: rgba(16, 185, 129, 0.12);
+  @media (min-width: 681px) {
+    .instant-body > .card-effect-stage {
+      order: 4;
+      margin: 0.15rem 0 0.6rem;
+    }
+    .instant-body > .instant-actions {
+      order: 5;
+    }
+    .instant-body > .ambient-pulse-pill {
+      order: 6;
+    }
+    .instant-body > .action-verify-footer {
+      order: 7;
+    }
   }
 
   .mobile-details-extra {
@@ -2412,14 +2446,14 @@
     flex-direction: column;
     gap: 0.45rem;
     margin-bottom: 0.55rem;
-    padding: 0.65rem 0.85rem;
+    padding: 0.72rem 0.88rem;
     min-width: 0;
     max-width: 100%;
     box-sizing: border-box;
-    border-radius: 14px;
-    background: linear-gradient(135deg, rgba(254, 243, 199, 0.92), rgba(209, 250, 229, 0.92));
-    border: 1px solid rgba(217, 119, 6, 0.35);
-    color: #064e3b;
+    border-radius: 16px;
+    background: linear-gradient(145deg, rgba(8, 30, 21, 0.96), rgba(16, 54, 38, 0.95));
+    border: 1px solid rgba(52, 211, 153, 0.38);
+    color: #ecfdf5;
     font-size: 0.84rem;
     line-height: 1.38;
     animation: returnPulse 0.35s ease-out;
@@ -2438,36 +2472,14 @@
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #047857;
+    color: #6ee7b7;
   }
 
   .inline-celebration-card .win-title {
     margin: 0;
     font-size: 0.96rem;
     font-weight: 800;
-    color: #064e3b;
-  }
-
-  .impact-payoff-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.16rem 0.52rem;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.88);
-    border: 1px solid rgba(5, 150, 105, 0.28);
-    color: #065f46;
-    font-size: 0.72rem;
-    font-weight: 800;
-    white-space: nowrap;
-  }
-
-  .impact-payoff-canvas {
-    width: 100%;
-    height: 76px;
-    display: block;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.55);
-    border: 1px solid rgba(16, 185, 129, 0.18);
+    color: #ffffff;
   }
 
   .inline-celebration-next {
@@ -2485,39 +2497,19 @@
     display: flex;
     align-items: center;
     gap: 0.42rem;
-    margin-top: 0.45rem;
-    padding: 0.32rem 0.65rem;
-    border-radius: 999px;
-    background: rgba(236, 253, 245, 0.72);
-    border: 1px solid rgba(16, 185, 129, 0.18);
-    color: #1e4633;
-    font-size: 0.74rem;
+    margin-top: 0.38rem;
+    padding: 0.15rem 0.05rem;
+    border-radius: 0;
+    background: transparent;
+    border: none;
+    color: #2c5540;
+    font-size: 0.73rem;
     font-weight: 600;
     line-height: 1.25;
   }
 
   .ambient-pulse-wave {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(16, 185, 129, 0.12) 50%,
-      transparent 100%
-    );
-    transform: translateX(-100%);
-    animation: ambientWave 6s ease-in-out infinite;
-    pointer-events: none;
-  }
-
-  @keyframes ambientWave {
-    0%,
-    100% {
-      transform: translateX(-100%);
-    }
-    50% {
-      transform: translateX(100%);
-    }
+    display: none;
   }
 
   .ambient-pulse-dot {
@@ -2525,7 +2517,7 @@
     height: 6px;
     border-radius: 50%;
     background: #10b981;
-    box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.65);
     flex-shrink: 0;
   }
 
@@ -2556,9 +2548,9 @@
 
   .return-dopamine-btn {
     appearance: none;
-    border: 1px solid rgba(5, 150, 105, 0.38);
-    background: #059669;
-    color: #ffffff;
+    border: 1px solid rgba(251, 191, 36, 0.5);
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    color: #062015;
     font-family: inherit;
     font-size: 0.8rem;
     font-weight: 800;
@@ -2566,11 +2558,11 @@
     border-radius: 999px;
     cursor: pointer;
     text-decoration: none;
-    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.24);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.28);
   }
 
   .return-dopamine-svet-link {
-    color: #065f46;
+    color: #fde68a;
     font-size: 0.78rem;
     font-weight: 800;
     text-decoration: underline;
@@ -2610,6 +2602,62 @@
     .bento-paths,
     .portals-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .action-meta-line > .meta-sep,
+    .action-meta-line > .evidence-pill,
+    .instant-body > .action-impact-summary,
+    .instant-body > .action-verify-footer {
+      display: none !important;
+    }
+
+    .mde-evidence-pill {
+      padding: 0.14rem 0.48rem;
+      font-size: 0.72rem;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.12);
+      color: #065f46;
+      font-weight: 700;
+    }
+
+    .mde-share-btn,
+    .mde-broken-btn {
+      appearance: none;
+      background: none;
+      border: none;
+      padding: 0;
+      color: #047857;
+      font-family: inherit;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .mobile-details-extra {
+      display: flex;
+      flex-direction: column;
+      gap: 0.38rem;
+      margin-top: 0.5rem;
+      padding-top: 0.45rem;
+      border-top: 1px dashed rgba(22, 82, 56, 0.18);
+      font-size: 0.76rem;
+      line-height: 1.38;
+    }
+
+    .mde-row {
+      display: flex;
+      align-items: center;
+      gap: 0.38rem;
+      flex-wrap: wrap;
+    }
+
+    .mde-verify {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.72rem;
+      color: var(--text-muted);
     }
   }
 
@@ -2684,29 +2732,26 @@
 
     .energy-tabs {
       display: flex;
+      justify-content: space-between;
       min-width: 0;
       max-width: 100%;
       box-sizing: border-box;
-      overflow-x: auto;
-      flex-wrap: nowrap;
-      gap: 0.25rem;
-      padding: 0.2rem;
-      margin-bottom: 0.45rem;
-      border-radius: 14px;
-      scrollbar-width: none;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .energy-tabs::-webkit-scrollbar {
-      display: none;
+      gap: 0.12rem;
+      padding: 0.14rem;
+      margin-bottom: 0.42rem;
+      border-radius: 13px;
     }
 
     .energy-tab {
-      flex: 0 0 auto;
-      padding: 0.34rem 0.52rem;
-      font-size: 0.74rem;
+      flex: 1 1 auto;
+      min-width: 0;
+      padding: 0.3rem 0.14rem;
+      font-size: 0.63rem;
       white-space: nowrap;
-      border-radius: 10px;
+      text-align: center;
+      justify-content: center;
+      border-radius: 9px;
+      letter-spacing: -0.02em;
     }
 
     .instant-body {
@@ -2716,9 +2761,11 @@
     }
 
     .action-meta-line {
-      font-size: 0.72rem;
+      font-size: 0.68rem;
       gap: 0.24rem;
-      margin-bottom: 0.24rem;
+      margin-bottom: 0.2rem;
+      flex-wrap: nowrap;
+      justify-content: space-between;
     }
 
     .action-meta-line > .meta-sep,
@@ -2731,12 +2778,23 @@
     .quick-tags-pill,
     .evidence-pill,
     .mde-evidence-pill {
-      padding: 0.14rem 0.44rem;
-      font-size: 0.7rem;
+      padding: 0.12rem 0.4rem;
+      font-size: 0.66rem;
       border-radius: 999px;
       background: rgba(16, 185, 129, 0.12);
       color: #065f46;
       font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+
+    .personal-values-pill {
+      padding: 0.12rem 0.42rem;
+      font-size: 0.66rem;
+      flex-shrink: 0;
+      margin-left: auto;
     }
 
     .mde-share-btn,
@@ -2811,10 +2869,6 @@
       padding: 0.48rem 0.65rem;
       font-size: 0.76rem;
       gap: 0.32rem;
-    }
-
-    .impact-payoff-canvas {
-      height: 64px;
     }
 
     .instant-actions {

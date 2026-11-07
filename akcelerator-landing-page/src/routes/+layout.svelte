@@ -481,33 +481,42 @@
     border-color: rgba(5, 150, 105, 0.32);
   }
 
-  @media (max-width: 820px) {
+  @media (max-width: 1024px) {
     .top-nav {
-      padding: 0.4rem 0.55rem 0.25rem;
+      padding: 0.45rem 0.65rem 0.25rem;
     }
     .nav-capsule {
-      border-radius: 20px;
-      padding: 0.48rem 0.65rem;
-      gap: 0.42rem;
+      border-radius: 999px;
+      padding: 0.38rem 0.58rem 0.38rem 0.68rem;
+      gap: 0.35rem;
+      flex-wrap: nowrap;
       justify-content: space-between;
     }
     .brand {
-      font-size: 0.95rem;
+      font-size: 0.86rem;
+      gap: 0.4rem;
+      flex-shrink: 0;
     }
     .brand-mark {
-      width: 28px;
-      height: 28px;
+      width: 26px;
+      height: 26px;
     }
     .brand-accent {
-      font-size: 1.12rem;
+      font-size: 1.02rem;
+    }
+    .brand-sub,
+    .nav-pill.add-tip {
+      display: none;
     }
     .nav-links {
-      width: 100%;
+      width: auto;
+      flex: 0 1 auto;
+      min-width: 0;
       flex-wrap: nowrap;
       overflow-x: auto;
       justify-content: flex-start;
-      gap: 0.3rem;
-      padding-bottom: 0.1rem;
+      margin-left: auto;
+      gap: 0.18rem;
       scrollbar-width: none;
       -webkit-overflow-scrolling: touch;
     }
@@ -516,8 +525,10 @@
     }
     .nav-pill {
       flex-shrink: 0;
-      font-size: 0.8rem;
-      padding: 0.36rem 0.7rem;
+      white-space: nowrap;
+      font-size: 0.75rem;
+      padding: 0.32rem 0.52rem;
+      gap: 0.25rem;
     }
   }
 

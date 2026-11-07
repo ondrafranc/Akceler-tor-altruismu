@@ -647,11 +647,40 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
 
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/?action=zvirata_utulek_online');
+  await page.evaluate(() => localStorage.setItem('aa_values', JSON.stringify(['animals'])));
+  await page.goto('/?action=zvirata_utulek_online');
   await expect(page.locator('.instant-card .btn-studio-primary')).toHaveAttribute('data-hold-spark', 'true');
 
-  // Open on-demand special effect preview on homepage
+  // Verify decluttered .studio-head (no .effect-spark-btn, .sound-mute-btn, or .personal-values-pill crammed in header)
+  await expect(page.locator('.instant-card .studio-head .effect-spark-btn')).toHaveCount(0);
+  await expect(page.locator('.instant-card .studio-head .sound-mute-btn')).toHaveCount(0);
+  await expect(page.locator('.instant-card .studio-head .personal-values-pill')).toHaveCount(0);
+  const studioHeadBox = await page.locator('.instant-card .studio-head').boundingBox();
+  expect(studioHeadBox).not.toBeNull();
+  expect(studioHeadBox!.height).toBeLessThan(42);
+  await page.evaluate(() => localStorage.removeItem('aa_values'));
+
+  // Living 2D Canvas diorama is already visible by default without clicking any toggle button
+  await expect(page.locator('.instant-card .card-effect-stage')).toBeVisible();
+  // Wait for initial progress ramp, then verify clicking ✨ Impuls or tapping canvas increments live badge counter
+  await page.waitForTimeout(700);
+  const badgeBefore = await page.locator('.instant-card .card-effect-stage .impact-payoff-badge').innerText();
+  const numBefore = Number((badgeBefore.match(/\d+/) || ['0'])[0]);
   await page.locator('.instant-card .effect-spark-btn').click();
   await expect(page.locator('.instant-card .card-effect-stage')).toBeVisible();
+  const badgeAfter = await page.locator('.instant-card .card-effect-stage .impact-payoff-badge').innerText();
+  const numAfter = Number((badgeAfter.match(/\d+/) || ['0'])[0]);
+  expect(numAfter).toBeGreaterThan(numBefore);
+
+  // Rapidly switching .energy-tab while holding .btn-studio-primary cleanly resets --spark-charge to 0
+  await page.locator('.instant-card .btn-studio-primary').dispatchEvent('pointerdown');
+  await page.waitForTimeout(200);
+  await page.locator('.instant-card .energy-tab').nth(1).click();
+  const chargeAfterSwitch = await page
+    .locator('.instant-card .btn-studio-primary')
+    .evaluate((el) => el.style.getPropertyValue('--spark-charge'));
+  expect(chargeAfterSwitch).toBe('0');
+  await expect(page.locator('.instant-card .btn-studio-primary')).not.toHaveClass(/spark-ready/);
 
   for (const exp of activityExpectations) {
     await page.goto(`/?action=${exp.id}`);
@@ -688,11 +717,24 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
   for (const vp of viewports) {
     await page.setViewportSize({ width: vp.width, height: vp.height });
 
+    // Homepage check on all viewports: diorama is visible by default, and on Tablet/Mobile secondary metadata is folded into <details>
+    await page.goto('/');
+    await expect(page.locator('.instant-card .card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
+    if (vp.width <= 1024) {
+      await expect(page.locator('.instant-body > .action-impact-summary')).toBeHidden();
+      await expect(page.locator('.instant-body > .action-verify-footer')).toBeHidden();
+      const navBox = await page.locator('.nav-capsule').boundingBox();
+      expect(navBox).not.toBeNull();
+      expect(navBox!.height).toBeLessThan(64);
+    }
+
     // A) /app/online: Hold-to-Spark attribute, ✨ effect stage, ambient pulse, and SmallWinCelebration canvas
     await page.goto('/app/online');
     const firstCard = page.locator('.grid .card').first();
     await expect(firstCard.locator('.cta.primary')).toHaveAttribute('data-hold-spark', 'true');
     await expect(page.locator('.ambient-pulse-pill').first()).toBeVisible();
+    await expect(firstCard.locator('.actions-row .effect-spark-btn')).toHaveCount(0);
+    await expect(firstCard.locator('.card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
 
     await firstCard.locator('.effect-spark-btn').click();
     await expect(firstCard.locator('.card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
@@ -717,6 +759,8 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
     const highlightCard = page.locator('.highlight-card');
     await expect(highlightCard.locator('.btn-gold-action')).toHaveAttribute('data-hold-spark', 'true');
     await expect(highlightCard.locator('.ambient-pulse-pill')).toBeVisible();
+    await expect(highlightCard.locator('.rec-top-actions .effect-spark-btn')).toHaveCount(0);
+    await expect(highlightCard.locator('.card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
 
     await highlightCard.locator('.effect-spark-btn').click();
     await expect(highlightCard.locator('.card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
@@ -730,6 +774,9 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
     await page.goto('/near');
     const firstPlaceCard = page.locator('.place-card').first();
     await expect(firstPlaceCard).toBeVisible();
+    await expect(firstPlaceCard.locator('.pc-actions .effect-spark-btn')).toHaveCount(0);
+    expect(await firstPlaceCard.locator('.pc-actions > *').count()).toBeLessThanOrEqual(2);
+    await expect(firstPlaceCard.locator('.card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
     await firstPlaceCard.locator('.effect-spark-btn').click();
     await expect(firstPlaceCard.locator('.card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
     await expect(page.locator('.ambient-pulse-pill').first()).toBeVisible();

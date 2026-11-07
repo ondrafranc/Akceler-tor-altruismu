@@ -111,18 +111,19 @@
       {#if !restingMode}
         <div class="win-overline">{activeElementMeta.icon} Klidné poděkování</div>
         <h3 id="win-title" class="win-title">{cleanTitle($activeCelebration.title)}</h3>
-        <div class="win-sensory-stage" data-scene={effectMeta?.scene || 'light'}>
-          <div class="win-sensory-head">
+        <div class="win-sensory-stage card-effect-stage" data-scene={effectMeta?.scene || 'light'}>
+          <div class="win-sensory-head card-effect-head">
             <span class="impact-payoff-badge">{effectMeta?.badge || '✨ Světelná stopa'}</span>
-            <span class="win-sensory-hint">Klepni do plátna pro jiskru</span>
+            <span class="win-sensory-hint card-effect-hint">Klepni do plátna pro jiskru</span>
           </div>
           <canvas
             class="impact-payoff-canvas"
-            width="300"
-            height="92"
+            width="320"
+            height="124"
             aria-hidden="true"
             use:impactCanvas={{
               action: $activeCelebration,
+              climax: true,
               onProgress: (v) => {
                 impactMetricValue = v;
               }
@@ -233,35 +234,12 @@
   }
 
   .win-sensory-stage {
-    margin: 0 0 0.75rem 0;
-    padding: 0.65rem 0.75rem;
-    border-radius: 16px;
-    background: linear-gradient(145deg, rgba(11, 38, 26, 0.94), rgba(18, 59, 41, 0.92));
-    border: 1px solid rgba(52, 211, 153, 0.3);
+    margin: 0 0 0.85rem 0;
     text-align: left;
-    display: flex;
-    flex-direction: column;
-    gap: 0.42rem;
   }
 
-  .win-sensory-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  .win-sensory-stage .impact-payoff-badge {
-    background: rgba(52, 211, 153, 0.22);
-    color: #fde68a;
-    border-color: rgba(251, 191, 36, 0.42);
-  }
-
-  .win-sensory-hint {
-    font-size: 0.72rem;
-    color: rgba(209, 250, 229, 0.8);
-    font-weight: 600;
+  .win-sensory-stage .impact-payoff-canvas {
+    height: 124px;
   }
 
   .win-rest-reassurance {

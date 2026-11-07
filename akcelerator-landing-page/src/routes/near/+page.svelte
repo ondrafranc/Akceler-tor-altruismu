@@ -25,6 +25,7 @@
     playPayoffAsmr,
     savePendingPartnerReturn,
     consumePendingPartnerReturn,
+    triggerCanvasBurst,
     fetchAmbientPulse
   } from '../../lib/sensoryEngine.js';
 
@@ -182,7 +183,8 @@
   let copiedPlaceLinkId = null;
   let soundMuted = false;
   let activeEffectPlaceId = null;
-  let placeEffectMetric = 0;
+  /** @type {Record<string, number>} */
+  let placeMetrics = {};
   let nearReturnPlace = null;
   let nearReturnMetric = 0;
   let awaitingNearPlace = null;
@@ -204,14 +206,16 @@
     trackEvent('aa_sound_toggle', { surface: 'near', muted: soundMuted });
   }
 
-  function togglePlaceEffect(p) {
-    if (activeEffectPlaceId === p.id) {
-      activeEffectPlaceId = null;
-      return;
-    }
-    placeEffectMetric = 0;
+  function togglePlaceEffect(p, event) {
     activeEffectPlaceId = p.id;
-    playPayoffAsmr(toPlaceAction(p));
+    const act = toPlaceAction(p);
+    const stage = event?.currentTarget?.closest?.('.card-effect-stage');
+    const canvas = stage?.querySelector?.('canvas.impact-payoff-canvas');
+    if (canvas) {
+      triggerCanvasBurst(canvas, true);
+    } else {
+      playPayoffAsmr(act);
+    }
     trackEvent('aa_effect_preview_toggle', { surface: 'near', id: p.id });
   }
 
@@ -1089,11 +1093,12 @@
           </div>
           <canvas
             class="impact-payoff-canvas"
-            width="300"
-            height="92"
+            width="320"
+            height="118"
             aria-label="Fyzikální vizualizace dopadu dobrého skutku"
             use:impactCanvas={{
               action: nearReturnPlace,
+              climax: true,
               onProgress: (v) => {
                 nearReturnMetric = v;
               }
@@ -1132,6 +1137,7 @@
         {#each visiblePlaces as p, idx (p.id)}
           {@const meta = KIND_META[p.kind] || KIND_META.ngo}
           {@const webUrl = normalizeUrl(p.website)}
+          {@const placeAction = toPlaceAction(p)}
           <article
             id={`place-card-${String(p.id).replace(/[^a-zA-Z0-9_-]/g, '-')}`}
             class="place-card"
@@ -1176,34 +1182,18 @@
                 >
                   Web ↗
                 </a>
+              {:else}
+                <button
+                  type="button"
+                  class="pc-btn msg"
+                  on:click={() => {
+                    markActionStarted(p.id, 'near_place_msg');
+                    openTemplateId = openTemplateId === p.id ? null : p.id;
+                  }}
+                >
+                  {openTemplateId === p.id ? 'Skrýt zprávu' : '💬 Co napsat'}
+                </button>
               {/if}
-
-              <button
-                type="button"
-                class="pc-btn msg"
-                on:click={() => {
-                  markActionStarted(p.id, 'near_place_msg');
-                  openTemplateId = openTemplateId === p.id ? null : p.id;
-                }}
-              >
-                {openTemplateId === p.id ? 'Skrýt zprávu' : '💬 Co napsat'}
-              </button>
-
-              <button type="button" class="pc-btn ghost" on:click={() => focusPlaceOnMap(p)}>
-                📍 Na mapě
-              </button>
-
-              <button
-                type="button"
-                class="pc-btn ghost effect-spark-btn"
-                class:active={activeEffectPlaceId === p.id}
-                aria-pressed={activeEffectPlaceId === p.id}
-                aria-label="Vyzkoušet interaktivní fyzikální a zvukový efekt místa"
-                title="Vyzkoušet interaktivní fyzikální a zvukový efekt místa"
-                on:click={() => togglePlaceEffect(p)}
-              >
-                ✨
-              </button>
 
               <button
                 type="button"
@@ -1221,32 +1211,52 @@
               </button>
             </div>
 
-            {#if activeEffectPlaceId === p.id}
-              {@const placeAction = toPlaceAction(p)}
-              <div
-                class="card-effect-stage"
-                data-scene={getActionEffectMeta(placeAction, placeEffectMetric).scene}
-              >
-                <div class="card-effect-head">
-                  <span class="impact-payoff-badge">
-                    {getActionEffectMeta(placeAction, placeEffectMetric).badge}
-                  </span>
-                  <span class="card-effect-hint">Klepni do plátna pro interakci</span>
+            <div
+              class="card-effect-stage"
+              data-scene={getActionEffectMeta(placeAction, placeMetrics[p.id] || 0).scene}
+            >
+              <div class="card-effect-head">
+                <span class="impact-payoff-badge">
+                  {getActionEffectMeta(placeAction, placeMetrics[p.id] || 0).badge}
+                </span>
+                <div class="card-effect-controls">
+                  <button
+                    type="button"
+                    class="effect-spark-btn"
+                    class:active={activeEffectPlaceId === p.id}
+                    aria-pressed={activeEffectPlaceId === p.id}
+                    aria-label="Vyzkoušet interaktivní fyzikální a zvukový efekt místa"
+                    title="Spustit vlnu dopadu na plátně"
+                    on:click={(e) => togglePlaceEffect(p, e)}
+                  >
+                    ✨ Impuls
+                  </button>
+                  <button
+                    type="button"
+                    class="sound-mute-btn"
+                    on:click={handleToggleSound}
+                    aria-pressed={soundMuted}
+                    aria-label={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
+                    title={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
+                  >
+                    {soundMuted ? '🔇' : '🔊'}
+                  </button>
                 </div>
-                <canvas
-                  class="impact-payoff-canvas"
-                  width="300"
-                  height="92"
-                  aria-label="Fyzikální vizualizace dopadu dobrého skutku"
-                  use:impactCanvas={{
-                    action: placeAction,
-                    onProgress: (v) => {
-                      placeEffectMetric = v;
-                    }
-                  }}
-                ></canvas>
               </div>
-            {/if}
+              <canvas
+                class="impact-payoff-canvas"
+                width="320"
+                height="118"
+                aria-label="Fyzikální vizualizace dopadu dobrého skutku"
+                use:impactCanvas={{
+                  action: placeAction,
+                  climax: false,
+                  onProgress: (v) => {
+                    placeMetrics = { ...placeMetrics, [p.id]: v };
+                  }
+                }}
+              ></canvas>
+            </div>
 
             {#if openTemplateId === p.id}
               {@const tpl = buildFirstContactTemplate(p)}
@@ -1282,6 +1292,27 @@
                 {p.curated ? `Zdroj: Ověřený katalog (${p.verifiedAt || '11/2026'})` : 'Zdroj: OpenStreetMap ČR'}
               </span>
               <span class="pc-footer-links">
+                {#if webUrl}
+                  <button
+                    type="button"
+                    class="pc-report-btn"
+                    on:click={() => {
+                      markActionStarted(p.id, 'near_place_msg');
+                      openTemplateId = openTemplateId === p.id ? null : p.id;
+                    }}
+                  >
+                    {openTemplateId === p.id ? 'Skrýt zprávu' : '💬 Co napsat'}
+                  </button>
+                  ·
+                {/if}
+                <button
+                  type="button"
+                  class="pc-report-btn"
+                  on:click={() => focusPlaceOnMap(p)}
+                >
+                  📍 Na mapě
+                </button>
+                ·
                 <button
                   type="button"
                   class="pc-report-btn pc-share-btn"
@@ -1301,7 +1332,7 @@
                       url: webUrl || ''
                     })}
                 >
-                  Nahlásit nefunkční údaj
+                  Nahlásit chybu
                 </button>
               </span>
             </div>
@@ -1364,16 +1395,6 @@
           <span class="pulse-dot-live" aria-hidden="true"></span>
           <span class="pulse-msg-text">{ambientPulseText}</span>
         </div>
-        <button
-          type="button"
-          class="sound-mute-btn near-sound-btn"
-          on:click={handleToggleSound}
-          aria-pressed={soundMuted}
-          aria-label={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
-          title={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
-        >
-          {soundMuted ? '🔇' : '🔊'}
-        </button>
       </div>
 
       {#if filteredPlaces.length > visibleCount}
@@ -1809,16 +1830,6 @@
   }
 
   /* List Column */
-  .near-sound-btn {
-    padding: 0.34rem 0.58rem;
-    border-radius: 999px;
-    border: 1px solid rgba(22, 66, 48, 0.14);
-    background: rgba(255, 255, 255, 0.92);
-    font-size: 0.8rem;
-    cursor: pointer;
-    flex-shrink: 0;
-  }
-
   .near-pulse-wrap {
     display: flex;
     align-items: center;
