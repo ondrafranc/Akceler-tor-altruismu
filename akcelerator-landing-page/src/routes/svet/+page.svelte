@@ -915,6 +915,10 @@
       if (ro) ro.disconnect();
       if (breathInterval) clearInterval(breathInterval);
       if (toastTimer) clearTimeout(toastTimer);
+      if (audioCtx && typeof audioCtx.close === 'function') {
+        audioCtx.close().catch(() => {});
+        audioCtx = null;
+      }
     };
   });
 </script>

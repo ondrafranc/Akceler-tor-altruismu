@@ -1,5 +1,13 @@
 import { json } from '@sveltejs/kit';
 import { CZECH_CITIES } from '$lib/data/czech-actions.js';
+import {
+  clamp,
+  safeText,
+  isValidLatLon,
+  setBoundedCache,
+  checkRateLimit,
+  resolveClientKey
+} from '$lib/security.js';
 
 /** @type {Map<string, { expiresAt: number, data: any }>} */
 const CACHE = new Map();
@@ -48,15 +56,6 @@ function searchLocalTowns(q, limit = 5) {
   return LOCAL_CZECH_TOWNS.filter((t) => stripDiacritics(t.label).includes(normQ)).slice(0, limit);
 }
 
-function clamp(n, min, max) {
-  return Math.min(max, Math.max(min, n));
-}
-
-function safeText(v) {
-  if (typeof v !== 'string') return '';
-  return v.trim();
-}
-
 async function throttleUpstream(minIntervalMs = 1100) {
   const now = Date.now();
   const wait = LAST_UPSTREAM_TS + minIntervalMs - now;
@@ -80,7 +79,7 @@ async function fetchNominatim(q, limit) {
     const res = await fetch(url.toString(), {
       signal: controller.signal,
       headers: {
-        'user-agent': 'AkceleratorAltruismu/2.0 (SvelteKit; Czech-only)',
+        'user-agent': 'AkceleratorAltruismu/2.5 (SvelteKit; Czech-only)',
         'accept-language': 'cs,en;q=0.3'
       }
     });
@@ -92,16 +91,16 @@ async function fetchNominatim(q, limit) {
     for (const it of Array.isArray(items) ? items : []) {
       const lat = Number(it?.lat);
       const lon = Number(it?.lon);
-      if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+      if (!isValidLatLon(lat, lon)) continue;
       const countryCode = safeText(it?.address?.country_code).toLowerCase();
       if (countryCode && countryCode !== 'cz') continue;
 
       results.push({
-        label: safeText(it?.display_name),
+        label: safeText(it?.display_name).slice(0, 220),
         lat,
         lon,
-        type: safeText(it?.type),
-        class: safeText(it?.class),
+        type: safeText(it?.type).slice(0, 40),
+        class: safeText(it?.class).slice(0, 40),
         address: it?.address || null
       });
     }
@@ -117,27 +116,31 @@ async function fetchNominatim(q, limit) {
 }
 
 /** @type {import('./$types').RequestHandler} */
-export async function GET({ url }) {
+export async function GET({ url, request, getClientAddress }) {
   const q = safeText(url.searchParams.get('q'));
-  const limit = clamp(Number(url.searchParams.get('limit') || 5), 1, 8);
+  const rawLimit = Number(url.searchParams.get('limit') || 5);
+  const limit = clamp(Number.isFinite(rawLimit) ? Math.trunc(rawLimit) : 5, 1, 8);
 
   if (!q || q.length < 2) {
     return json(
       { error: 'Missing query' },
-      {
-        status: 400,
-        headers: { 'cache-control': 'no-store' }
-      }
+      { status: 400, headers: { 'cache-control': 'no-store' } }
     );
   }
 
   if (q.length > 120) {
     return json(
       { error: 'Query too long' },
-      {
-        status: 400,
-        headers: { 'cache-control': 'no-store' }
-      }
+      { status: 400, headers: { 'cache-control': 'no-store' } }
+    );
+  }
+
+  const clientKey = resolveClientKey(request, getClientAddress);
+  const rl = checkRateLimit('geocode', clientKey, 60, 60_000);
+  if (!rl.allowed) {
+    return json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'cache-control': 'no-store', 'retry-after': String(rl.retryAfterSec) } }
     );
   }
 
@@ -164,17 +167,21 @@ export async function GET({ url }) {
 
   const p = fetchNominatim(q, limit)
     .then((data) => {
-      CACHE.set(key, { expiresAt: now + 24 * 60 * 60 * 1000, data });
+      setBoundedCache(CACHE, key, data, 24 * 60 * 60 * 1000, 300);
       return data;
     })
     .catch(() => {
-      return { results: searchLocalTowns(q, limit), fallback: true };
+      const fb = { results: searchLocalTowns(q, limit), fallback: true };
+      setBoundedCache(CACHE, key, fb, 10 * 60 * 1000, 300);
+      return fb;
     })
     .finally(() => {
       INFLIGHT.delete(key);
     });
 
-  INFLIGHT.set(key, p);
+  if (INFLIGHT.size < 100) {
+    INFLIGHT.set(key, p);
+  }
 
   const data = await p;
   return json(data, {
@@ -183,5 +190,3 @@ export async function GET({ url }) {
     }
   });
 }
-
-

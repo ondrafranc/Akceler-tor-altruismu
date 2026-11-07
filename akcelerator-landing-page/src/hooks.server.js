@@ -1,6 +1,5 @@
 /**
- * Global security headers for all responses.
- * Complements vercel.json static headers; runs during SSR too.
+ * Global security headers for all SSR and API responses.
  */
 export async function handle({ event, resolve }) {
   const response = await resolve(event, {
@@ -10,15 +9,16 @@ export async function handle({ event, resolve }) {
   const headers = new Headers(response.headers);
   headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   headers.set('X-Content-Type-Options', 'nosniff');
+  headers.set('X-Frame-Options', 'DENY');
+  headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
   headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   headers.set('X-DNS-Prefetch-Control', 'off');
   headers.set('X-Download-Options', 'noopen');
   headers.set('X-Permitted-Cross-Domain-Policies', 'none');
 
-  // Ensure frame-ancestors matches CSP policy
   const csp = headers.get('Content-Security-Policy');
   if (csp && !/frame-ancestors/.test(csp)) {
-    headers.set('Content-Security-Policy', `${csp}; frame-ancestors 'self'`);
+    headers.set('Content-Security-Policy', `${csp}; frame-ancestors 'none'`);
   }
 
   return new Response(response.body, {
@@ -26,5 +26,3 @@ export async function handle({ event, resolve }) {
     headers
   });
 }
-
-

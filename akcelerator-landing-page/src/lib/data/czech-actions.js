@@ -4,6 +4,8 @@
  * šablony prvního kontaktu a záložní místa pro mapu (/near).
  */
 
+import { sanitizeEmail } from '../security.js';
+
 export const VALUES = [
   {
     key: 'community',
@@ -1483,9 +1485,9 @@ export function buildFirstContactTemplate(place) {
     body = `Dobrý den,\n\nzaujala mě činnost ${name} a rád/a bych se zeptal/a, jak se u vás dá nejjednodušeji zapojit nebo s čím teď nejvíc potřebujete pomoci.\n\nPředem děkuji za krátkou zprávu a přeji hezký den!`;
   }
 
-  const rawEmail = (place?.email || '').trim();
-  const mailtoUrl = rawEmail
-    ? `mailto:${encodeURIComponent(rawEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  const safeMail = sanitizeEmail(place?.email);
+  const mailtoUrl = safeMail
+    ? `mailto:${encodeURIComponent(safeMail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
     : null;
 
   return {

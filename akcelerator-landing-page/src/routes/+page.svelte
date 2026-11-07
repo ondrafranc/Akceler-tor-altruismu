@@ -319,7 +319,7 @@
               <a
                 href={currentQuickAction.url}
                 target="_blank"
-                rel="noopener"
+                rel="noopener noreferrer"
                 class="btn-studio-primary"
                 on:click={() => trackEvent('aa_clickout', { surface: 'home_instant', id: currentQuickAction.id })}
               >
@@ -659,7 +659,7 @@
           <a
             href={p.url}
             target="_blank"
-            rel="noopener"
+            rel="noopener noreferrer"
             class="portal-card"
             on:click={() => trackEvent('aa_clickout', { surface: 'home_portal', id: p.id })}
           >

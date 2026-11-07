@@ -229,7 +229,7 @@
               class="cta primary"
               href={o.url}
               target="_blank"
-              rel="noopener"
+              rel="noopener noreferrer"
               on:click={() => trackEvent('aa_clickout', { surface: 'online', id: o.id })}
             >
               {o.cta || 'Otevřít'} ↗
@@ -296,14 +296,14 @@
     font-size: 0.75rem;
     font-weight: 800;
     letter-spacing: 0.12em;
-    color: #047857;
+    color: #fde68a;
     margin-bottom: 0.4rem;
   }
 
   .title {
     font-family: var(--font-sans);
     font-weight: 800;
-    color: #0e281c;
+    color: #ffffff;
     font-size: clamp(2rem, 3.6vw, 2.85rem);
     margin: 0;
     letter-spacing: -0.03em;
@@ -311,12 +311,12 @@
   }
 
   .title .serif-accent {
-    color: #059669;
+    color: #fde68a;
     font-weight: 400;
   }
 
   .subtitle {
-    color: #365244;
+    color: rgba(236, 248, 241, 0.9);
     margin: 0.65rem auto 0;
     max-width: 56ch;
     font-size: 0.98rem;
@@ -341,30 +341,30 @@
     width: 100%;
     padding: 0.74rem 1.08rem;
     border-radius: 999px;
-    border: 1.5px solid rgba(22, 82, 56, 0.18);
-    background: rgba(255, 255, 255, 0.95);
-    box-shadow: 0 8px 20px -10px rgba(14, 40, 28, 0.14);
+    border: 1.5px solid rgba(255, 255, 255, 0.32);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 10px 24px -10px rgba(5, 20, 14, 0.35);
     color: #0e281c;
     font-family: var(--font-sans);
     font-size: 0.9rem;
   }
 
   .search-wrap input::placeholder {
-    color: #557062;
+    color: #4f6b5d;
   }
 
   .btn-random-spark {
     padding: 0.74rem 1.22rem;
     border-radius: 999px;
-    border: 1px solid rgba(18, 56, 40, 0.15);
-    background: linear-gradient(135deg, #123828, #1c523a);
-    color: #fde68a;
+    border: 1px solid rgba(253, 230, 138, 0.5);
+    background: linear-gradient(135deg, #fde68a 0%, #6ee7b7 100%);
+    color: #062016;
     font-family: var(--font-sans);
     font-weight: 800;
     font-size: 0.86rem;
     cursor: pointer;
-    box-shadow: 0 10px 22px -8px rgba(14, 40, 28, 0.25);
-    transition: transform 0.18s ease;
+    box-shadow: 0 10px 24px -8px rgba(4, 18, 12, 0.38);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
   }
 
   .btn-random-spark:hover {

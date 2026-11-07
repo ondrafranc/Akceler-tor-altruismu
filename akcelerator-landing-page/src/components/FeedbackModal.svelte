@@ -1,10 +1,13 @@
 <script>
+  import { onDestroy } from 'svelte';
+
   let isOpen = false;
   let feedback = '';
   let rating = 0;
   let isSubmitting = false;
   let statusMessage = '';
   let statusType = '';
+  let closeTimer = null;
 
   $: isFormValid = feedback.trim().length > 0;
 
@@ -53,7 +56,8 @@
       if (resp.ok && data?.success) {
         statusType = 'success';
         statusMessage = 'Děkujeme! Tvoje zpětná vazba nám pomůže web dál zlepšovat.';
-        setTimeout(() => {
+        if (closeTimer) clearTimeout(closeTimer);
+        closeTimer = setTimeout(() => {
           feedback = '';
           rating = 0;
           closeModal();
@@ -69,6 +73,10 @@
       isSubmitting = false;
     }
   }
+
+  onDestroy(() => {
+    if (closeTimer) clearTimeout(closeTimer);
+  });
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -91,6 +99,7 @@
     role="dialog"
     aria-modal="true"
     aria-labelledby="fb-title"
+    tabindex="-1"
     on:click|self={closeModal}
   >
     <div class="modal-card">

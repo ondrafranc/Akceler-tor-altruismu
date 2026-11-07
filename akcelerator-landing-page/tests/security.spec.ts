@@ -14,13 +14,17 @@ const BANNED_RENDERED_COPY = [
   'Pustit starost po vodě'
 ];
 
-test('root sets security headers', async ({ request, baseURL }) => {
+test('root sets strict security headers without unsafe-eval', async ({ request, baseURL }) => {
   const res = await request.get(baseURL! + '/');
   expect(res.status()).toBe(200);
   const h = res.headers();
   expect(h['content-security-policy']).toBeDefined();
+  expect(h['content-security-policy']).not.toContain('unsafe-eval');
+  expect(h['content-security-policy']).toContain("frame-ancestors 'none'");
   expect(h['referrer-policy']).toBe('strict-origin-when-cross-origin');
   expect(h['x-content-type-options']).toBe('nosniff');
+  expect(h['x-frame-options']).toBe('DENY');
+  expect(h['permissions-policy']).toContain('geolocation=(self)');
 });
 
 test('all core routes return 200, render Krajina dobra navigation, and contain zero cringe/meta copy', async ({ page }) => {

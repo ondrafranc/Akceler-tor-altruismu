@@ -387,7 +387,7 @@
               class="btn-gold-action"
               href={bestAction.url}
               target="_blank"
-              rel="noopener"
+              rel="noopener noreferrer"
               on:click={() =>
                 trackEvent('aa_clickout', {
                   surface: 'guided_best',
@@ -435,7 +435,7 @@
                   <a
                     href={alt.url}
                     target="_blank"
-                    rel="noopener"
+                    rel="noopener noreferrer"
                     class="alt-open"
                     on:click={() => trackEvent('aa_clickout', { surface: 'guided_alt', id: alt.id })}
                   >
@@ -503,7 +503,7 @@
 
             <div class="lc-actions">
               {#if place.website}
-                <a href={place.website} target="_blank" rel="noopener" class="lc-btn primary">
+                <a href={place.website} target="_blank" rel="noopener noreferrer" class="lc-btn primary">
                   Web organizace ↗
                 </a>
               {/if}
@@ -551,14 +551,14 @@
     font-size: 0.74rem;
     font-weight: 800;
     letter-spacing: 0.11em;
-    color: #047857;
+    color: #fde68a;
     margin-bottom: 0.35rem;
   }
 
   .title {
     font-family: var(--font-sans);
     font-weight: 800;
-    color: #0e281c;
+    color: #ffffff;
     font-size: clamp(1.95rem, 3.4vw, 2.7rem);
     margin: 0;
     letter-spacing: -0.03em;
@@ -566,12 +566,12 @@
   }
 
   .title .serif-accent {
-    color: #059669;
+    color: #fde68a;
     font-weight: 400;
   }
 
   .subtitle {
-    color: #365244;
+    color: rgba(236, 248, 241, 0.9);
     margin: 0.55rem auto 0;
     max-width: 58ch;
     font-size: 0.96rem;
@@ -579,7 +579,7 @@
   }
 
   .subtitle strong {
-    color: #0e281c;
+    color: #a7f3d0;
   }
 
   /* SIDE-BY-SIDE WORKSPACE */

@@ -73,3 +73,29 @@ test('anywhere in Czechia (even rural Šumava / Vysočina) always returns neares
   expect(Array.isArray(geoBody.results)).toBeTruthy();
   expect(geoBody.results.length).toBeGreaterThan(0);
 });
+
+test('APIs reject dangerous URLs, invalid coordinates, and out-of-range inputs', async ({ request, baseURL }) => {
+  // Reject javascript: URI in submissions
+  const xssSub = await request.post(baseURL! + '/api/submissions', {
+    data: {
+      hp: '',
+      started_at: Date.now() - 5000,
+      kind: 'org',
+      name: 'Testovací komunitní zahrada Praha',
+      website: 'javascript:alert(1)',
+      lat: 50.0755,
+      lon: 14.4378
+    }
+  });
+  expect(xssSub.status()).toBe(400);
+
+  // Reject invalid geographic bounds on /api/nearby
+  const badNear = await request.get(baseURL! + '/api/nearby?lat=999&lon=14.4378');
+  expect(badNear.status()).toBe(400);
+
+  // Reject out-of-range rating on /api/test-supabase
+  const badFb = await request.post(baseURL! + '/api/test-supabase', {
+    data: { feedback_text: 'Test', rating: 99 }
+  });
+  expect(badFb.status()).toBe(400);
+});

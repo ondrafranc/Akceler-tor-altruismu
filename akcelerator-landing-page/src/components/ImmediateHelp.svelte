@@ -62,7 +62,7 @@
                 <a href={`tel:${r.phoneRaw}`} class="res-phone">📞 {r.phone}</a>
               {/if}
               {#if r.url}
-                <a href={r.url} target="_blank" rel="noopener" class="res-web">Web / chat →</a>
+                <a href={r.url} target="_blank" rel="noopener noreferrer" class="res-web">Web / chat →</a>
               {/if}
             </div>
           </div>

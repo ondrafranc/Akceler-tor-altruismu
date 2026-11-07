@@ -1,8 +1,21 @@
 // Nearby places in Czechia (OpenStreetMap via Overpass API + Curated Czech Verified Network)
-// Cached in memory and guaranteed to return rich, human-actionable places anywhere in Czechia.
+// Cached in bounded memory and guaranteed to return human-actionable places anywhere in Czechia.
 
 import { json } from '@sveltejs/kit';
 import { CURATED_FALLBACK_PLACES } from '$lib/data/czech-actions.js';
+import {
+  clamp,
+  toFiniteNumber,
+  isValidLatLon,
+  haversineKm,
+  safeText,
+  sanitizeHttpUrl,
+  sanitizeEmail,
+  sanitizePhone,
+  setBoundedCache,
+  checkRateLimit,
+  resolveClientKey
+} from '$lib/security.js';
 
 /** @type {Map<string, { expiresAt: number, data: any }>} */
 const CACHE = new Map();
@@ -13,48 +26,21 @@ const OVERPASS_ENDPOINTS = [
   'https://overpass.kumi.systems/api/interpreter'
 ];
 
-function clamp(n, min, max) {
-  return Math.min(max, Math.max(min, n));
-}
+const ALLOWED_OSM_TYPES = new Set(['node', 'way', 'relation']);
 
-function parseFloatSafe(v) {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
-
-function parseIntSafe(v) {
-  const n = Number(v);
-  return Number.isFinite(n) ? Math.trunc(n) : null;
-}
-
-function firstText(...vals) {
+function firstText(maxLen, ...vals) {
   for (const v of vals) {
-    if (typeof v === 'string') {
-      const s = v.trim();
-      if (s) return s;
-    }
+    const s = safeText(v);
+    if (s) return maxLen > 0 ? s.slice(0, maxLen) : s;
   }
   return null;
 }
 
-function haversineKm(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  return 2 * R * Math.asin(Math.sqrt(a));
-}
-
 function buildAddress(tags) {
-  const street = firstText(tags['addr:street'], tags['addr:place']);
-  const house = firstText(tags['addr:housenumber'], tags['addr:conscriptionnumber'], tags['addr:streetnumber']);
-  const city = firstText(tags['addr:city'], tags['addr:town'], tags['addr:village'], tags['addr:hamlet'], tags['addr:suburb']);
-  const postcode = firstText(tags['addr:postcode']);
+  const street = firstText(100, tags['addr:street'], tags['addr:place']);
+  const house = firstText(30, tags['addr:housenumber'], tags['addr:conscriptionnumber'], tags['addr:streetnumber']);
+  const city = firstText(80, tags['addr:city'], tags['addr:town'], tags['addr:village'], tags['addr:hamlet'], tags['addr:suburb']);
+  const postcode = firstText(16, tags['addr:postcode']);
 
   const line1 = [street, house].filter(Boolean).join(' ');
   const line2 = [postcode, city].filter(Boolean).join(' ');
@@ -63,6 +49,7 @@ function buildAddress(tags) {
 }
 
 function osmUrl(type, id) {
+  if (!ALLOWED_OSM_TYPES.has(type) || !Number.isInteger(id) || id <= 0) return null;
   return `https://www.openstreetmap.org/${type}/${id}`;
 }
 
@@ -165,8 +152,8 @@ async function postOverpass(query) {
 }
 
 function extractLatLon(el) {
-  if (typeof el?.lat === 'number' && typeof el?.lon === 'number') return [el.lat, el.lon];
-  if (el?.center && typeof el.center.lat === 'number' && typeof el.center.lon === 'number') return [el.center.lat, el.center.lon];
+  if (isValidLatLon(el?.lat, el?.lon)) return [el.lat, el.lon];
+  if (el?.center && isValidLatLon(el.center.lat, el.center.lon)) return [el.center.lat, el.center.lon];
   return null;
 }
 
@@ -189,21 +176,31 @@ function getFallbackPlaces(lat, lon, radiusM, kinds) {
 }
 
 /** @type {import('./$types').RequestHandler} */
-export async function GET({ url }) {
-  const lat = parseFloatSafe(url.searchParams.get('lat'));
-  const lon = parseFloatSafe(url.searchParams.get('lon'));
-  const radius = parseIntSafe(url.searchParams.get('radius_m')) ?? 5000;
+export async function GET({ url, request, getClientAddress }) {
+  const lat = toFiniteNumber(url.searchParams.get('lat'));
+  const lon = toFiniteNumber(url.searchParams.get('lon'));
+  const radiusRaw = toFiniteNumber(url.searchParams.get('radius_m'));
+  const radius = radiusRaw !== null ? Math.trunc(radiusRaw) : 5000;
   const kindsRaw = (url.searchParams.get('kinds') || '').split(',').map((s) => s.trim()).filter(Boolean);
   const includeAssociations = url.searchParams.get('include_associations') === '1';
 
-  if (lat == null || lon == null) {
-    return json({ error: 'Missing lat/lon' }, { status: 400, headers: { 'cache-control': 'no-store' } });
+  if (!isValidLatLon(lat, lon)) {
+    return json({ error: 'Invalid or missing lat/lon' }, { status: 400, headers: { 'cache-control': 'no-store' } });
+  }
+
+  const clientKey = resolveClientKey(request, getClientAddress);
+  const rl = checkRateLimit('nearby', clientKey, 120, 60_000);
+  if (!rl.allowed) {
+    return json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'cache-control': 'no-store', 'retry-after': String(rl.retryAfterSec) } }
+    );
   }
 
   const radiusM = clamp(radius, 250, 25_000);
-  const kinds = kindsRaw.filter((k) => ['ngo', 'community', 'food', 'animals'].includes(k));
+  const kinds = [...new Set(kindsRaw.filter((k) => ['ngo', 'community', 'food', 'animals'].includes(k)))].sort();
 
-  const cacheKey = `v25:${lat.toFixed(4)}:${lon.toFixed(4)}:${radiusM}:${includeAssociations ? 'a1' : 'a0'}:${kinds.sort().join(',')}`;
+  const cacheKey = `v26:${lat.toFixed(4)}:${lon.toFixed(4)}:${radiusM}:${includeAssociations ? 'a1' : 'a0'}:${kinds.join(',')}`;
   const cached = CACHE.get(cacheKey);
   const now = Date.now();
   if (cached && cached.expiresAt > now) {
@@ -221,18 +218,20 @@ export async function GET({ url }) {
       const ll = extractLatLon(el);
       if (!ll) continue;
       const tags = el.tags || {};
-      let name = firstText(tags.name, tags['name:cs'], tags.operator, tags.brand);
+      let name = firstText(160, tags.name, tags['name:cs'], tags.operator, tags.brand);
       if (!name && tags.amenity === 'public_bookcase') {
         name = 'Veřejná knihobudka';
       }
-      // Skip nameless obscure nodes that offer no actionable info for users
       if (!name) continue;
 
-      const website = firstText(tags.website, tags['contact:website'], tags.url);
-      const phone = firstText(tags.phone, tags['contact:phone']);
-      const email = firstText(tags.email, tags['contact:email']);
-      const opening_hours = firstText(tags.opening_hours);
-      const description = firstText(tags['description:cs'], tags.description);
+      const rawWebsite = firstText(280, tags.website, tags['contact:website'], tags.url);
+      const website = rawWebsite ? sanitizeHttpUrl(rawWebsite) : null;
+      const rawPhone = firstText(40, tags.phone, tags['contact:phone']);
+      const phone = rawPhone ? sanitizePhone(rawPhone) : null;
+      const rawEmail = firstText(120, tags.email, tags['contact:email']);
+      const email = rawEmail ? sanitizeEmail(rawEmail) : null;
+      const opening_hours = firstText(180, tags.opening_hours);
+      const description = firstText(500, tags['description:cs'], tags.description);
       const address = buildAddress(tags);
       const kind =
         tags.amenity === 'animal_shelter'
@@ -267,8 +266,7 @@ export async function GET({ url }) {
         phone,
         email,
         opening_hours,
-        description,
-        tags
+        description
       });
     }
 
@@ -292,7 +290,7 @@ export async function GET({ url }) {
     }
 
     const payload = { places, radius_m: radiusM, lat, lon, fallback: false, expandedToNearest };
-    CACHE.set(cacheKey, { expiresAt: now + 60 * 60 * 1000, data: payload });
+    setBoundedCache(CACHE, cacheKey, payload, 60 * 60 * 1000, 250);
 
     return json(payload, {
       headers: { 'cache-control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400' }
@@ -300,8 +298,10 @@ export async function GET({ url }) {
   } catch {
     const fallbackPlaces = getFallbackPlaces(lat, lon, radiusM, kinds);
     const payload = { places: fallbackPlaces, radius_m: radiusM, lat, lon, fallback: true };
+    setBoundedCache(CACHE, cacheKey, payload, 2 * 60 * 1000, 250);
     return json(payload, {
-      headers: { 'cache-control': 'public, max-age=0, s-maxage=300, stale-while-revalidate=3600' }
+      status: 200,
+      headers: { 'cache-control': 'public, max-age=0, s-maxage=120' }
     });
   }
 }

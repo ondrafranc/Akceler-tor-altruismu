@@ -9,6 +9,7 @@
     buildFirstContactTemplate
   } from '../../lib/data/czech-actions.js';
   import { recordSmallWin } from '../../lib/progress.js';
+  import { haversineKm, sanitizeHttpUrl as normalizeUrl, safeText } from '../../lib/security.js';
 
   const CATEGORY_PRESETS = [
     { id: 'all', label: '✨ Vše smysluplné v okolí', kinds: ['ngo', 'community', 'food', 'animals'], onlyWeb: false },
@@ -75,32 +76,6 @@
   // First-contact template
   let openTemplateId = null;
   let copiedTemplateId = null;
-
-  function haversineKm(lat1, lon1, lat2, lon2) {
-    const R = 6371;
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    return 2 * R * Math.asin(Math.sqrt(a));
-  }
-
-  function normalizeUrl(url) {
-    if (!url) return null;
-    const u = String(url).trim();
-    if (!u) return null;
-    if (u.startsWith('http://') || u.startsWith('https://')) return u;
-    if (u.startsWith('//')) return `https:${u}`;
-    return `https://${u}`;
-  }
-
-  function safeText(v) {
-    return typeof v === 'string' ? v.trim() : '';
-  }
 
   function formatDist(km) {
     if (!Number.isFinite(km)) return '';
@@ -275,8 +250,9 @@
       const marker = leaflet.marker([p.lat, p.lon], { icon, riseOnHover: true });
       markerById.set(p.id, marker);
 
-      const webHtml = p.website
-        ? `<a href="${escapeHtml(p.website)}" target="_blank" rel="noopener" style="font-weight:800;color:#059669;">Otevřít web ↗</a>`
+      const safeWeb = normalizeUrl(p.website);
+      const webHtml = safeWeb
+        ? `<a href="${escapeHtml(safeWeb)}" target="_blank" rel="noopener noreferrer" style="font-weight:800;color:#059669;">Otevřít web ↗</a>`
         : '';
 
       marker.bindPopup(
@@ -505,63 +481,73 @@
     }
   }
 
-  onMount(async () => {
-    try {
-      const sp = new URLSearchParams(window.location.search);
-      const latP = Number(sp.get('lat'));
-      const lonP = Number(sp.get('lon'));
-      const rP = Number(sp.get('radius_km') || sp.get('r'));
-      const kindsP = (sp.get('kinds') || '')
-        .split(',')
-        .map((s) => s.trim())
-        .filter((k) => ['ngo', 'community', 'food', 'animals'].includes(k));
+  onMount(() => {
+    let destroyed = false;
+    let resizeTimer = null;
 
-      if (kindsP.length) kinds = kindsP;
-      if (Number.isFinite(rP) && rP > 0) {
-        radiusKm = rP > 100 ? Math.min(25, Math.round(rP / 1000)) : Math.min(25, Math.max(1, Math.round(rP)));
+    (async () => {
+      try {
+        const sp = new URLSearchParams(window.location.search);
+        const latP = Number(sp.get('lat'));
+        const lonP = Number(sp.get('lon'));
+        const rP = Number(sp.get('radius_km') || sp.get('r'));
+        const kindsP = (sp.get('kinds') || '')
+          .split(',')
+          .map((s) => s.trim())
+          .filter((k) => ['ngo', 'community', 'food', 'animals'].includes(k));
+
+        if (kindsP.length) kinds = kindsP;
+        if (Number.isFinite(rP) && rP > 0) {
+          radiusKm = rP > 100 ? Math.min(25, Math.round(rP / 1000)) : Math.min(25, Math.max(1, Math.round(rP)));
+        }
+        if (Number.isFinite(latP) && Number.isFinite(lonP) && Math.abs(latP) <= 90 && Math.abs(lonP) <= 180 && Math.abs(latP) > 1 && Math.abs(lonP) > 1) {
+          centerLat = latP;
+          centerLon = lonP;
+          const mCity = CZECH_CITIES.find((c) => haversineKm(c.lat, c.lon, latP, lonP) < 12);
+          if (mCity) selectedCity = mCity;
+        }
+      } catch {}
+
+      // Seed curated places BEFORE map finishes mounting so list is instant
+      places = getInstantCurated(centerLat, centerLon, kinds);
+
+      try {
+        const mod = await import('leaflet');
+        if (destroyed || !mapEl) return;
+        leaflet = mod.default || mod;
+        await tick();
+        if (destroyed || !mapEl) return;
+
+        map = leaflet.map(mapEl, {
+          zoomControl: true,
+          scrollWheelZoom: true
+        });
+
+        setTileLayer('osm');
+        moveMapCenter(centerLat, centerLon, 13);
+        isLoadingMap = false;
+
+        // Ensure tiles fill container cleanly
+        resizeTimer = setTimeout(() => map?.invalidateSize(), 120);
+
+        map.on('click', async (e) => {
+          const { lat, lng } = e.latlng;
+          moveMapCenter(lat, lng, map.getZoom());
+          await fetchNearby(lat, lng);
+        });
+
+        await fetchNearby(centerLat, centerLon);
+      } catch {
+        if (destroyed) return;
+        isLoadingMap = false;
+        mapBootError = 'Interaktivní podklad se nepodařilo vykreslit, ale seznam nejbližších ověřených míst níže funguje naplno.';
+        await fetchNearby(centerLat, centerLon);
       }
-      if (Number.isFinite(latP) && Number.isFinite(lonP) && Math.abs(latP) > 1 && Math.abs(lonP) > 1) {
-        centerLat = latP;
-        centerLon = lonP;
-        const mCity = CZECH_CITIES.find((c) => haversineKm(c.lat, c.lon, latP, lonP) < 12);
-        if (mCity) selectedCity = mCity;
-      }
-    } catch {}
-
-    // Seed curated places BEFORE map finishes mounting so list is instant
-    places = getInstantCurated(centerLat, centerLon, kinds);
-
-    try {
-      const mod = await import('leaflet');
-      leaflet = mod.default || mod;
-      await tick();
-
-      map = leaflet.map(mapEl, {
-        zoomControl: true,
-        scrollWheelZoom: true
-      });
-
-      setTileLayer('osm');
-      moveMapCenter(centerLat, centerLon, 13);
-      isLoadingMap = false;
-
-      // Ensure tiles fill container cleanly
-      setTimeout(() => map?.invalidateSize(), 120);
-
-      map.on('click', async (e) => {
-        const { lat, lng } = e.latlng;
-        moveMapCenter(lat, lng, map.getZoom());
-        await fetchNearby(lat, lng);
-      });
-
-      await fetchNearby(centerLat, centerLon);
-    } catch (err) {
-      isLoadingMap = false;
-      mapBootError = 'Interaktivní podklad se nepodařilo vykreslit, ale seznam nejbližších ověřených míst níže funguje naplno.';
-      await fetchNearby(centerLat, centerLon);
-    }
+    })();
 
     return () => {
+      destroyed = true;
+      if (resizeTimer) clearTimeout(resizeTimer);
       if (map) {
         map.remove();
         map = null;
@@ -770,19 +756,21 @@
           </div>
           <div class="ch-list">
             {#each communityItems.slice(0, 3) as ci}
+              {@const ciWeb = normalizeUrl(ci.website)}
+              {@const ciDist = ci.distanceKm ?? ci.distance_km}
               <div class="ch-item">
                 <div class="ch-title-row">
                   <strong>{ci.name}</strong>
-                  {#if ci.distance_km != null}
-                    <span>{formatDist(ci.distance_km)}</span>
+                  {#if ciDist != null}
+                    <span>{formatDist(ciDist)}</span>
                   {/if}
                 </div>
                 {#if ci.description}
                   <p>{ci.description}</p>
                 {/if}
                 <div class="ch-links">
-                  {#if ci.website}
-                    <a href={normalizeUrl(ci.website)} target="_blank" rel="noopener">Web ↗</a>
+                  {#if ciWeb}
+                    <a href={ciWeb} target="_blank" rel="noopener noreferrer">Web ↗</a>
                   {/if}
                   {#if typeof ci.lat === 'number' && typeof ci.lon === 'number'}
                     <button type="button" on:click={() => moveMapCenter(ci.lat, ci.lon, 15)}>Ukázat na mapě</button>
@@ -835,11 +823,11 @@
                 📍 Ukázat na mapě
               </button>
 
-              {#if p.website}
+              {#if normalizeUrl(p.website)}
                 <a
-                  href={p.website}
+                  href={normalizeUrl(p.website)}
                   target="_blank"
-                  rel="noopener"
+                  rel="noopener noreferrer"
                   class="pc-btn primary"
                   on:click={() => trackEvent('aa_clickout', { surface: 'near_place', id: p.id })}
                 >
@@ -889,7 +877,7 @@
                   <a
                     href={`https://mapy.cz/zakladni?x=${p.lon}&y=${p.lat}&z=16&q=${encodeURIComponent(p.name)}`}
                     target="_blank"
-                    rel="noopener"
+                    rel="noopener noreferrer"
                     class="pc-btn map-focus"
                   >
                     🧭 Trasa na Mapy.cz ↗
@@ -920,7 +908,7 @@
         <summary>Hledáš jednorázovou víkendovku nebo konkrétní inzerát? (4 portály)</summary>
         <div class="portals-mini-grid">
           {#each PORTALS.slice(0, 4) as portal}
-            <a href={portal.url} target="_blank" rel="noopener" class="portal-mini">
+            <a href={portal.url} target="_blank" rel="noopener noreferrer" class="portal-mini">
               <strong>{portal.title} ↗</strong>
               <span>{portal.desc}</span>
             </a>
@@ -964,46 +952,47 @@
     align-items: center;
     padding: 0.42rem 0.92rem;
     border-radius: 999px;
-    border: 1px solid rgba(22, 82, 56, 0.16);
-    background: rgba(255, 255, 255, 0.9);
-    color: #123828;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    background: rgba(255, 255, 255, 0.13);
+    color: #f4faf6;
     font-family: var(--font-sans);
     font-weight: 700;
     font-size: 0.82rem;
     text-decoration: none;
     cursor: pointer;
-    box-shadow: 0 4px 12px -4px rgba(14, 40, 28, 0.08);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 6px 14px -6px rgba(4, 18, 12, 0.28);
     transition: all 0.16s ease;
   }
 
   .hero-pill-btn:hover {
-    background: #ffffff;
-    border-color: rgba(5, 150, 105, 0.38);
+    background: rgba(255, 255, 255, 0.22);
+    border-color: rgba(253, 230, 138, 0.48);
   }
 
   .hero-pill-btn.accent {
-    background: #123828;
-    color: #fde68a;
-    border-color: #123828;
+    background: linear-gradient(135deg, #fde68a 0%, #6ee7b7 100%);
+    color: #062016;
+    border-color: rgba(253, 230, 138, 0.55);
     font-weight: 800;
   }
 
   .hero-pill-btn.accent:hover {
-    background: #1c523a;
+    filter: brightness(1.04);
   }
 
   .hero-kicker {
     font-size: 0.74rem;
     font-weight: 800;
     letter-spacing: 0.11em;
-    color: #047857;
+    color: #fde68a;
     margin-bottom: 0.35rem;
   }
 
   .title {
     font-family: var(--font-sans);
     font-weight: 800;
-    color: #0e281c;
+    color: #ffffff;
     font-size: clamp(1.95rem, 3.5vw, 2.8rem);
     line-height: 1.1;
     margin: 0;
@@ -1011,12 +1000,12 @@
   }
 
   .title .serif-accent {
-    color: #059669;
+    color: #fde68a;
     font-weight: 400;
   }
 
   .subtitle {
-    color: #365244;
+    color: rgba(236, 248, 241, 0.9);
     margin: 0.55rem auto 1.15rem;
     max-width: 62ch;
     font-size: 0.96rem;
@@ -1024,7 +1013,7 @@
   }
 
   .subtitle strong {
-    color: #047857;
+    color: #a7f3d0;
   }
 
   .quick-cities {
@@ -1046,28 +1035,29 @@
   }
 
   .gps-chip {
-    background: #059669;
-    border: 1px solid #047857;
-    color: #ffffff;
+    background: #34d399;
+    border: 1px solid #6ee7b7;
+    color: #052015;
     font-weight: 800;
-    box-shadow: 0 4px 12px -4px rgba(5, 150, 105, 0.32);
+    box-shadow: 0 6px 14px -4px rgba(16, 185, 129, 0.38);
   }
 
   .city-chip {
-    background: rgba(255, 255, 255, 0.88);
-    border: 1px solid rgba(22, 82, 56, 0.15);
-    color: #163a2a;
+    background: rgba(255, 255, 255, 0.13);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    color: #f0fdf4;
+    backdrop-filter: blur(6px);
   }
 
   .city-chip:hover {
-    background: #ffffff;
-    border-color: rgba(5, 150, 105, 0.42);
+    background: rgba(255, 255, 255, 0.22);
+    border-color: rgba(253, 230, 138, 0.5);
   }
 
   .city-chip.active {
-    background: #123828;
-    border-color: #123828;
-    color: #fde68a;
+    background: #fde68a;
+    border-color: #fde68a;
+    color: #062016;
     font-weight: 800;
   }
 

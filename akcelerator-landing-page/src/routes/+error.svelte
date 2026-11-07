@@ -45,7 +45,7 @@
     font-size: 0.76rem;
     font-weight: 800;
     letter-spacing: 0.12em;
-    color: #047857;
+    color: #fde68a;
     margin-bottom: 0.5rem;
   }
 
@@ -53,19 +53,19 @@
     font-family: var(--font-sans);
     font-size: clamp(1.85rem, 3.4vw, 2.6rem);
     font-weight: 800;
-    color: #0e281c;
+    color: #ffffff;
     margin: 0 0 0.85rem;
     letter-spacing: -0.03em;
     line-height: 1.12;
   }
 
   h1 .serif-accent {
-    color: #059669;
+    color: #fde68a;
     font-weight: 400;
   }
 
   p {
-    color: #365244;
+    color: rgba(236, 248, 241, 0.9);
     line-height: 1.6;
     max-width: 50ch;
     margin: 0 auto 1.8rem;
@@ -81,8 +81,8 @@
   .btn-primary {
     padding: 0.82rem 1.35rem;
     border-radius: 14px;
-    background: linear-gradient(135deg, #0f3d2a 0%, #165b3f 100%);
-    color: #ffffff;
+    background: linear-gradient(135deg, #fde68a 0%, #6ee7b7 100%);
+    color: #072116;
     font-weight: 800;
     text-decoration: none;
     transition: transform 0.18s ease;
@@ -95,15 +95,16 @@
   .btn-glass {
     padding: 0.82rem 1.35rem;
     border-radius: 14px;
-    background: rgba(255, 255, 255, 0.88);
-    border: 1px solid rgba(22, 82, 56, 0.18);
-    color: #0e281c;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    color: #f4faf6;
     font-weight: 700;
     text-decoration: none;
+    backdrop-filter: blur(8px);
     transition: background 0.18s ease;
   }
 
   .btn-glass:hover {
-    background: #ffffff;
+    background: rgba(255, 255, 255, 0.22);
   }
 </style>

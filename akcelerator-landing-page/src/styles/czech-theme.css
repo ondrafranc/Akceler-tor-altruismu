@@ -107,23 +107,23 @@ body {
 }
 
 /* ==========================================================================
-   SUNLIT WATERCOLOR MEADOW SUBPAGE HERO BANNER
-   Shared across /app, /app/guided, /app/online, /near, /submit
+   BOTANICAL FOREST-EMERALD SUBPAGE HERO BANNER WITH PAINTED BACKDROP
+   Shared across /app, /app/guided, /app/online, /near, /submit, +error
    ========================================================================== */
 .subpage-hero {
   position: relative;
   overflow: hidden;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(238, 247, 241, 0.82) 52%, rgba(251, 249, 242, 0.88) 100%),
-    url('/art/meadow-soft-bg.jpg') center 42% / cover no-repeat;
-  color: #0e281c;
+    linear-gradient(135deg, rgba(12, 42, 29, 0.88) 0%, rgba(19, 61, 43, 0.8) 52%, rgba(11, 36, 25, 0.88) 100%),
+    url('/art/botanical-calm.jpg') center 38% / cover no-repeat;
+  color: #f4faf6;
   border-radius: 30px;
   padding: 2.35rem 2.25rem;
   margin-bottom: 1.65rem;
   box-shadow:
-    0 20px 44px -18px rgba(15, 45, 32, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(22, 82, 56, 0.13);
+    0 22px 48px -16px rgba(9, 29, 20, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 .subpage-hero::before {
@@ -131,8 +131,8 @@ body {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 16% 20%, rgba(167, 243, 208, 0.28), transparent 48%),
-    radial-gradient(circle at 84% 24%, rgba(254, 243, 199, 0.34), transparent 50%);
+    radial-gradient(circle at 16% 20%, rgba(52, 211, 153, 0.22), transparent 50%),
+    radial-gradient(circle at 84% 22%, rgba(253, 230, 138, 0.18), transparent 52%);
   pointer-events: none;
 }
 

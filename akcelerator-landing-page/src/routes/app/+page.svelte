@@ -73,14 +73,14 @@
     font-size: 0.75rem;
     font-weight: 800;
     letter-spacing: 0.12em;
-    color: #047857;
+    color: #fde68a;
     margin-bottom: 0.4rem;
   }
 
   .title {
     font-family: var(--font-sans);
     font-weight: 800;
-    color: #0e281c;
+    color: #ffffff;
     font-size: clamp(2rem, 3.6vw, 2.8rem);
     line-height: 1.12;
     margin: 0;
@@ -88,12 +88,12 @@
   }
 
   .title .serif-accent {
-    color: #059669;
+    color: #fde68a;
     font-weight: 400;
   }
 
   .subtitle {
-    color: #365244;
+    color: rgba(236, 248, 241, 0.9);
     margin: 0.65rem auto 0;
     max-width: 52ch;
     font-size: 1rem;
