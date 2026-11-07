@@ -10,18 +10,16 @@
   let savedValues = [];
   let copiedId = '';
   let spotlightId = '';
-
-  // Anti-overwhelm: show only 3 calm cards initially (1 clean row!), expand gently when asked!
   let visibleLimit = 3;
 
   const FILTERS = [
-    { id: 'all', label: '✨ Doporučený výběr' },
-    { id: 'free', label: '💸 Zdarma (0 Kč)' },
-    { id: 'fast', label: '⚡ Do 5 minut' },
-    { id: 'writing', label: '🛋️ Z gauče' },
-    { id: 'outdoor', label: '🌿 Na procházce' },
-    { id: 'tutoring', label: '💻 Hlavou od PC' },
-    { id: 'donation', label: '💚 Drobný dar' }
+    { id: 'all', label: '✨ Doporučené' },
+    { id: 'free', label: 'Zdarma' },
+    { id: 'fast', label: 'Do 5 min' },
+    { id: 'writing', label: 'Z gauče' },
+    { id: 'outdoor', label: 'Venku' },
+    { id: 'tutoring', label: 'U počítače' },
+    { id: 'donation', label: 'Drobný dar' }
   ];
 
   onMount(() => {
@@ -37,12 +35,23 @@
     } catch {}
   });
 
+  function cleanTitle(str) {
+    return String(str || '').replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\s]+/u, '').trim() || str;
+  }
+
+  function cleanMeta(str) {
+    return String(str || '')
+      .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F]/gu, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+
   async function shareAction(action) {
-    const shareText = `💡 Tip na malý dobrý skutek (${action.title} – ${action.org}): ${action.url}`;
+    const shareText = `Tip na drobný dobrý skutek (${cleanTitle(action.title)} – ${action.org}): ${action.url}`;
     try {
       if (navigator.share) {
         await navigator.share({
-          title: action.title,
+          title: cleanTitle(action.title),
           text: shareText,
           url: action.url
         });
@@ -66,11 +75,11 @@
     return ($completedSteps || []).some((s) => s.id === id);
   }
 
-  function valueLabelsFor(action) {
-    return action.values
+  function primaryTopicFor(action) {
+    const first = action.values
       .map((k) => VALUES.find((v) => v.key === k)?.shortLabel)
-      .filter(Boolean)
-      .slice(0, 2);
+      .filter(Boolean)[0];
+    return first || 'Dobrý skutek';
   }
 
   function pickRandomSpark() {
@@ -124,10 +133,10 @@
 
 <div class="page">
   <header class="subpage-hero header">
-    <div class="hero-kicker">DROBNÉ SKUTKY NA DÁLKU I VENKU • {MICRO_ACTIONS.length} OVĚŘENÝCH PROJEKTŮ</div>
+    <div class="hero-kicker">DROBNÉ SKUTKY NA DÁLKU I VENKU · {MICRO_ACTIONS.length} OVĚŘENÝCH PROJEKTŮ</div>
     <h1 class="title">Drobné skutky, které zvládneš <span class="serif-accent">během pár minut</span></h1>
     <p class="subtitle">
-      Začínáme třemi ověřenými tipy, ať se ti snadno vybírá. Další si kdykoliv rozbalíš jedním kliknutím nebo si vyfiltruješ přesně to, co tě baví.
+      Začínáme třemi lehkými tipy — další si kdykoliv rozbalíš nebo vyhledáš podle nálady.
     </p>
 
     <div class="hero-tools-row">
@@ -135,12 +144,12 @@
         <input
           type="search"
           bind:value={searchQuery}
-          placeholder="Hledat podle slova: útulek, mapování, ptáci, senioři, studánky…"
+          placeholder="Hledat: útulek, mapování, ptáci, senioři, studánky…"
           aria-label="Hledat v mikro-krocích"
         />
       </div>
       <button type="button" class="btn-random-spark" on:click={pickRandomSpark}>
-        ✨ Vybrat náhodný tip
+        ✨ Náhodný tip
       </button>
     </div>
   </header>
@@ -180,40 +189,28 @@
   {:else}
     <div class="grid">
       {#each visibleActions as o (o.id)}
-        <div
+        <article
           id={`online-card-${o.id}`}
           class="card"
-          class:matched={matchesSavedValues(o)}
           class:spotlight={spotlightId === o.id}
           class:done-card={isCompleted(o.id)}
         >
-          <div class="badges">
+          <div class="card-meta-top">
+            <span class="topic-label">{primaryTopicFor(o)}</span>
+            <span>·</span>
+            <span>{cleanMeta(o.metaLabel)}</span>
             {#if isCompleted(o.id)}
-              <span class="badge done-b">✓ Vyzkoušeno</span>
+              <span class="done-dot">· ✓ Splněno</span>
             {/if}
-            {#if matchesSavedValues(o)}
-              <span class="badge match">🎯 Blízké téma</span>
-            {/if}
-            {#each valueLabelsFor(o) as lbl}
-              <span class="badge">{lbl}</span>
-            {/each}
           </div>
 
-          <div class="card-title">{o.title}</div>
+          <h2 class="card-title">{cleanTitle(o.title)}</h2>
           <div class="org-name">{o.org}</div>
-          <div class="card-desc">{o.desc}</div>
-
-          {#if o.selfBenefit}
-            <div class="self-benefit-note">✨ <strong>Co to dá i tobě:</strong> {o.selfBenefit}</div>
-          {/if}
-
-          {#if o.reassurance}
-            <div class="reassure-note">🛡️ <strong>Bez obav:</strong> {o.reassurance}</div>
-          {/if}
+          <p class="card-desc">{o.desc}</p>
 
           {#if o.steps?.length}
-            <details class="steps-details">
-              <summary>👣 Jak na to ({o.steps.length} {o.steps.length === 1 ? 'krok' : o.steps.length < 5 ? 'kroky' : 'kroků'})</summary>
+            <details class="steps-inline">
+              <summary>Jak na to ({o.steps.length} {o.steps.length === 1 ? 'krok' : o.steps.length < 5 ? 'kroky' : 'kroků'})</summary>
               <ol>
                 {#each o.steps as step}
                   <li>{step}</li>
@@ -221,8 +218,6 @@
               </ol>
             </details>
           {/if}
-
-          <div class="meta">{o.metaLabel}</div>
 
           <div class="actions-row">
             <a
@@ -249,13 +244,14 @@
             <button
               type="button"
               class="cta share-btn"
-              title="Poslat tip kamarádovi"
+              title="Sdílet odkaz"
+              aria-label="Sdílet odkaz"
               on:click={() => shareAction(o)}
             >
               {copiedId === o.id ? '✓' : '↗'}
             </button>
           </div>
-        </div>
+        </article>
       {/each}
     </div>
 
@@ -266,7 +262,7 @@
           class="calm-more-btn"
           on:click={() => (visibleLimit += 6)}
         >
-          <span>🌿 Ukázat dalších {Math.min(6, remainingCount)} tipů</span>
+          <span>Ukázat dalších {Math.min(6, remainingCount)} tipů</span>
         </button>
         <span class="calm-more-hint">
           Zobrazeno {visibleActions.length} z {filteredActions.length} ověřených možností.
@@ -283,7 +279,7 @@
 
 <style>
   .page {
-    max-width: 1160px;
+    max-width: 1140px;
     margin: 0 auto;
     padding: 0.75rem 1.25rem 4rem;
   }
@@ -293,18 +289,18 @@
   }
 
   .hero-kicker {
-    font-size: 0.75rem;
+    font-size: 0.74rem;
     font-weight: 800;
     letter-spacing: 0.12em;
     color: #fde68a;
-    margin-bottom: 0.4rem;
+    margin-bottom: 0.35rem;
   }
 
   .title {
     font-family: var(--font-sans);
     font-weight: 800;
     color: #ffffff;
-    font-size: clamp(2rem, 3.6vw, 2.85rem);
+    font-size: clamp(2rem, 3.5vw, 2.75rem);
     margin: 0;
     letter-spacing: -0.03em;
     line-height: 1.12;
@@ -317,17 +313,17 @@
 
   .subtitle {
     color: rgba(236, 248, 241, 0.9);
-    margin: 0.65rem auto 0;
-    max-width: 56ch;
-    font-size: 0.98rem;
-    line-height: 1.6;
+    margin: 0.55rem auto 0;
+    max-width: 52ch;
+    font-size: 0.96rem;
+    line-height: 1.58;
   }
 
   .hero-tools-row {
-    margin: 1.25rem auto 0;
-    max-width: 680px;
+    margin: 1.2rem auto 0;
+    max-width: 640px;
     display: flex;
-    gap: 0.6rem;
+    gap: 0.55rem;
     flex-wrap: wrap;
     justify-content: center;
   }
@@ -339,32 +335,30 @@
 
   .search-wrap input {
     width: 100%;
-    padding: 0.74rem 1.08rem;
+    padding: 0.72rem 1.1rem;
     border-radius: 999px;
-    border: 1.5px solid rgba(255, 255, 255, 0.32);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     background: rgba(255, 255, 255, 0.96);
-    box-shadow: 0 10px 24px -10px rgba(5, 20, 14, 0.35);
     color: #0e281c;
     font-family: var(--font-sans);
     font-size: 0.9rem;
   }
 
   .search-wrap input::placeholder {
-    color: #4f6b5d;
+    color: #567063;
   }
 
   .btn-random-spark {
-    padding: 0.74rem 1.22rem;
+    padding: 0.72rem 1.15rem;
     border-radius: 999px;
-    border: 1px solid rgba(253, 230, 138, 0.5);
+    border: none;
     background: linear-gradient(135deg, #fde68a 0%, #6ee7b7 100%);
     color: #062016;
     font-family: var(--font-sans);
     font-weight: 800;
     font-size: 0.86rem;
     cursor: pointer;
-    box-shadow: 0 10px 24px -8px rgba(4, 18, 12, 0.38);
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    transition: transform 0.18s ease;
   }
 
   .btn-random-spark:hover {
@@ -373,30 +367,28 @@
 
   .filters-bar {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.45rem;
     justify-content: center;
     flex-wrap: wrap;
-    margin: 1.25rem 0 1.6rem;
+    margin: 1.15rem 0 1.5rem;
   }
 
   .filter-chip {
-    padding: 0.56rem 1rem;
+    padding: 0.5rem 0.95rem;
     border-radius: 999px;
     border: 1px solid rgba(22, 66, 48, 0.1);
     background: rgba(255, 255, 255, 0.92);
     color: var(--text-primary);
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 0.87rem;
+    font-size: 0.84rem;
     cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: var(--shadow-sm);
+    transition: all 0.18s ease;
   }
 
   .filter-chip:hover {
     border-color: rgba(16, 185, 129, 0.38);
     background: #ffffff;
-    transform: translateY(-1px);
   }
 
   .filter-chip.active {
@@ -407,27 +399,26 @@
 
   .empty-box {
     text-align: center;
-    padding: 2.5rem 1.5rem;
+    padding: 2.4rem 1.5rem;
     background: rgba(255, 255, 255, 0.94);
-    border-radius: 26px;
+    border-radius: 24px;
     border: 1px solid rgba(22, 66, 48, 0.09);
   }
 
   .grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1.25rem;
+    gap: 1.2rem;
   }
 
   .card {
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.96);
     border: 1px solid rgba(22, 66, 48, 0.09);
     border-radius: 24px;
     box-shadow: var(--shadow-sm);
-    padding: 1.55rem;
+    padding: 1.65rem;
     display: flex;
     flex-direction: column;
-    gap: 0.58rem;
     transition: transform 0.24s var(--ease-gentle), box-shadow 0.24s var(--ease-gentle);
   }
 
@@ -438,39 +429,35 @@
 
   .card.spotlight {
     border: 1.5px solid #f59e0b;
-    box-shadow: 0 0 0 4px rgba(253, 230, 138, 0.45), var(--shadow-md);
+    box-shadow: 0 0 0 4px rgba(253, 230, 138, 0.4), var(--shadow-md);
   }
 
-  .badges {
+  .card-meta-top {
     display: flex;
-    gap: 0.4rem;
+    align-items: center;
+    gap: 0.38rem;
     flex-wrap: wrap;
+    font-size: 0.76rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
   }
 
-  .badge {
-    font-size: 0.74rem;
+  .topic-label {
     font-weight: 700;
-    padding: 0.22rem 0.6rem;
-    border-radius: 999px;
-    background: #f3f2ea;
     color: var(--text-secondary);
   }
 
-  .badge.match {
-    background: #e8f7ee;
-    color: #065f46;
-  }
-
-  .badge.done-b {
-    background: #ecf5ef;
-    color: #164230;
+  .done-dot {
+    color: #047857;
+    font-weight: 700;
   }
 
   .card-title {
+    margin: 0 0 0.25rem;
     font-weight: 800;
     color: var(--text-primary);
-    font-size: 1.12rem;
-    line-height: 1.3;
+    font-size: 1.15rem;
+    line-height: 1.28;
     letter-spacing: -0.015em;
   }
 
@@ -478,69 +465,59 @@
     font-size: 0.82rem;
     font-weight: 700;
     color: var(--emerald-600);
+    margin-bottom: 0.55rem;
   }
 
   .card-desc {
+    margin: 0 0 0.85rem;
     color: var(--text-secondary);
     line-height: 1.58;
     flex: 1;
-    font-size: 0.91rem;
+    font-size: 0.9rem;
   }
 
-  .self-benefit-note {
+  .steps-inline {
     font-size: 0.82rem;
-    color: #0b3b28;
-    background: #eef8f2;
-    border-radius: 12px;
-    padding: 0.55rem 0.75rem;
-    line-height: 1.45;
-  }
-
-  .reassure-note {
-    font-size: 0.8rem;
-    color: #57534e;
-    background: #f8f6ef;
-    border-radius: 12px;
-    padding: 0.5rem 0.75rem;
-    line-height: 1.44;
-  }
-
-  .steps-details {
-    font-size: 0.84rem;
     color: var(--text-secondary);
-    background: #faf9f5;
-    border: 1px solid rgba(22, 66, 48, 0.08);
-    border-radius: 12px;
-    padding: 0.5rem 0.78rem;
+    margin-bottom: 0.9rem;
   }
 
-  .steps-details summary {
+  .steps-inline summary {
     cursor: pointer;
     font-weight: 700;
     color: var(--forest-800);
+    list-style: none;
   }
 
-  .steps-details ol {
-    margin: 0.45rem 0 0.15rem 1.15rem;
+  .steps-inline summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .steps-inline summary::before {
+    content: '▸ ';
+    color: var(--emerald-600);
+  }
+
+  .steps-inline[open] summary::before {
+    content: '▾ ';
+  }
+
+  .steps-inline ol {
+    margin: 0.45rem 0 0 1.15rem;
     padding: 0;
     line-height: 1.5;
-  }
-
-  .meta {
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    font-weight: 600;
   }
 
   .actions-row {
     display: flex;
     gap: 0.45rem;
-    margin-top: 0.35rem;
+    align-items: center;
+    margin-top: auto;
   }
 
   .cta {
-    border-radius: 13px;
-    padding: 0.65rem 0.9rem;
+    border-radius: 12px;
+    padding: 0.68rem 0.9rem;
     font-family: inherit;
     font-size: 0.84rem;
     font-weight: 700;
@@ -550,7 +527,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.18s ease;
+    transition: all 0.16s ease;
   }
 
   .cta.primary {
@@ -560,18 +537,30 @@
   }
 
   .cta.primary:hover {
-    background: var(--forest-700);
+    background: var(--czech-forest);
   }
 
   .cta.secondary {
-    background: #ecf7f0;
-    color: #0b3b28;
-    border-color: rgba(16, 185, 129, 0.24);
+    background: #eef7f1;
+    color: #065f46;
+    border-color: rgba(5, 150, 105, 0.24);
+  }
+
+  .cta.secondary:hover {
+    background: #059669;
+    color: #ffffff;
   }
 
   .cta.share-btn {
-    background: #f5f3ec;
-    color: var(--text-secondary);
+    background: transparent;
+    color: var(--text-muted);
+    border-color: rgba(22, 66, 48, 0.1);
+    padding: 0.68rem 0.72rem;
+  }
+
+  .cta.share-btn:hover {
+    background: #f5f9f6;
+    color: var(--text-primary);
   }
 
   .link-show-all {
@@ -579,11 +568,11 @@
     background: transparent;
     color: var(--emerald-600);
     font-family: inherit;
-    font-weight: 700;
+    font-weight: 800;
     font-size: 0.82rem;
     cursor: pointer;
     text-decoration: underline;
-    margin-left: 0.35rem;
+    padding: 0 0.25rem;
   }
 
   @media (max-width: 980px) {

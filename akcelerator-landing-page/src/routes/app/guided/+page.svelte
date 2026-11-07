@@ -15,7 +15,7 @@
       id: 'couch',
       emoji: '🛋️',
       title: '2 minuty z domova',
-      sub: 'Rychlý skutek z mobilu nebo počítače, zdarma',
+      sub: 'Rychlý skutek z mobilu',
       timeBucket: '5',
       mode: 'online',
       social: 'solo',
@@ -25,7 +25,7 @@
       id: 'focus',
       emoji: '💻',
       title: '15 minut u počítače',
-      sub: 'Mapování, občanská věda nebo vytřídění věcí doma',
+      sub: 'Mapování nebo věda z domova',
       timeBucket: '15',
       mode: 'online',
       social: 'solo',
@@ -35,7 +35,7 @@
       id: 'walk',
       emoji: '🌿',
       title: 'Při procházce venku',
-      sub: 'Spojit čerstvý vzduch s užitečnou věcí v okolí',
+      sub: 'Užitečná věc cestou v okolí',
       timeBucket: '15',
       mode: 'local',
       social: 'solo',
@@ -45,7 +45,7 @@
       id: 'people',
       emoji: '🤝',
       title: 'Mezi lidmi v partě',
-      sub: 'Společná výpomoc nebo akce ve městě či přírodě',
+      sub: 'Společná akce ve městě či přírodě',
       timeBucket: '45',
       mode: 'local',
       social: 'group',
@@ -55,7 +55,7 @@
       id: 'donate',
       emoji: '💚',
       title: 'Poslat drobný dar',
-      sub: 'Od 50 Kč online přímo na konkrétní pomoc',
+      sub: 'Od 50 Kč přímo na pomoc',
       timeBucket: '5',
       mode: 'online',
       social: 'solo',
@@ -139,6 +139,17 @@
 
   $: nearUrl = `/near?lat=${activeCity.lat}&lon=${activeCity.lon}&r=10&kinds=${encodeURIComponent(targetMapKinds.join(','))}`;
 
+  function cleanTitle(str) {
+    return String(str || '').replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\s]+/u, '').trim() || str;
+  }
+
+  function cleanMeta(str) {
+    return String(str || '')
+      .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F]/gu, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+
   function selectSituation(id) {
     if (activeSituationId === id) {
       cycleRecommendation();
@@ -191,7 +202,7 @@
     planFlash = true;
     setTimeout(() => {
       planFlash = false;
-    }, 600);
+    }, 500);
   }
 
   function persistPrefs() {
@@ -243,28 +254,19 @@
 </svelte:head>
 
 <div class="page">
-  <!-- =====================================================================
-       SUNLIT MEADOW EDITORIAL HEADER
-       ===================================================================== -->
   <header class="subpage-hero header">
-    <div class="hero-kicker">PRŮVODCE DOBRÝMI SKUTKY • NA MÍRU TVÉMU ČASU</div>
+    <div class="hero-kicker">PRŮVODCE NA MÍRU</div>
     <h1 class="title">Jak chceš dneska <span class="serif-accent">pomoct</span>?</h1>
     <p class="subtitle">
-      Vyber si, kolik máš zrovna teď času a jaké téma je ti nejbližší. Hned uvidíš <strong>jeden konkrétní, ověřený skutek</strong>, do kterého se můžeš bez složitého hledání pustit.
+      Zvol si, kolik máš zrovna času a jaké téma ti je blízké — hned uvidíš jeden konkrétní, ověřený skutek.
     </p>
   </header>
 
-  <!-- =====================================================================
-       SIDE-BY-SIDE LIVE COMPASS WORKSPACE (DESKTOP 2-COL, MOBILE STACKED)
-       ===================================================================== -->
   <div class="guided-workspace">
     <!-- LEFT: 2 CALM CHOICES -->
     <section class="compass-shell" aria-label="Nastavení průvodce">
       <div class="step-block">
-        <div class="block-head">
-          <span class="step-badge">1</span>
-          <h2>Kolik máš zrovna teď času a sil?</h2>
-        </div>
+        <div class="block-label">1. Kolik máš zrovna času?</div>
 
         <div class="situation-grid" role="radiogroup" aria-label="Dnešní situace a kapacita">
           {#each SITUATIONS as s}
@@ -288,10 +290,7 @@
       <div class="divider"></div>
 
       <div class="step-block">
-        <div class="block-head">
-          <span class="step-badge">2</span>
-          <h2>Komu nebo čemu chceš pomoct? <span class="opt-tag">(volitelné, max 2)</span></h2>
-        </div>
+        <div class="block-label">2. Blízké téma <span class="opt-tag">(volitelné)</span></div>
 
         <div class="topic-pills" role="group" aria-label="Výběr tématu pomoci">
           <button
@@ -300,7 +299,7 @@
             class:selected={selectedTopics.length === 0}
             on:click={() => toggleTopic('all')}
           >
-            ✨ Cokoliv užitečného
+            ✨ Cokoliv
           </button>
           {#each VALUES as v}
             <button
@@ -316,70 +315,40 @@
       </div>
     </section>
 
-    <!-- RIGHT: LIVE PERSONAL RECOMMENDATION (#personal-plan) -->
+    <!-- RIGHT: CLEAN FOCUSED RECOMMENDATION (ZERO NESTED COLORED BOXES) -->
     <section id="personal-plan" class="plan-section" class:flash={planFlash} aria-live="polite">
       {#if bestAction}
         <div class="card highlight-card">
-          <div class="rec-header">
-            <span class="rec-pill">
-              {activeSituation.emoji} {activeSituation.title}
-              {#if selectedTopics.length > 0}
-                • {selectedTopics.map((k) => VALUES.find((v) => v.key === k)?.shortLabel).filter(Boolean).join(' + ')}
+          <div class="rec-top-row">
+            <div class="rec-meta-line">
+              <strong>{bestAction.org}</strong>
+              <span>·</span>
+              <span>{cleanMeta(bestAction.metaLabel)}</span>
+              {#if isDone(bestAction.id)}
+                <span class="done-inline">· ✓ Splněno</span>
               {/if}
-            </span>
-            {#if isDone(bestAction.id)}
-              <span class="done-tag">✓ Splněno — svítí v Krajině dobra</span>
-            {/if}
+            </div>
+
+            <button type="button" class="btn-cycle-inline" on:click={cycleRecommendation}>
+              ↻ Jiný nápad
+            </button>
           </div>
 
-          <h2 class="rec-title">{bestAction.title}</h2>
-          <div class="rec-org">Organizace: <strong>{bestAction.org}</strong></div>
-
-          <div class="reasons">
-            {#if bestAction.reasons?.length}
-              {#each bestAction.reasons as r}
-                <span class="reason-badge">{r}</span>
-              {/each}
-            {/if}
-            <span class="reason-badge meta">{bestAction.metaLabel}</span>
-          </div>
-
+          <h2 class="rec-title">{cleanTitle(bestAction.title)}</h2>
           <p class="rec-desc">{bestAction.desc}</p>
 
-          <div class="benefit-boxes">
-            {#if bestAction.selfBenefit}
-              <div class="benefit-box self">
-                <strong>✨ Co to přinese i tobě:</strong> {bestAction.selfBenefit}
-              </div>
-            {/if}
-            {#if bestAction.concreteImpact}
-              <div class="benefit-box impact">
-                <strong>✦ Konkrétní dopad:</strong> {bestAction.concreteImpact}
-              </div>
-            {/if}
-          </div>
-
-          {#if bestAction.reassurance}
-            <div class="reassurance-box">
-              <strong>🛡️ Prakticky:</strong> {bestAction.reassurance}
-            </div>
-          {/if}
-
-          {#if bestAction.whyItMatters}
-            <div class="why-box">
-              <strong>Proč to pomáhá:</strong> {bestAction.whyItMatters}
-            </div>
+          {#if bestAction.concreteImpact || bestAction.selfBenefit}
+            <p class="rec-impact-line">
+              {bestAction.concreteImpact || bestAction.selfBenefit}
+            </p>
           {/if}
 
           {#if bestAction.steps?.length}
-            <div class="steps-box">
-              <div class="steps-title">👣 Jak na to krok za krokem:</div>
-              <ol class="steps-list">
-                {#each bestAction.steps as step}
-                  <li>{step}</li>
-                {/each}
-              </ol>
-            </div>
+            <ol class="clean-steps">
+              {#each bestAction.steps as step}
+                <li>{step}</li>
+              {/each}
+            </ol>
           {/if}
 
           <div class="cta-row">
@@ -394,7 +363,7 @@
                   id: bestAction.id
                 })}
             >
-              <span>{bestAction.cta || 'Otevřít a udělat tenhle skutek'}</span>
+              <span>{bestAction.cta || 'Otevřít projekt'}</span>
               <span>↗</span>
             </a>
 
@@ -408,28 +377,22 @@
                   surface: 'guided'
                 })}
             >
-              ✓ Mám hotovo
-            </button>
-
-            <button type="button" class="btn-next-action" on:click={cycleRecommendation}>
-              🔄 Jiný nápad
+              ✓ Hotovo
             </button>
           </div>
         </div>
       {/if}
 
-      <!-- OPTIONAL ALTERNATIVES — COLLAPSED BY DEFAULT -->
       {#if sideAlternatives.length}
         <details class="calm-drawer alts-drawer">
           <summary>
-            <span>🌿 Porovnat ještě {sideAlternatives.length} další nápady pro tohle nastavení</span>
+            <span>Další {sideAlternatives.length} nápady pro tohle nastavení</span>
           </summary>
           <div class="alts-grid">
             {#each sideAlternatives as alt (alt.id)}
               <article class="alt-card">
-                <div class="alt-meta">{alt.metaLabel}</div>
-                <h4>{alt.title}</h4>
-                <div class="alt-org">{alt.org}</div>
+                <div class="alt-meta">{alt.org} · {cleanMeta(alt.metaLabel)}</div>
+                <h4>{cleanTitle(alt.title)}</h4>
                 <p>{alt.desc}</p>
                 <div class="alt-actions">
                   <a
@@ -442,7 +405,7 @@
                     Otevřít ↗
                   </a>
                   <button type="button" class="alt-detail" on:click={() => promoteAlternative(alt)}>
-                    Ukázat postup ↑
+                    Detail ↑
                   </button>
                 </div>
               </article>
@@ -453,23 +416,18 @@
     </section>
   </div>
 
-  <!-- =====================================================================
-       LOCAL PLACES IN YOUR CITY — AUTO-OPENED ONLY FOR WALK / PEOPLE!
-       ===================================================================== -->
+  <!-- LOCAL PLACES IN YOUR CITY — AUTO-OPENED ONLY FOR WALK / PEOPLE -->
   <details class="calm-drawer local-drawer" bind:open={localDrawerOpen}>
     <summary>
-      <span>📍 Místa pomoci v okolí města {activeCity.name} — {localDrawerOpen ? 'otevřeno pro osobní zapojení venku' : 'zobrazit místa pro osobní návštěvu'}</span>
+      <span>📍 Místa pro osobní zapojení v okolí města {activeCity.name}</span>
     </summary>
 
     <section class="local-section" aria-label="Místa v okolí">
       <div class="local-head">
-        <div>
-          <span class="sec-kicker">Osobní pomoc v regionu • Hotový vzor první zprávy</span>
-          <h2>Kam se můžeš ozvat nebo zajít poblíž města</h2>
-        </div>
+        <h2>Kam se ozvat nebo zajít poblíž města</h2>
 
         <div class="city-picker-wrap">
-          <label for="guided-city-select">📍 Nejbližší město:</label>
+          <label for="guided-city-select">Město:</label>
           <select
             id="guided-city-select"
             bind:value={cityId}
@@ -480,7 +438,7 @@
               <option value={c.id}>{c.name}</option>
             {/each}
           </select>
-          <a href={nearUrl} class="map-jump-link">Otevřít plnou mapu →</a>
+          <a href={nearUrl} class="map-jump-link">Celá mapa →</a>
         </div>
       </div>
 
@@ -489,14 +447,11 @@
           {@const tpl = buildFirstContactTemplate(place)}
           <article class="local-card">
             <div class="lc-top">
-              <span class="lc-subcat">{place.subcategory || 'Místo pomoci'}</span>
+              <span>{place.subcategory || 'Místo pomoci'}</span>
               <span class="lc-dist">~{place.distKm} km ({activeCity.name})</span>
             </div>
             <h3>{place.name}</h3>
-            <p class="lc-desc">{place.description}</p>
-            {#if place.quickMission}
-              <div class="lc-mission">💡 <strong>Jak pomoct:</strong> {place.quickMission}</div>
-            {/if}
+            <p class="lc-desc">{place.quickMission || place.description}</p>
             {#if place.address}
               <div class="lc-addr">📍 {place.address}</div>
             {/if}
@@ -504,7 +459,7 @@
             <div class="lc-actions">
               {#if place.website}
                 <a href={place.website} target="_blank" rel="noopener noreferrer" class="lc-btn primary">
-                  Web organizace ↗
+                  Web ↗
                 </a>
               {/if}
               <button
@@ -512,7 +467,7 @@
                 class="lc-btn ghost"
                 on:click={() => (openTemplateId = openTemplateId === place.id ? null : place.id)}
               >
-                💬 Vzor první zprávy
+                💬 Vzor zprávy
               </button>
             </div>
 
@@ -521,10 +476,10 @@
                 <pre>{tpl.body}</pre>
                 <div class="tpl-btns">
                   <button type="button" on:click={() => copyTemplate(place)}>
-                    {copiedTemplateId === place.id ? '✓ Text zkopírován!' : '📋 Zkopírovat zprávu'}
+                    {copiedTemplateId === place.id ? '✓ Zkopírováno' : '📋 Zkopírovat'}
                   </button>
                   {#if tpl.mailtoUrl}
-                    <a href={tpl.mailtoUrl}>✉️ Otevřít v e-mailu</a>
+                    <a href={tpl.mailtoUrl}>✉️ E-mail</a>
                   {/if}
                 </div>
               </div>
@@ -538,7 +493,7 @@
 
 <style>
   .page {
-    max-width: 1160px;
+    max-width: 1140px;
     margin: 0 auto;
     padding: 0.75rem 1.25rem 4rem;
   }
@@ -550,7 +505,7 @@
   .hero-kicker {
     font-size: 0.74rem;
     font-weight: 800;
-    letter-spacing: 0.11em;
+    letter-spacing: 0.12em;
     color: #fde68a;
     margin-bottom: 0.35rem;
   }
@@ -559,7 +514,7 @@
     font-family: var(--font-sans);
     font-weight: 800;
     color: #ffffff;
-    font-size: clamp(1.95rem, 3.4vw, 2.7rem);
+    font-size: clamp(1.95rem, 3.4vw, 2.65rem);
     margin: 0;
     letter-spacing: -0.03em;
     line-height: 1.1;
@@ -573,341 +528,254 @@
   .subtitle {
     color: rgba(236, 248, 241, 0.9);
     margin: 0.55rem auto 0;
-    max-width: 58ch;
+    max-width: 54ch;
     font-size: 0.96rem;
     line-height: 1.58;
   }
 
-  .subtitle strong {
-    color: #a7f3d0;
-  }
-
-  /* SIDE-BY-SIDE WORKSPACE */
   .guided-workspace {
     display: grid;
-    grid-template-columns: 0.92fr 1.08fr;
-    gap: 1.45rem;
+    grid-template-columns: 0.88fr 1.12fr;
+    gap: 1.5rem;
     align-items: start;
   }
 
   /* COMPASS SHELL */
   .compass-shell {
     background: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(22, 82, 56, 0.12);
+    border: 1px solid rgba(22, 82, 56, 0.1);
     border-radius: 26px;
     padding: 1.45rem 1.5rem;
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-sm);
   }
 
-  .block-head {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    margin-bottom: 0.8rem;
-  }
-
-  .step-badge {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: #123828;
-    color: #fde68a;
-    font-weight: 800;
-    font-size: 0.8rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .block-head h2 {
-    margin: 0;
-    font-size: 1.04rem;
+  .block-label {
+    font-size: 0.84rem;
     font-weight: 800;
     color: var(--text-primary);
+    margin-bottom: 0.7rem;
   }
 
   .opt-tag {
     font-weight: 600;
-    font-size: 0.8rem;
     color: var(--text-muted);
   }
 
   .situation-grid {
     display: flex;
     flex-direction: column;
-    gap: 0.52rem;
+    gap: 0.42rem;
   }
 
   .situation-card {
     display: flex;
     align-items: center;
-    gap: 0.8rem;
+    gap: 0.75rem;
     text-align: left;
-    padding: 0.78rem 0.95rem;
-    border-radius: 16px;
-    background: #f5f9f6;
-    border: 1.5px solid rgba(22, 82, 56, 0.1);
+    padding: 0.68rem 0.9rem;
+    border-radius: 14px;
+    background: transparent;
+    border: 1px solid rgba(22, 82, 56, 0.09);
     cursor: pointer;
     font-family: var(--font-sans);
-    transition: all 0.18s ease;
+    transition: all 0.16s ease;
   }
 
   .situation-card:hover {
-    border-color: rgba(16, 185, 129, 0.45);
-    background: #ffffff;
+    background: #f5faf7;
+    border-color: rgba(16, 185, 129, 0.35);
   }
 
   .situation-card.active {
-    background: linear-gradient(135deg, #e6f7ed 0%, #fef9e7 100%);
-    border-color: #059669;
-    color: #0b261b;
-    box-shadow: 0 8px 20px -10px rgba(5, 150, 105, 0.35);
+    background: #0f3022;
+    border-color: #0f3022;
+    color: #ffffff;
+    box-shadow: 0 8px 18px -8px rgba(9, 29, 20, 0.3);
   }
 
   .sit-emoji {
-    font-size: 1.35rem;
+    font-size: 1.25rem;
     flex-shrink: 0;
   }
 
   .sit-copy {
     display: flex;
     flex-direction: column;
-    gap: 0.12rem;
+    gap: 0.06rem;
   }
 
   .sit-title {
-    font-weight: 800;
-    font-size: 0.9rem;
-    color: #0e281c;
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: inherit;
   }
 
   .sit-sub {
-    font-size: 0.77rem;
-    line-height: 1.35;
-    color: var(--text-secondary);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .situation-card.active .sit-sub {
+    color: rgba(167, 243, 208, 0.88);
   }
 
   .divider {
     height: 1px;
-    background: rgba(22, 82, 56, 0.09);
+    background: rgba(22, 82, 56, 0.08);
     margin: 1.15rem 0;
   }
 
   .topic-pills {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.45rem;
+    gap: 0.4rem;
   }
 
   .topic-pill {
-    padding: 0.48rem 0.88rem;
+    padding: 0.42rem 0.82rem;
     border-radius: 999px;
-    border: 1.5px solid rgba(22, 82, 56, 0.13);
-    background: #f5f9f6;
+    border: 1px solid rgba(22, 82, 56, 0.12);
+    background: #f6faf7;
     color: var(--text-primary);
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     cursor: pointer;
     transition: all 0.16s ease;
   }
 
   .topic-pill:hover {
-    border-color: rgba(16, 185, 129, 0.45);
+    border-color: rgba(16, 185, 129, 0.4);
     background: #ffffff;
   }
 
   .topic-pill.selected {
-    background: #123828;
-    border-color: #123828;
+    background: #0f3022;
+    border-color: #0f3022;
     color: #fde68a;
-    box-shadow: 0 6px 14px -4px rgba(18, 56, 40, 0.25);
   }
 
-  /* LIVE PERSONAL PLAN (CALM BRIGHT SAGE-IVORY CARD) */
+  /* CLEAN PERSONAL RECOMMENDATION CARD */
   .plan-section {
     position: sticky;
     top: 5.2rem;
-    transition: transform 0.25s ease;
   }
 
   .plan-section.flash .highlight-card {
-    box-shadow:
-      0 22px 44px -14px rgba(16, 185, 129, 0.24),
-      0 0 0 2px rgba(16, 185, 129, 0.55);
+    box-shadow: 0 22px 44px -14px rgba(16, 185, 129, 0.24), 0 0 0 2px rgba(16, 185, 129, 0.42);
   }
 
   .highlight-card {
-    background: linear-gradient(165deg, #ffffff 0%, #f3f9f5 100%);
+    background: rgba(255, 255, 255, 0.97);
     color: var(--text-primary);
     border-radius: 26px;
-    padding: 1.8rem;
-    border: 1.5px solid rgba(16, 185, 129, 0.28);
-    box-shadow: var(--shadow-lg);
+    padding: 2rem;
+    border: 1px solid rgba(22, 82, 56, 0.11);
+    box-shadow: var(--shadow-md);
     transition: box-shadow 0.25s ease;
   }
 
-  .rec-header {
+  .rec-top-row {
     display: flex;
-    gap: 0.5rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
     flex-wrap: wrap;
     margin-bottom: 0.65rem;
   }
 
-  .rec-pill {
-    padding: 0.28rem 0.75rem;
-    border-radius: 999px;
-    background: rgba(16, 185, 129, 0.12);
-    border: 1px solid rgba(16, 185, 129, 0.28);
-    color: #065f46;
-    font-size: 0.77rem;
-    font-weight: 800;
-  }
-
-  .done-tag {
-    padding: 0.28rem 0.75rem;
-    border-radius: 999px;
-    background: #fef3c7;
-    color: #92400e;
-    font-size: 0.77rem;
-    font-weight: 800;
-  }
-
-  .rec-title {
-    margin: 0 0 0.3rem;
-    font-size: clamp(1.3rem, 2.2vw, 1.65rem);
-    font-weight: 800;
-    color: #0e281c;
-    line-height: 1.22;
-  }
-
-  .rec-org {
-    font-size: 0.88rem;
-    color: var(--text-secondary);
-    margin-bottom: 0.75rem;
-  }
-
-  .rec-org strong {
-    color: #047857;
-  }
-
-  .reasons {
+  .rec-meta-line {
     display: flex;
+    align-items: center;
+    gap: 0.42rem;
     flex-wrap: wrap;
-    gap: 0.4rem;
-    margin-bottom: 0.85rem;
+    font-size: 0.82rem;
+    color: var(--text-muted);
   }
 
-  .reason-badge {
-    padding: 0.24rem 0.64rem;
-    border-radius: 999px;
-    background: #edf5f0;
-    color: #164230;
-    font-size: 0.76rem;
+  .rec-meta-line strong {
+    color: var(--emerald-600);
     font-weight: 700;
   }
 
-  .reason-badge.meta {
-    background: #fef7e0;
-    color: #92400e;
+  .done-inline {
+    color: #047857;
+    font-weight: 700;
+  }
+
+  .btn-cycle-inline {
+    border: none;
+    background: transparent;
+    color: var(--emerald-600);
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: 0.82rem;
+    cursor: pointer;
+    padding: 0.2rem 0.45rem;
+    border-radius: 8px;
+  }
+
+  .btn-cycle-inline:hover {
+    background: rgba(16, 185, 129, 0.09);
+    color: var(--forest-850);
+  }
+
+  .rec-title {
+    margin: 0 0 0.55rem;
+    font-size: clamp(1.35rem, 2.3vw, 1.7rem);
+    font-weight: 800;
+    color: #0b2419;
+    line-height: 1.22;
+    letter-spacing: -0.02em;
   }
 
   .rec-desc {
-    font-size: 0.95rem;
-    line-height: 1.58;
+    font-size: 0.96rem;
+    line-height: 1.62;
     color: var(--text-secondary);
-    margin: 0 0 0.9rem;
+    margin: 0 0 0.95rem;
   }
 
-  .benefit-boxes {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-    gap: 0.55rem;
-    margin-bottom: 0.75rem;
+  .rec-impact-line {
+    margin: 0 0 1.1rem;
+    padding-left: 0.85rem;
+    border-left: 2.5px solid #10b981;
+    font-size: 0.88rem;
+    line-height: 1.52;
+    color: #164230;
+    font-weight: 600;
   }
 
-  .benefit-box {
-    padding: 0.62rem 0.8rem;
-    border-radius: 13px;
-    font-size: 0.83rem;
-    line-height: 1.45;
-  }
-
-  .benefit-box.self {
-    background: #ecfdf5;
-    border: 1px solid rgba(16, 185, 129, 0.22);
-    color: #0b2e20;
-  }
-
-  .benefit-box.impact {
-    background: #fffbeb;
-    border: 1px solid rgba(245, 158, 11, 0.25);
-    color: #451a03;
-  }
-
-  .reassurance-box,
-  .why-box {
-    padding: 0.62rem 0.85rem;
-    border-radius: 13px;
-    background: #f5f9f6;
-    border: 1px solid rgba(22, 82, 56, 0.09);
-    font-size: 0.84rem;
-    color: var(--text-secondary);
-    margin-bottom: 0.65rem;
-    line-height: 1.46;
-  }
-
-  .reassurance-box strong,
-  .why-box strong {
-    color: #0e281c;
-  }
-
-  .steps-box {
-    padding: 0.88rem 1rem;
-    border-radius: 16px;
-    background: #ffffff;
-    border: 1px solid rgba(22, 82, 56, 0.12);
-    margin-bottom: 1.15rem;
-  }
-
-  .steps-title {
-    font-weight: 800;
-    font-size: 0.84rem;
-    color: #047857;
-    margin-bottom: 0.4rem;
-  }
-
-  .steps-list {
-    margin: 0;
-    padding-left: 1.15rem;
+  .clean-steps {
+    margin: 0 0 1.35rem;
+    padding-left: 1.2rem;
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
-    font-size: 0.86rem;
-    color: var(--text-primary);
-    line-height: 1.46;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
   }
 
   .cta-row {
     display: flex;
-    gap: 0.55rem;
+    gap: 0.6rem;
     flex-wrap: wrap;
   }
 
   .btn-gold-action {
     flex: 1;
-    min-width: 200px;
+    min-width: 190px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    padding: 0.85rem 1.25rem;
+    padding: 0.86rem 1.25rem;
     border-radius: 14px;
     background: linear-gradient(135deg, #0f3626 0%, #17523a 100%);
     color: #ffffff;
-    font-weight: 800;
-    font-size: 0.9rem;
+    font-weight: 700;
+    font-size: 0.92rem;
     text-decoration: none;
     box-shadow: 0 10px 22px -6px rgba(15, 54, 38, 0.35);
     transition: transform 0.18s ease;
@@ -918,15 +786,16 @@
   }
 
   .btn-done-action {
-    padding: 0.85rem 1.05rem;
+    padding: 0.86rem 1.1rem;
     border-radius: 14px;
-    border: 1.5px solid rgba(5, 150, 105, 0.35);
-    background: #ecfdf5;
+    border: 1px solid rgba(5, 150, 105, 0.28);
+    background: #eef7f1;
     color: #065f46;
     font-family: var(--font-sans);
-    font-weight: 800;
-    font-size: 0.86rem;
+    font-weight: 700;
+    font-size: 0.88rem;
     cursor: pointer;
+    transition: all 0.16s ease;
   }
 
   .btn-done-action:hover {
@@ -934,30 +803,13 @@
     color: #ffffff;
   }
 
-  .btn-next-action {
-    padding: 0.85rem 1rem;
-    border-radius: 14px;
-    border: 1px solid rgba(22, 82, 56, 0.16);
-    background: #ffffff;
-    color: var(--text-secondary);
-    font-family: var(--font-sans);
-    font-weight: 700;
-    font-size: 0.85rem;
-    cursor: pointer;
-  }
-
-  .btn-next-action:hover {
-    border-color: #059669;
-    color: #0e281c;
-  }
-
   /* ALTERNATIVES */
   .alts-drawer {
-    margin-top: 0.95rem;
+    margin-top: 0.9rem;
   }
 
   .alts-drawer .alts-grid {
-    margin-top: 0.9rem;
+    margin-top: 0.85rem;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.75rem;
@@ -965,40 +817,32 @@
 
   .alt-card {
     background: #ffffff;
-    border: 1px solid rgba(22, 82, 56, 0.1);
-    border-radius: 18px;
+    border: 1px solid rgba(22, 82, 56, 0.09);
+    border-radius: 16px;
     padding: 1rem;
     display: flex;
     flex-direction: column;
-    box-shadow: var(--shadow-sm);
   }
 
   .alt-meta {
-    font-size: 0.72rem;
+    font-size: 0.73rem;
     font-weight: 700;
-    color: #059669;
+    color: var(--emerald-600);
     margin-bottom: 0.25rem;
   }
 
   .alt-card h4 {
-    margin: 0 0 0.2rem;
-    font-size: 0.9rem;
+    margin: 0 0 0.35rem;
+    font-size: 0.92rem;
     font-weight: 800;
     color: var(--text-primary);
   }
 
-  .alt-org {
-    font-size: 0.76rem;
-    font-weight: 700;
-    color: var(--text-muted);
-    margin-bottom: 0.4rem;
-  }
-
   .alt-card p {
     margin: 0 0 0.75rem;
-    font-size: 0.8rem;
+    font-size: 0.81rem;
     color: var(--text-secondary);
-    line-height: 1.44;
+    line-height: 1.46;
     flex: 1;
   }
 
@@ -1017,55 +861,42 @@
   }
 
   .alt-detail {
-    padding: 0.28rem 0.6rem;
-    border-radius: 8px;
-    border: 1px solid rgba(22, 82, 56, 0.14);
-    background: #f5f9f6;
-    font-size: 0.74rem;
+    border: none;
+    background: transparent;
+    font-family: var(--font-sans);
+    font-size: 0.76rem;
     font-weight: 700;
-    color: var(--text-primary);
+    color: var(--text-muted);
     cursor: pointer;
+  }
+
+  .alt-detail:hover {
+    color: var(--text-primary);
   }
 
   /* LOCAL PLACES */
   .local-drawer {
-    margin-top: 1.4rem;
-  }
-
-  .local-drawer .local-section {
-    margin-top: 1rem;
+    margin-top: 1.35rem;
   }
 
   .local-section {
-    background: #ffffff;
-    border: 1px solid rgba(22, 82, 56, 0.1);
-    border-radius: 24px;
-    padding: 1.55rem;
-    box-shadow: var(--shadow-sm);
+    margin-top: 1rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid rgba(22, 82, 56, 0.09);
   }
 
   .local-head {
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: center;
     gap: 1rem;
     flex-wrap: wrap;
-    margin-bottom: 1.2rem;
-  }
-
-  .sec-kicker {
-    display: block;
-    font-size: 0.73rem;
-    font-weight: 800;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #059669;
-    margin-bottom: 0.2rem;
+    margin-bottom: 1rem;
   }
 
   .local-head h2 {
     margin: 0;
-    font-size: 1.32rem;
+    font-size: 1.15rem;
     font-weight: 800;
     color: var(--text-primary);
   }
@@ -1073,24 +904,24 @@
   .city-picker-wrap {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.55rem;
     flex-wrap: wrap;
   }
 
   .city-picker-wrap label {
-    font-size: 0.84rem;
+    font-size: 0.82rem;
     font-weight: 700;
     color: var(--text-secondary);
   }
 
   .city-select {
-    padding: 0.5rem 0.85rem;
-    border-radius: 12px;
-    border: 1.5px solid rgba(22, 82, 56, 0.18);
-    background: #f5f9f6;
+    padding: 0.45rem 0.8rem;
+    border-radius: 10px;
+    border: 1px solid rgba(22, 82, 56, 0.16);
+    background: #ffffff;
     font-family: var(--font-sans);
-    font-weight: 800;
-    font-size: 0.88rem;
+    font-weight: 700;
+    font-size: 0.85rem;
     color: var(--text-primary);
     cursor: pointer;
   }
@@ -1110,8 +941,8 @@
 
   .local-card {
     padding: 1.15rem;
-    border-radius: 20px;
-    background: #f5f9f6;
+    border-radius: 18px;
+    background: #ffffff;
     border: 1px solid rgba(22, 82, 56, 0.09);
     display: flex;
     flex-direction: column;
@@ -1122,9 +953,9 @@
     justify-content: space-between;
     gap: 0.4rem;
     font-size: 0.74rem;
-    font-weight: 800;
+    font-weight: 700;
     color: #059669;
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.3rem;
   }
 
   .lc-dist {
@@ -1139,21 +970,11 @@
   }
 
   .lc-desc {
-    margin: 0 0 0.6rem;
+    margin: 0 0 0.55rem;
     font-size: 0.83rem;
     color: var(--text-secondary);
-    line-height: 1.45;
+    line-height: 1.48;
     flex: 1;
-  }
-
-  .lc-mission {
-    padding: 0.48rem 0.65rem;
-    border-radius: 10px;
-    background: #ffffff;
-    font-size: 0.78rem;
-    color: var(--text-primary);
-    margin-bottom: 0.5rem;
-    line-height: 1.4;
   }
 
   .lc-addr {
@@ -1169,10 +990,10 @@
   }
 
   .lc-btn {
-    padding: 0.45rem 0.75rem;
+    padding: 0.45rem 0.78rem;
     border-radius: 10px;
     font-size: 0.78rem;
-    font-weight: 800;
+    font-weight: 700;
     text-decoration: none;
     cursor: pointer;
     font-family: var(--font-sans);
@@ -1185,17 +1006,15 @@
   }
 
   .lc-btn.ghost {
-    background: #ffffff;
-    border: 1px solid rgba(22, 82, 56, 0.16);
+    background: #f5f9f6;
+    border: 1px solid rgba(22, 82, 56, 0.12);
     color: var(--text-primary);
   }
 
   .tpl-drawer {
     margin-top: 0.65rem;
-    padding: 0.65rem;
-    border-radius: 12px;
-    background: #ffffff;
-    border: 1px solid rgba(22, 82, 56, 0.12);
+    padding-top: 0.65rem;
+    border-top: 1px solid rgba(22, 82, 56, 0.09);
   }
 
   .tpl-drawer pre {
@@ -1215,7 +1034,7 @@
 
   .tpl-btns button,
   .tpl-btns a {
-    padding: 0.35rem 0.65rem;
+    padding: 0.35rem 0.68rem;
     border-radius: 8px;
     border: none;
     background: #065f46;
@@ -1242,7 +1061,7 @@
   @media (max-width: 600px) {
     .compass-shell,
     .highlight-card {
-      padding: 1.25rem 1.1rem;
+      padding: 1.35rem 1.2rem;
     }
   }
 </style>

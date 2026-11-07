@@ -80,18 +80,11 @@
     <div class="celebration-card">
       <div class="celebration-glow" aria-hidden="true"></div>
       {#if !restingMode}
-        <div class="win-badge">
-          <span>{activeElementMeta.icon}</span>
-          <span>Klidné poděkování • tvůj skutek pomáhá</span>
-        </div>
+        <div class="win-overline">{activeElementMeta.icon} Klidné poděkování</div>
         <h3 id="win-title" class="win-title">{$activeCelebration.title}</h3>
-        <p class="win-message">{$activeCelebration.message}</p>
-
-        {#if $activeCelebration.concreteImpact}
-          <div class="impact-pill">
-            ✦ Skutečná pomoc: <strong>{$activeCelebration.concreteImpact}</strong>
-          </div>
-        {/if}
+        <p class="win-message">
+          {$activeCelebration.concreteImpact || $activeCelebration.message}
+        </p>
 
         <div class="win-actions">
           <a href="/svet?just_lit=1" class="btn-world" on:click={handleGoToWorld}>
@@ -105,7 +98,7 @@
               {sharedCopied ? '✓ Odkaz zkopírován' : '↗ Poslat tip blízkému'}
             </button>
             <button type="button" class="btn-more" on:click={handleContinue}>
-              Zůstat na stránce
+              Zavřít
             </button>
           </div>
         </div>
@@ -113,11 +106,11 @@
         <div class="rest-icon" aria-hidden="true">🌿</div>
         <h3 id="win-title" class="win-title">Děkujeme, pro dnešek je hotovo</h3>
         <p class="win-message">
-          Udělal/a jsi konkrétní dobrou věc pro druhé. Klidně teď odlož telefon, napij se vody a dopřej si chvíli ticha.
+          Udělal/a jsi konkrétní dobrou věc pro druhé. Klidně teď odlož telefon a dopřej si chvíli ticha.
         </p>
         <div class="win-actions">
           <a href="/svet#dech" class="btn-world" on:click={handleGoToWorld}>
-            🌊 Dát si 1 minutu klidného dechu v Krajině dobra
+            🌊 Minuta klidného dechu v Krajině dobra
           </a>
           <button type="button" class="btn-stop" on:click={closeCelebration}>
             Zavřít okno
@@ -133,25 +126,25 @@
     position: fixed;
     inset: 0;
     z-index: 1200;
-    background: rgba(6, 20, 14, 0.58);
+    background: rgba(6, 20, 14, 0.56);
     backdrop-filter: blur(10px);
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 1.25rem;
-    animation: fadeIn 0.24s ease-out;
+    animation: fadeIn 0.22s ease-out;
   }
 
   .celebration-card {
     position: relative;
     overflow: hidden;
     width: 100%;
-    max-width: 470px;
-    background: linear-gradient(165deg, #ffffff 0%, #f5f2e8 100%);
+    max-width: 450px;
+    background: #ffffff;
     border-radius: 28px;
-    padding: 2rem 1.85rem;
-    box-shadow: 0 32px 64px -16px rgba(4, 15, 10, 0.48);
-    border: 1px solid rgba(16, 185, 129, 0.22);
+    padding: 2.1rem 1.9rem;
+    box-shadow: 0 32px 64px -16px rgba(4, 15, 10, 0.45);
+    border: 1px solid rgba(16, 185, 129, 0.2);
     text-align: center;
   }
 
@@ -162,32 +155,27 @@
     transform: translateX(-50%);
     width: 260px;
     height: 140px;
-    background: radial-gradient(circle, rgba(52, 211, 153, 0.22) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(52, 211, 153, 0.2) 0%, transparent 70%);
     pointer-events: none;
   }
 
-  .win-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.36rem 0.85rem;
-    border-radius: 999px;
-    background: #ecf7f0;
-    border: 1px solid rgba(16, 185, 129, 0.24);
-    color: #0d4a33;
-    font-size: 0.8rem;
-    font-weight: 700;
-    margin-bottom: 0.9rem;
+  .win-overline {
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #059669;
+    margin-bottom: 0.55rem;
   }
 
   .rest-icon {
-    font-size: 2.3rem;
+    font-size: 2.2rem;
     margin-bottom: 0.5rem;
   }
 
   .win-title {
-    margin: 0 0 0.6rem 0;
-    font-size: 1.38rem;
+    margin: 0 0 0.55rem 0;
+    font-size: 1.35rem;
     font-weight: 800;
     letter-spacing: -0.02em;
     color: #0b2419;
@@ -195,26 +183,16 @@
   }
 
   .win-message {
-    margin: 0 0 1.15rem 0;
-    font-size: 0.96rem;
+    margin: 0 0 1.4rem 0;
+    font-size: 0.95rem;
     line-height: 1.6;
     color: #3d5247;
-  }
-
-  .impact-pill {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(251, 191, 36, 0.12) 100%);
-    border: 1px solid rgba(16, 185, 129, 0.22);
-    border-radius: 14px;
-    padding: 0.65rem 0.9rem;
-    font-size: 0.86rem;
-    color: #0b291d;
-    margin-bottom: 1.25rem;
   }
 
   .win-actions {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: 0.55rem;
   }
 
   .btn-world {
@@ -222,13 +200,13 @@
     align-items: center;
     justify-content: center;
     padding: 0.92rem 1.25rem;
-    border-radius: 16px;
+    border-radius: 15px;
     background: linear-gradient(135deg, #0d2e20 0%, #174933 100%);
     color: #fde68a;
     font-weight: 700;
-    font-size: 0.94rem;
+    font-size: 0.93rem;
     text-decoration: none;
-    box-shadow: 0 12px 24px -8px rgba(9, 29, 20, 0.35);
+    box-shadow: 0 12px 24px -8px rgba(9, 29, 20, 0.32);
     transition: transform 0.2s ease;
   }
 
@@ -237,54 +215,50 @@
   }
 
   .btn-stop {
-    padding: 0.85rem 1.15rem;
+    padding: 0.84rem 1.15rem;
     border-radius: 15px;
-    border: 1px solid rgba(22, 66, 48, 0.16);
-    background: #ffffff;
+    border: 1px solid rgba(22, 66, 48, 0.14);
+    background: #f6faf7;
     color: #0d291d;
     font-family: inherit;
     font-weight: 700;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     cursor: pointer;
     transition: background 0.18s ease;
   }
 
   .btn-stop:hover {
-    background: #eef5f0;
+    background: #eaf3ed;
   }
 
   .win-secondary-row {
     display: flex;
     gap: 0.5rem;
-    margin-top: 0.2rem;
+    margin-top: 0.15rem;
   }
 
   .btn-share,
   .btn-more {
     flex: 1;
-    padding: 0.65rem 0.75rem;
-    border-radius: 12px;
-    border: 1px solid rgba(22, 66, 48, 0.1);
+    padding: 0.55rem 0.65rem;
+    border-radius: 10px;
+    border: none;
     background: transparent;
-    color: #4b6357;
+    color: #5b7367;
     font-family: inherit;
-    font-weight: 600;
-    font-size: 0.82rem;
+    font-weight: 700;
+    font-size: 0.8rem;
     cursor: pointer;
   }
 
   .btn-share:hover,
   .btn-more:hover {
-    background: rgba(22, 66, 48, 0.05);
     color: #0d2118;
+    background: rgba(22, 66, 48, 0.05);
   }
 
   @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 </style>

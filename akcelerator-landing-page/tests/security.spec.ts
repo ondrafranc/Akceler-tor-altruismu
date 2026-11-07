@@ -179,3 +179,29 @@ test('guided live compass rotates recommendations, auto-opens local places when 
     expect(onlineHtml).not.toContain(deadDomain);
   }
 });
+
+test('calm UX guard: zero stacked callout clutter on cards and interactive Krajina dobra atmosphere + canvas effects work', async ({ page }) => {
+  const consoleErrors: string[] = [];
+  page.on('pageerror', (err) => consoleErrors.push(err.message));
+
+  await page.goto('/');
+  // Ensure old cluttered inner boxes are completely gone from .instant-card
+  await expect(page.locator('.instant-card .action-self-benefit')).toHaveCount(0);
+  await expect(page.locator('.instant-card .action-reassurance')).toHaveCount(0);
+  await expect(page.locator('.bento-meta')).toHaveCount(0);
+  // How-to steps stay collapsed until requested
+  await expect(page.locator('.instant-card details.how-toggle')).not.toHaveAttribute('open', '');
+
+  await page.goto('/svet');
+  // Dawn mode active by default
+  await expect(page.locator('img.art-layer.dawn')).toHaveAttribute('style', /opacity:\s*0\.88/);
+  // Switch to Hvězdná noc -> dawn layer fades to 0, aurora & stars canvas renders cleanly
+  await page.locator('button:has-text("Hvězdná noc")').click();
+  await expect(page.locator('img.art-layer.dawn')).toHaveAttribute('style', /opacity:\s*0(?:\b|;)/);
+
+  // Quick deed whisper chip triggers light bloom & toast without errors
+  await page.locator('.qd-chip').first().click();
+  await expect(page.locator('.gentle-toast')).toBeVisible();
+
+  expect(consoleErrors).toEqual([]);
+});

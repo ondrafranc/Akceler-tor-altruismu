@@ -561,62 +561,52 @@
 </svelte:head>
 
 <div class="near-page">
-  <!-- =====================================================================
-       HERO HEADER
-       ===================================================================== -->
-  <div class="subpage-hero near-header">
-    <div class="hero-top-bar">
-      <div class="hero-top-actions">
-        <button type="button" class="hero-pill-btn" on:click={copyShareLink}>
-          {shareMessage || '🔗 Sdílet výřez mapy'}
-        </button>
-        <a class="hero-pill-btn accent" href="/submit">+ Přidat místo v okolí</a>
-      </div>
-    </div>
-
-    <div class="hero-kicker">MAPA POMOCI V OKOLÍ • VŠECH 14 KRAJŮ ČR</div>
+  <header class="subpage-hero near-header">
+    <div class="hero-kicker">MAPA POMOCI V OKOLÍ · CELÁ ČR</div>
     <h1 class="title">Kde můžeš pomoct <span class="serif-accent">kousek od sebe</span></h1>
     <p class="subtitle">
-      Útulky, veřejné knihobudky, potravinové banky, šatníky i sousedská centra. U každého místa vidíš <strong>konkrétní tip, jak se zapojit</strong>, i připravenou zprávu na první oslovení.
+      Útulky, veřejné knihobudky, potravinové banky a sousedská místa — i s připravenou zprávou na první oslovení.
     </p>
+  </header>
 
-    <!-- 1-CLICK QUICK CITIES + GPS -->
-    <div class="quick-cities" aria-label="Rychlý skok do krajského města">
-      <button type="button" class="gps-chip" on:click={useGps} disabled={gpsStatus === 'requesting'}>
-        {gpsStatus === 'requesting' ? '📍 Hledám tě…' : '📍 Moje poloha'}
-      </button>
-      {#each CZECH_CITIES as city}
-        <button
-          type="button"
-          class="city-chip"
-          class:active={Math.abs(centerLat - city.lat) < 0.05 && Math.abs(centerLon - city.lon) < 0.05}
-          on:click={() => selectQuickCity(city)}
-        >
-          {city.name}
-        </button>
-      {/each}
-    </div>
-  </div>
-
-  <!-- =====================================================================
-       SEARCH + CATEGORY PRESETS BAR
-       ===================================================================== -->
+  <!-- UNIFIED SEARCH + FILTER BAR -->
   <div class="controls-card">
     <div class="controls-top">
+      <button type="button" class="gps-btn" on:click={useGps} disabled={gpsStatus === 'requesting'}>
+        {gpsStatus === 'requesting' ? '📍 Hledám…' : '📍 Moje poloha'}
+      </button>
+
       <div class="search-box">
         <input
           type="text"
           bind:value={locationQuery}
-          placeholder="Zadej libovolnou obec, čtvrť nebo PSČ v ČR (např. Tábor, Kladno, 779 00)…"
+          placeholder="Obec, město nebo PSČ (např. Tábor, Kladno, 779 00)…"
+          aria-label="Hledat obec nebo PSČ"
           on:keydown={(e) => e.key === 'Enter' && searchLocation()}
         />
         <button type="button" class="btn-find" on:click={searchLocation}>
-          {geoStatus === 'loading' ? 'Hledám…' : 'Najít obec'}
+          {geoStatus === 'loading' ? 'Hledám…' : 'Najít'}
         </button>
       </div>
 
+      <select
+        class="city-jump-select"
+        aria-label="Rychlý skok do krajského města"
+        on:change={(e) => {
+          const found = CZECH_CITIES.find((c) => c.id === e.currentTarget.value);
+          if (found) selectQuickCity(found);
+        }}
+      >
+        <option value="">Krajská města…</option>
+        {#each CZECH_CITIES as city}
+          <option value={city.id} selected={Math.abs(centerLat - city.lat) < 0.05 && Math.abs(centerLon - city.lon) < 0.05}>
+            {city.name}
+          </option>
+        {/each}
+      </select>
+
       <div class="radius-box">
-        <label for="r-slider">Okruh: <strong>{radiusKm} km</strong></label>
+        <label for="r-slider">Okruh <strong>{radiusKm} km</strong></label>
         <input
           id="r-slider"
           type="range"
@@ -649,61 +639,50 @@
       </div>
     {/if}
 
-    <div class="presets-bar" role="group" aria-label="Co na mapě hledáš">
-      {#each CATEGORY_PRESETS as preset}
-        <button
-          type="button"
-          class="preset-pill"
-          class:active={activePresetId === preset.id}
-          on:click={() => applyPreset(preset)}
-        >
-          {preset.label}
-        </button>
-      {/each}
-    </div>
-
-    <details class="fine-drawer">
-      <summary>Upřesnit vrstvy mapy ({kinds.length}/4 aktivní)</summary>
-      <div class="fine-filters">
-        <span class="fine-lbl">Zobrazit vrstvy:</span>
-        {#each Object.entries(KIND_META) as [k, meta]}
+    <div class="controls-bottom">
+      <div class="presets-bar" role="group" aria-label="Co na mapě hledáš">
+        {#each CATEGORY_PRESETS as preset}
           <button
             type="button"
-            class="layer-toggle"
-            class:on={kinds.includes(k)}
-            on:click={() => toggleKind(k)}
+            class="preset-pill"
+            class:active={activePresetId === preset.id}
+            on:click={() => applyPreset(preset)}
           >
-            <span>{meta.emoji}</span>
-            <span>{meta.label}</span>
+            {preset.label}
           </button>
         {/each}
       </div>
-    </details>
+
+      <div class="controls-links">
+        <button type="button" class="text-util-btn" on:click={copyShareLink}>
+          {shareMessage || '🔗 Sdílet výřez'}
+        </button>
+        <a href="/submit" class="text-util-link">+ Přidat místo</a>
+      </div>
+    </div>
   </div>
 
   {#if isExpandedToNearest}
     <div class="smart-nearest-banner" role="status">
-      <strong>📍 Nejbližší ověřená místa v tvém regionu:</strong> Přímo v okruhu {radiusKm} km nebyla v mapě evidovaná pobočka, proto jsme ti automaticky vyhledali nejbližší ověřená místa v dojezdové vzdálenosti.
+      📍 Přímo v okruhu {radiusKm} km nebyla evidovaná pobočka — ukazujeme nejbližší ověřená místa v tvém regionu.
     </div>
   {/if}
 
   <!-- MOBILE VIEW SWITCHER -->
   <div class="mobile-tabs">
     <button type="button" class:active={mobileView === 'both'} on:click={() => setMobileMode('both')}>Mapa + Seznam</button>
-    <button type="button" class:active={mobileView === 'map'} on:click={() => setMobileMode('map')}>Jen velká mapa</button>
+    <button type="button" class:active={mobileView === 'map'} on:click={() => setMobileMode('map')}>Jen mapa</button>
     <button type="button" class:active={mobileView === 'list'} on:click={() => setMobileMode('list')}>Seznam ({filteredPlaces.length})</button>
   </div>
 
-  <!-- =====================================================================
-       SPLIT VIEW: INTERACTIVE LEAFLET MAP + ACTIONABLE CARDS
-       ===================================================================== -->
+  <!-- SPLIT VIEW: INTERACTIVE LEAFLET MAP + CLEAN ACTIONABLE CARDS -->
   <div class="split-layout">
     <div class="map-column" class:hidden-mob={mobileView === 'list'}>
       <div class="map-frame">
         {#if isLoadingMap}
-          <div class="map-status-pill">Spouštím interaktivní mapu…</div>
+          <div class="map-status-pill">Spouštím mapu…</div>
         {:else if isFetching}
-          <div class="map-status-pill">Aktualizuji místa v okolí…</div>
+          <div class="map-status-pill">Aktualizuji okolí…</div>
         {/if}
 
         <div class="map-floating-tools">
@@ -712,7 +691,7 @@
             class="tile-switch-btn"
             on:click={() => setTileLayer(tileStyle === 'osm' ? 'hot' : 'osm')}
           >
-            {tileStyle === 'osm' ? '🌿 Jemný humanitární podklad' : '🗺️ Klasická podrobná mapa'}
+            {tileStyle === 'osm' ? '🌿 Jemný podklad' : '🗺️ Klasická mapa'}
           </button>
         </div>
 
@@ -722,7 +701,7 @@
 
         <div bind:this={mapEl} class="leaflet-canvas"></div>
         <div class="map-foot-hint">
-          💡 Tip: Klikni kamkoliv přímo do mapy — střed hledání se okamžitě přesune na vybranou obec či ulici.
+          Kliknutím kamkoliv do mapy přesuneš střed hledání na vybranou obec či ulici.
         </div>
       </div>
     </div>
@@ -733,12 +712,14 @@
           <strong>{filteredPlaces.length}</strong> {filteredPlaces.length === 1 ? 'místo v okolí' : filteredPlaces.length >= 2 && filteredPlaces.length <= 4 ? 'místa v okolí' : 'míst v okolí'}
         </div>
         <div class="list-filters">
-          <input
-            type="search"
-            class="filter-input"
-            placeholder="Filtrovat podle názvu…"
-            bind:value={query}
-          />
+          {#if visibleCount > 6}
+            <input
+              type="search"
+              class="filter-input"
+              placeholder="Hledat v seznamu…"
+              bind:value={query}
+            />
+          {/if}
           <select bind:value={sortBy} class="sort-select" aria-label="Řazení míst">
             <option value="easy">Nejjednodušší start</option>
             <option value="distance">Podle vzdálenosti</option>
@@ -747,15 +728,126 @@
         </div>
       </div>
 
-      <!-- COMMUNITY TIPS IN THIS REGION -->
+      <!-- PLACES CARDS (CLEAN, ZERO BOX-IN-BOX) -->
+      <div class="places-stack">
+        {#each visiblePlaces as p, idx (p.id)}
+          {@const meta = KIND_META[p.kind] || KIND_META.ngo}
+          {@const webUrl = normalizeUrl(p.website)}
+          <article
+            id={`place-card-${String(p.id).replace(/[^a-zA-Z0-9_-]/g, '-')}`}
+            class="place-card"
+            class:active={activePlaceId === p.id}
+            class:top-pick={idx === 0 && sortBy === 'easy'}
+          >
+            <div class="pc-meta-top">
+              <span class="pc-cat">{meta.emoji} {p.subcategory || meta.label}</span>
+              <span>·</span>
+              <span class="pc-dist">{formatDist(p.distanceKm)}</span>
+              {#if p.curated}
+                <span>·</span>
+                <span class="pc-verified">✦ Ověřeno</span>
+              {/if}
+            </div>
+
+            <h3 class="pc-title">{p.name}</h3>
+
+            {#if p.address}
+              <div class="pc-addr">📍 {p.address}</div>
+            {/if}
+
+            <p class="pc-desc">{p.quickMission || p.description || concreteActionHint(p)}</p>
+
+            <div class="pc-actions">
+              {#if webUrl}
+                <a
+                  href={webUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="pc-btn primary"
+                  on:click={() => trackEvent('aa_clickout', { surface: 'near_place', id: p.id })}
+                >
+                  Web ↗
+                </a>
+              {/if}
+
+              <button
+                type="button"
+                class="pc-btn msg"
+                on:click={() => (openTemplateId = openTemplateId === p.id ? null : p.id)}
+              >
+                {openTemplateId === p.id ? 'Skrýt zprávu' : '💬 Co napsat'}
+              </button>
+
+              <button type="button" class="pc-btn ghost" on:click={() => focusPlaceOnMap(p)}>
+                📍 Na mapě
+              </button>
+
+              <button
+                type="button"
+                class="pc-btn done"
+                on:click={() =>
+                  recordSmallWin({
+                    id: p.id,
+                    title: `Místní krok: ${p.name}`,
+                    surface: 'near'
+                  })}
+              >
+                ✓ Hotovo
+              </button>
+            </div>
+
+            {#if openTemplateId === p.id}
+              {@const tpl = buildFirstContactTemplate(p)}
+              <div class="template-drawer">
+                <div class="td-head">
+                  <strong>Vzor krátké zprávy:</strong>
+                  {#if p.phone}
+                    <span>📞 <a href={`tel:${p.phone.replace(/[^\d+]/g, '')}`}>{p.phone}</a></span>
+                  {/if}
+                </div>
+                <pre class="td-body">{tpl.body}</pre>
+                <div class="td-btns">
+                  <button type="button" class="pc-btn primary" on:click={() => copyTemplateText(p)}>
+                    {copiedTemplateId === p.id ? '✓ Zkopírováno' : '📋 Zkopírovat text'}
+                  </button>
+                  {#if tpl.mailtoUrl}
+                    <a href={tpl.mailtoUrl} class="pc-btn ghost">✉️ E-mail</a>
+                  {/if}
+                  <a
+                    href={`https://mapy.cz/zakladni?x=${p.lon}&y=${p.lat}&z=16&q=${encodeURIComponent(p.name)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="pc-btn ghost"
+                  >
+                    🧭 Mapy.cz ↗
+                  </a>
+                </div>
+              </div>
+            {/if}
+          </article>
+        {/each}
+      </div>
+
+      {#if filteredPlaces.length > visibleCount}
+        {@const nextBatch = Math.min(6, filteredPlaces.length - visibleCount)}
+        <div class="calm-more-wrap near-more-wrap">
+          <button type="button" class="calm-more-btn" on:click={() => (visibleCount += 6)}>
+            Ukázat {nextBatch === 1 ? 'další 1 místo' : nextBatch <= 4 ? `další ${nextBatch} místa` : `dalších ${nextBatch} míst`} ({filteredPlaces.length - visibleCount} zbývá)
+          </button>
+          {#if filteredPlaces.length - visibleCount > 6}
+            <button type="button" class="near-show-all" on:click={() => (visibleCount = filteredPlaces.length)}>
+              Rozbalit všechna místa ({filteredPlaces.length})
+            </button>
+          {/if}
+        </div>
+      {/if}
+
+      <!-- COMMUNITY TIPS TUCKED CALMLY -->
       {#if communityItems.length > 0}
-        <div class="community-highlight-box">
-          <div class="ch-head">
-            <span>🌱 Sousedské a komunitní tipy v okolí ({communityItems.length})</span>
-            <a href="/submit">+ Přidat další</a>
-          </div>
+        <details class="calm-drawer extra-drawer">
+          <summary>🌱 Sousedské tipy od lidí v okolí ({communityItems.length})</summary>
           <div class="ch-list">
-            {#each communityItems.slice(0, 3) as ci}
+            {#each communityItems.slice(0, 4) as ci}
               {@const ciWeb = normalizeUrl(ci.website)}
               {@const ciDist = ci.distanceKm ?? ci.distance_km}
               <div class="ch-item">
@@ -773,139 +865,17 @@
                     <a href={ciWeb} target="_blank" rel="noopener noreferrer">Web ↗</a>
                   {/if}
                   {#if typeof ci.lat === 'number' && typeof ci.lon === 'number'}
-                    <button type="button" on:click={() => moveMapCenter(ci.lat, ci.lon, 15)}>Ukázat na mapě</button>
+                    <button type="button" on:click={() => moveMapCenter(ci.lat, ci.lon, 15)}>Na mapě</button>
                   {/if}
                 </div>
               </div>
             {/each}
           </div>
-        </div>
+        </details>
       {/if}
 
-      <!-- PLACES CARDS -->
-      <div class="places-stack">
-        {#each visiblePlaces as p, idx (p.id)}
-          {@const meta = KIND_META[p.kind] || KIND_META.ngo}
-          <article
-            id={`place-card-${String(p.id).replace(/[^a-zA-Z0-9_-]/g, '-')}`}
-            class="place-card"
-            class:active={activePlaceId === p.id}
-            class:top-pick={idx === 0 && sortBy === 'easy'}
-          >
-            <div class="pc-badges">
-              {#if p.curated}
-                <span class="pc-badge verified">✦ Ověřené místo</span>
-              {/if}
-              <span class="pc-badge kind">{meta.emoji} {p.subcategory || meta.label}</span>
-              <span class="pc-badge dist">{formatDist(p.distanceKm)}</span>
-            </div>
-
-            <h3 class="pc-title">{p.name}</h3>
-
-            {#if p.address}
-              <div class="pc-meta-line">📍 {p.address}</div>
-            {/if}
-            {#if p.opening_hours}
-              <div class="pc-meta-line">🕒 {p.opening_hours}</div>
-            {/if}
-            {#if p.description}
-              <p class="pc-desc">{p.description}</p>
-            {/if}
-
-            <!-- CONCRETE HUMAN MICRO-MISSION -->
-            <div class="pc-mission">
-              <span class="mission-kicker">Jak tu můžeš pomoct:</span>
-              <p>{concreteActionHint(p)}</p>
-            </div>
-
-            <div class="pc-actions">
-              <button type="button" class="pc-btn map-focus" on:click={() => focusPlaceOnMap(p)}>
-                📍 Ukázat na mapě
-              </button>
-
-              {#if normalizeUrl(p.website)}
-                <a
-                  href={normalizeUrl(p.website)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="pc-btn primary"
-                  on:click={() => trackEvent('aa_clickout', { surface: 'near_place', id: p.id })}
-                >
-                  Otevřít web ↗
-                </a>
-              {/if}
-
-              <button
-                type="button"
-                class="pc-btn msg"
-                on:click={() => (openTemplateId = openTemplateId === p.id ? null : p.id)}
-              >
-                {openTemplateId === p.id ? 'Skrýt zprávu' : '💬 Co jim napsat?'}
-              </button>
-
-              <button
-                type="button"
-                class="pc-btn done"
-                on:click={() =>
-                  recordSmallWin({
-                    id: p.id,
-                    title: `Místní krok: ${p.name}`,
-                    surface: 'near'
-                  })}
-              >
-                ✓ Splněno
-              </button>
-            </div>
-
-            {#if openTemplateId === p.id}
-              {@const tpl = buildFirstContactTemplate(p)}
-              <div class="template-drawer">
-                <div class="td-head">
-                  <strong>Připravená zpráva na první oslovení (stačí zkopírovat):</strong>
-                  {#if p.phone}
-                    <span>📞 <a href={`tel:${p.phone.replace(/[^\d+]/g, '')}`}>{p.phone}</a></span>
-                  {/if}
-                </div>
-                <pre class="td-body">{tpl.body}</pre>
-                <div class="td-btns">
-                  <button type="button" class="pc-btn primary" on:click={() => copyTemplateText(p)}>
-                    {copiedTemplateId === p.id ? '✓ Zkopírováno do schránky!' : '📋 Zkopírovat text zprávy'}
-                  </button>
-                  {#if tpl.mailtoUrl}
-                    <a href={tpl.mailtoUrl} class="pc-btn msg">✉️ Otevřít v e-mailu ({p.email})</a>
-                  {/if}
-                  <a
-                    href={`https://mapy.cz/zakladni?x=${p.lon}&y=${p.lat}&z=16&q=${encodeURIComponent(p.name)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="pc-btn map-focus"
-                  >
-                    🧭 Trasa na Mapy.cz ↗
-                  </a>
-                </div>
-              </div>
-            {/if}
-          </article>
-        {/each}
-      </div>
-
-      {#if filteredPlaces.length > visibleCount}
-        {@const nextBatch = Math.min(6, filteredPlaces.length - visibleCount)}
-        <div class="calm-more-wrap near-more-wrap">
-          <button type="button" class="calm-more-btn" on:click={() => (visibleCount += 6)}>
-            Ukázat {nextBatch === 1 ? 'další 1 místo' : nextBatch <= 4 ? `další ${nextBatch} místa` : `dalších ${nextBatch} míst`} v okolí ({filteredPlaces.length - visibleCount} zbývá)
-          </button>
-          {#if filteredPlaces.length - visibleCount > 6}
-            <button type="button" class="near-show-all" on:click={() => (visibleCount = filteredPlaces.length)}>
-              Rozbalit všechna místa ({filteredPlaces.length})
-            </button>
-          {/if}
-        </div>
-      {/if}
-
-      <!-- REGIONAL PORTALS (Tucked calmly so list isn't overwhelming) -->
-      <details class="calm-drawer portals-box">
-        <summary>Hledáš jednorázovou víkendovku nebo konkrétní inzerát? (4 portály)</summary>
+      <details class="calm-drawer extra-drawer">
+        <summary>Hledáš jednorázovou víkendovku nebo inzerát? (4 portály)</summary>
         <div class="portals-mini-grid">
           {#each PORTALS.slice(0, 4) as portal}
             <a href={portal.url} target="_blank" rel="noopener noreferrer" class="portal-mini">
@@ -921,70 +891,19 @@
 
 <style>
   .near-page {
-    max-width: 1220px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 0.75rem 1.25rem 3.5rem;
   }
 
   .near-header {
     text-align: center;
-    padding: 1.9rem 1.75rem;
-  }
-
-  .hero-top-bar {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    margin-bottom: 0.75rem;
-  }
-
-  .hero-top-actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  .hero-pill-btn {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.42rem 0.92rem;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.24);
-    background: rgba(255, 255, 255, 0.13);
-    color: #f4faf6;
-    font-family: var(--font-sans);
-    font-weight: 700;
-    font-size: 0.82rem;
-    text-decoration: none;
-    cursor: pointer;
-    backdrop-filter: blur(8px);
-    box-shadow: 0 6px 14px -6px rgba(4, 18, 12, 0.28);
-    transition: all 0.16s ease;
-  }
-
-  .hero-pill-btn:hover {
-    background: rgba(255, 255, 255, 0.22);
-    border-color: rgba(253, 230, 138, 0.48);
-  }
-
-  .hero-pill-btn.accent {
-    background: linear-gradient(135deg, #fde68a 0%, #6ee7b7 100%);
-    color: #062016;
-    border-color: rgba(253, 230, 138, 0.55);
-    font-weight: 800;
-  }
-
-  .hero-pill-btn.accent:hover {
-    filter: brightness(1.04);
   }
 
   .hero-kicker {
     font-size: 0.74rem;
     font-weight: 800;
-    letter-spacing: 0.11em;
+    letter-spacing: 0.12em;
     color: #fde68a;
     margin-bottom: 0.35rem;
   }
@@ -993,7 +912,7 @@
     font-family: var(--font-sans);
     font-weight: 800;
     color: #ffffff;
-    font-size: clamp(1.95rem, 3.5vw, 2.8rem);
+    font-size: clamp(1.95rem, 3.5vw, 2.75rem);
     line-height: 1.1;
     margin: 0;
     letter-spacing: -0.03em;
@@ -1006,132 +925,111 @@
 
   .subtitle {
     color: rgba(236, 248, 241, 0.9);
-    margin: 0.55rem auto 1.15rem;
-    max-width: 62ch;
+    margin: 0.55rem auto 0;
+    max-width: 54ch;
     font-size: 0.96rem;
-    line-height: 1.55;
-  }
-
-  .subtitle strong {
-    color: #a7f3d0;
-  }
-
-  .quick-cities {
-    display: flex;
-    gap: 0.4rem;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-
-  .gps-chip,
-  .city-chip {
-    padding: 0.38rem 0.76rem;
-    border-radius: 999px;
-    font-family: var(--font-sans);
-    font-size: 0.8rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.16s ease;
-  }
-
-  .gps-chip {
-    background: #34d399;
-    border: 1px solid #6ee7b7;
-    color: #052015;
-    font-weight: 800;
-    box-shadow: 0 6px 14px -4px rgba(16, 185, 129, 0.38);
-  }
-
-  .city-chip {
-    background: rgba(255, 255, 255, 0.13);
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    color: #f0fdf4;
-    backdrop-filter: blur(6px);
-  }
-
-  .city-chip:hover {
-    background: rgba(255, 255, 255, 0.22);
-    border-color: rgba(253, 230, 138, 0.5);
-  }
-
-  .city-chip.active {
-    background: #fde68a;
-    border-color: #fde68a;
-    color: #062016;
-    font-weight: 800;
+    line-height: 1.58;
   }
 
   /* Controls Card */
   .controls-card {
-    background: rgba(255, 255, 255, 0.94);
+    background: rgba(255, 255, 255, 0.95);
     border: 1px solid rgba(22, 66, 48, 0.1);
     border-radius: 24px;
-    padding: 1.15rem 1.3rem;
-    box-shadow: var(--shadow-md);
-    margin-bottom: 1.15rem;
+    padding: 1.15rem 1.35rem;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 1.2rem;
   }
 
   .controls-top {
     display: flex;
-    gap: 1rem;
+    gap: 0.65rem;
     align-items: center;
     flex-wrap: wrap;
   }
 
+  .gps-btn {
+    padding: 0.64rem 0.95rem;
+    border-radius: 12px;
+    background: #eef7f1;
+    border: 1px solid rgba(5, 150, 105, 0.28);
+    color: #065f46;
+    font-family: var(--font-sans);
+    font-size: 0.84rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.16s ease;
+  }
+
+  .gps-btn:hover {
+    background: #059669;
+    color: #ffffff;
+  }
+
   .search-box {
     flex: 1;
-    min-width: 260px;
+    min-width: 240px;
     display: flex;
-    gap: 0.5rem;
+    gap: 0.45rem;
   }
 
   .search-box input {
     flex: 1;
-    padding: 0.65rem 0.9rem;
-    border-radius: 14px;
-    border: 1px solid rgba(22, 66, 48, 0.16);
+    padding: 0.64rem 0.9rem;
+    border-radius: 12px;
+    border: 1px solid rgba(22, 66, 48, 0.15);
     font-family: var(--font-sans);
-    font-size: 0.9rem;
-    background: #faf9f5;
+    font-size: 0.88rem;
+    background: #ffffff;
   }
 
   .btn-find {
-    padding: 0.65rem 1.1rem;
-    border-radius: 14px;
+    padding: 0.64rem 1.05rem;
+    border-radius: 12px;
     border: none;
-    background: var(--forest-900);
+    background: var(--forest-850);
     color: #ffffff;
     font-family: var(--font-sans);
-    font-weight: 800;
-    font-size: 0.88rem;
+    font-weight: 700;
+    font-size: 0.86rem;
+    cursor: pointer;
+  }
+
+  .city-jump-select {
+    padding: 0.64rem 0.85rem;
+    border-radius: 12px;
+    border: 1px solid rgba(22, 66, 48, 0.15);
+    background: #ffffff;
+    font-family: var(--font-sans);
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--text-primary);
     cursor: pointer;
   }
 
   .radius-box {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
-    font-size: 0.86rem;
+    gap: 0.55rem;
+    font-size: 0.82rem;
     color: var(--text-secondary);
   }
 
   .radius-box input[type='range'] {
-    width: 120px;
+    width: 96px;
     accent-color: #059669;
   }
 
   .info-note {
     margin-top: 0.6rem;
-    padding: 0.45rem 0.75rem;
-    border-radius: 10px;
-    background: #ecfdf5;
-    color: #065f46;
-    font-size: 0.84rem;
+    font-size: 0.82rem;
     font-weight: 600;
+    color: #065f46;
   }
 
   .geo-dropdown {
-    margin-top: 0.5rem;
+    margin-top: 0.55rem;
     display: grid;
     gap: 0.35rem;
   }
@@ -1152,109 +1050,87 @@
     color: var(--text-muted);
   }
 
+  .controls-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 0.85rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid rgba(22, 66, 48, 0.07);
+  }
+
   .presets-bar {
     display: flex;
-    gap: 0.45rem;
+    gap: 0.4rem;
     flex-wrap: wrap;
-    margin-top: 0.9rem;
   }
 
   .preset-pill {
-    padding: 0.48rem 0.88rem;
+    padding: 0.42rem 0.85rem;
     border-radius: 999px;
-    border: 1px solid rgba(22, 66, 48, 0.12);
-    background: #f5f3eb;
+    border: 1px solid rgba(22, 66, 48, 0.1);
+    background: #f5f9f6;
     color: var(--text-primary);
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 0.84rem;
+    font-size: 0.81rem;
     cursor: pointer;
     transition: all 0.16s ease;
   }
 
+  .preset-pill:hover {
+    border-color: rgba(16, 185, 129, 0.38);
+    background: #ffffff;
+  }
+
   .preset-pill.active {
-    background: var(--forest-900);
+    background: var(--forest-850);
     color: #fde68a;
-    border-color: var(--forest-900);
+    border-color: var(--forest-850);
   }
 
-  .fine-drawer {
-    margin-top: 0.7rem;
-  }
-
-  .fine-drawer summary {
-    cursor: pointer;
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: var(--text-muted);
-    user-select: none;
-    list-style: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-  }
-
-  .fine-drawer summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .fine-drawer summary::after {
-    content: '▾';
-    font-size: 0.85rem;
-  }
-
-  .fine-drawer[open] summary::after {
-    transform: rotate(180deg);
-  }
-
-  .fine-filters {
+  .controls-links {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    flex-wrap: wrap;
-    margin-top: 0.55rem;
-    padding-top: 0.55rem;
-    border-top: 1px solid rgba(22, 66, 48, 0.08);
+    gap: 0.8rem;
+    font-size: 0.8rem;
   }
 
-  .fine-lbl {
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: var(--text-muted);
-    margin-right: 0.25rem;
-  }
-
-  .layer-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    padding: 0.28rem 0.65rem;
-    border-radius: 999px;
-    border: 1px solid rgba(22, 66, 48, 0.12);
-    background: #ffffff;
+  .text-util-btn {
+    border: none;
+    background: transparent;
     color: var(--text-muted);
     font-family: var(--font-sans);
-    font-size: 0.78rem;
     font-weight: 700;
+    font-size: 0.8rem;
     cursor: pointer;
-    opacity: 0.65;
+    padding: 0;
   }
 
-  .layer-toggle.on {
-    opacity: 1;
-    background: #ecfdf5;
-    border-color: rgba(16, 185, 129, 0.38);
-    color: #065f46;
+  .text-util-btn:hover {
+    color: var(--text-primary);
+  }
+
+  .text-util-link {
+    color: var(--emerald-600);
+    font-weight: 800;
+    text-decoration: none;
+  }
+
+  .text-util-link:hover {
+    text-decoration: underline;
   }
 
   .smart-nearest-banner {
     margin-bottom: 1rem;
-    padding: 0.75rem 1rem;
-    border-radius: 16px;
-    background: #fefce8;
-    border: 1px solid rgba(217, 119, 6, 0.28);
-    color: #78350f;
-    font-size: 0.88rem;
+    padding: 0.65rem 0.95rem;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(22, 66, 48, 0.1);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
   }
 
   .mobile-tabs {
@@ -1265,18 +1141,18 @@
 
   .mobile-tabs button {
     flex: 1;
-    padding: 0.6rem;
+    padding: 0.58rem;
     border-radius: 12px;
-    border: 1px solid rgba(22, 66, 48, 0.14);
+    border: 1px solid rgba(22, 66, 48, 0.12);
     background: #ffffff;
     font-family: var(--font-sans);
-    font-weight: 800;
-    font-size: 0.84rem;
+    font-weight: 700;
+    font-size: 0.83rem;
     cursor: pointer;
   }
 
   .mobile-tabs button.active {
-    background: var(--forest-900);
+    background: var(--forest-850);
     color: #fde68a;
   }
 
@@ -1284,7 +1160,7 @@
   .split-layout {
     display: grid;
     grid-template-columns: 1.08fr 0.92fr;
-    gap: 1.15rem;
+    gap: 1.25rem;
     align-items: start;
   }
 
@@ -1298,13 +1174,13 @@
     background: #ffffff;
     border-radius: 24px;
     overflow: hidden;
-    border: 1px solid rgba(22, 66, 48, 0.12);
-    box-shadow: var(--shadow-lg);
+    border: 1px solid rgba(22, 66, 48, 0.1);
+    box-shadow: var(--shadow-md);
   }
 
   .leaflet-canvas {
     width: 100%;
-    height: 560px;
+    height: 550px;
     background: #e7ece8;
     z-index: 1;
   }
@@ -1314,11 +1190,11 @@
     top: 12px;
     left: 54px;
     z-index: 500;
-    padding: 0.36rem 0.8rem;
+    padding: 0.34rem 0.78rem;
     border-radius: 999px;
-    background: rgba(8, 25, 18, 0.88);
+    background: rgba(8, 25, 18, 0.86);
     color: #fde68a;
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     font-weight: 700;
     backdrop-filter: blur(8px);
   }
@@ -1331,24 +1207,24 @@
   }
 
   .tile-switch-btn {
-    padding: 0.38rem 0.75rem;
+    padding: 0.36rem 0.75rem;
     border-radius: 999px;
-    border: 1px solid rgba(22, 66, 48, 0.18);
+    border: 1px solid rgba(22, 66, 48, 0.16);
     background: rgba(255, 255, 255, 0.94);
     color: var(--text-primary);
     font-family: var(--font-sans);
-    font-size: 0.76rem;
-    font-weight: 800;
+    font-size: 0.75rem;
+    font-weight: 700;
     cursor: pointer;
     box-shadow: var(--shadow-sm);
   }
 
   .map-foot-hint {
-    padding: 0.6rem 0.95rem;
-    background: #faf9f5;
-    border-top: 1px solid rgba(22, 66, 48, 0.08);
-    font-size: 0.8rem;
-    color: var(--text-secondary);
+    padding: 0.55rem 0.95rem;
+    background: #f8faf8;
+    border-top: 1px solid rgba(22, 66, 48, 0.07);
+    font-size: 0.78rem;
+    color: var(--text-muted);
   }
 
   .map-error-box {
@@ -1365,17 +1241,17 @@
     align-items: center;
     gap: 0.65rem;
     flex-wrap: wrap;
-    margin-bottom: 0.85rem;
+    margin-bottom: 0.8rem;
   }
 
   .count-heading {
-    font-size: 1rem;
-    color: var(--text-primary);
+    font-size: 0.95rem;
+    color: var(--text-secondary);
   }
 
   .count-heading strong {
-    font-size: 1.2rem;
-    color: #059669;
+    font-size: 1.15rem;
+    color: var(--forest-850);
   }
 
   .list-filters {
@@ -1386,82 +1262,17 @@
 
   .filter-input,
   .sort-select {
-    padding: 0.48rem 0.75rem;
-    border-radius: 12px;
-    border: 1px solid rgba(22, 66, 48, 0.14);
-    background: #ffffff;
+    padding: 0.42rem 0.75rem;
+    border-radius: 10px;
+    border: 1px solid rgba(22, 66, 48, 0.12);
+    background: rgba(255, 255, 255, 0.92);
     font-family: var(--font-sans);
-    font-size: 0.84rem;
-  }
-
-  .community-highlight-box {
-    margin-bottom: 1rem;
-    padding: 1rem 1.1rem;
-    border-radius: 20px;
-    background: linear-gradient(145deg, #eaf6ee, #f4faf6);
-    border: 1px solid rgba(16, 185, 129, 0.24);
-    color: #0e281c;
-  }
-
-  .ch-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     font-size: 0.82rem;
-    font-weight: 800;
-    color: #047857;
-    margin-bottom: 0.6rem;
+    font-weight: 600;
+    color: var(--text-primary);
   }
 
-  .ch-head a {
-    color: #059669;
-    text-decoration: none;
-  }
-
-  .ch-list {
-    display: grid;
-    gap: 0.5rem;
-  }
-
-  .ch-item {
-    padding: 0.65rem 0.8rem;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.88);
-    border: 1px solid rgba(22, 82, 56, 0.09);
-    font-size: 0.84rem;
-  }
-
-  .ch-title-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 0.5rem;
-  }
-
-  .ch-item p {
-    margin: 0.25rem 0;
-    font-size: 0.8rem;
-    color: #365244;
-  }
-
-  .ch-links {
-    display: flex;
-    gap: 0.6rem;
-    margin-top: 0.3rem;
-  }
-
-  .ch-links a,
-  .ch-links button {
-    font-size: 0.76rem;
-    font-weight: 800;
-    color: #047857;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    text-decoration: underline;
-  }
-
-  /* Place Cards */
+  /* Clean Place Cards */
   .places-stack {
     display: flex;
     flex-direction: column;
@@ -1469,142 +1280,121 @@
   }
 
   .place-card {
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(22, 66, 48, 0.11);
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(22, 66, 48, 0.09);
     border-radius: 22px;
-    padding: 1.15rem 1.25rem;
+    padding: 1.25rem 1.35rem;
     box-shadow: var(--shadow-sm);
-    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    transition: box-shadow 0.18s ease, border-color 0.18s ease;
   }
 
   .place-card:hover,
   .place-card.active {
-    border-color: rgba(16, 185, 129, 0.45);
+    border-color: rgba(16, 185, 129, 0.4);
     box-shadow: var(--shadow-md);
   }
 
   .place-card.top-pick {
-    border: 1.5px solid #10b981;
-    background: linear-gradient(155deg, #ffffff 0%, #ecfdf5 100%);
+    border-color: rgba(16, 185, 129, 0.35);
   }
 
-  .pc-badges {
+  .pc-meta-top {
     display: flex;
+    align-items: center;
     gap: 0.38rem;
     flex-wrap: wrap;
-    margin-bottom: 0.4rem;
+    font-size: 0.76rem;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
   }
 
-  .pc-badge {
-    font-size: 0.74rem;
-    font-weight: 800;
-    padding: 0.18rem 0.55rem;
-    border-radius: 999px;
-    background: #f4f1e8;
+  .pc-cat {
+    font-weight: 700;
     color: var(--text-secondary);
   }
 
-  .pc-badge.verified {
-    background: #0d281d;
-    color: #fde68a;
+  .pc-dist {
+    font-weight: 700;
+    color: var(--emerald-600);
   }
 
-  .pc-badge.dist {
-    background: #ecfdf5;
-    color: #065f46;
+  .pc-verified {
+    font-weight: 700;
+    color: #0d4a33;
   }
 
   .pc-title {
-    margin: 0 0 0.3rem;
-    font-size: 1.08rem;
+    margin: 0 0 0.25rem;
+    font-size: 1.1rem;
     font-weight: 800;
     color: var(--text-primary);
     line-height: 1.28;
   }
 
-  .pc-meta-line {
-    font-size: 0.82rem;
-    color: var(--text-secondary);
-    margin-bottom: 0.2rem;
+  .pc-addr {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 0.45rem;
   }
 
   .pc-desc {
-    margin: 0.35rem 0 0.55rem;
+    margin: 0 0 0.85rem;
     font-size: 0.88rem;
     color: var(--text-secondary);
-    line-height: 1.5;
-  }
-
-  .pc-mission {
-    margin-top: 0.5rem;
-    padding: 0.55rem 0.75rem;
-    border-radius: 12px;
-    background: #f5f3eb;
-    border-left: 3px solid #10b981;
-  }
-
-  .mission-kicker {
-    display: block;
-    font-size: 0.72rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #059669;
-    margin-bottom: 0.1rem;
-  }
-
-  .pc-mission p {
-    margin: 0;
-    font-size: 0.83rem;
-    line-height: 1.45;
-    color: var(--text-primary);
+    line-height: 1.54;
   }
 
   .pc-actions {
-    margin-top: 0.75rem;
     display: flex;
-    gap: 0.42rem;
+    gap: 0.4rem;
     flex-wrap: wrap;
   }
 
   .pc-btn {
-    padding: 0.5rem 0.8rem;
-    border-radius: 11px;
-    border: 1px solid rgba(22, 66, 48, 0.14);
+    padding: 0.48rem 0.82rem;
+    border-radius: 10px;
+    border: 1px solid rgba(22, 66, 48, 0.12);
     background: #ffffff;
     color: var(--text-primary);
     font-family: var(--font-sans);
-    font-weight: 800;
-    font-size: 0.81rem;
+    font-weight: 700;
+    font-size: 0.8rem;
     text-decoration: none;
     cursor: pointer;
     transition: all 0.15s ease;
   }
 
   .pc-btn.primary {
-    background: var(--forest-900);
-    border-color: var(--forest-900);
+    background: var(--forest-850);
+    border-color: var(--forest-850);
     color: #ffffff;
   }
 
   .pc-btn.msg {
-    background: #fefce8;
-    border-color: rgba(217, 119, 6, 0.28);
-    color: #92400e;
+    background: #f6faf7;
+    color: var(--forest-800);
+  }
+
+  .pc-btn.ghost {
+    background: transparent;
+    color: var(--text-secondary);
   }
 
   .pc-btn.done {
-    background: #ecfdf5;
-    border-color: rgba(16, 185, 129, 0.35);
+    background: #eef7f1;
+    border-color: rgba(5, 150, 105, 0.26);
     color: #065f46;
+  }
+
+  .pc-btn.done:hover {
+    background: #059669;
+    color: #ffffff;
   }
 
   .template-drawer {
     margin-top: 0.75rem;
-    padding: 0.85rem;
-    border-radius: 14px;
-    background: #faf9f5;
-    border: 1px solid rgba(22, 66, 48, 0.14);
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(22, 66, 48, 0.09);
   }
 
   .td-head {
@@ -1612,30 +1402,30 @@
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 0.4rem;
-    font-size: 0.82rem;
-    margin-bottom: 0.45rem;
+    font-size: 0.8rem;
+    margin-bottom: 0.4rem;
   }
 
   .td-body {
-    margin: 0 0 0.6rem;
+    margin: 0 0 0.55rem;
     padding: 0.65rem;
     border-radius: 10px;
-    background: #ffffff;
-    border: 1px solid rgba(22, 66, 48, 0.1);
+    background: #f7faf8;
     font-family: var(--font-sans);
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     line-height: 1.48;
     white-space: pre-wrap;
+    color: var(--text-secondary);
   }
 
   .td-btns {
     display: flex;
-    gap: 0.45rem;
+    gap: 0.4rem;
     flex-wrap: wrap;
   }
 
   .near-more-wrap {
-    margin-top: 0.95rem;
+    margin-top: 1rem;
   }
 
   .near-show-all {
@@ -1650,35 +1440,79 @@
     cursor: pointer;
   }
 
-  .portals-box {
-    margin-top: 1.25rem;
+  .extra-drawer {
+    margin-top: 0.9rem;
+  }
+
+  .ch-list {
+    margin-top: 0.75rem;
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .ch-item {
+    padding: 0.65rem 0.8rem;
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid rgba(22, 82, 56, 0.08);
+    font-size: 0.83rem;
+  }
+
+  .ch-title-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .ch-item p {
+    margin: 0.25rem 0;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+
+  .ch-links {
+    display: flex;
+    gap: 0.6rem;
+    margin-top: 0.25rem;
+  }
+
+  .ch-links a,
+  .ch-links button {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #047857;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: underline;
   }
 
   .portals-mini-grid {
-    margin-top: 0.85rem;
+    margin-top: 0.75rem;
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 0.6rem;
+    gap: 0.55rem;
   }
 
   .portal-mini {
-    padding: 0.7rem 0.85rem;
-    border-radius: 14px;
-    background: #faf9f5;
-    border: 1px solid rgba(22, 66, 48, 0.09);
+    padding: 0.68rem 0.85rem;
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid rgba(22, 66, 48, 0.08);
     text-decoration: none;
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.18rem;
   }
 
   .portal-mini strong {
-    font-size: 0.86rem;
+    font-size: 0.84rem;
     color: #059669;
   }
 
   .portal-mini span {
-    font-size: 0.78rem;
+    font-size: 0.77rem;
     color: var(--text-secondary);
     line-height: 1.4;
   }
@@ -1696,7 +1530,7 @@
     border-radius: 50%;
     background: #ffffff;
     border: 2.5px solid var(--pin-color, #059669);
-    box-shadow: 0 6px 16px rgba(6, 21, 15, 0.26);
+    box-shadow: 0 6px 16px rgba(6, 21, 15, 0.24);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1707,7 +1541,7 @@
   :global(.aa-map-pin .pin-bubble.is-curated) {
     background: #fffef7;
     border: 3px solid #059669;
-    box-shadow: 0 8px 20px rgba(6, 21, 15, 0.3), 0 0 0 4px rgba(251, 191, 36, 0.55);
+    box-shadow: 0 8px 20px rgba(6, 21, 15, 0.28), 0 0 0 4px rgba(251, 191, 36, 0.5);
   }
 
   :global(.aa-map-pin .pin-star) {

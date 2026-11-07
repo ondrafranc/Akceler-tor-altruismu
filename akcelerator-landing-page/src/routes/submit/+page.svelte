@@ -1,16 +1,18 @@
 <script>
-  import { CZECH_CITIES, LOCAL_COMMUNITY_ITEMS } from '../../lib/data/czech-actions.js';
+  import { CZECH_CITIES } from '../../lib/data/czech-actions.js';
   import { recordSmallWin } from '../../lib/progress.js';
   import { trackEvent } from '../../lib/analytics.js';
 
   const QUICK_CATEGORIES = [
     '🐾 Zvířata a útulky',
     '🥫 Potraviny a šatníky',
-    '📚 Knihobudka / Re-use místo',
+    '📚 Knihobudka / ReUse',
     '🤝 Komunita a sousedé',
     '👴 Senioři',
     '🌱 Příroda a úklid'
   ];
+
+  const TOP_CITIES = CZECH_CITIES.slice(0, 6);
 
   let kind = 'org'; // org | event
 
@@ -25,9 +27,8 @@
   let eventStartLocal = '';
   let eventEndLocal = '';
 
-  // Location picker (1-click city OR /api/geocode)
   let locationQuery = '';
-  let geoStatus = 'idle'; // idle | loading | ok | error
+  let geoStatus = 'idle';
   let geoMessage = '';
   /** @type {Array<{label: string, lat: number, lon: number}>} */
   let geoResults = [];
@@ -61,7 +62,7 @@
     locationQuery = city.name;
     geoResults = [];
     geoStatus = 'ok';
-    geoMessage = `Vybráno město: ${city.name}`;
+    geoMessage = `Vybráno: ${city.name}`;
   }
 
   async function searchLocation() {
@@ -74,7 +75,7 @@
     }
 
     geoStatus = 'loading';
-    geoMessage = 'Hledám přesnou adresu…';
+    geoMessage = 'Hledám v ČR…';
     geoResults = [];
 
     try {
@@ -84,14 +85,14 @@
       geoResults = results;
       if (!results.length) {
         geoStatus = 'error';
-        geoMessage = 'Přesnou adresu jsem nenašel – můžeš kliknout na nejbližší město výše.';
+        geoMessage = 'Přesnou adresu jsem nenašel – klikni případně na nejbližší město.';
         return;
       }
       geoStatus = 'ok';
       geoMessage = 'Vyber přesné místo ze seznamu:';
     } catch {
       geoStatus = 'error';
-      geoMessage = 'Vyhledávání adresy je dočasně nedostupné – vyber prosím město tlačítkem výše.';
+      geoMessage = 'Vyhledávání je dočasně nedostupné – vyber prosím město níže.';
     }
   }
 
@@ -125,7 +126,7 @@
 
     if (lat == null || lon == null) {
       submitStatus = 'error';
-      submitMessage = 'Klikni na město nebo vyhledej polohu, ať víme, kam tip umístit na mapě.';
+      submitMessage = 'Vyhledej obec nebo klikni na nejbližší město.';
       return;
     }
 
@@ -190,27 +191,26 @@
 
 <div class="page">
   <header class="subpage-hero header">
-    <div class="hero-kicker">TIPY Z TVÉHO OKOLÍ • SPOLEČNÁ MAPA POMOCI</div>
+    <div class="hero-kicker">SPOLEČNÁ MAPA POMOCI</div>
     <h1 class="title">Přidej místo nebo akci, <span class="serif-accent">kde se dá pomoct</span></h1>
     <p class="subtitle">
-      Víš o útulku, komunitním šatníku, knihobudce nebo sousedské brigádě? Stačí název a obec — tvůj tip pomůže dalším lidem v okolí.
+      Víš o útulku, komunitním šatníku, knihobudce nebo sousedské brigádě? Stačí název a obec.
     </p>
   </header>
 
   <div class="submit-layout">
-    <!-- FORM COLUMN -->
+    <!-- CLEAN FOCUSED FORM -->
     <div class="card">
       <div class="tabs">
         <button class="tab" class:active={kind === 'org'} type="button" on:click={() => (kind = 'org')}>
-          📍 Místo / spolek / knihobudka
+          📍 Místo / spolek
         </button>
         <button class="tab" class:active={kind === 'event'} type="button" on:click={() => (kind = 'event')}>
-          📅 Sousedská akce / brigáda
+          📅 Sousedská akce
         </button>
       </div>
 
       <form class="form" on:submit|preventDefault={submit}>
-        <!-- Honeypot -->
         <div class="hp" aria-hidden="true">
           <label for="hp_company">Company</label>
           <input id="hp_company" type="text" bind:value={hp} tabindex="-1" autocomplete="off" />
@@ -222,43 +222,19 @@
             id="name"
             type="text"
             bind:value={name}
-            placeholder="Např. Knihobudka v parku / Útulek Tlapka / Komunitní swap oblečení"
+            placeholder="Např. Knihobudka v parku / Útulek Tlapka / Swap oblečení"
             maxlength="120"
           />
         </div>
 
         <div class="field">
-          <label for="desc">Jak se tam dá zapojit? (lidsky, 1–2 věty)</label>
-          <textarea
-            id="desc"
-            bind:value={description}
-            rows="3"
-            maxlength="600"
-            placeholder="Např. Každé úterý odpoledne berou čisté zimní bundy, nebo mají od 14:00 veřejné venčení psů bez registrace…"
-          ></textarea>
-        </div>
-
-        <div class="field">
-          <label for="loc">Kde to v ČR je? * (1 klikem město, nebo přesná ulice)</label>
-          <div class="quick-pills">
-            {#each CZECH_CITIES as city}
-              <button
-                type="button"
-                class="q-pill"
-                class:active={addressLabel === city.name}
-                on:click={() => pickQuickCity(city)}
-              >
-                📍 {city.name}
-              </button>
-            {/each}
-          </div>
-
+          <label for="loc">Kde to v ČR je? *</label>
           <div class="loc-search">
             <input
               id="loc"
               type="text"
               bind:value={locationQuery}
-              placeholder="Nebo napiš menší obec či ulici (např. Litomyšl, Znojmo, Písek)…"
+              placeholder="Napiš město, obec nebo ulici (např. Litomyšl, Znojmo, Písek)…"
               on:input={() => {
                 geoResults = [];
                 geoMessage = '';
@@ -273,13 +249,22 @@
               disabled={geoStatus === 'loading'}
             />
             <button class="btn secondary" type="button" on:click={searchLocation} disabled={geoStatus === 'loading' || locationQuery.trim().length < 2}>
-              {geoStatus === 'loading' ? 'Hledám…' : 'Najít v ČR'}
+              {geoStatus === 'loading' ? 'Hledám…' : 'Najít'}
             </button>
           </div>
 
-          {#if geoMessage}
-            <div class={'banner ' + geoStatus} aria-live="polite">{geoMessage}</div>
-          {/if}
+          <div class="quick-pills">
+            {#each TOP_CITIES as city}
+              <button
+                type="button"
+                class="q-pill"
+                class:active={addressLabel === city.name}
+                on:click={() => pickQuickCity(city)}
+              >
+                {city.name}
+              </button>
+            {/each}
+          </div>
 
           {#if geoResults.length}
             <div class="geo-results">
@@ -293,8 +278,21 @@
           {/if}
 
           {#if lat != null && lon != null && addressLabel}
-            <div class="picked">✅ Poloha vybrána: <strong>{addressLabel}</strong></div>
+            <div class="picked">✓ Poloha vybrána: <strong>{addressLabel}</strong></div>
+          {:else if geoMessage}
+            <div class="geo-hint">{geoMessage}</div>
           {/if}
+        </div>
+
+        <div class="field">
+          <label for="desc">Jak se tam dá zapojit? (1–2 věty)</label>
+          <textarea
+            id="desc"
+            bind:value={description}
+            rows="3"
+            maxlength="600"
+            placeholder="Např. Berou čisté zimní oblečení, nebo mají od 14:00 veřejné venčení psů…"
+          ></textarea>
         </div>
 
         {#if kind === 'event'}
@@ -315,11 +313,10 @@
         {/if}
 
         <details class="calm-drawer optional-fields">
-          <summary>Doplnit štítek, web nebo kontaktní e-mail (volitelné)</summary>
+          <summary>Doplnit štítek, web nebo kontakt (volitelné)</summary>
           <div class="grid opt-grid">
             <div class="field wide">
-              <label for="category">O co jde? (volitelné)</label>
-              <input id="category" type="text" bind:value={category} placeholder="Klikni na štítek níže nebo napiš vlastní…" maxlength="80" />
+              <label for="category">Oblast pomoci</label>
               <div class="quick-pills">
                 {#each QUICK_CATEGORIES as qc}
                   <button
@@ -335,12 +332,12 @@
             </div>
 
             <div class="field">
-              <label for="website">Web / FB / Instagram (volitelné)</label>
+              <label for="website">Web nebo sociální síť</label>
               <input id="website" type="text" bind:value={website} placeholder="https://…" maxlength="220" />
             </div>
 
             <div class="field">
-              <label for="email">Kontaktní e-mail (volitelné)</label>
+              <label for="email">Kontaktní e-mail</label>
               <input id="email" type="email" bind:value={email} placeholder="info@…" maxlength="120" />
             </div>
           </div>
@@ -348,7 +345,7 @@
 
         <div class="actions">
           <button class="btn submit-btn" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Ukládám…' : '✦ Připnout sousedský tip na mapu'}
+            {isSubmitting ? 'Ukládám…' : '✦ Připnout tip na mapu'}
           </button>
         </div>
 
@@ -356,46 +353,30 @@
           <div class={'banner ' + submitStatus} aria-live="polite">
             <div>{submitMessage}</div>
             {#if submitStatus === 'success'}
-              <a href={submittedMapUrl} class="map-jump-link">🗺️ Ukázat místo na mapě →</a>
+              <a href={submittedMapUrl} class="map-jump-link">Ukázat místo na mapě →</a>
             {/if}
           </div>
         {/if}
       </form>
     </div>
 
-    <!-- SIDEBAR: LIVE NEIGHBORHOOD INSPIRATION -->
-    <aside class="side-board">
-      <div class="board-box">
-        <span class="board-kicker">🌿 ŽIVÉ PŘÍKLADY Z ČESKA</span>
-        <h3>Co sem lidé nejčastěji přidávají?</h3>
-        <ul class="idea-list">
-          <li>🐾 <strong>Menší útulky a depozita</strong>, kde uvítají staré deky nebo vyvenčení psa.</li>
-          <li>📚 <strong>Veřejné knihobudky a ReUse poličky</strong> na nádražích a v parcích.</li>
-          <li>🧥 <strong>Komunitní šatníky a potravinové skříňky</strong> pro samoživitele.</li>
-          <li>🌳 <strong>Sousedské úklidy potoka, výsadby stromů</strong> nebo studentské swapy.</li>
-        </ul>
-      </div>
-
-      <div class="board-box light">
-        <span class="board-kicker dark">📌 UŽ NA NÁSTĚNCE</span>
-        <h3>Ověřené komunitní body</h3>
-        <div class="seed-stack">
-          {#each LOCAL_COMMUNITY_ITEMS.slice(0, 2) as item}
-            <a href={`/near?lat=${item.lat}&lon=${item.lon}&r=8`} class="seed-card">
-              <div class="seed-cat">{item.category}</div>
-              <strong>{item.name}</strong>
-              <span>📍 {item.address_label}</span>
-            </a>
-          {/each}
-        </div>
-      </div>
+    <!-- SINGLE CALM SIDEBAR CARD -->
+    <aside class="side-note">
+      <span class="board-kicker">🌿 INSPIRACE Z OKOLÍ</span>
+      <h3>Co sem lidé nejčastěji přidávají?</h3>
+      <ul class="idea-list">
+        <li><strong>Menší útulky a depozita</strong>, kde uvítají deky nebo vyvenčení psa.</li>
+        <li><strong>Veřejné knihobudky a ReUse poličky</strong> na nádražích a v parcích.</li>
+        <li><strong>Komunitní šatníky a potravinové skříňky</strong> pro rodiny v nouzi.</li>
+        <li><strong>Sousedské úklidy, výsadby stromů</strong> nebo lokální swapy.</li>
+      </ul>
     </aside>
   </div>
 </div>
 
 <style>
   .page {
-    max-width: 1120px;
+    max-width: 1080px;
     margin: 0 auto;
     padding: 0.75rem 1.25rem 3.5rem;
   }
@@ -404,12 +385,8 @@
     text-align: center;
   }
 
-  .opt-grid {
-    margin-top: 0.85rem;
-  }
-
   .hero-kicker {
-    font-size: 0.75rem;
+    font-size: 0.74rem;
     font-weight: 800;
     letter-spacing: 0.12em;
     color: #fde68a;
@@ -420,7 +397,7 @@
     font-family: var(--font-sans);
     font-weight: 800;
     color: #ffffff;
-    font-size: clamp(1.95rem, 3.4vw, 2.75rem);
+    font-size: clamp(1.95rem, 3.4vw, 2.7rem);
     margin: 0;
     letter-spacing: -0.03em;
   }
@@ -433,55 +410,57 @@
   .subtitle {
     color: rgba(236, 248, 241, 0.9);
     margin: 0.55rem auto 0;
-    max-width: 58ch;
-    line-height: 1.55;
+    max-width: 52ch;
+    line-height: 1.58;
   }
 
   .submit-layout {
     display: grid;
-    grid-template-columns: 1.35fr 0.65fr;
-    gap: 1.15rem;
+    grid-template-columns: 1.38fr 0.62fr;
+    gap: 1.35rem;
     align-items: start;
-    margin-top: 1.15rem;
   }
 
   .card {
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(22, 66, 48, 0.12);
-    border-radius: 24px;
-    box-shadow: var(--shadow-md);
-    padding: 1.65rem;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(22, 66, 48, 0.1);
+    border-radius: 26px;
+    box-shadow: var(--shadow-sm);
+    padding: 1.85rem;
   }
 
   .tabs {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-bottom: 1.1rem;
+    display: inline-flex;
+    gap: 0.3rem;
+    padding: 0.26rem;
+    border-radius: 999px;
+    background: #eef3ef;
+    margin-bottom: 1.35rem;
   }
 
   .tab {
     border-radius: 999px;
-    border: 1px solid rgba(22, 66, 48, 0.14);
-    background: #f5f3eb;
-    padding: 0.58rem 1rem;
+    border: none;
+    background: transparent;
+    padding: 0.5rem 1rem;
     cursor: pointer;
     font-family: var(--font-sans);
-    font-weight: 800;
-    font-size: 0.88rem;
-    color: var(--text-primary);
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    transition: all 0.16s ease;
   }
 
   .tab.active {
     background: #0d2b1f;
-    color: #fde68a;
-    border-color: #0d2b1f;
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(9, 29, 20, 0.16);
   }
 
   .form {
     display: flex;
     flex-direction: column;
-    gap: 0.95rem;
+    gap: 1.05rem;
   }
 
   .grid {
@@ -490,10 +469,14 @@
     gap: 0.85rem;
   }
 
+  .opt-grid {
+    margin-top: 0.85rem;
+  }
+
   .field {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.38rem;
   }
 
   .field.wide {
@@ -501,16 +484,16 @@
   }
 
   label {
-    font-size: 0.88rem;
-    font-weight: 800;
+    font-size: 0.86rem;
+    font-weight: 700;
     color: var(--text-primary);
   }
 
   input,
   textarea {
-    padding: 0.65rem 0.8rem;
+    padding: 0.68rem 0.88rem;
     border-radius: 12px;
-    border: 1px solid rgba(22, 66, 48, 0.16);
+    border: 1px solid rgba(22, 66, 48, 0.15);
     background: #ffffff;
     font-family: inherit;
     font-size: 0.92rem;
@@ -520,28 +503,42 @@
     resize: vertical;
   }
 
+  .loc-search {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .loc-search input {
+    flex: 1;
+    min-width: 220px;
+  }
+
   .quick-pills {
     display: flex;
     gap: 0.35rem;
     flex-wrap: wrap;
-    margin-top: 0.2rem;
+    margin-top: 0.15rem;
   }
 
   .q-pill {
-    padding: 0.32rem 0.68rem;
+    padding: 0.3rem 0.68rem;
     border-radius: 999px;
-    border: 1px solid rgba(22, 66, 48, 0.14);
-    background: #f6f4ec;
-    color: var(--text-primary);
+    border: 1px solid rgba(22, 66, 48, 0.11);
+    background: #f5f9f6;
+    color: var(--text-secondary);
     font-family: var(--font-sans);
     font-size: 0.78rem;
     font-weight: 700;
     cursor: pointer;
+    transition: all 0.15s ease;
   }
 
   .q-pill:hover {
-    background: #ecfdf5;
-    border-color: #059669;
+    background: #ffffff;
+    border-color: rgba(16, 185, 129, 0.4);
+    color: var(--text-primary);
   }
 
   .q-pill.active {
@@ -550,28 +547,15 @@
     border-color: #0d2b1f;
   }
 
-  .loc-search {
-    display: flex;
-    gap: 0.55rem;
-    align-items: center;
-    flex-wrap: wrap;
-    margin-top: 0.25rem;
-  }
-
-  .loc-search input {
-    flex: 1;
-    min-width: 220px;
-  }
-
   .geo-results {
-    margin-top: 0.5rem;
+    margin-top: 0.4rem;
     display: grid;
-    gap: 0.45rem;
+    gap: 0.35rem;
   }
 
   .geo-item {
     text-align: left;
-    padding: 0.6rem 0.75rem;
+    padding: 0.55rem 0.75rem;
     border-radius: 12px;
     border: 1px solid rgba(22, 66, 48, 0.12);
     background: #ffffff;
@@ -582,40 +566,56 @@
     display: block;
     font-weight: 800;
     color: var(--text-primary);
+    font-size: 0.88rem;
   }
 
   .geo-sub {
     display: block;
-    font-size: 0.82rem;
-    color: var(--text-secondary);
+    font-size: 0.78rem;
+    color: var(--text-muted);
   }
 
   .picked {
-    margin-top: 0.4rem;
+    margin-top: 0.25rem;
     color: #065f46;
-    font-size: 0.9rem;
+    font-size: 0.86rem;
+    font-weight: 600;
+  }
+
+  .geo-hint {
+    margin-top: 0.25rem;
+    color: var(--text-muted);
+    font-size: 0.82rem;
   }
 
   .btn {
     border-radius: 14px;
-    padding: 0.75rem 1.15rem;
+    padding: 0.72rem 1.15rem;
     font-family: var(--font-sans);
-    font-weight: 800;
+    font-weight: 700;
     cursor: pointer;
     border: 1px solid rgba(22, 66, 48, 0.14);
   }
 
   .btn.secondary {
-    background: #ffffff;
+    background: #f5f9f6;
     color: var(--text-primary);
+    padding: 0.68rem 1rem;
+    border-radius: 12px;
   }
 
   .submit-btn {
-    background: linear-gradient(135deg, #123828 0%, #1c523a 100%);
-    border: 1.5px solid rgba(251, 191, 36, 0.5);
-    color: #fde68a;
-    font-size: 0.95rem;
-    box-shadow: 0 10px 24px -8px rgba(14, 40, 28, 0.28);
+    background: linear-gradient(135deg, #0f3626 0%, #1b573e 100%);
+    border: none;
+    color: #ffffff;
+    font-size: 0.94rem;
+    padding: 0.88rem 1.4rem;
+    box-shadow: 0 10px 22px -6px rgba(14, 40, 28, 0.32);
+    transition: transform 0.18s ease;
+  }
+
+  .submit-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
   }
 
   .btn:disabled {
@@ -624,31 +624,25 @@
   }
 
   .banner {
-    margin-top: 0.5rem;
-    padding: 0.65rem 0.85rem;
+    margin-top: 0.4rem;
+    padding: 0.7rem 0.9rem;
     border-radius: 12px;
-    border: 1px solid rgba(22, 66, 48, 0.12);
-    background: #f5f3eb;
-    color: var(--text-secondary);
     font-size: 0.88rem;
   }
 
   .banner.error {
     background: #fef2f2;
-    border-color: rgba(153, 27, 27, 0.2);
     color: #991b1b;
   }
 
-  .banner.success,
-  .banner.ok {
+  .banner.success {
     background: #ecfdf5;
-    border-color: rgba(6, 95, 70, 0.22);
     color: #065f46;
   }
 
   .map-jump-link {
     display: inline-block;
-    margin-top: 0.4rem;
+    margin-top: 0.35rem;
     font-weight: 800;
     color: #065f46;
   }
@@ -657,93 +651,42 @@
     display: none;
   }
 
-  /* Sidebar */
-  .side-board {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .board-box {
-    padding: 1.35rem;
-    border-radius: 22px;
-    background: linear-gradient(155deg, #ebf6ef, #f6faf7);
-    border: 1px solid rgba(22, 82, 56, 0.14);
-    color: #0e281c;
-    box-shadow: var(--shadow-sm);
-  }
-
-  .board-box.light {
-    background: rgba(255, 255, 255, 0.94);
-    border: 1px solid rgba(22, 66, 48, 0.12);
-    color: var(--text-primary);
+  /* Single Calm Sidebar Note */
+  .side-note {
+    padding: 1.55rem;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(22, 66, 48, 0.09);
   }
 
   .board-kicker {
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.1em;
-    color: #047857;
+    color: var(--emerald-600);
   }
 
-  .board-kicker.dark {
-    color: #059669;
-  }
-
-  .board-box h3 {
-    margin: 0.3rem 0 0.75rem;
+  .side-note h3 {
+    margin: 0.35rem 0 0.8rem;
     font-size: 1.08rem;
     font-weight: 800;
+    color: var(--text-primary);
   }
 
   .idea-list {
     margin: 0;
     padding-left: 1.15rem;
-    font-size: 0.85rem;
-    line-height: 1.55;
-    color: #2f4b3d;
+    font-size: 0.86rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
   }
 
   .idea-list li {
-    margin-bottom: 0.45rem;
+    margin-bottom: 0.5rem;
   }
 
-  .seed-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 0.55rem;
-  }
-
-  .seed-card {
-    padding: 0.7rem 0.85rem;
-    border-radius: 14px;
-    background: #faf9f4;
-    border: 1px solid rgba(22, 66, 48, 0.1);
-    text-decoration: none;
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-    transition: border-color 0.15s ease;
-  }
-
-  .seed-card:hover {
-    border-color: #10b981;
-  }
-
-  .seed-cat {
-    font-size: 0.72rem;
-    font-weight: 800;
-    color: #059669;
-  }
-
-  .seed-card strong {
-    font-size: 0.86rem;
+  .idea-list strong {
     color: var(--text-primary);
-  }
-
-  .seed-card span {
-    font-size: 0.76rem;
-    color: var(--text-secondary);
   }
 
   @media (max-width: 920px) {

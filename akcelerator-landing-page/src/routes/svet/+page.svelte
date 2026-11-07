@@ -22,7 +22,7 @@
   const ACTION_BY_ID = Object.fromEntries(MICRO_ACTIONS.map((a) => [a.id, a]));
 
   // =========================================================================
-  // ALWAYS 100% FULL BEAUTY — ZERO LEVELS, CONNECTED TO REAL GOOD DEEDS
+  // ALWAYS 100% FULL BEAUTY — CONNECTED TO REAL GOOD DEEDS
   // =========================================================================
   /** @type {'dawn' | 'night'} */
   let atmosphereMode = 'dawn';
@@ -30,32 +30,32 @@
 
   // 8 living deed lights seeded across the sky & lake — each linked to a real Czech micro-action
   const INSPIRING_DEED_SEEDS = [
-    { actionId: 'zvirata_utulek_online', element: 'animals', x: 0.24, y: 0.69, zone: 'water' },
-    { actionId: 'missing_maps', element: 'care', x: 0.21, y: 0.22, zone: 'sky' },
-    { actionId: 'knihobudka_kniha', element: 'community', x: 0.47, y: 0.74, zone: 'water' },
-    { actionId: 'birdlife_ptaci_pasti', element: 'nature', x: 0.41, y: 0.16, zone: 'sky' },
+    { actionId: 'zvirata_utulek_online', element: 'animals', x: 0.23, y: 0.69, zone: 'water' },
+    { actionId: 'missing_maps', element: 'care', x: 0.2, y: 0.21, zone: 'sky' },
+    { actionId: 'knihobudka_kniha', element: 'community', x: 0.46, y: 0.74, zone: 'water' },
+    { actionId: 'birdlife_ptaci_pasti', element: 'nature', x: 0.41, y: 0.15, zone: 'sky' },
     { actionId: 'estudanky_pramen', element: 'nature', x: 0.66, y: 0.66, zone: 'water' },
-    { actionId: 'remobil_telefon', element: 'nature', x: 0.62, y: 0.24, zone: 'sky' },
-    { actionId: 'letters_seniors', element: 'community', x: 0.79, y: 0.19, zone: 'sky' },
+    { actionId: 'remobil_telefon', element: 'nature', x: 0.62, y: 0.23, zone: 'sky' },
+    { actionId: 'letters_seniors', element: 'community', x: 0.79, y: 0.18, zone: 'sky' },
     { actionId: 'trash_hero_uklid', element: 'nature', x: 0.81, y: 0.72, zone: 'water' }
   ];
 
   const QUICK_OFFLINE_DEEDS = [
-    { label: '🥣 Poslal/a jsem misku útulku', title: 'Naplněná miska pro zvířata v útulku', element: 'animals' },
-    { label: '🤝 Pomohl/a jsem někomu v okolí', title: 'Drobná pomoc člověku v mém okolí', element: 'community' },
-    { label: '🌿 Sebral/a jsem odpadek venku', title: 'Sebraný odpadek cestou v přírodě či ulici', element: 'nature' },
-    { label: '💌 Ozval/a jsem se blízkému', title: 'Zpráva nebo zavolání člověku, na kterém záleží', element: 'care' },
-    { label: '📦 Poslal/a jsem věc dál', title: 'Darovaná věc, která ještě poslouží druhým', element: 'community' }
+    { label: '🥣 Miska útulku', title: 'Naplněná miska pro zvířata v útulku', element: 'animals' },
+    { label: '🤝 Pomoc v okolí', title: 'Drobná pomoc člověku v mém okolí', element: 'community' },
+    { label: '🌿 Sebraný odpadek', title: 'Sebraný odpadek cestou v přírodě či ulici', element: 'nature' },
+    { label: '💌 Zpráva blízkému', title: 'Zpráva nebo zavolání člověku, na kterém záleží', element: 'care' }
   ];
 
-  // =========================================================================
-  // REAL DEED LIGHT BAR ON THE LAKE & SKY
-  // =========================================================================
   /** @type {'water' | 'sky'} */
   let ritualMode = 'water';
   let ritualInput = '';
   let gentleToast = '';
   let toastTimer = null;
+
+  function cleanTitle(str) {
+    return String(str || '').replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\s]+/u, '').trim() || str;
+  }
 
   function showGentleToast(msg) {
     gentleToast = msg;
@@ -65,10 +65,13 @@
     }, 4400);
   }
 
-  // Optional subtle Web Audio API pentatonic chimes (muted by default)
+  // =========================================================================
+  // POLYPHONIC HARMONIC SOUNDSCAPE (HARP / CELESTA / SINGING BOWL)
+  // =========================================================================
   let soundEnabled = false;
   /** @type {AudioContext | null} */
   let audioCtx = null;
+  let lastHoverChimeAt = 0;
 
   function ensureAudio() {
     if (typeof window === 'undefined') return null;
@@ -91,8 +94,8 @@
   }
 
   /**
-   * Plays a soft, warm harmonic sine/triangle chime (pentatonic scale)
-   * @param {'sky' | 'water' | 'breath_in' | 'breath_out'} type
+   * Lush polyphonic pentatonic synthesis
+   * @param {'sky' | 'water' | 'breath_in' | 'breath_out' | 'hover'} type
    */
   function playChime(type) {
     if (!soundEnabled) return;
@@ -100,62 +103,96 @@
     if (!ctx) return;
     try {
       const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+
+      if (type === 'hover') {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const hoverNotes = [880, 987.77, 1046.5, 1174.66, 1318.51];
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(hoverNotes[Math.floor(Math.random() * hoverNotes.length)], now);
+        gain.gain.setValueAtTime(0.0005, now);
+        gain.gain.exponentialRampToValueAtTime(0.014, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.58);
+        return;
+      }
 
       if (type === 'sky') {
-        const notes = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5];
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(notes[Math.floor(Math.random() * notes.length)], now);
-        gain.gain.setValueAtTime(0.001, now);
-        gain.gain.exponentialRampToValueAtTime(0.055, now + 0.04);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.9);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 1.95);
+        // Arpeggiated celesta / harp triad
+        const roots = [523.25, 587.33, 659.25];
+        const base = roots[Math.floor(Math.random() * roots.length)];
+        const chord = [base, base * 1.25, base * 1.5, base * 2];
+        chord.forEach((freq, idx) => {
+          const t0 = now + idx * 0.065;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = idx === 3 ? 'triangle' : 'sine';
+          osc.frequency.setValueAtTime(freq, t0);
+          gain.gain.setValueAtTime(0.0008, t0);
+          gain.gain.exponentialRampToValueAtTime(0.038 / (1 + idx * 0.3), t0 + 0.035);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.4);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(t0);
+          osc.stop(t0 + 2.45);
+        });
       } else if (type === 'water') {
-        const notes = [261.63, 293.66, 329.63, 392.0, 440.0];
-        osc.type = 'triangle';
-        const base = notes[Math.floor(Math.random() * notes.length)];
-        osc.frequency.setValueAtTime(base, now);
-        osc.frequency.exponentialRampToValueAtTime(base * 1.015, now + 0.45);
-        gain.gain.setValueAtTime(0.001, now);
-        gain.gain.exponentialRampToValueAtTime(0.05, now + 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 2.25);
+        // Warm singing bowl + water harmonic overtone
+        const roots = [261.63, 293.66, 329.63, 392.0];
+        const base = roots[Math.floor(Math.random() * roots.length)];
+        [1, 1.5, 2.01].forEach((mult, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = idx === 0 ? 'triangle' : 'sine';
+          osc.frequency.setValueAtTime(base * mult, now);
+          if (idx === 0) {
+            osc.frequency.exponentialRampToValueAtTime(base * 1.008, now + 0.5);
+          }
+          gain.gain.setValueAtTime(0.0008, now);
+          gain.gain.exponentialRampToValueAtTime(0.042 / (idx + 1), now + 0.05 + idx * 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.8 - idx * 0.35);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 2.85);
+        });
       } else if (type === 'breath_in' || type === 'breath_out') {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(type === 'breath_in' ? 329.63 : 261.63, now);
-        gain.gain.setValueAtTime(0.0008, now);
-        gain.gain.exponentialRampToValueAtTime(0.025, now + 0.6);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.6);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 2.7);
+        const freqs = type === 'breath_in' ? [261.63, 392.0] : [220.0, 329.63];
+        freqs.forEach((f, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(f, now);
+          gain.gain.setValueAtTime(0.0006, now);
+          gain.gain.exponentialRampToValueAtTime(idx === 0 ? 0.024 : 0.014, now + 0.75);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 3.1);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 3.2);
+        });
       }
     } catch {}
   }
 
   // =========================================================================
-  // CALMING BREATHING EXERCISE (3 GENTLE RHYTHMS)
+  // CALMING BREATHING EXERCISE (3 CLEAN PILL RHYTHMS)
   // =========================================================================
   const BREATH_PATTERNS = [
     {
       id: 'calm46',
-      label: '🌊 Úleva od přetížení (4–6)',
-      desc: 'Delší výdech než nádech přirozeně zklidní tep a pomůže tělu povolit napětí.',
+      short: '🌊 Úleva 4–6',
+      desc: 'Delší výdech než nádech přirozeně zklidní tep a uvolní napětí v těle.',
       inhale: 4,
       hold: 0,
       exhale: 6
     },
     {
       id: 'balance44',
-      label: '🌿 Klidná rovnováha (4–4)',
+      short: '🌿 Rovnováha 4–4',
       desc: 'Plynulý, vyrovnaný rytmus pro chvíle, kdy se potřebuješ soustředit a ztišit.',
       inhale: 4,
       hold: 0,
@@ -163,8 +200,8 @@
     },
     {
       id: 'deep478',
-      label: '🌙 Hluboké ztišení (4–7–8)',
-      desc: 'Pomalé tempo vhodné večer nebo po náročném dni plném zpráv.',
+      short: '🌙 Ztišení 4–7–8',
+      desc: 'Pomalé večerní tempo vhodné po náročném dni plném podnětů.',
       inhale: 4,
       hold: 7,
       exhale: 8
@@ -190,8 +227,9 @@
     let phaseElapsed = 0;
     breathPhase = 'inhale';
     breathPhaseSecLeft = activePattern.inhale;
-    breathScale = 1.34;
+    breathScale = 1.35;
     playChime('breath_in');
+    spawnBreathWave(true);
     trackEvent('aa_world_breathing_start', { pattern: activePattern.id, duration: breathingDurationSec });
 
     breathInterval = setInterval(() => {
@@ -207,25 +245,28 @@
         if (activePattern.hold > 0) {
           breathPhase = 'hold';
           breathPhaseSecLeft = activePattern.hold;
-          breathScale = 1.34;
+          breathScale = 1.35;
         } else {
           breathPhase = 'exhale';
           breathPhaseSecLeft = activePattern.exhale;
-          breathScale = 0.88;
+          breathScale = 0.86;
           playChime('breath_out');
+          spawnBreathWave(false);
         }
       } else if (breathPhase === 'hold' && phaseElapsed >= activePattern.hold) {
         phaseElapsed = 0;
         breathPhase = 'exhale';
         breathPhaseSecLeft = activePattern.exhale;
-        breathScale = 0.88;
+        breathScale = 0.86;
         playChime('breath_out');
+        spawnBreathWave(false);
       } else if (breathPhase === 'exhale' && phaseElapsed >= activePattern.exhale) {
         phaseElapsed = 0;
         breathPhase = 'inhale';
         breathPhaseSecLeft = activePattern.inhale;
-        breathScale = 1.34;
+        breathScale = 1.35;
         playChime('breath_in');
+        spawnBreathWave(true);
       } else {
         const targetLen =
           breathPhase === 'inhale'
@@ -247,18 +288,11 @@
   }
 
   // =========================================================================
-  // CALM GOOD NEWS CAROUSEL (1 AT A TIME)
+  // ONE QUIET GOOD NEWS WHISPER + OPTIONAL DRAWERS
   // =========================================================================
   let proofIndex = 0;
   $: currentProof = HOPE_PROOFS[proofIndex % HOPE_PROOFS.length];
 
-  function nextProof() {
-    proofIndex = (proofIndex + 1) % HOPE_PROOFS.length;
-  }
-
-  // =========================================================================
-  // JOURNAL & 9:16 STORY POSTCARD
-  // =========================================================================
   let editingUid = null;
   let draftNote = '';
   let storyMode = 'quiet';
@@ -278,7 +312,7 @@
     const prefersWater = elementKey === 'community' || (elementKey === 'animals' && index % 2 === 1);
     const y = prefersWater
       ? 0.61 + ((index * 0.29) % 0.2)
-      : 0.14 + ((index * 0.23 + 0.07) % 0.29);
+      : 0.14 + ((index * 0.23 + 0.07) % 0.28);
     return { x, y, zone: prefersWater ? 'water' : 'sky' };
   }
 
@@ -334,7 +368,7 @@
       action: null,
       title: w.title,
       note: '',
-      concreteImpact: 'Dobrý skutek přidaný přímo do tvé Krajiny dobra.',
+      concreteImpact: 'Dobrý skutek přidaný do tvé Krajiny dobra.',
       orgName: '',
       minutes: 0,
       url: '',
@@ -351,14 +385,191 @@
 
   /** @type {any | null} */
   let selectedLight = null;
+  /** @type {any | null} */
+  let hoveredLight = null;
+
+  // =========================================================================
+  // SPECTACULAR 60FPS INTERACTIVE VISUAL EFFECTS ENGINE
+  // =========================================================================
+  /** @type {HTMLCanvasElement | null} */
+  let canvasEl = null;
+  /** @type {HTMLDivElement | null} */
+  let stageWrapEl = null;
+  let pointer = { x: 0.5, y: 0.62, active: false, smoothX: 0.5, smoothY: 0.62 };
+  let parallaxStyle = '';
+  let lastRippleAt = 0;
+  let lastTrailAt = 0;
+
+  /** @type {Array<{ x: number, y: number, vx: number, vy: number, r: number, alpha: number, color: string, life: number, maxLife: number, gravity: number, twinkle: number }>} */
+  let burstParticles = [];
+  /** @type {Array<{ x: number, y: number, rx: number, maxRx: number, speed: number, alpha: number, color: string, lineWidth: number }>} */
+  let waterRipples = [];
+  /** @type {Array<{ x: number, y: number, r: number, maxR: number, alpha: number, color: string, isWater: boolean }>} */
+  let shockwaves = [];
+  /** @type {Array<{ sx: number, sy: number, cx: number, cy: number, tx: number, ty: number, progress: number, speed: number, color: string, isWater: boolean }>} */
+  let activeComets = [];
+  /** @type {Array<{ x1: number, y1: number, x2: number, y2: number, progress: number, alpha: number, color: string }>} */
+  let constellationPulses = [];
+  /** @type {Array<{ x: number, y: number, vx: number, vy: number, len: number, life: number, maxLife: number }>} */
+  let meteors = [];
+  /** @type {Record<string, number>} */
+  let hoverScales = {};
+
+  function spawnBreathWave(isInhale) {
+    waterRipples.push({
+      x: 0.5,
+      y: 0.68,
+      rx: isInhale ? 12 : 24,
+      maxRx: 260,
+      speed: isInhale ? 1.05 : 0.72,
+      alpha: 0.55,
+      color: isInhale ? '#6ee7b7' : '#fde68a',
+      lineWidth: 2.2
+    });
+    shockwaves.push({
+      x: 0.5,
+      y: 0.58,
+      r: 14,
+      maxR: 210,
+      alpha: 0.32,
+      color: isInhale ? '#6ee7b7' : '#fde68a',
+      isWater: true
+    });
+  }
+
+  /**
+   * Full cinematic bloom + comet/lantern ceremony
+   */
+  function triggerLightBloom(nx, ny, color = '#fde68a', isWater = false, withLaunchArc = false) {
+    if (withLaunchArc) {
+      const startX = Math.max(0.12, Math.min(0.88, nx + (Math.random() - 0.5) * 0.18));
+      const startY = isWater ? 0.92 : 0.56;
+      const ctrlX = (startX + nx) * 0.5 + (Math.random() - 0.5) * 0.14;
+      const ctrlY = isWater ? Math.min(startY, ny) - 0.12 : Math.min(startY, ny) - 0.08;
+      activeComets.push({
+        sx: startX,
+        sy: startY,
+        cx: ctrlX,
+        cy: ctrlY,
+        tx: nx,
+        ty: ny,
+        progress: 0,
+        speed: isWater ? 0.036 : 0.028,
+        color,
+        isWater
+      });
+    }
+
+    detonateBloomAt(nx, ny, color, isWater, withLaunchArc ? 0.55 : 1);
+  }
+
+  function detonateBloomAt(nx, ny, color = '#fde68a', isWater = false, intensity = 1) {
+    const count = Math.round((isWater ? 58 : 72) * intensity);
+    const palette = isWater
+      ? [color, '#fef3c7', '#6ee7b7', '#fed7aa']
+      : [color, '#ffffff', '#fde68a', '#6ee7b7'];
+
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.35;
+      const speed = (0.0012 + Math.random() * 0.0056) * (0.7 + intensity * 0.35);
+      const upwardLift = isWater ? -(0.0008 + Math.random() * 0.0022) : -0.0002;
+      burstParticles.push({
+        x: nx,
+        y: ny,
+        vx: Math.cos(angle) * speed * (isWater ? 0.85 : 1),
+        vy: Math.sin(angle) * speed * (isWater ? 0.55 : 1) + upwardLift,
+        r: 1.6 + Math.random() * 3.8,
+        alpha: 0.98,
+        color: palette[i % palette.length],
+        life: 0,
+        maxLife: 68 + Math.random() * 58,
+        gravity: isWater ? -0.000022 : 0.000018,
+        twinkle: Math.random() * Math.PI * 2
+      });
+    }
+
+    // Multi-ring luminous shockwave halos
+    shockwaves.push({
+      x: nx,
+      y: ny,
+      r: 4,
+      maxR: isWater ? 145 : 175,
+      alpha: 0.85 * intensity,
+      color: '#ffffff',
+      isWater
+    });
+    shockwaves.push({
+      x: nx,
+      y: ny,
+      r: 10,
+      maxR: isWater ? 210 : 240,
+      alpha: 0.62 * intensity,
+      color,
+      isWater
+    });
+
+    // If sky star, connect glowing constellation filaments to nearest stars + reflect on pond
+    if (!isWater) {
+      const skyPeers = activeLights
+        .filter((l) => l.zone === 'sky' && Math.hypot(l.x - nx, l.y - ny) > 0.02)
+        .sort((a, b) => Math.hypot(a.x - nx, a.y - ny) - Math.hypot(b.x - nx, b.y - ny))
+        .slice(0, 3);
+
+      for (const peer of skyPeers) {
+        constellationPulses.push({
+          x1: nx,
+          y1: ny,
+          x2: peer.x,
+          y2: peer.y,
+          progress: 0,
+          alpha: 0.9,
+          color
+        });
+      }
+
+      // Mirror ripple on the lake below the lit star
+      const mirrorY = 0.61 + (0.48 - Math.min(0.46, ny)) * 0.42;
+      waterRipples.push({
+        x: nx,
+        y: mirrorY,
+        rx: 5,
+        maxRx: 95,
+        speed: 1.15,
+        alpha: 0.55,
+        color,
+        lineWidth: 1.6
+      });
+    }
+
+    // Lush concentric water waves
+    if (isWater || ny >= 0.5) {
+      const wy = Math.max(0.57, ny);
+      const waveColors = ['#ffffff', color, '#6ee7b7', '#fde68a'];
+      waveColors.forEach((wc, idx) => {
+        setTimeout(() => {
+          waterRipples.push({
+            x: nx,
+            y: wy,
+            rx: 4 + idx * 3,
+            maxRx: 135 + idx * 28,
+            speed: 1.35 - idx * 0.14,
+            alpha: (0.86 - idx * 0.14) * intensity,
+            color: wc,
+            lineWidth: 2.3 - idx * 0.35
+          });
+        }, idx * 140);
+      });
+    }
+  }
 
   function openRandomInspiringDeed() {
-    if (seededDeedLights.length === 0) return;
-    const currentIdx = seededDeedLights.findIndex((l) => l?.uid === selectedLight?.uid);
-    const next = seededDeedLights[(currentIdx + 1) % seededDeedLights.length];
+    const pool = seededDeedLights.length > 0 ? seededDeedLights : activeLights;
+    if (pool.length === 0) return;
+    const currentIdx = pool.findIndex((l) => l?.uid === selectedLight?.uid);
+    const next = pool[(currentIdx + 1) % pool.length];
     if (!next) return;
     selectedLight = next;
-    triggerLightBloom(next.x, next.y, ELEMENT_MAP[next.element]?.softColor || '#fde68a', next.zone === 'water');
+    triggerLightBloom(next.x, next.y, ELEMENT_MAP[next.element]?.softColor || '#fde68a', next.zone === 'water', false);
     playChime(next.zone === 'water' ? 'water' : 'sky');
   }
 
@@ -385,10 +596,10 @@
         element: light.element || 'care'
       });
     }
-    triggerLightBloom(light.x, light.y, '#fde68a', light.zone === 'water');
+    triggerLightBloom(light.x, light.y, '#fde68a', light.zone === 'water', true);
     playChime(light.zone === 'water' ? 'water' : 'sky');
     selectedLight = { ...light, isMine: true };
-    showGentleToast(`Skvělé! Skutek „${light.title}“ teď v krajině svítí jako tvůj.`);
+    showGentleToast(`Skvělé! Skutek „${cleanTitle(light.title)}“ teď v krajině září jako tvůj.`);
   }
 
   function addQuickOfflineDeed(deed) {
@@ -403,12 +614,160 @@
       element: deed.element
     });
     selectedLight = null;
-    triggerLightBloom(saved.x, saved.y, ELEMENT_MAP[deed.element]?.softColor || '#fde68a', isWater);
+    triggerLightBloom(saved.x, saved.y, ELEMENT_MAP[deed.element]?.softColor || '#fde68a', isWater, true);
     playChime(isWater ? 'water' : 'sky');
     showGentleToast(
       isWater
-        ? `Lucerna za skutek „${deed.title}“ se rozsvítila na hladině.`
-        : `Hvězda za skutek „${deed.title}“ se rozsvítila na obloze.`
+        ? `Lucerna za skutek „${deed.title}“ vyplula na hladinu.`
+        : `Hvězda za skutek „${deed.title}“ vystoupala na oblohu.`
+    );
+  }
+
+  function findClosestLight(nx, ny, aspect) {
+    let closest = null;
+    let minDist = 0.055;
+    for (const l of activeLights) {
+      const dx = l.x - nx;
+      const dy = (l.y - ny) * aspect;
+      const d = Math.hypot(dx, dy);
+      if (d < minDist) {
+        minDist = d;
+        closest = l;
+      }
+    }
+    return closest;
+  }
+
+  function handlePointerMove(e) {
+    if (!stageWrapEl) return;
+    const rect = stageWrapEl.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const nx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const ny = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+    pointer.x = nx;
+    pointer.y = ny;
+    pointer.active = true;
+
+    const nearLight = findClosestLight(nx, ny, rect.height / rect.width);
+    if (nearLight?.uid !== hoveredLight?.uid) {
+      hoveredLight = nearLight;
+      const now = performance.now();
+      if (nearLight && now - lastHoverChimeAt > 240) {
+        lastHoverChimeAt = now;
+        playChime('hover');
+      }
+    }
+
+    const now = performance.now();
+    // Fluid bioluminescent wake on the lake
+    if (ny > 0.55 && now - lastRippleAt > 110) {
+      lastRippleAt = now;
+      waterRipples.push({
+        x: nx,
+        y: ny,
+        rx: 2.5,
+        maxRx: 58,
+        speed: 0.92,
+        alpha: 0.36,
+        color: atmosphereMode === 'night' ? '#6ee7b7' : '#fde68a',
+        lineWidth: 1.35
+      });
+    }
+
+    // Delicate stardust wake in the air & over the water
+    if (now - lastTrailAt > 42 && burstParticles.length < 220) {
+      lastTrailAt = now;
+      burstParticles.push({
+        x: nx + (Math.random() - 0.5) * 0.008,
+        y: ny + (Math.random() - 0.5) * 0.008,
+        vx: (Math.random() - 0.5) * 0.0005,
+        vy: -0.00035 - Math.random() * 0.0005,
+        r: 1.1 + Math.random() * 1.9,
+        alpha: 0.72,
+        color: ny > 0.54 ? '#6ee7b7' : '#fde68a',
+        life: 0,
+        maxLife: 34 + Math.random() * 24,
+        gravity: -0.00001,
+        twinkle: Math.random() * 6.28
+      });
+    }
+  }
+
+  function handlePointerLeave() {
+    pointer.active = false;
+    hoveredLight = null;
+  }
+
+  function handleStageClick(e) {
+    if (!stageWrapEl) return;
+    const rect = stageWrapEl.getBoundingClientRect();
+    const nx = Math.max(0.06, Math.min(0.94, (e.clientX - rect.left) / rect.width));
+    const ny = Math.max(0.07, Math.min(0.88, (e.clientY - rect.top) / rect.height));
+
+    const closest = findClosestLight(nx, ny, rect.height / rect.width);
+
+    if (closest && !nextSeedToPlant && !ritualInput.trim()) {
+      selectedLight = closest;
+      triggerLightBloom(closest.x, closest.y, ELEMENT_MAP[closest.element]?.softColor || '#fde68a', closest.zone === 'water', false);
+      playChime(closest.zone === 'water' ? 'water' : 'sky');
+      return;
+    }
+
+    if (nextSeedToPlant) {
+      const elMeta = ELEMENT_MAP[nextSeedToPlant.element] || SANCTUARY_ELEMENTS[0];
+      const isWater = ny >= 0.53;
+      plantStepLight(nextSeedToPlant.uid, { x: nx, y: ny });
+      triggerLightBloom(nx, ny, elMeta.softColor, isWater, true);
+      playChime(isWater ? 'water' : 'sky');
+      showGentleToast(
+        isWater
+          ? 'Lucerna za tvůj dobrý skutek vyplula na hladinu.'
+          : 'Hvězda za tvůj dobrý skutek vystoupala na oblohu.'
+      );
+      return;
+    }
+
+    const text = ritualInput.trim();
+    const clickedWater = ny >= 0.53;
+    const yClamped = clickedWater ? Math.max(0.58, ny) : Math.min(0.46, ny);
+    const saved = addSanctuaryWish({
+      x: nx,
+      y: yClamped,
+      kind: 'deed',
+      title: text || 'Drobný dobrý skutek ze dneška',
+      element: clickedWater ? 'community' : 'care'
+    });
+    ritualInput = '';
+    selectedLight = null;
+    triggerLightBloom(saved.x, saved.y, clickedWater ? '#fed7aa' : '#fde68a', clickedWater, true);
+    playChime(clickedWater ? 'water' : 'sky');
+    showGentleToast(
+      clickedWater
+        ? 'Nová lucerna za dobrý skutek pluje po hladině.'
+        : 'Nová hvězda za dobrý skutek září nad údolím.'
+    );
+  }
+
+  function submitRitualBar() {
+    const isWater = ritualMode === 'water';
+    const nx = 0.18 + Math.random() * 0.64;
+    const ny = isWater ? 0.62 + Math.random() * 0.18 : 0.15 + Math.random() * 0.25;
+    const text = ritualInput.trim();
+    const saved = addSanctuaryWish({
+      x: nx,
+      y: ny,
+      kind: 'deed',
+      title: text || 'Drobný dobrý skutek ze dneška',
+      element: isWater ? 'community' : 'care'
+    });
+    ritualInput = '';
+    selectedLight = null;
+    triggerLightBloom(saved.x, saved.y, isWater ? '#fed7aa' : '#fde68a', isWater, true);
+    playChime(isWater ? 'water' : 'sky');
+    showGentleToast(
+      isWater
+        ? 'Lucerna za tvůj dobrý skutek vyplula na hladinu.'
+        : 'Hvězda za tvůj dobrý skutek vystoupala na oblohu.'
     );
   }
 
@@ -479,177 +838,40 @@
     editingUid = null;
   }
 
-  // =========================================================================
-  // 60FPS FULL-BEAUTY LANDSCAPE CANVAS ENGINE (DEED STARS, LANTERNS, RIPPLES)
-  // =========================================================================
-  /** @type {HTMLCanvasElement | null} */
-  let canvasEl = null;
-  /** @type {HTMLDivElement | null} */
-  let stageWrapEl = null;
-  let pointer = { x: 0.5, y: 0.62, active: false };
-  let lastRippleAt = 0;
-
-  /** @type {Array<{ x: number, y: number, vx: number, vy: number, r: number, alpha: number, color: string, life: number, maxLife: number }>} */
-  let burstParticles = [];
-  /** @type {Array<{ x: number, y: number, rx: number, alpha: number, color: string }>} */
-  let waterRipples = [];
-
-  function triggerLightBloom(nx, ny, color = '#fde68a', isWater = false) {
-    for (let i = 0; i < 36; i++) {
-      const angle = (Math.PI * 2 * i) / 36 + (Math.random() - 0.5) * 0.25;
-      const speed = 0.0007 + Math.random() * 0.0032;
-      burstParticles.push({
-        x: nx,
-        y: ny,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - (isWater ? 0.0008 : 0.0003),
-        r: 1.5 + Math.random() * 3.1,
-        alpha: 0.92,
-        color,
-        life: 0,
-        maxLife: 58 + Math.random() * 44
-      });
-    }
-
-    if (isWater || ny >= 0.5) {
-      const wy = Math.max(0.57, ny);
-      waterRipples.push({ x: nx, y: wy, rx: 4, alpha: 0.78, color });
-      setTimeout(() => {
-        waterRipples.push({ x: nx, y: wy, rx: 2, alpha: 0.52, color: '#ffffff' });
-      }, 220);
-    }
-  }
-
-  function handlePointerMove(e) {
-    if (!stageWrapEl) return;
-    const rect = stageWrapEl.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-    const nx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const ny = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-    pointer.x = nx;
-    pointer.y = ny;
-    pointer.active = true;
-
-    const now = performance.now();
-    if (ny > 0.56 && now - lastRippleAt > 260) {
-      lastRippleAt = now;
-      waterRipples.push({ x: nx, y: ny, rx: 3, alpha: 0.28, color: '#fde68a' });
-    }
-  }
-
-  function handlePointerLeave() {
-    pointer.active = false;
-  }
-
-  function handleStageClick(e) {
-    if (!stageWrapEl) return;
-    const rect = stageWrapEl.getBoundingClientRect();
-    const nx = Math.max(0.06, Math.min(0.94, (e.clientX - rect.left) / rect.width));
-    const ny = Math.max(0.07, Math.min(0.88, (e.clientY - rect.top) / rect.height));
-
-    // 1. Check if clicking near an existing deed star or lantern to inspect or perform that deed!
-    let closest = null;
-    let minDist = 0.055;
-    for (const l of activeLights) {
-      const dx = l.x - nx;
-      const dy = (l.y - ny) * (rect.height / rect.width);
-      const d = Math.hypot(dx, dy);
-      if (d < minDist) {
-        minDist = d;
-        closest = l;
-      }
-    }
-
-    if (closest && !nextSeedToPlant && !ritualInput.trim()) {
-      selectedLight = closest;
-      triggerLightBloom(closest.x, closest.y, ELEMENT_MAP[closest.element]?.softColor || '#fde68a', closest.zone === 'water');
-      playChime(closest.zone === 'water' ? 'water' : 'sky');
-      return;
-    }
-
-    // 2. If user just arrived with a completed real micro-step, place its light where clicked
-    if (nextSeedToPlant) {
-      const elMeta = ELEMENT_MAP[nextSeedToPlant.element] || SANCTUARY_ELEMENTS[0];
-      const isWater = ny >= 0.53;
-      plantStepLight(nextSeedToPlant.uid, { x: nx, y: ny });
-      triggerLightBloom(nx, ny, elMeta.softColor, isWater);
-      playChime(isWater ? 'water' : 'sky');
-      showGentleToast(
-        isWater
-          ? 'Lucerna za tvůj dobrý skutek pluje na hladině.'
-          : 'Hvězda za tvůj dobrý skutek svítí na obloze.'
-      );
-      return;
-    }
-
-    // 3. Otherwise, clicking on water or sky lights a new good deed directly
-    const text = ritualInput.trim();
-    const clickedWater = ny >= 0.53;
-    const yClamped = clickedWater ? Math.max(0.58, ny) : Math.min(0.46, ny);
-    const saved = addSanctuaryWish({
-      x: nx,
-      y: yClamped,
-      kind: 'deed',
-      title: text || 'Drobný dobrý skutek ze dneška',
-      element: clickedWater ? 'community' : 'care'
-    });
-    ritualInput = '';
-    selectedLight = null;
-    triggerLightBloom(saved.x, saved.y, clickedWater ? '#fed7aa' : '#fde68a', clickedWater);
-    playChime(clickedWater ? 'water' : 'sky');
-    showGentleToast(
-      clickedWater
-        ? 'Nová lucerna za dobrý skutek pluje po hladině.'
-        : 'Nová hvězda za dobrý skutek svítí nad údolím.'
-    );
-  }
-
-  function submitRitualBar() {
-    const isWater = ritualMode === 'water';
-    const nx = 0.18 + Math.random() * 0.64;
-    const ny = isWater ? 0.62 + Math.random() * 0.18 : 0.15 + Math.random() * 0.25;
-    const text = ritualInput.trim();
-    const saved = addSanctuaryWish({
-      x: nx,
-      y: ny,
-      kind: 'deed',
-      title: text || 'Drobný dobrý skutek ze dneška',
-      element: isWater ? 'community' : 'care'
-    });
-    ritualInput = '';
-    selectedLight = null;
-    triggerLightBloom(saved.x, saved.y, isWater ? '#fed7aa' : '#fde68a', isWater);
-    playChime(isWater ? 'water' : 'sky');
-    showGentleToast(
-      isWater
-        ? 'Lucerna za tvůj dobrý skutek vyplula na hladinu.'
-        : 'Hvězda za tvůj dobrý skutek se rozsvítila na obloze.'
-    );
-  }
-
   onMount(() => {
     let rafId = 0;
+    const reducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    const fireflies = Array.from({ length: 42 }, (_, i) => ({
+    const fireflies = Array.from({ length: 54 }, (_, i) => ({
       x: Math.random(),
-      y: 0.44 + Math.random() * 0.52,
-      vx: (Math.random() - 0.5) * 0.00038,
-      vy: (Math.random() - 0.5) * 0.00024,
+      y: 0.36 + Math.random() * 0.58,
+      vx: (Math.random() - 0.5) * 0.00042,
+      vy: (Math.random() - 0.5) * 0.00028,
       phase: i * 1.37,
-      size: 1.6 + (i % 3) * 0.9,
+      size: 1.5 + (i % 4) * 0.85,
       gold: i % 3 !== 0
     }));
 
-    const ambientStars = Array.from({ length: 58 }, (_, i) => ({
+    const ambientStars = Array.from({ length: 78 }, (_, i) => ({
       x: ((i * 73 + 19) % 97) / 97,
-      y: ((i * 41 + 7) % 46) / 100 + 0.03,
-      r: 0.6 + (i % 3) * 0.45,
-      twinkle: i * 0.9
+      y: ((i * 41 + 5) % 45) / 100 + 0.02,
+      r: 0.55 + (i % 3) * 0.48,
+      twinkle: i * 0.91
     }));
+
+    const mistClouds = [
+      { x: 0.22, y: 0.57, w: 0.38, h: 0.065, speed: 0.00018, phase: 0.4 },
+      { x: 0.68, y: 0.61, w: 0.44, h: 0.075, speed: -0.00014, phase: 2.1 },
+      { x: 0.45, y: 0.66, w: 0.5, h: 0.06, speed: 0.00012, phase: 4.0 }
+    ];
 
     let width = 0;
     let height = 0;
     let dpr = 1;
+    let nextMeteorAt = 2.5;
 
     function resize() {
       if (!canvasEl || !stageWrapEl) return;
@@ -665,8 +887,48 @@
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(resize) : null;
     if (ro && stageWrapEl) ro.observe(stageWrapEl);
 
+    // Gentle entrance shimmer when user enters /svet (especially after completing a deed!)
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      if (sp.get('just_lit') === '1' && !reducedMotion) {
+        setTimeout(() => {
+          triggerLightBloom(0.48, 0.26, '#fde68a', false, true);
+        }, 280);
+      }
+    } catch {}
+
+    function drawStarSpikes(ctx, sx, sy, outerR, innerR, rot = 0) {
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(rot);
+      ctx.beginPath();
+      for (let p = 0; p < 4; p++) {
+        const a = (p * Math.PI) / 2;
+        const aMid = a + Math.PI / 4;
+        const rTip = p % 2 === 0 ? outerR * 1.18 : outerR * 0.92;
+        if (p === 0) ctx.moveTo(Math.cos(a) * rTip, Math.sin(a) * rTip);
+        else ctx.lineTo(Math.cos(a) * rTip, Math.sin(a) * rTip);
+        ctx.lineTo(Math.cos(aMid) * innerR, Math.sin(aMid) * innerR);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
     function render(nowMs) {
       const t = nowMs * 0.001;
+
+      // Smooth pointer parallax for painted backdrop layers
+      const targetPX = pointer.active ? pointer.x : 0.5 + Math.sin(t * 0.25) * 0.08;
+      const targetPY = pointer.active ? pointer.y : 0.5 + Math.cos(t * 0.2) * 0.06;
+      pointer.smoothX += (targetPX - pointer.smoothX) * 0.06;
+      pointer.smoothY += (targetPY - pointer.smoothY) * 0.06;
+      if (!reducedMotion) {
+        const tx = ((0.5 - pointer.smoothX) * 12).toFixed(2);
+        const ty = ((0.5 - pointer.smoothY) * 8).toFixed(2);
+        parallaxStyle = `transform: scale(1.032) translate3d(${tx}px, ${ty}px, 0);`;
+      }
+
       if (canvasEl && width > 0 && height > 0) {
         const ctx = canvasEl.getContext('2d');
         if (ctx) {
@@ -675,64 +937,185 @@
 
           const isNight = atmosphereMode === 'night';
 
-          // 1. Gentle Aurora Veil over the hills
+          // 1A. DAWN MODE: Soft Feathered Volumetric Golden God-Rays (Zero Hard Polygon Edges)
+          if (!isNight) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'screen';
+            for (let r = 0; r < 4; r++) {
+              const sway = Math.sin(t * 0.32 + r * 1.4) * 0.045;
+              const originX = width * (0.48 + r * 0.095);
+              const originY = -height * 0.08;
+              const angle = 0.24 - r * 0.09 + sway;
+              const halfBeamW = width * (0.068 + (r % 2) * 0.022);
+              const beamLen = height * 0.96;
+
+              ctx.save();
+              ctx.translate(originX, originY);
+              ctx.rotate(angle);
+
+              // Feathered perpendicular gradient so left & right edges melt invisibly into the sky
+              const perpGrad = ctx.createLinearGradient(-halfBeamW, 0, halfBeamW, 0);
+              const peakAlpha = 0.095 - r * 0.012;
+              perpGrad.addColorStop(0, 'rgba(254, 243, 199, 0)');
+              perpGrad.addColorStop(0.28, `rgba(253, 230, 138, ${(peakAlpha * 0.52).toFixed(3)})`);
+              perpGrad.addColorStop(0.5, `rgba(255, 251, 235, ${peakAlpha.toFixed(3)})`);
+              perpGrad.addColorStop(0.72, `rgba(253, 230, 138, ${(peakAlpha * 0.52).toFixed(3)})`);
+              perpGrad.addColorStop(1, 'rgba(254, 243, 199, 0)');
+
+              ctx.fillStyle = perpGrad;
+              ctx.fillRect(-halfBeamW, 0, halfBeamW * 2, beamLen);
+              ctx.restore();
+            }
+            ctx.restore();
+          }
+
+          // 1B. SILKY NORTHERN LIGHTS AURORA CURTAINS (Organic Sine Top & Bottom, Zero Flat Seams)
           ctx.save();
           ctx.globalCompositeOperation = 'screen';
-          const auroraAlpha = isNight ? 0.24 : 0.12;
-          for (let b = 0; b < 2; b++) {
-            const ay = height * (0.15 + b * 0.07) + Math.sin(t * 0.42 + b) * 9;
-            const ag = ctx.createLinearGradient(width * 0.12, ay - 35, width * 0.88, ay + 45);
+          const auroraBase = isNight ? 0.28 : 0.075;
+          for (let band = 0; band < 3; band++) {
+            const baseY = height * (0.1 + band * 0.062);
+            const curtainH = height * (0.13 - band * 0.015);
+            const ag = ctx.createLinearGradient(0, baseY - 26, 0, baseY + curtainH + 22);
             ag.addColorStop(0, 'rgba(52, 211, 153, 0)');
-            ag.addColorStop(0.32, `rgba(52, 211, 153, ${auroraAlpha})`);
-            ag.addColorStop(0.68, `rgba(56, 189, 248, ${auroraAlpha * 0.82})`);
+            ag.addColorStop(0.26, `rgba(52, 211, 153, ${(auroraBase * (1 - band * 0.16)).toFixed(3)})`);
+            ag.addColorStop(0.56, `rgba(56, 189, 248, ${(auroraBase * 0.72).toFixed(3)})`);
+            ag.addColorStop(0.78, `rgba(192, 132, 252, ${(isNight ? auroraBase * 0.36 : 0).toFixed(3)})`);
             ag.addColorStop(1, 'rgba(192, 132, 252, 0)');
             ctx.fillStyle = ag;
+
             ctx.beginPath();
-            ctx.ellipse(width * 0.5, ay, width * 0.44, 34, Math.sin(t * 0.22 + b) * 0.04, 0, Math.PI * 2);
+            for (let sx = 0; sx <= width + 32; sx += 32) {
+              const wave =
+                Math.sin(sx * 0.0055 + t * (0.48 + band * 0.11) + band * 1.7) * 15 +
+                Math.cos(sx * 0.01 - t * 0.32 + band) * 7;
+              if (sx === 0) ctx.moveTo(0, baseY + wave - 18);
+              else ctx.lineTo(sx, baseY + wave - 18);
+            }
+            for (let sx = width + 32; sx >= 0; sx -= 32) {
+              const wave =
+                Math.sin(sx * 0.0055 + t * (0.48 + band * 0.11) + band * 1.7) * 15 +
+                Math.cos(sx * 0.01 - t * 0.32 + band) * 7;
+              ctx.lineTo(sx, baseY + wave + curtainH + 18);
+            }
+            ctx.closePath();
             ctx.fill();
           }
           ctx.restore();
 
-          // 2. Breathing halo over the center of the lake when exercise is active
-          if (breathingActive) {
-            const pulseR = width * (0.18 + (breathScale - 0.88) * 0.22);
-            const bg = ctx.createRadialGradient(
-              width * 0.5,
-              height * 0.56,
-              8,
-              width * 0.5,
-              height * 0.56,
-              pulseR
-            );
-            bg.addColorStop(0, 'rgba(253, 230, 138, 0.24)');
-            bg.addColorStop(0.55, 'rgba(52, 211, 153, 0.1)');
-            bg.addColorStop(1, 'rgba(253, 230, 138, 0)');
-            ctx.fillStyle = bg;
-            ctx.beginPath();
-            ctx.arc(width * 0.5, height * 0.56, pulseR, 0, Math.PI * 2);
-            ctx.fill();
+          // 2. Spontaneous Shooting Stars in Starry Night Mode
+          if (isNight && !reducedMotion && t > nextMeteorAt) {
+            nextMeteorAt = t + 4.2 + Math.random() * 4.5;
+            const fromRight = Math.random() > 0.4;
+            meteors.push({
+              x: fromRight ? 0.65 + Math.random() * 0.28 : 0.08 + Math.random() * 0.28,
+              y: 0.05 + Math.random() * 0.14,
+              vx: fromRight ? -(0.009 + Math.random() * 0.005) : 0.009 + Math.random() * 0.005,
+              vy: 0.0038 + Math.random() * 0.0025,
+              len: 68 + Math.random() * 45,
+              life: 0,
+              maxLife: 46
+            });
           }
 
-          // 3. Soft Twinkling Background Stars
-          const starVis = isNight ? 0.82 : 0.36;
+          for (let m = meteors.length - 1; m >= 0; m--) {
+            const mt = meteors[m];
+            mt.life += 1;
+            mt.x += mt.vx;
+            mt.y += mt.vy;
+            const p = mt.life / mt.maxLife;
+            if (p >= 1) {
+              meteors.splice(m, 1);
+              continue;
+            }
+            const alpha = Math.sin(p * Math.PI) * 0.92;
+            const mx = mt.x * width;
+            const my = mt.y * height;
+            const angle = Math.atan2(mt.vy * height, mt.vx * width);
+            const tx = mx - Math.cos(angle) * mt.len;
+            const ty = my - Math.sin(angle) * mt.len;
+            const mg = ctx.createLinearGradient(mx, my, tx, ty);
+            mg.addColorStop(0, `rgba(255, 255, 255, ${alpha.toFixed(3)})`);
+            mg.addColorStop(0.3, `rgba(253, 230, 138, ${(alpha * 0.7).toFixed(3)})`);
+            mg.addColorStop(1, 'rgba(253, 230, 138, 0)');
+            ctx.strokeStyle = mg;
+            ctx.lineWidth = 2.1;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(mx, my);
+            ctx.lineTo(tx, ty);
+            ctx.stroke();
+          }
+
+          // 3. Twinkling Celestial Background Stars
+          const starVis = isNight ? 0.9 : 0.34;
           for (const st of ambientStars) {
-            const tw = 0.4 + 0.6 * Math.sin(t * 1.4 + st.twinkle);
-            ctx.fillStyle = `rgba(255, 250, 235, ${(tw * starVis).toFixed(3)})`;
+            const tw = 0.35 + 0.65 * Math.sin(t * 1.65 + st.twinkle);
+            ctx.fillStyle = `rgba(255, 251, 235, ${(tw * starVis).toFixed(3)})`;
             ctx.beginPath();
             ctx.arc(st.x * width, st.y * height, st.r, 0, Math.PI * 2);
             ctx.fill();
           }
 
-          // 4. Living Deed Constellation (Sky Stars + Water Lanterns)
+          // 4. Drifting Lake Mist Over the Mirror Pond
+          ctx.save();
+          ctx.globalCompositeOperation = 'screen';
+          for (const mc of mistClouds) {
+            if (!reducedMotion) {
+              mc.x += mc.speed;
+              if (mc.x > 1.25) mc.x = -0.25;
+              if (mc.x < -0.25) mc.x = 1.25;
+            }
+            const mx = mc.x * width;
+            const my = mc.y * height + Math.sin(t * 0.5 + mc.phase) * 4;
+            const mw = mc.w * width;
+            const mh = mc.h * height;
+            const mistGrad = ctx.createRadialGradient(mx, my, 4, mx, my, mw * 0.55);
+            mistGrad.addColorStop(
+              0,
+              isNight ? 'rgba(110, 231, 183, 0.085)' : 'rgba(254, 249, 235, 0.13)'
+            );
+            mistGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = mistGrad;
+            ctx.beginPath();
+            ctx.ellipse(mx, my, mw * 0.55, mh, 0, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+
+          // 5. Breathing Sanctuary Aura on the Pond
+          if (breathingActive) {
+            const pulseR = width * (0.16 + (breathScale - 0.86) * 0.24);
+            ctx.save();
+            ctx.globalCompositeOperation = 'screen';
+            const bg = ctx.createRadialGradient(
+              width * 0.5,
+              height * 0.62,
+              8,
+              width * 0.5,
+              height * 0.62,
+              pulseR
+            );
+            bg.addColorStop(0, 'rgba(253, 230, 138, 0.32)');
+            bg.addColorStop(0.5, 'rgba(52, 211, 153, 0.16)');
+            bg.addColorStop(1, 'rgba(52, 211, 153, 0)');
+            ctx.fillStyle = bg;
+            ctx.beginPath();
+            ctx.ellipse(width * 0.5, height * 0.62, pulseR, pulseR * 0.42, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+
+          // 6. Living Deed Constellation & Animated Filament Pulses
           const lights = activeLights;
           const skyLights = lights.filter((l) => l.zone === 'sky');
           const waterLights = lights.filter((l) => l.zone === 'water');
 
           if (skyLights.length >= 2) {
             ctx.save();
-            ctx.strokeStyle = 'rgba(253, 230, 138, 0.32)';
-            ctx.lineWidth = 1.35;
-            ctx.setLineDash([4, 6]);
+            ctx.strokeStyle = isNight ? 'rgba(253, 230, 138, 0.34)' : 'rgba(253, 230, 138, 0.24)';
+            ctx.lineWidth = 1.25;
+            ctx.setLineDash([4, 7]);
             ctx.beginPath();
             for (let i = 0; i < skyLights.length - 1; i++) {
               ctx.moveTo(skyLights[i].x * width, skyLights[i].y * height);
@@ -742,166 +1125,409 @@
             ctx.restore();
           }
 
-          // Draw Sky Deed Stars + Mirror Reflections
+          for (let c = constellationPulses.length - 1; c >= 0; c--) {
+            const cp = constellationPulses[c];
+            cp.progress += 0.024;
+            if (cp.progress >= 1.25) {
+              constellationPulses.splice(c, 1);
+              continue;
+            }
+            const headP = Math.min(1, cp.progress);
+            const tailP = Math.max(0, cp.progress - 0.35);
+            const xA = (cp.x1 + (cp.x2 - cp.x1) * tailP) * width;
+            const yA = (cp.y1 + (cp.y2 - cp.y1) * tailP) * height;
+            const xB = (cp.x1 + (cp.x2 - cp.x1) * headP) * width;
+            const yB = (cp.y1 + (cp.y2 - cp.y1) * headP) * height;
+            const lg = ctx.createLinearGradient(xA, yA, xB, yB);
+            lg.addColorStop(0, 'rgba(253, 230, 138, 0)');
+            lg.addColorStop(1, `rgba(253, 230, 138, ${(cp.alpha * (1 - cp.progress / 1.25)).toFixed(3)})`);
+            ctx.strokeStyle = lg;
+            ctx.lineWidth = 2.6;
+            ctx.beginPath();
+            ctx.moveTo(xA, yA);
+            ctx.lineTo(xB, yB);
+            ctx.stroke();
+          }
+
+          // 7. Ascending Launch Comets
+          for (let c = activeComets.length - 1; c >= 0; c--) {
+            const cm = activeComets[c];
+            cm.progress += cm.speed;
+            const p = Math.min(1, cm.progress);
+            const inv = 1 - p;
+            const cx = (inv * inv * cm.sx + 2 * inv * p * cm.cx + p * p * cm.tx) * width;
+            const cy = (inv * inv * cm.sy + 2 * inv * p * cm.cy + p * p * cm.ty) * height;
+
+            // Shed sparkling wake embers
+            for (let s = 0; s < 2; s++) {
+              burstParticles.push({
+                x: cx / width + (Math.random() - 0.5) * 0.008,
+                y: cy / height + (Math.random() - 0.5) * 0.008,
+                vx: (Math.random() - 0.5) * 0.0008,
+                vy: 0.0004 + Math.random() * 0.0008,
+                r: 1.5 + Math.random() * 2.4,
+                alpha: 0.92,
+                color: s === 0 ? '#ffffff' : cm.color,
+                life: 0,
+                maxLife: 28 + Math.random() * 18,
+                gravity: 0.00001,
+                twinkle: Math.random() * 6.28
+              });
+            }
+
+            ctx.save();
+            ctx.globalCompositeOperation = 'screen';
+            const cg = ctx.createRadialGradient(cx, cy, 1, cx, cy, 24);
+            cg.addColorStop(0, '#ffffff');
+            cg.addColorStop(0.35, cm.color);
+            cg.addColorStop(1, 'rgba(253, 230, 138, 0)');
+            ctx.fillStyle = cg;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 24, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            if (cm.progress >= 1) {
+              activeComets.splice(c, 1);
+              detonateBloomAt(cm.tx, cm.ty, cm.color, cm.isWater, 0.95);
+            }
+          }
+
+          // 8. Draw Sky Deed Stars + Shimmering Lake Reflections
           for (let i = 0; i < skyLights.length; i++) {
             const st = skyLights[i];
             const sx = st.x * width;
             const sy = st.y * height;
             const meta = ELEMENT_MAP[st.element] || SANCTUARY_ELEMENTS[3];
-            const pulse = 1 + 0.12 * Math.sin(t * 2.0 + i * 1.3);
             const isSelected = selectedLight?.uid === st.uid;
+            const isHovered = hoveredLight?.uid === st.uid;
 
-            const haloR = (st.isMine ? 30 : 24) * pulse;
-            const halo = ctx.createRadialGradient(sx, sy, 1, sx, sy, haloR);
-            halo.addColorStop(0, '#ffffff');
-            halo.addColorStop(0.28, meta.softColor);
-            halo.addColorStop(0.65, meta.glow);
+            const prevScale = hoverScales[st.uid] || 1;
+            const targetScale = isHovered || isSelected ? 1.42 : 1;
+            const hScale = prevScale + (targetScale - prevScale) * 0.16;
+            hoverScales[st.uid] = hScale;
+
+            const pulse = (1 + 0.13 * Math.sin(t * 2.2 + i * 1.4)) * hScale;
+
+            ctx.save();
+            ctx.globalCompositeOperation = 'screen';
+            const haloR = (st.isMine ? 34 : 26) * pulse;
+            const halo = ctx.createRadialGradient(sx, sy, 0.5, sx, sy, haloR);
+            halo.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+            halo.addColorStop(0.2, meta.glow);
+            halo.addColorStop(0.55, 'rgba(253, 230, 138, 0.16)');
             halo.addColorStop(1, 'rgba(253, 230, 138, 0)');
             ctx.fillStyle = halo;
             ctx.beginPath();
             ctx.arc(sx, sy, haloR, 0, Math.PI * 2);
             ctx.fill();
+            ctx.restore();
 
-            if (st.isMine || isSelected) {
-              ctx.strokeStyle = isSelected ? 'rgba(255, 255, 255, 0.9)' : 'rgba(253, 230, 138, 0.65)';
-              ctx.lineWidth = isSelected ? 1.8 : 1.2;
+            if (st.isMine || isSelected || isHovered) {
+              ctx.strokeStyle = isSelected || isHovered ? 'rgba(255, 255, 255, 0.92)' : 'rgba(253, 230, 138, 0.68)';
+              ctx.lineWidth = isSelected || isHovered ? 1.8 : 1.25;
               ctx.beginPath();
-              ctx.arc(sx, sy, 13 * pulse, 0, Math.PI * 2);
+              ctx.arc(sx, sy, 15 * pulse, 0, Math.PI * 2);
               ctx.stroke();
             }
 
-            const flare = (st.isMine ? 9.5 : 8) * pulse;
+            // 8-point celestial diffraction starflare
+            const flare = (st.isMine ? 13 : 10.5) * pulse;
             ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.moveTo(sx, sy - flare);
-            ctx.lineTo(sx + 2.1, sy - 2.1);
-            ctx.lineTo(sx + flare, sy);
-            ctx.lineTo(sx + 2.1, sy + 2.1);
-            ctx.lineTo(sx, sy + flare);
-            ctx.lineTo(sx - 2.1, sy + 2.1);
-            ctx.lineTo(sx - flare, sy);
-            ctx.lineTo(sx - 2.1, sy - 2.1);
-            ctx.closePath();
-            ctx.fill();
+            drawStarSpikes(ctx, sx, sy, flare, 2.2 * hScale, 0);
+            ctx.fillStyle = 'rgba(254, 243, 199, 0.72)';
+            drawStarSpikes(ctx, sx, sy, flare * 0.62, 1.3 * hScale, Math.PI / 4);
 
-            const ry = height * (0.61 + (0.48 - Math.min(0.46, st.y)) * 0.44);
-            const shimmerX = sx + Math.sin(t * 2.4 + i) * 3.5;
-            const rg = ctx.createRadialGradient(shimmerX, ry, 1, shimmerX, ry, 18);
-            rg.addColorStop(0, 'rgba(253, 230, 138, 0.34)');
-            rg.addColorStop(1, 'rgba(253, 230, 138, 0)');
-            ctx.fillStyle = rg;
-            ctx.beginPath();
-            ctx.ellipse(shimmerX, ry, 16, 5.5, 0, 0, Math.PI * 2);
-            ctx.fill();
+            // Shimmering water-stroke column reflection on the pond
+            const ry = height * (0.6 + (0.48 - Math.min(0.46, st.y)) * 0.44);
+            ctx.save();
+            ctx.globalCompositeOperation = 'screen';
+            for (let row = 0; row < 4; row++) {
+              const rowY = ry + row * 4.5;
+              const waveX = sx + Math.sin(t * 2.8 + i + row * 1.3) * (3 + row * 1.4);
+              const halfW = (13 - row * 2.2) * hScale;
+              ctx.strokeStyle = `rgba(253, 230, 138, ${(0.36 - row * 0.07).toFixed(3)})`;
+              ctx.lineWidth = 1.6;
+              ctx.lineCap = 'round';
+              ctx.beginPath();
+              ctx.moveTo(waveX - halfW, rowY);
+              ctx.lineTo(waveX + halfW, rowY);
+              ctx.stroke();
+            }
+            ctx.restore();
           }
 
-          // Draw Floating Deed Lanterns on the Mirror Lake
-          for (let i = 0; i < waterLights.length; i++) {
-            const wl = waterLights[i];
-            const bobX = wl.x * width + Math.sin(t * 0.85 + i * 1.7) * 5.5;
-            const bobY = wl.y * height + Math.cos(t * 1.2 + i * 2.1) * 2.3;
-            const meta = ELEMENT_MAP[wl.element] || SANCTUARY_ELEMENTS[2];
-            const isSelected = selectedLight?.uid === wl.uid;
-
-            ctx.strokeStyle = wl.isMine || isSelected ? 'rgba(253, 230, 138, 0.55)' : 'rgba(253, 230, 138, 0.28)';
-            ctx.lineWidth = isSelected ? 1.8 : 1.1;
-            ctx.beginPath();
-            ctx.ellipse(bobX, bobY + 4, (wl.isMine ? 18 : 15) + Math.sin(t * 1.8 + i) * 2.5, 4.5, 0, 0, Math.PI * 2);
-            ctx.stroke();
-
-            const lanternR = wl.isMine ? 25 : 21;
-            const lg = ctx.createRadialGradient(bobX, bobY, 1, bobX, bobY, lanternR);
-            lg.addColorStop(0, '#fffbeb');
-            lg.addColorStop(0.36, meta.softColor);
-            lg.addColorStop(0.75, meta.glow);
-            lg.addColorStop(1, 'rgba(251, 146, 60, 0)');
-            ctx.fillStyle = lg;
-            ctx.beginPath();
-            ctx.arc(bobX, bobY, lanternR, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = '#fff7ed';
-            ctx.beginPath();
-            ctx.arc(bobX, bobY - 1, wl.isMine ? 4.8 : 4.1, 0, Math.PI * 2);
-            ctx.fill();
-          }
-
-          // 5. Concentric Water Ripples
+          // 9. Concentric Bioluminescent Water Ripples
           for (let i = waterRipples.length - 1; i >= 0; i--) {
             const rp = waterRipples[i];
-            rp.rx += 0.8;
-            rp.alpha *= 0.982;
-            if (rp.alpha < 0.02) {
+            rp.rx += rp.speed;
+            const lifeFrac = rp.rx / rp.maxRx;
+            if (lifeFrac >= 1 || rp.alpha < 0.015) {
               waterRipples.splice(i, 1);
               continue;
             }
-            ctx.strokeStyle = `rgba(253, 230, 138, ${rp.alpha.toFixed(3)})`;
-            ctx.lineWidth = 1.4;
+            const curAlpha = rp.alpha * (1 - lifeFrac);
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, Math.min(1, curAlpha));
+            ctx.strokeStyle = rp.color;
+            ctx.lineWidth = rp.lineWidth;
             ctx.beginPath();
-            ctx.ellipse(rp.x * width, rp.y * height, rp.rx, rp.rx * 0.28, 0, 0, Math.PI * 2);
+            ctx.ellipse(rp.x * width, rp.y * height, rp.rx, rp.rx * 0.29, 0, 0, Math.PI * 2);
             ctx.stroke();
+            ctx.restore();
           }
 
-          // 6. Ambient Fireflies in Foreground Irises & Reeds
-          for (const ff of fireflies) {
-            ff.x += ff.vx + Math.sin(t * 0.65 + ff.phase) * 0.00018;
-            ff.y += ff.vy + Math.cos(t * 0.8 + ff.phase) * 0.00014;
-            if (ff.x < 0.02) ff.x = 0.98;
-            if (ff.x > 0.98) ff.x = 0.02;
-            if (ff.y < 0.4) ff.vy = Math.abs(ff.vy);
-            if (ff.y > 0.95) ff.vy = -Math.abs(ff.vy);
+          // 10. Draw Floating Paper Lanterns on the Mirror Pond
+          for (let i = 0; i < waterLights.length; i++) {
+            const wl = waterLights[i];
+            const isSelected = selectedLight?.uid === wl.uid;
+            const isHovered = hoveredLight?.uid === wl.uid;
 
-            const glowPulse = 0.35 + 0.65 * Math.max(0, Math.sin(t * 1.9 + ff.phase));
+            const prevScale = hoverScales[wl.uid] || 1;
+            const targetScale = isHovered || isSelected ? 1.36 : 1;
+            const hScale = prevScale + (targetScale - prevScale) * 0.16;
+            hoverScales[wl.uid] = hScale;
+
+            // Gentle rocking when a water ripple passes underneath!
+            let rippleTilt = 0;
+            let rippleBob = 0;
+            for (const rp of waterRipples) {
+              const distPx = Math.hypot((wl.x - rp.x) * width, (wl.y - rp.y) * height * 2.6);
+              const diff = Math.abs(distPx - rp.rx);
+              if (diff < 18) {
+                const amp = (1 - diff / 18) * (1 - rp.rx / rp.maxRx);
+                rippleBob -= amp * 4.5;
+                rippleTilt += Math.sin(distPx * 0.3) * amp * 0.14;
+              }
+            }
+
+            const bobX = wl.x * width + Math.sin(t * 0.85 + i * 1.7) * 5.5;
+            const bobY = wl.y * height + Math.cos(t * 1.25 + i * 2.1) * 2.4 + rippleBob;
+            const meta = ELEMENT_MAP[wl.element] || SANCTUARY_ELEMENTS[2];
+            const flicker = 0.94 + 0.06 * Math.sin(t * 7.5 + i * 2.3);
+
+            const depthScale = Math.max(0.76, Math.min(1.18, 0.78 + (wl.y - 0.58) * 1.15));
+            const totalScale = hScale * depthScale;
+
+            // Soft translucent warm underwater reflection pool (zero opaque saucer!)
+            ctx.save();
+            ctx.globalCompositeOperation = 'screen';
+            const poolR = (wl.isMine ? 40 : 32) * totalScale * flicker;
+            const pg = ctx.createRadialGradient(bobX, bobY + 6, 1, bobX, bobY + 6, poolR);
+            pg.addColorStop(0, 'rgba(255, 251, 235, 0.56)');
+            pg.addColorStop(0.28, 'rgba(251, 191, 36, 0.26)');
+            pg.addColorStop(0.62, meta.glow.replace(/0\.\d+\)/, '0.14)'));
+            pg.addColorStop(1, 'rgba(251, 146, 60, 0)');
+            ctx.fillStyle = pg;
+            ctx.beginPath();
+            ctx.ellipse(bobX, bobY + 7, poolR, poolR * 0.36, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Delicate shimmering reflection strokes below the lantern
+            for (let wr = 0; wr < 3; wr++) {
+              const wy = bobY + 8 + wr * 3.6 * totalScale;
+              const wx = bobX + Math.sin(t * 3.1 + i + wr) * 2.5;
+              const ww = (10 - wr * 2.4) * totalScale;
+              ctx.strokeStyle = `rgba(254, 243, 199, ${(0.38 - wr * 0.1).toFixed(3)})`;
+              ctx.lineWidth = 1.3;
+              ctx.lineCap = 'round';
+              ctx.beginPath();
+              ctx.moveTo(wx - ww, wy);
+              ctx.lineTo(wx + ww, wy);
+              ctx.stroke();
+            }
+            ctx.restore();
+
+            // Gentle water ring around lantern base
+            ctx.strokeStyle =
+              wl.isMine || isSelected || isHovered
+                ? 'rgba(253, 230, 138, 0.72)'
+                : 'rgba(253, 230, 138, 0.32)';
+            ctx.lineWidth = isSelected || isHovered ? 1.6 : 1.05;
+            ctx.beginPath();
+            ctx.ellipse(
+              bobX,
+              bobY + 4.5 * totalScale,
+              (wl.isMine ? 16 : 13) * totalScale + Math.sin(t * 1.9 + i) * 1.5,
+              3.8 * totalScale,
+              0,
+              0,
+              Math.PI * 2
+            );
+            ctx.stroke();
+
+            // Crafted glowing paper lantern silhouette (Tōrō / lotus lantern)
+            ctx.save();
+            ctx.translate(bobX, bobY);
+            ctx.rotate(Math.sin(t * 1.1 + i) * 0.04 + rippleTilt);
+            ctx.scale(totalScale, totalScale);
+
+            const lw = wl.isMine ? 13 : 11;
+            const lh = wl.isMine ? 16 : 13.5;
+
+            // Warm outer candle aura around the paper body
+            const aura = ctx.createRadialGradient(0, -lh * 0.4, 1, 0, -lh * 0.4, lw * 1.6);
+            aura.addColorStop(0, 'rgba(254, 243, 199, 0.55)');
+            aura.addColorStop(1, 'rgba(251, 146, 60, 0)');
+            ctx.fillStyle = aura;
+            ctx.beginPath();
+            ctx.arc(0, -lh * 0.4, lw * 1.6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Floating wooden lotus base
+            ctx.fillStyle = 'rgba(62, 35, 16, 0.9)';
+            ctx.beginPath();
+            ctx.ellipse(0, 3.2, lw * 0.86, 2.4, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Glowing warm paper lantern body
+            const bodyGrad = ctx.createLinearGradient(0, -lh + 3, 0, 3.2);
+            bodyGrad.addColorStop(0, '#fde68a');
+            bodyGrad.addColorStop(0.5, '#fffbeb');
+            bodyGrad.addColorStop(1, '#fb923c');
+            ctx.fillStyle = bodyGrad;
+            ctx.beginPath();
+            ctx.roundRect(-lw * 0.54, -lh + 3, lw * 1.08, lh, 4);
+            ctx.fill();
+
+            // Delicate top wooden cap & subtle vertical ribs
+            ctx.strokeStyle = 'rgba(120, 66, 24, 0.42)';
+            ctx.lineWidth = 0.85;
+            ctx.beginPath();
+            ctx.moveTo(-lw * 0.22, -lh + 3.5);
+            ctx.lineTo(-lw * 0.22, 2.8);
+            ctx.moveTo(lw * 0.22, -lh + 3.5);
+            ctx.lineTo(lw * 0.22, 2.8);
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(78, 44, 18, 0.82)';
+            ctx.fillRect(-lw * 0.48, -lh + 2.4, lw * 0.96, 1.6);
+
+            // Bright inner candle flame core
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.ellipse(0, -2.2 * flicker, 2.3, 3.9 * flicker, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+          }
+
+          // 11. Expanding Luminous Shockwaves
+          ctx.save();
+          ctx.globalCompositeOperation = 'screen';
+          for (let s = shockwaves.length - 1; s >= 0; s--) {
+            const sw = shockwaves[s];
+            sw.r += (sw.maxR - sw.r) * 0.065 + 1.4;
+            const p = sw.r / sw.maxR;
+            if (p >= 0.98) {
+              shockwaves.splice(s, 1);
+              continue;
+            }
+            const a = sw.alpha * (1 - p) * (1 - p);
+            ctx.globalAlpha = Math.max(0, Math.min(1, a));
+            ctx.strokeStyle = sw.color;
+            ctx.lineWidth = 2.4 * (1 - p * 0.6);
+            ctx.beginPath();
+            if (sw.isWater) {
+              ctx.ellipse(sw.x * width, sw.y * height, sw.r, sw.r * 0.36, 0, 0, Math.PI * 2);
+            } else {
+              ctx.arc(sw.x * width, sw.y * height, sw.r, 0, Math.PI * 2);
+            }
+            ctx.stroke();
+          }
+          ctx.restore();
+
+          // 12. Ambient Fireflies (Gently Drawn Toward Warm Cursor!)
+          for (const ff of fireflies) {
+            if (!reducedMotion) {
+              if (pointer.active) {
+                const dx = pointer.x - ff.x;
+                const dy = pointer.y - ff.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist > 0.02 && dist < 0.24) {
+                  ff.vx += (dx / dist) * 0.000018;
+                  ff.vy += (dy / dist) * 0.000018;
+                }
+              }
+              ff.vx *= 0.992;
+              ff.vy *= 0.992;
+              ff.x += ff.vx + Math.sin(t * 0.7 + ff.phase) * 0.00022;
+              ff.y += ff.vy + Math.cos(t * 0.85 + ff.phase) * 0.00016;
+              if (ff.x < 0.02) ff.x = 0.98;
+              if (ff.x > 0.98) ff.x = 0.02;
+              if (ff.y < 0.3) ff.vy = Math.abs(ff.vy) + 0.0001;
+              if (ff.y > 0.95) ff.vy = -Math.abs(ff.vy) - 0.0001;
+            }
+
+            const breathSync = breathingActive ? 0.55 + (breathScale - 0.86) * 0.9 : 1;
+            const glowPulse = (0.3 + 0.7 * Math.max(0, Math.sin(t * 2.0 + ff.phase))) * breathSync;
             const fx = ff.x * width;
             const fy = ff.y * height;
-            const fg = ctx.createRadialGradient(fx, fy, 0.5, fx, fy, ff.size * 5.2);
+            const fg = ctx.createRadialGradient(fx, fy, 0.5, fx, fy, ff.size * 5.6);
             if (ff.gold) {
-              fg.addColorStop(0, `rgba(254, 243, 199, ${glowPulse.toFixed(3)})`);
-              fg.addColorStop(0.45, `rgba(251, 191, 36, ${(glowPulse * 0.42).toFixed(3)})`);
+              fg.addColorStop(0, `rgba(254, 243, 199, ${Math.min(1, glowPulse).toFixed(3)})`);
+              fg.addColorStop(0.42, `rgba(251, 191, 36, ${(glowPulse * 0.45).toFixed(3)})`);
             } else {
-              fg.addColorStop(0, `rgba(209, 250, 229, ${glowPulse.toFixed(3)})`);
-              fg.addColorStop(0.45, `rgba(52, 211, 153, ${(glowPulse * 0.42).toFixed(3)})`);
+              fg.addColorStop(0, `rgba(209, 250, 229, ${Math.min(1, glowPulse).toFixed(3)})`);
+              fg.addColorStop(0.42, `rgba(52, 211, 153, ${(glowPulse * 0.45).toFixed(3)})`);
             }
             fg.addColorStop(1, 'rgba(0, 0, 0, 0)');
             ctx.fillStyle = fg;
             ctx.beginPath();
-            ctx.arc(fx, fy, ff.size * 5.2, 0, Math.PI * 2);
+            ctx.arc(fx, fy, ff.size * 5.6, 0, Math.PI * 2);
             ctx.fill();
           }
 
-          // 7. Gentle Bloom Particles
+          // 13. Cascading Stardust, Lantern Embers & Cursor Wake Particles
+          ctx.save();
+          ctx.globalCompositeOperation = 'screen';
           for (let i = burstParticles.length - 1; i >= 0; i--) {
             const bp = burstParticles[i];
             bp.life += 1;
+            bp.vy += bp.gravity;
             bp.x += bp.vx;
             bp.y += bp.vy;
-            bp.vx *= 0.982;
-            bp.vy *= 0.982;
+            bp.vx *= 0.984;
+            bp.vy *= 0.986;
             const fade = Math.max(0, 1 - bp.life / bp.maxLife);
             if (fade <= 0.01) {
               burstParticles.splice(i, 1);
               continue;
             }
-            ctx.fillStyle = bp.color;
-            ctx.globalAlpha = fade * bp.alpha;
-            ctx.beginPath();
-            ctx.arc(bp.x * width, bp.y * height, bp.r * fade + 0.7, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.globalAlpha = 1;
-          }
+            const tw = 0.72 + 0.28 * Math.sin(bp.life * 0.25 + bp.twinkle);
+            const px = bp.x * width;
+            const py = bp.y * height;
+            const rad = (bp.r * fade + 0.8) * tw;
 
-          // 8. Soft Warm Cursor Glow
+            ctx.globalAlpha = fade * bp.alpha * 0.38;
+            ctx.fillStyle = bp.color;
+            ctx.beginPath();
+            ctx.arc(px, py, rad * 2.6, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.globalAlpha = fade * bp.alpha;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(px, py, rad * 0.72, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+
+          // 14. Warm Bioluminescent Cursor Lantern Aura
           if (pointer.active) {
             const lx = pointer.x * width;
             const ly = pointer.y * height;
-            const lantern = ctx.createRadialGradient(lx, ly, 2, lx, ly, 95);
-            lantern.addColorStop(0, 'rgba(254, 243, 199, 0.28)');
-            lantern.addColorStop(0.45, 'rgba(251, 191, 36, 0.09)');
+            ctx.save();
+            ctx.globalCompositeOperation = 'screen';
+            const lantern = ctx.createRadialGradient(lx, ly, 2, lx, ly, 115);
+            lantern.addColorStop(0, 'rgba(254, 243, 199, 0.34)');
+            lantern.addColorStop(0.4, 'rgba(110, 231, 183, 0.12)');
             lantern.addColorStop(1, 'rgba(251, 191, 36, 0)');
             ctx.fillStyle = lantern;
             ctx.beginPath();
-            ctx.arc(lx, ly, 95, 0, Math.PI * 2);
+            ctx.arc(lx, ly, 115, 0, Math.PI * 2);
             ctx.fill();
+            ctx.restore();
           }
         }
       }
@@ -929,16 +1555,15 @@
 
 <div class="sanctuary-page">
   <!-- =====================================================================
-       1. KRAJINA DOBRA — FULL SUNLIT BEAUTY CONNECTED TO REAL CZECH DEEDS
+       1. IMMERSIVE KRAJINA DOBRA STAGE
        ===================================================================== -->
   <section class="sanctuary-stage">
     <div class="sanctuary-top">
       <div class="sanctuary-intro">
-        <div class="kicker">KRAJINA DOBRA • SKUTEČNÉ SKUTKY V ČESKU</div>
+        <div class="kicker">KRAJINA DOBRA · SKUTEČNÉ SKUTKY V ČESKU</div>
         <h1>Krajina, kde svítí <span class="serif-accent">dobré skutky</span></h1>
         <p class="lead">
-          Každá hvězda na obloze i lucerna na hladině připomíná konkrétní pomoc lidem, zvířatům nebo přírodě.
-          <strong>Klikni na kterékoliv světlo pro inspiraci na dnešní skutek</strong> — nebo sem rozsviť drobnou pomoc, která se dnes povedla tobě.
+          Klikni na kterékoliv světlo pro inspiraci na dnešní skutek — nebo klikni na hladinu či oblohu a rozsviť ten svůj.
         </p>
       </div>
 
@@ -964,10 +1589,10 @@
 
         <div class="atmo-sub-row">
           <button type="button" class="explore-deed-btn" on:click={openRandomInspiringDeed}>
-            ✨ Náhodný skutek z krajiny
+            ✨ Náhodný skutek
           </button>
           <button type="button" class="sound-btn" class:on={soundEnabled} on:click={toggleSound}>
-            {soundEnabled ? '🎐 Tóny tůně: zapnuto' : '🔇 Jemné tóny'}
+            {soundEnabled ? '🎐 Tóny: zapnuto' : '🔇 Jemné tóny'}
           </button>
         </div>
       </div>
@@ -985,38 +1610,53 @@
       role="application"
       aria-label="Krajina dobra: kliknutím na světlo zobrazíš konkrétní dobrý skutek, kliknutím na hladinu nebo oblohu rozsvítíš vlastní skutek"
     >
-      <img
-        src="/art/sanctuary-twilight.jpg"
-        alt="Šumavské údolí s lesní tůní a světly dobrých skutků"
-        class="art-layer twilight"
-        draggable="false"
-      />
+      <div class="art-parallax-wrap" style={parallaxStyle}>
+        <img
+          src="/art/sanctuary-twilight.jpg"
+          alt="Šumavské údolí s lesní tůní a světly dobrých skutků"
+          class="art-layer twilight"
+          draggable="false"
+        />
 
-      <img
-        src="/art/sanctuary-dawn.jpg"
-        alt=""
-        aria-hidden="true"
-        class="art-layer dawn"
-        style={`opacity: ${dawnLayerOpacity.toFixed(2)};`}
-        draggable="false"
-      />
+        <img
+          src="/art/sanctuary-dawn.jpg"
+          alt=""
+          aria-hidden="true"
+          class="art-layer dawn"
+          style={`opacity: ${dawnLayerOpacity.toFixed(2)};`}
+          draggable="false"
+        />
+      </div>
 
       <canvas bind:this={canvasEl} class="sanctuary-canvas"></canvas>
+
+      <!-- MAGNETIC HOVER TOOLTIP PREVIEW -->
+      {#if hoveredLight && (!selectedLight || selectedLight.uid !== hoveredLight.uid)}
+        {@const hMeta = ELEMENT_MAP[hoveredLight.element] || SANCTUARY_ELEMENTS[3]}
+        <div
+          class="light-hover-pill"
+          style={`left: ${Math.min(86, Math.max(14, hoveredLight.x * 100)).toFixed(1)}%; top: ${Math.max(10, hoveredLight.y * 100 - 6).toFixed(1)}%;`}
+        >
+          <span>{hMeta.icon}</span>
+          <strong>{cleanTitle(hoveredLight.title)}</strong>
+          <span class="hp-hint">· klikni</span>
+        </div>
+      {/if}
 
       {#if nextSeedToPlant}
         <div class="seed-ceremony-banner">
           <div class="seed-orb" aria-hidden="true">✦</div>
           <div class="seed-copy">
             <span class="seed-tag">TVŮJ DOKONČENÝ SKUTEK</span>
-            <strong>{nextSeedToPlant.title}</strong>
-            <span>Klikni kamkoliv na oblohu (hvězda) nebo na hladinu (lucerna) a rozsviť ho v krajině.</span>
+            <strong>{cleanTitle(nextSeedToPlant.title)}</strong>
+            <span>Klikni na oblohu (hvězda) nebo na hladinu (lucerna) a rozsviť ho v krajině.</span>
           </div>
           <button
             type="button"
             class="seed-auto-btn"
             on:click|stopPropagation={() => {
-              plantStepLight(nextSeedToPlant.uid, { x: 0.48, y: 0.25 });
-              triggerLightBloom(0.48, 0.25, '#fde68a', false);
+              plantStepLight(nextSeedToPlant.uid, { x: 0.48, y: 0.24 });
+              triggerLightBloom(0.48, 0.24, '#fde68a', false, true);
               playChime('sky');
             }}
           >
@@ -1040,28 +1680,25 @@
           on:keydown|stopPropagation
         >
           <div class="mw-head">
-            <div class="mw-badges">
-              <span class="mw-badge">{selMeta.icon} {selMeta.title}</span>
-              {#if selectedLight.isMine}
-                <span class="mw-mine-pill">✦ Tvůj skutek</span>
-              {/if}
-            </div>
+            <span class="mw-overline">
+              {selMeta.icon} {selMeta.title}
+              {#if selectedLight.isMine} · ✦ Tvůj skutek{/if}
+            </span>
             <button type="button" class="mw-close" on:click={() => (selectedLight = null)} aria-label="Zavřít">✕</button>
           </div>
 
-          <strong class="mw-title">
-            {String(selectedLight.title || '').replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\s]+/u, '').trim() || selectedLight.title}
-          </strong>
+          <strong class="mw-title">{cleanTitle(selectedLight.title)}</strong>
 
           {#if selectedLight.orgName || selectedLight.minutes}
             <div class="mw-meta">
-              {#if selectedLight.minutes}<span>⏱ {selectedLight.minutes} min</span>{/if}
-              {#if selectedLight.orgName}<span>• {selectedLight.orgName}</span>{/if}
+              {#if selectedLight.orgName}<span>{selectedLight.orgName}</span>{/if}
+              {#if selectedLight.orgName && selectedLight.minutes}<span>·</span>{/if}
+              {#if selectedLight.minutes}<span>{selectedLight.minutes} min</span>{/if}
             </div>
           {/if}
 
           {#if selectedLight.concreteImpact}
-            <div class="mw-impact">{selectedLight.concreteImpact}</div>
+            <p class="mw-impact">{selectedLight.concreteImpact}</p>
           {/if}
 
           {#if selectedLight.note}
@@ -1086,7 +1723,7 @@
                 class="mw-btn-done"
                 on:click={() => markDeedLightDone(selectedLight)}
               >
-                ✓ Mám splněno — rozsvítit jako svůj
+                ✓ Mám splněno — rozsvítit
               </button>
             {/if}
           </div>
@@ -1094,9 +1731,9 @@
       {/if}
     </div>
 
-    <!-- DEED BAR: ADD AN EVERYDAY REAL GOOD DEED TO WATER OR SKY -->
+    <!-- SLEEK COMPACT DEED DOCK -->
     <form class="ritual-bar" on:submit|preventDefault={submitRitualBar}>
-      <div class="ritual-top-row">
+      <div class="ritual-dock-main">
         <div class="ritual-modes" role="tablist" aria-label="Kam rozsvítit dobrý skutek">
           <button
             type="button"
@@ -1104,7 +1741,7 @@
             class:active={ritualMode === 'water'}
             on:click={() => (ritualMode = 'water')}
           >
-            🏮 Lucerna na hladině
+            🏮 Hladina
           </button>
           <button
             type="button"
@@ -1112,46 +1749,37 @@
             class:active={ritualMode === 'sky'}
             on:click={() => (ritualMode = 'sky')}
           >
-            ✦ Hvězda na obloze
+            ✦ Obloha
           </button>
         </div>
 
-        <span class="ritual-helper">
-          Povedlo se ti dnes pomoct offline? Rozsviť si to jedním klikem:
-        </span>
-      </div>
-
-      <div class="quick-deed-chips" aria-label="Rychlé příklady dnešních dobrých skutků">
-        {#each QUICK_OFFLINE_DEEDS as qd}
-          <button
-            type="button"
-            class="qd-chip"
-            on:click={() => addQuickOfflineDeed(qd)}
-          >
-            {qd.label}
-          </button>
-        {/each}
-      </div>
-
-      <div class="ritual-input-row">
         <input
           type="text"
           bind:value={ritualInput}
           maxlength="110"
-          placeholder="Nebo napiš vlastní drobný skutek ze dneška (uloží se jen u tebe v prohlížeči)…"
+          placeholder="Napiš drobný skutek ze dneška (uloží se jen u tebe)…"
           aria-label="Popis tvého dobrého skutku"
         />
+
         <button type="submit" class="ritual-send-btn">
-          {ritualMode === 'water' ? '🏮 Rozsvítit na hladině' : '✦ Rozsvítit na nebi'}
+          {ritualMode === 'water' ? '🏮 Rozsvítit lucernu' : '✦ Rozsvítit hvězdu'}
         </button>
+      </div>
+
+      <div class="ritual-whisper-row" aria-label="Rychlé příklady dnešních dobrých skutků">
+        <span class="rw-lbl">Rychle rozsvítit:</span>
+        {#each QUICK_OFFLINE_DEEDS as qd}
+          <button type="button" class="qd-chip" on:click={() => addQuickOfflineDeed(qd)}>
+            {qd.label}
+          </button>
+        {/each}
         {#if ($sanctuaryWishes || []).length > 0}
           <button
             type="button"
             class="ritual-clear-btn"
             on:click={() => clearSanctuaryWishes()}
-            title="Smazat ručně přidaná světla"
           >
-            Vyčistit přidaná světla
+            Vyčistit přidaná
           </button>
         {/if}
       </div>
@@ -1159,17 +1787,17 @@
   </section>
 
   <!-- =====================================================================
-       2. BREATHING EXERCISE — GENUINE CALM SO YOU HAVE STRENGTH TO HELP
+       2. BREATHING EXERCISE — CLEAN PILLS + LUMINOUS LOTUS ORB
        ===================================================================== -->
   <section id="dech" class="breathing-sanctuary" aria-label="Dechové zastavení pro zklidnění">
     <div class="breath-copy-col">
-      <span class="sec-kicker">CHVÍLE KLIDU • NÁVRAT K SOBĚ</span>
+      <span class="sec-kicker">CHVÍLE KLIDU · NÁVRAT K SOBĚ</span>
       <h2>Dechové zastavení, když <span class="serif-accent">potřebuješ nabrat sílu</span></h2>
       <p class="breath-lead">
-        Pomáhat druhým jde snáz, když máš sám/sama z čeho brát. Pomalý, klidný výdech uvolní napětí v ramenou a ztiší roztěkanou hlavu během jediné minuty.
+        Pomáhat druhým jde snáz, když máš sám/sama z čeho brát. Vyber si rytmus a nech dech na minutu zklidnit.
       </p>
 
-      <div class="pattern-list" role="radiogroup" aria-label="Zvolit dechový rytmus">
+      <div class="pattern-pills" role="radiogroup" aria-label="Zvolit dechový rytmus">
         {#each BREATH_PATTERNS as pat}
           <button
             type="button"
@@ -1180,21 +1808,22 @@
               if (breathingActive) startBreathing();
             }}
           >
-            <strong>{pat.label}</strong>
-            <span>{pat.desc}</span>
+            {pat.short}
           </button>
         {/each}
       </div>
 
+      <p class="pattern-active-desc">{activePattern.desc}</p>
+
       <div class="duration-row">
-        <span class="dur-lbl">Délka zastavení:</span>
+        <span class="dur-lbl">Délka:</span>
         <button
           type="button"
           class="dur-chip"
           class:active={breathingDurationSec === 60}
           on:click={() => (breathingDurationSec = 60)}
         >
-          1 minuta
+          1 min
         </button>
         <button
           type="button"
@@ -1202,13 +1831,25 @@
           class:active={breathingDurationSec === 120}
           on:click={() => (breathingDurationSec = 120)}
         >
-          2 minuty
+          2 min
         </button>
       </div>
     </div>
 
     <div class="breath-visual-col">
       <div class="lotus-stage">
+        <div
+          class="lotus-halo aura"
+          class:inhale={breathPhase === 'inhale' || breathPhase === 'hold'}
+          class:exhale={breathPhase === 'exhale'}
+          style={`transition-duration: ${
+            breathPhase === 'inhale'
+              ? activePattern.inhale
+              : breathPhase === 'exhale'
+              ? activePattern.exhale
+              : 0.6
+          }s;`}
+        ></div>
         <div
           class="lotus-halo outer"
           class:inhale={breathPhase === 'inhale' || breathPhase === 'hold'}
@@ -1256,19 +1897,19 @@
       <div class="breath-instruction" aria-live="polite">
         {#if breathPhase === 'inhale'}
           <strong>Klidný nádech nosem…</strong>
-          <span>Nech vzduch volně klesnout až do břicha ({breathSecondsLeft} s do konce)</span>
+          <span>{breathSecondsLeft} s do konce</span>
         {:else if breathPhase === 'hold'}
-          <strong>Krátké spočinutí v klidu…</strong>
-          <span>Uvolni čelist a ramena ({breathSecondsLeft} s do konce)</span>
+          <strong>Krátké spočinutí v tichu…</strong>
+          <span>{breathSecondsLeft} s do konce</span>
         {:else if breathPhase === 'exhale'}
-          <strong>Dlouhý, pomalý výdech ústy…</strong>
-          <span>Nech s výdechem odejít přebytečné napětí ({breathSecondsLeft} s do konce)</span>
+          <strong>Dlouhý, pomalý výdech…</strong>
+          <span>{breathSecondsLeft} s do konce</span>
         {:else if breathPhase === 'done'}
-          <strong>Hotovo. Zůstaň ještě vteřinu v tichu.</strong>
-          <span>Všimni si, o kolik klidněji teď dýcháš.</span>
+          <strong>Hotovo. Zůstaň ještě vteřinu v klidu.</strong>
+          <span>Všimni si, o kolik volněji teď dýcháš.</span>
         {:else}
           <strong>Dopřej si minutu klidného dechu</strong>
-          <span>Hladina tůně výše bude jemně dýchat spolu s tebou.</span>
+          <span>Hladina tůně výše dýchá v rytmu spolu s tebou.</span>
         {/if}
       </div>
 
@@ -1285,36 +1926,30 @@
   </section>
 
   <!-- =====================================================================
-       3. ONE CALM RAY OF HOPE FROM CZECHIA + DIRECT LINK TO HELP
+       3. QUIET BORDERLESS HOPE WHISPER + OPTIONAL COLLAPSED DRAWERS
        ===================================================================== -->
-  <section class="calm-hope-card" aria-label="Dobrá zpráva z Česka">
-    <div class="chc-left">
-      <span class="sec-kicker">DOBRÉ ZPRÁVY Z ČESKA • SKUTEČNÁ POMOC V PRAXI</span>
-      <h2>{currentProof.title}</h2>
-      <p class="chc-proof">{currentProof.realWorldProof}</p>
-      <p class="chc-psych">💡 {currentProof.psychNote}</p>
-      <div class="chc-actions">
-        <button type="button" class="calm-more-btn" on:click={nextProof}>
-          ↻ Další dobrá zpráva z Česka
-        </button>
-        <a href="/app/guided" class="gentle-step-link">
-          Vybrat si svůj dnešní dobrý skutek v průvodci →
-        </a>
-      </div>
+  <section class="quiet-proof" aria-label="Dobrá zpráva z Česka">
+    <span class="sec-kicker">DOBRÁ ZPRÁVA Z ČESKA</span>
+    <p class="qp-text">
+      <strong>{currentProof.title}.</strong> {currentProof.realWorldProof}
+    </p>
+    <div class="qp-actions">
+      <button type="button" class="qp-next" on:click={() => (proofIndex = (proofIndex + 1) % HOPE_PROOFS.length)}>
+        ↻ Další dobrá zpráva
+      </button>
+      <span>·</span>
+      <a href="/app/guided" class="qp-link">Vybrat si dnešní skutek →</a>
     </div>
   </section>
 
-  <!-- =====================================================================
-       4. OPTIONAL COLLAPSIBLE DRAWERS
-       ===================================================================== -->
   <div class="optional-drawers">
     <details class="calm-drawer" bind:open={storyDrawerOpen}>
       <summary>
-        <span>🎨 Vytvořit si 9:16 pohlednici Krajiny dobra (na tapetu nebo pro přátele)</span>
+        <span>🎨 Vytvořit si 9:16 pohlednici Krajiny dobra</span>
       </summary>
       <div class="drawer-inner story-studio-inner">
         <p class="drawer-note">
-          Vytváří se soukromě přímo v tvém prohlížeči z malované šumavské tůně — můžeš ji poslat dál jako milou inspiraci k dobrému skutku.
+          Vytváří se soukromě přímo ve tvém prohlížeči — můžeš si ji uložit nebo poslat dál jako tichou inspiraci.
         </p>
         <div class="story-mode-tabs">
           <button
@@ -1322,14 +1957,14 @@
             class:active={storyMode === 'quiet'}
             on:click={() => (storyMode = 'quiet')}
           >
-            🌿 Klidná pohlednice krajiny
+            🌿 Klidná krajina
           </button>
           <button
             type="button"
             class:active={storyMode === 'tip'}
             on:click={() => (storyMode = 'tip')}
           >
-            💡 S konkrétním tipem na skutek
+            💡 S tipem na skutek
           </button>
         </div>
 
@@ -1337,12 +1972,12 @@
           {#if storyDataUrl}
             <img src={storyDataUrl} alt="Náhled 9:16 pohlednice Krajiny dobra" class="story-img" />
           {:else}
-            <div class="story-loading">Připravuji malovanou pohlednici…</div>
+            <div class="story-loading">Připravuji pohlednici…</div>
           {/if}
         </div>
 
         <button type="button" class="story-dl-btn" on:click={downloadOrShareStory} disabled={storyBusy}>
-          {storyBusy ? 'Připravuji…' : '↓ Stáhnout / sdílet pohlednici (1080×1920)'}
+          {storyBusy ? 'Připravuji…' : '↓ Stáhnout pohlednici (1080×1920)'}
         </button>
         {#if storyCopiedMsg}
           <p class="story-msg">{storyCopiedMsg}</p>
@@ -1356,11 +1991,11 @@
       </summary>
       <div class="drawer-inner">
         <p class="drawer-note">
-          Uloženo pouze u tebe v prohlížeči — jako tiché připomenutí chvil, kdy jsi někomu nebo něčemu pomohl/a.
+          Uloženo pouze u tebe v prohlížeči — jako připomenutí chvil, kdy jsi někomu nebo něčemu pomohl/a.
         </p>
         {#if ($completedSteps || []).length === 0}
           <p class="empty-journal">
-            Zatím tu není žádný záznam. Až splníš svůj první drobný skutek na úvodu nebo přímo na hladině výše, objeví se tady.
+            Zatím tu není žádný záznam. Až splníš svůj první drobný skutek, objeví se tady.
           </p>
         {:else}
           <ul class="journal-list">
@@ -1368,7 +2003,7 @@
               {@const meta = ELEMENT_MAP[step.element] || SANCTUARY_ELEMENTS[3]}
               <li class="journal-item">
                 <div class="ji-top">
-                  <span class="ji-title">{meta.icon} {step.title}</span>
+                  <span class="ji-title">{meta.icon} {cleanTitle(step.title)}</span>
                   <span class="ji-date">{new Date(step.timestamp).toLocaleDateString('cs-CZ')}</span>
                 </div>
                 {#if editingUid === step.uid}
@@ -1376,7 +2011,7 @@
                     <input
                       type="text"
                       bind:value={draftNote}
-                      placeholder="Krátká poznámka pro sebe (volitelné)"
+                      placeholder="Krátká poznámka pro sebe…"
                       maxlength="220"
                     />
                     <button type="button" on:click={() => saveNote(step.uid)}>Uložit</button>
@@ -1404,47 +2039,47 @@
     padding: 0.75rem 1.25rem 4.5rem;
     display: flex;
     flex-direction: column;
-    gap: 1.85rem;
+    gap: 2rem;
   }
 
   /* =========================================================================
-     1. KRAJINA DOBRA STAGE
+     1. IMMERSIVE KRAJINA DOBRA STAGE
      ========================================================================= */
   .sanctuary-stage {
     border-radius: 32px;
-    padding: 2.1rem 2.1rem 1.65rem;
+    padding: 1.5rem 1.7rem 1.3rem;
     background:
       radial-gradient(90% 90% at 80% 10%, rgba(251, 191, 36, 0.16) 0%, transparent 55%),
-      linear-gradient(165deg, #0b261b 0%, #123828 55%, #0c291d 100%);
+      linear-gradient(165deg, #092117 0%, #103425 55%, #0b261b 100%);
     color: #f8faf8;
-    box-shadow: 0 28px 60px -18px rgba(10, 34, 24, 0.24);
-    border: 1px solid rgba(167, 243, 208, 0.24);
+    box-shadow: 0 28px 60px -18px rgba(8, 28, 19, 0.3);
+    border: 1px solid rgba(167, 243, 208, 0.2);
   }
 
   .sanctuary-top {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    gap: 1.5rem;
+    gap: 1.25rem;
     flex-wrap: wrap;
-    margin-bottom: 1.35rem;
+    margin-bottom: 1.2rem;
   }
 
   .sanctuary-intro {
-    max-width: 650px;
+    max-width: 580px;
   }
 
   .kicker {
-    font-size: 0.74rem;
+    font-size: 0.73rem;
     font-weight: 800;
-    letter-spacing: 0.11em;
+    letter-spacing: 0.12em;
     color: #fde68a;
-    margin-bottom: 0.4rem;
+    margin-bottom: 0.3rem;
   }
 
   h1 {
-    margin: 0 0 0.55rem 0;
-    font-size: clamp(1.95rem, 3.5vw, 2.85rem);
+    margin: 0 0 0.4rem 0;
+    font-size: clamp(1.9rem, 3.4vw, 2.7rem);
     font-weight: 800;
     letter-spacing: -0.03em;
     line-height: 1.1;
@@ -1458,40 +2093,35 @@
 
   .lead {
     margin: 0;
-    color: rgba(232, 246, 238, 0.9);
-    font-size: 0.98rem;
-    line-height: 1.62;
-  }
-
-  .lead strong {
-    color: #fde68a;
-    font-weight: 700;
+    color: rgba(230, 245, 236, 0.86);
+    font-size: 0.94rem;
+    line-height: 1.55;
   }
 
   .atmosphere-controls {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 0.5rem;
+    gap: 0.45rem;
   }
 
   .atmo-pill-group {
     display: inline-flex;
-    padding: 0.26rem;
+    padding: 0.24rem;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    gap: 0.25rem;
+    background: rgba(255, 255, 255, 0.09);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    gap: 0.22rem;
   }
 
   .atmo-btn {
     border: none;
     border-radius: 999px;
-    padding: 0.44rem 0.9rem;
+    padding: 0.42rem 0.88rem;
     background: transparent;
     color: rgba(236, 253, 245, 0.85);
     font-family: inherit;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -1504,20 +2134,20 @@
 
   .atmo-sub-row {
     display: flex;
-    gap: 0.45rem;
+    gap: 0.4rem;
     flex-wrap: wrap;
     justify-content: flex-end;
   }
 
   .explore-deed-btn,
   .sound-btn {
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: 999px;
-    padding: 0.4rem 0.85rem;
-    background: rgba(255, 255, 255, 0.08);
+    padding: 0.36rem 0.82rem;
+    background: rgba(255, 255, 255, 0.07);
     color: rgba(240, 253, 246, 0.92);
     font-family: inherit;
-    font-size: 0.79rem;
+    font-size: 0.78rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -1525,26 +2155,34 @@
 
   .explore-deed-btn:hover,
   .sound-btn:hover {
-    background: rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.15);
   }
 
   .sound-btn.on {
-    background: rgba(52, 211, 153, 0.24);
-    border-color: rgba(110, 231, 183, 0.55);
+    background: rgba(52, 211, 153, 0.22);
+    border-color: rgba(110, 231, 183, 0.52);
     color: #fde68a;
   }
 
   .sanctuary-viewport {
     position: relative;
     width: 100%;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 16 / 8.4;
+    max-height: 57vh;
     min-height: 340px;
     border-radius: 24px;
     overflow: hidden;
     cursor: pointer;
-    border: 1px solid rgba(253, 230, 138, 0.3);
-    box-shadow: 0 22px 48px -14px rgba(4, 16, 11, 0.58);
+    border: 1px solid rgba(253, 230, 138, 0.28);
+    box-shadow: 0 24px 52px -14px rgba(3, 12, 8, 0.65);
     user-select: none;
+  }
+
+  .art-parallax-wrap {
+    position: absolute;
+    inset: 0;
+    will-change: transform;
+    pointer-events: none;
   }
 
   .art-layer {
@@ -1565,16 +2203,49 @@
     display: block;
   }
 
+  .light-hover-pill {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    padding: 0.36rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(6, 24, 16, 0.88);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(253, 230, 138, 0.48);
+    color: #fef3c7;
+    font-size: 0.76rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+    z-index: 4;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  .light-hover-pill strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #ffffff;
+  }
+
+  .hp-hint {
+    color: #6ee7b7;
+    font-weight: 700;
+  }
+
   .seed-ceremony-banner {
     position: absolute;
     top: 1rem;
     left: 1rem;
     right: 1rem;
-    max-width: 640px;
+    max-width: 620px;
     margin: 0 auto;
-    padding: 0.75rem 1rem;
+    padding: 0.72rem 1rem;
     border-radius: 18px;
-    background: rgba(8, 30, 21, 0.88);
+    background: rgba(8, 30, 21, 0.9);
     backdrop-filter: blur(12px);
     border: 1px solid rgba(253, 230, 138, 0.48);
     display: flex;
@@ -1584,15 +2255,15 @@
   }
 
   .seed-orb {
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     background: rgba(253, 230, 138, 0.22);
     color: #fde68a;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.1rem;
+    font-size: 1rem;
     flex-shrink: 0;
   }
 
@@ -1600,13 +2271,13 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 0.1rem;
-    font-size: 0.8rem;
+    gap: 0.08rem;
+    font-size: 0.79rem;
     color: rgba(236, 253, 245, 0.9);
   }
 
   .seed-tag {
-    font-size: 0.68rem;
+    font-size: 0.66rem;
     font-weight: 800;
     letter-spacing: 0.08em;
     color: #fde68a;
@@ -1615,12 +2286,12 @@
   .seed-auto-btn {
     border: none;
     border-radius: 999px;
-    padding: 0.5rem 0.9rem;
+    padding: 0.48rem 0.9rem;
     background: linear-gradient(135deg, #fde68a 0%, #6ee7b7 100%);
     color: #061b12;
     font-family: inherit;
     font-weight: 800;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     cursor: pointer;
     white-space: nowrap;
   }
@@ -1630,13 +2301,13 @@
     bottom: 1rem;
     left: 50%;
     transform: translateX(-50%);
-    padding: 0.55rem 1.1rem;
+    padding: 0.52rem 1.1rem;
     border-radius: 999px;
-    background: rgba(8, 30, 21, 0.9);
+    background: rgba(8, 30, 21, 0.92);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(253, 230, 138, 0.45);
+    border: 1px solid rgba(253, 230, 138, 0.48);
     color: #fef3c7;
-    font-size: 0.85rem;
+    font-size: 0.84rem;
     font-weight: 600;
     z-index: 5;
     pointer-events: none;
@@ -1648,15 +2319,15 @@
     position: absolute;
     bottom: 1rem;
     right: 1rem;
-    width: min(350px, calc(100% - 2rem));
-    padding: 1rem 1.1rem;
+    width: min(340px, calc(100% - 2rem));
+    padding: 1.05rem 1.15rem;
     border-radius: 20px;
-    background: rgba(8, 30, 21, 0.93);
+    background: rgba(7, 26, 18, 0.94);
     backdrop-filter: blur(16px);
-    border: 1px solid rgba(253, 230, 138, 0.42);
+    border: 1px solid rgba(253, 230, 138, 0.4);
     color: #f8faf8;
     z-index: 6;
-    box-shadow: 0 18px 38px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 18px 38px rgba(0, 0, 0, 0.45);
   }
 
   .mw-head {
@@ -1664,83 +2335,66 @@
     justify-content: space-between;
     align-items: center;
     gap: 0.5rem;
-    margin-bottom: 0.4rem;
+    margin-bottom: 0.35rem;
   }
 
-  .mw-badges {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    flex-wrap: wrap;
-  }
-
-  .mw-badge {
-    font-size: 0.73rem;
+  .mw-overline {
+    font-size: 0.72rem;
     font-weight: 800;
-    padding: 0.16rem 0.6rem;
-    border-radius: 999px;
-    background: rgba(254, 243, 199, 0.94);
-    color: #0e281c;
-  }
-
-  .mw-mine-pill {
-    font-size: 0.7rem;
-    font-weight: 800;
-    padding: 0.14rem 0.5rem;
-    border-radius: 999px;
-    background: rgba(110, 231, 183, 0.2);
-    color: #a7f3d0;
+    color: #fde68a;
+    letter-spacing: 0.03em;
   }
 
   .mw-close {
     border: none;
     background: transparent;
-    color: rgba(255, 255, 255, 0.75);
+    color: rgba(255, 255, 255, 0.72);
     cursor: pointer;
     font-size: 0.95rem;
   }
 
   .mw-title {
     display: block;
-    font-size: 0.96rem;
-    line-height: 1.35;
-    margin-bottom: 0.28rem;
+    font-size: 0.98rem;
+    line-height: 1.32;
+    margin-bottom: 0.25rem;
   }
 
   .mw-meta {
-    font-size: 0.76rem;
-    color: rgba(209, 250, 229, 0.78);
-    margin-bottom: 0.35rem;
+    font-size: 0.75rem;
+    color: rgba(167, 243, 208, 0.85);
+    margin-bottom: 0.4rem;
     display: flex;
     gap: 0.35rem;
   }
 
   .mw-impact {
+    margin: 0;
     font-size: 0.81rem;
-    line-height: 1.45;
+    line-height: 1.48;
     color: rgba(236, 253, 245, 0.88);
   }
 
   .mw-note {
     margin: 0.35rem 0 0;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     font-style: italic;
     color: #fde68a;
   }
 
   .mw-actions {
-    margin-top: 0.75rem;
+    margin-top: 0.8rem;
     display: flex;
     flex-direction: column;
-    gap: 0.42rem;
+    gap: 0.4rem;
   }
 
   .mw-btn-link {
     display: inline-flex;
     justify-content: center;
     align-items: center;
-    padding: 0.52rem 0.85rem;
-    border-radius: 12px;
+    padding: 0.54rem 0.85rem;
+    border-radius: 11px;
     background: linear-gradient(135deg, #fde68a 0%, #6ee7b7 100%);
     color: #061b12;
     font-weight: 800;
@@ -1750,13 +2404,13 @@
 
   .mw-btn-done {
     padding: 0.48rem 0.85rem;
-    border-radius: 12px;
-    border: 1px solid rgba(167, 243, 208, 0.36);
-    background: rgba(255, 255, 255, 0.08);
+    border-radius: 11px;
+    border: 1px solid rgba(167, 243, 208, 0.32);
+    background: rgba(255, 255, 255, 0.07);
     color: #ecfdf5;
     font-family: inherit;
     font-weight: 700;
-    font-size: 0.79rem;
+    font-size: 0.78rem;
     cursor: pointer;
   }
 
@@ -1764,137 +2418,142 @@
     background: rgba(16, 185, 129, 0.25);
   }
 
-  /* DEED RITUAL BAR */
+  /* SLEEK COMPACT DEED DOCK */
   .ritual-bar {
-    margin-top: 1.05rem;
-    padding: 0.95rem 1.05rem;
-    border-radius: 20px;
-    background: rgba(255, 255, 255, 0.07);
-    border: 1px solid rgba(255, 255, 255, 0.13);
+    margin-top: 0.95rem;
     display: flex;
     flex-direction: column;
-    gap: 0.68rem;
+    gap: 0.55rem;
   }
 
-  .ritual-top-row {
+  .ritual-dock-main {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
+    padding: 0.42rem;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     flex-wrap: wrap;
   }
 
   .ritual-modes {
-    display: flex;
-    gap: 0.45rem;
-    flex-wrap: wrap;
-  }
-
-  .ritual-helper {
-    font-size: 0.8rem;
-    color: rgba(226, 245, 235, 0.8);
+    display: inline-flex;
+    gap: 0.2rem;
+    padding: 0.2rem;
+    border-radius: 13px;
+    background: rgba(4, 16, 11, 0.45);
   }
 
   .ritual-pill {
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 999px;
-    padding: 0.38rem 0.85rem;
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(236, 253, 245, 0.86);
+    border: none;
+    border-radius: 10px;
+    padding: 0.42rem 0.75rem;
+    background: transparent;
+    color: rgba(236, 253, 245, 0.8);
     font-family: inherit;
-    font-size: 0.82rem;
+    font-size: 0.79rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.18s ease;
+    transition: all 0.16s ease;
   }
 
   .ritual-pill.active {
     background: rgba(253, 230, 138, 0.22);
-    border-color: rgba(253, 230, 138, 0.58);
     color: #fde68a;
   }
 
-  .quick-deed-chips {
-    display: flex;
-    gap: 0.42rem;
-    flex-wrap: wrap;
-  }
-
-  .qd-chip {
-    border: 1px solid rgba(167, 243, 208, 0.24);
-    border-radius: 999px;
-    padding: 0.34rem 0.78rem;
-    background: rgba(16, 185, 129, 0.12);
-    color: #ecfdf5;
-    font-family: inherit;
-    font-size: 0.78rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.18s ease;
-  }
-
-  .qd-chip:hover {
-    background: rgba(253, 230, 138, 0.22);
-    border-color: rgba(253, 230, 138, 0.5);
-    color: #fef3c7;
-  }
-
-  .ritual-input-row {
-    display: flex;
-    gap: 0.55rem;
-    flex-wrap: wrap;
-  }
-
-  .ritual-input-row input {
+  .ritual-dock-main input {
     flex: 1;
-    min-width: 220px;
-    padding: 0.68rem 1rem;
-    border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    background: rgba(5, 20, 14, 0.52);
+    min-width: 210px;
+    padding: 0.55rem 0.75rem;
+    border: none;
+    background: transparent;
     color: #ffffff;
     font-family: inherit;
     font-size: 0.88rem;
   }
 
-  .ritual-input-row input::placeholder {
-    color: rgba(226, 242, 233, 0.62);
+  .ritual-dock-main input:focus {
+    outline: none;
+  }
+
+  .ritual-dock-main input::placeholder {
+    color: rgba(226, 242, 233, 0.58);
   }
 
   .ritual-send-btn {
     border: none;
-    border-radius: 14px;
-    padding: 0.68rem 1.15rem;
+    border-radius: 12px;
+    padding: 0.58rem 1.05rem;
     background: linear-gradient(135deg, #fde68a 0%, #6ee7b7 100%);
     color: #061b12;
     font-family: inherit;
     font-weight: 800;
-    font-size: 0.86rem;
+    font-size: 0.83rem;
     cursor: pointer;
     white-space: nowrap;
+    transition: transform 0.16s ease;
+  }
+
+  .ritual-send-btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .ritual-whisper-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    padding: 0 0.25rem;
+  }
+
+  .rw-lbl {
+    font-size: 0.75rem;
+    color: rgba(209, 250, 229, 0.65);
+    font-weight: 600;
+  }
+
+  .qd-chip {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    padding: 0.24rem 0.68rem;
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(236, 253, 245, 0.88);
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.16s ease;
+  }
+
+  .qd-chip:hover {
+    background: rgba(253, 230, 138, 0.2);
+    border-color: rgba(253, 230, 138, 0.45);
+    color: #fef3c7;
   }
 
   .ritual-clear-btn {
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 14px;
-    padding: 0.68rem 0.9rem;
+    margin-left: auto;
+    border: none;
     background: transparent;
-    color: rgba(226, 242, 233, 0.82);
+    color: rgba(226, 242, 233, 0.62);
     font-family: inherit;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
+    text-decoration: underline;
   }
 
   /* =========================================================================
-     2. BREATHING SANCTUARY
+     2. BREATHING SANCTUARY (CLEAN PILLS + LUMINOUS ORB)
      ========================================================================= */
   .breathing-sanctuary {
-    background: linear-gradient(160deg, #ffffff 0%, #f1f7f2 100%);
+    background: rgba(255, 255, 255, 0.95);
     border-radius: 30px;
-    padding: 2.35rem;
-    border: 1px solid rgba(22, 82, 56, 0.11);
-    box-shadow: var(--shadow-md);
+    padding: 2.2rem 2.3rem;
+    border: 1px solid rgba(22, 82, 56, 0.1);
+    box-shadow: var(--shadow-sm);
     display: grid;
     grid-template-columns: 1.15fr 0.85fr;
     gap: 2.2rem;
@@ -1903,17 +2562,16 @@
 
   .sec-kicker {
     display: inline-block;
-    font-size: 0.73rem;
+    font-size: 0.72rem;
     font-weight: 800;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.11em;
     color: var(--emerald-600);
     margin-bottom: 0.35rem;
   }
 
-  .breathing-sanctuary h2,
-  .calm-hope-card h2 {
-    margin: 0 0 0.65rem 0;
-    font-size: clamp(1.6rem, 2.6vw, 2.15rem);
+  .breathing-sanctuary h2 {
+    margin: 0 0 0.55rem 0;
+    font-size: clamp(1.55rem, 2.5vw, 2.1rem);
     font-weight: 800;
     letter-spacing: -0.025em;
     line-height: 1.16;
@@ -1925,98 +2583,98 @@
   }
 
   .breath-lead {
-    margin: 0 0 1.2rem 0;
+    margin: 0 0 1.15rem 0;
     color: var(--text-secondary);
-    font-size: 0.96rem;
-    line-height: 1.62;
+    font-size: 0.95rem;
+    line-height: 1.6;
   }
 
-  .pattern-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.55rem;
-    margin-bottom: 1.1rem;
+  .pattern-pills {
+    display: inline-flex;
+    gap: 0.35rem;
+    padding: 0.28rem;
+    border-radius: 999px;
+    background: #eef4ef;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
   }
 
   .pattern-card {
-    text-align: left;
-    padding: 0.82rem 1rem;
-    border-radius: 16px;
-    border: 1px solid rgba(22, 82, 56, 0.1);
-    background: rgba(255, 255, 255, 0.9);
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    gap: 0.18rem;
+    border: none;
+    border-radius: 999px;
+    padding: 0.5rem 0.95rem;
+    background: transparent;
+    color: var(--text-secondary);
     font-family: inherit;
-    transition: all 0.2s var(--ease-gentle);
+    font-size: 0.83rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.18s ease;
   }
 
-  .pattern-card strong {
-    font-size: 0.92rem;
+  .pattern-card:hover {
     color: var(--text-primary);
   }
 
-  .pattern-card span {
-    font-size: 0.82rem;
-    color: var(--text-secondary);
-    line-height: 1.42;
+  .pattern-card.active {
+    background: #0f3022;
+    color: #fde68a;
+    box-shadow: 0 4px 12px rgba(9, 29, 20, 0.16);
   }
 
-  .pattern-card.active {
-    background: #eaf7ef;
-    border-color: rgba(16, 185, 129, 0.45);
-    box-shadow: 0 8px 22px -10px rgba(16, 185, 129, 0.3);
+  .pattern-active-desc {
+    margin: 0 0 1.15rem 0;
+    font-size: 0.88rem;
+    line-height: 1.55;
+    color: var(--text-secondary);
   }
 
   .duration-row {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
+    gap: 0.45rem;
   }
 
   .dur-lbl {
-    font-size: 0.84rem;
+    font-size: 0.82rem;
     font-weight: 700;
     color: var(--text-muted);
   }
 
   .dur-chip {
-    padding: 0.38rem 0.85rem;
+    padding: 0.34rem 0.78rem;
     border-radius: 999px;
-    border: 1px solid rgba(22, 82, 56, 0.15);
+    border: 1px solid rgba(22, 82, 56, 0.12);
     background: #ffffff;
     color: var(--text-secondary);
     font-family: inherit;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     font-weight: 700;
     cursor: pointer;
   }
 
   .dur-chip.active {
-    background: #123828;
-    color: #fde68a;
-    border-color: #123828;
+    background: #0f3022;
+    color: #ffffff;
+    border-color: #0f3022;
   }
 
   .breath-visual-col {
-    background: radial-gradient(circle at 50% 38%, #184a35 0%, #0e2e20 100%);
+    background: radial-gradient(circle at 50% 38%, #184a35 0%, #0b261b 100%);
     border-radius: 26px;
-    padding: 2.1rem 1.5rem;
+    padding: 2rem 1.5rem;
     color: #f8faf8;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: 1.25rem;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    gap: 1.15rem;
   }
 
   .lotus-stage {
     position: relative;
-    width: 190px;
-    height: 190px;
+    width: 196px;
+    height: 196px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2029,29 +2687,37 @@
     transition-timing-function: ease-in-out;
   }
 
+  .lotus-halo.aura {
+    width: 192px;
+    height: 192px;
+    background: radial-gradient(circle, rgba(253, 230, 138, 0.18) 0%, rgba(52, 211, 153, 0.08) 55%, transparent 74%);
+    transform: scale(0.82);
+    opacity: 0.5;
+  }
+
   .lotus-halo.outer {
-    width: 165px;
-    height: 165px;
-    background: radial-gradient(circle, rgba(52, 211, 153, 0.28) 0%, rgba(253, 230, 138, 0.1) 65%, transparent 100%);
-    border: 1px solid rgba(110, 231, 183, 0.32);
+    width: 158px;
+    height: 158px;
+    background: radial-gradient(circle, rgba(52, 211, 153, 0.28) 0%, rgba(253, 230, 138, 0.12) 65%, transparent 100%);
+    border: 1px solid rgba(110, 231, 183, 0.34);
     transform: scale(0.86);
-    opacity: 0.58;
+    opacity: 0.62;
   }
 
   .lotus-halo.middle {
-    width: 126px;
-    height: 126px;
-    background: radial-gradient(circle, rgba(253, 230, 138, 0.3) 0%, rgba(52, 211, 153, 0.22) 100%);
-    border: 1px solid rgba(253, 230, 138, 0.38);
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle, rgba(253, 230, 138, 0.34) 0%, rgba(52, 211, 153, 0.24) 100%);
+    border: 1px solid rgba(253, 230, 138, 0.42);
     transform: scale(0.9);
-    opacity: 0.72;
+    opacity: 0.76;
   }
 
   .lotus-core {
     position: relative;
     z-index: 2;
-    width: 84px;
-    height: 84px;
+    width: 82px;
+    height: 82px;
     border-radius: 50%;
     background: linear-gradient(135deg, #6ee7b7 0%, #fde68a 100%);
     color: #061b12;
@@ -2059,13 +2725,17 @@
     align-items: center;
     justify-content: center;
     font-weight: 800;
-    box-shadow: 0 0 32px rgba(110, 231, 183, 0.45);
+    box-shadow: 0 0 36px rgba(110, 231, 183, 0.5);
     transition-property: transform;
     transition-timing-function: ease-in-out;
   }
 
+  .lotus-halo.aura.inhale {
+    transform: scale(1.22);
+    opacity: 0.95;
+  }
   .lotus-halo.outer.inhale {
-    transform: scale(1.16);
+    transform: scale(1.18);
     opacity: 0.95;
   }
   .lotus-halo.middle.inhale {
@@ -2076,49 +2746,49 @@
     transform: scale(1.18);
   }
 
+  .lotus-halo.aura.exhale,
   .lotus-halo.outer.exhale,
-  .lotus-halo.middle.exhale,
-  .lotus-core.exhale {
-    transform: scale(0.78);
-    opacity: 0.55;
+  .lotus-halo.middle.exhale {
+    transform: scale(0.76);
+    opacity: 0.48;
   }
   .lotus-core.exhale {
-    opacity: 0.92;
+    transform: scale(0.82);
   }
 
   .phase-sec {
-    font-size: 1.22rem;
+    font-size: 1.2rem;
     font-weight: 800;
   }
 
   .phase-leaf {
-    font-size: 1.65rem;
+    font-size: 1.6rem;
   }
 
   .breath-instruction {
-    min-height: 3.1rem;
+    min-height: 2.9rem;
     display: flex;
     flex-direction: column;
-    gap: 0.22rem;
+    gap: 0.18rem;
   }
 
   .breath-instruction strong {
-    font-size: 1.05rem;
+    font-size: 1.02rem;
     color: #fde68a;
   }
 
   .breath-instruction span {
-    font-size: 0.84rem;
-    color: rgba(232, 246, 238, 0.86);
+    font-size: 0.82rem;
+    color: rgba(232, 246, 238, 0.82);
   }
 
   .breath-cta {
     border: none;
     border-radius: 999px;
-    padding: 0.82rem 1.5rem;
+    padding: 0.8rem 1.45rem;
     font-family: inherit;
     font-weight: 800;
-    font-size: 0.92rem;
+    font-size: 0.9rem;
     cursor: pointer;
     transition: transform 0.18s ease;
   }
@@ -2126,7 +2796,7 @@
   .breath-cta.start {
     background: linear-gradient(135deg, #6ee7b7 0%, #fde68a 100%);
     color: #061b12;
-    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.26);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.24);
   }
 
   .breath-cta.stop {
@@ -2140,69 +2810,76 @@
   }
 
   /* =========================================================================
-     3. CALM RAY OF HOPE CARD
+     3. QUIET BORDERLESS HOPE WHISPER + OPTIONAL DRAWERS
      ========================================================================= */
-  .calm-hope-card {
-    background: rgba(255, 255, 255, 0.94);
-    border: 1px solid rgba(22, 82, 56, 0.1);
-    border-radius: 28px;
-    padding: 2rem 2.2rem;
-    box-shadow: var(--shadow-sm);
+  .quiet-proof {
+    text-align: center;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 0.35rem 0;
   }
 
-  .chc-proof {
-    margin: 0 0 0.65rem 0;
-    font-size: 0.98rem;
+  .qp-text {
+    margin: 0.25rem 0 0.7rem;
+    font-size: 0.96rem;
     line-height: 1.62;
+    color: var(--text-secondary);
+  }
+
+  .qp-text strong {
     color: var(--text-primary);
   }
 
-  .chc-psych {
-    margin: 0 0 1.25rem 0;
-    font-size: 0.88rem;
-    color: var(--text-secondary);
-    background: #eef6f0;
-    padding: 0.65rem 0.95rem;
-    border-radius: 14px;
-  }
-
-  .chc-actions {
-    display: flex;
+  .qp-actions {
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
+    gap: 0.55rem;
     flex-wrap: wrap;
+    justify-content: center;
+    font-size: 0.85rem;
+    color: var(--text-muted);
   }
 
-  .gentle-step-link {
-    color: var(--emerald-600);
+  .qp-next {
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: inherit;
     font-weight: 700;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .qp-next:hover {
+    color: var(--text-primary);
+  }
+
+  .qp-link {
+    color: var(--emerald-600);
+    font-weight: 800;
     text-decoration: none;
   }
 
-  .gentle-step-link:hover {
+  .qp-link:hover {
     text-decoration: underline;
   }
 
-  /* =========================================================================
-     4. OPTIONAL COLLAPSIBLE DRAWERS
-     ========================================================================= */
   .optional-drawers {
     display: flex;
     flex-direction: column;
-    gap: 0.9rem;
+    gap: 0.8rem;
   }
 
   .drawer-inner {
-    margin-top: 1.1rem;
-    padding-top: 1rem;
+    margin-top: 1rem;
+    padding-top: 0.95rem;
     border-top: 1px solid rgba(22, 82, 56, 0.09);
   }
 
   .drawer-note {
-    margin: 0 0 1rem 0;
-    font-size: 0.88rem;
+    margin: 0 0 0.95rem 0;
+    font-size: 0.86rem;
     color: var(--text-secondary);
     line-height: 1.55;
   }
@@ -2216,20 +2893,20 @@
 
   .story-mode-tabs {
     display: inline-flex;
-    gap: 0.4rem;
+    gap: 0.35rem;
     margin-bottom: 1rem;
     flex-wrap: wrap;
   }
 
   .story-mode-tabs button {
-    padding: 0.48rem 0.95rem;
+    padding: 0.45rem 0.9rem;
     border-radius: 999px;
-    border: 1px solid rgba(22, 82, 56, 0.15);
+    border: 1px solid rgba(22, 82, 56, 0.14);
     background: #ffffff;
     color: var(--text-secondary);
     font-family: inherit;
     font-weight: 700;
-    font-size: 0.84rem;
+    font-size: 0.82rem;
     cursor: pointer;
   }
 
@@ -2240,13 +2917,13 @@
   }
 
   .story-preview-frame {
-    width: 230px;
+    width: 220px;
     aspect-ratio: 9 / 16;
-    border-radius: 20px;
+    border-radius: 18px;
     overflow: hidden;
     box-shadow: var(--shadow-md);
-    border: 1px solid rgba(22, 82, 56, 0.16);
-    margin-bottom: 1rem;
+    border: 1px solid rgba(22, 82, 56, 0.15);
+    margin-bottom: 0.95rem;
     background: #0c291d;
     display: flex;
     align-items: center;
@@ -2261,7 +2938,7 @@
   }
 
   .story-loading {
-    color: #fde68a;
+    color: rgba(236, 253, 245, 0.78);
     font-size: 0.82rem;
     padding: 1rem;
   }
@@ -2269,131 +2946,122 @@
   .story-dl-btn {
     border: none;
     border-radius: 999px;
-    padding: 0.82rem 1.45rem;
-    background: linear-gradient(135deg, #0f3626 0%, #175038 100%);
+    padding: 0.72rem 1.35rem;
+    background: linear-gradient(135deg, #0f3626 0%, #1b573e 100%);
     color: #fde68a;
     font-family: inherit;
     font-weight: 800;
-    font-size: 0.9rem;
+    font-size: 0.86rem;
     cursor: pointer;
   }
 
   .story-msg {
-    margin-top: 0.6rem;
-    font-size: 0.84rem;
+    margin: 0.6rem 0 0;
+    font-size: 0.82rem;
     color: var(--emerald-600);
     font-weight: 600;
   }
 
   .empty-journal {
     margin: 0;
-    font-size: 0.9rem;
+    font-size: 0.86rem;
     color: var(--text-muted);
   }
 
   .journal-list {
     list-style: none;
-    padding: 0;
     margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.65rem;
+    padding: 0;
+    display: grid;
+    gap: 0.6rem;
   }
 
   .journal-item {
-    padding: 0.85rem 1rem;
-    border-radius: 16px;
+    padding: 0.75rem 0.95rem;
+    border-radius: 14px;
     background: #ffffff;
-    border: 1px solid rgba(22, 82, 56, 0.09);
+    border: 1px solid rgba(22, 82, 56, 0.08);
   }
 
   .ji-top {
     display: flex;
     justify-content: space-between;
-    gap: 0.75rem;
+    align-items: center;
+    gap: 0.6rem;
     flex-wrap: wrap;
-    margin-bottom: 0.25rem;
   }
 
   .ji-title {
     font-weight: 700;
-    font-size: 0.92rem;
+    font-size: 0.88rem;
     color: var(--text-primary);
   }
 
   .ji-date {
-    font-size: 0.8rem;
+    font-size: 0.76rem;
     color: var(--text-muted);
   }
 
   .ji-note {
-    margin: 0.25rem 0 0;
-    font-size: 0.85rem;
-    font-style: italic;
+    margin: 0.3rem 0 0;
+    font-size: 0.82rem;
     color: var(--text-secondary);
+    font-style: italic;
   }
 
   .ji-add-note {
+    margin-top: 0.25rem;
     border: none;
     background: transparent;
-    padding: 0;
     color: var(--emerald-600);
     font-family: inherit;
-    font-size: 0.8rem;
-    font-weight: 600;
+    font-size: 0.78rem;
+    font-weight: 700;
     cursor: pointer;
+    padding: 0;
   }
 
   .ji-edit {
+    margin-top: 0.45rem;
     display: flex;
     gap: 0.45rem;
-    margin-top: 0.35rem;
   }
 
   .ji-edit input {
     flex: 1;
-    padding: 0.45rem 0.7rem;
+    padding: 0.42rem 0.7rem;
     border-radius: 10px;
-    border: 1px solid rgba(22, 82, 56, 0.18);
+    border: 1px solid rgba(22, 82, 56, 0.16);
     font-family: inherit;
-    font-size: 0.84rem;
+    font-size: 0.82rem;
   }
 
   .ji-edit button {
-    border: none;
+    padding: 0.42rem 0.8rem;
     border-radius: 10px;
-    padding: 0.45rem 0.85rem;
-    background: #123828;
-    color: #fde68a;
+    border: none;
+    background: #0f3022;
+    color: #ffffff;
     font-family: inherit;
-    font-weight: 700;
     font-size: 0.8rem;
+    font-weight: 700;
     cursor: pointer;
   }
 
-  @media (max-width: 920px) {
+  @media (max-width: 900px) {
     .breathing-sanctuary {
       grid-template-columns: 1fr;
+      padding: 1.75rem 1.4rem;
     }
-    .atmosphere-controls,
-    .atmo-sub-row {
-      align-items: flex-start;
-      justify-content: flex-start;
-    }
-  }
-
-  @media (max-width: 640px) {
     .sanctuary-stage {
-      padding: 1.45rem 1.15rem 1.25rem;
-      border-radius: 24px;
+      padding: 1.4rem 1.15rem 1.2rem;
+      border-radius: 26px;
+    }
+    .atmosphere-controls {
+      align-items: flex-start;
     }
     .sanctuary-viewport {
       aspect-ratio: 4 / 3;
-    }
-    .breathing-sanctuary,
-    .calm-hope-card {
-      padding: 1.5rem 1.25rem;
-      border-radius: 24px;
     }
   }
 </style>
