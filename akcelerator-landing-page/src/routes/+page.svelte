@@ -198,7 +198,7 @@
     return (
       String(str || "")
         .replace(
-          /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u,
+          /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\s]+/u,
           "",
         )
         .trim() || str
@@ -206,11 +206,11 @@
   }
 
   function getSavedValueLabels(ids) {
-    return VALUES.filter((v) => ids.includes(v.key || v.id))
+    return VALUES.filter((v) => ids.includes(v.id))
       .map((v) =>
-        (v.shortLabel || v.label)
+        v.label
           .replace(
-            /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u,
+            /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\s]+/u,
             "",
           )
           .trim(),
@@ -1029,7 +1029,6 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    flex-wrap: wrap;
     margin-bottom: 0.65rem;
   }
 
@@ -1341,7 +1340,6 @@
     display: flex;
     gap: 0.55rem;
     align-items: center;
-    flex-wrap: wrap;
     padding-top: 0.25rem;
   }
 
