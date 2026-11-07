@@ -353,6 +353,20 @@ export function recordSmallWin(step) {
     verified_initiation: verifiedInitiation
   });
 
+  if (
+    verifiedInitiation ||
+    entry.surface === 'near' ||
+    catalogMatch?.mode === 'local' ||
+    catalogMatch?.commitment === 'long_term'
+  ) {
+    trackFunnel('real_world_conversion', {
+      id: entry.id,
+      surface: entry.surface,
+      verified_initiation: verifiedInitiation,
+      commitment: catalogMatch?.commitment || 'one_off'
+    });
+  }
+
   if (!step?.silent) {
     activeCelebration.set({
       open: true,

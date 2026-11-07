@@ -75,7 +75,10 @@
             </defs>
           </svg>
         </span>
-        <span class="brand-text">Akcelerátor <span class="brand-accent">altruismu</span></span>
+        <span class="brand-copy">
+          <span class="brand-text">Akcelerátor <span class="brand-accent">altruismu</span></span>
+          <span class="brand-sub">Pomáháme lidem pomáhat</span>
+        </span>
       </a>
 
       <nav class="nav-links" aria-label="Hlavní navigace">
@@ -216,6 +219,19 @@
     font-size: 1.24rem;
     color: #047857;
     letter-spacing: 0.01em;
+  }
+
+  .brand-copy {
+    display: inline-flex;
+    flex-direction: column;
+    line-height: 1.1;
+  }
+
+  .brand-sub {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #4b6859;
+    letter-spacing: 0.02em;
   }
 
   .nav-links {

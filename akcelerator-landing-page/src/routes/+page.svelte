@@ -151,8 +151,8 @@
   }
   $: isCurrentStarted = Boolean(
     currentQuickAction?.id &&
-      $startedActionIds &&
-      $startedActionIds[currentQuickAction.id],
+      Array.isArray($startedActionIds) &&
+      $startedActionIds.includes(currentQuickAction.id),
   );
 
   $: activeHope = HOPE_FACTS[hopeIdx % HOPE_FACTS.length];
@@ -167,6 +167,11 @@
     suggestionIndex = 0;
     trackEvent("aa_home_energy_mode", { mode });
     trackFunnel("intent_selected", { surface: "home_instant", mode });
+    trackFunnel("recommendation_shown", {
+      surface: "home_instant",
+      mode,
+      index: 0,
+    });
   }
 
   function nextQuickIdea() {

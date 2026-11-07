@@ -129,7 +129,7 @@ export function trackFunnel(stage, data = {}) {
 /**
  * Records that the user genuinely initiated an action (opened partner URL or copied contact message).
  * @param {string} id
- * @param {Record<string, any>=} meta
+ * @param {(string | Record<string, any>)=} meta
  */
 export function markActionStarted(id, meta = {}) {
   if (!id) return;
@@ -140,8 +140,15 @@ export function markActionStarted(id, meta = {}) {
     return next;
   });
 
-  trackFunnel('action_started', { id, ...meta });
-  trackEvent('aa_clickout', { id, ...meta });
+  const payload =
+    typeof meta === 'string'
+      ? { id, surface: meta }
+      : meta && typeof meta === 'object'
+        ? { id, ...meta }
+        : { id };
+
+  trackFunnel('action_started', payload);
+  trackEvent('aa_clickout', payload);
 }
 
 /**

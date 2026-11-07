@@ -1762,41 +1762,41 @@ export function recommendActions(prefs = {}) {
     // 6. Jednorázově vs. dlouhodobě
     if (commitment === 'one_off') {
       if (action.commitment === 'one_off') {
-        score += 32;
+        score += 45;
         reasons.push('⚡ jednorázově bez závazku');
       } else {
-        score -= 30;
+        score -= 55;
       }
     } else if (commitment === 'long_term') {
       if (action.commitment === 'long_term') {
-        score += 48;
+        score += 85;
         reasons.push('🌱 dlouhodobá cesta');
       } else {
-        score -= 28;
+        score -= 65;
       }
     }
 
     // 7. Anonymita vs. kontakt
     if (contactLevel === 'anonymous') {
       if (action.contactLevel === 'anonymous') {
-        score += 38;
+        score += 55;
         reasons.push('🔒 zcela anonymně');
       } else {
-        score -= 42;
+        score -= 65;
       }
     } else if (contactLevel === 'contact_ok') {
       if (action.contactLevel === 'contact_ok') {
-        score += 36;
+        score += 65;
         reasons.push('👋 osobní kontakt');
       } else {
-        score -= 18;
+        score -= 55;
       }
     }
 
     // 8. Komu chci pomoci (lidé / zvířata / příroda)
     if (recipientMacro !== 'any') {
       if (action.recipientMacro === recipientMacro) {
-        score += 54;
+        score += 75;
         const macroLabel =
           recipientMacro === 'people'
             ? '👥 pomoc lidem'
@@ -1805,17 +1805,17 @@ export function recommendActions(prefs = {}) {
               : '🌿 pomoc přírodě';
         reasons.push(macroLabel);
       } else {
-        score -= 44;
+        score -= 65;
       }
     }
 
     // 9. Třída důkazů účinnosti (A / B / C)
     if (evidenceTier !== 'any') {
       if (action.impactEvidence === evidenceTier) {
-        score += 34;
+        score += 140;
         reasons.push(`Důkazy ${evidenceTier}`);
       } else {
-        score -= 24;
+        score -= 140;
       }
     }
 

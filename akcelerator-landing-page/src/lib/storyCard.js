@@ -143,7 +143,8 @@ export async function renderStoryCardPng(opts = {}) {
       ? opts.stars.slice(0, 10).map((s) => ({
           x: 130 + s.x * 820,
           y: 700 + Math.min(0.48, s.y) * 520,
-          color: s.color || '#fde68a'
+          color: s.color || '#fde68a',
+          lightType: s.lightType || 'star'
         }))
       : fallbackCoords.slice(0, starCount);
 
@@ -160,7 +161,7 @@ export async function renderStoryCardPng(opts = {}) {
   ctx.stroke();
   ctx.restore();
 
-  // Star Blooms
+  // Star, Lantern & Wave Blooms
   for (const p of pts) {
     const g = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, 34);
     g.addColorStop(0, p.color);
@@ -170,6 +171,19 @@ export async function renderStoryCardPng(opts = {}) {
     ctx.beginPath();
     ctx.arc(p.x, p.y, 34, 0, Math.PI * 2);
     ctx.fill();
+
+    if (p.lightType === 'wave') {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(110, 231, 183, 0.55)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, 26, 11, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, 42, 17, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
 
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
@@ -200,7 +214,7 @@ export async function renderStoryCardPng(opts = {}) {
   }
 
   // 5. Top Editorial Pill
-  roundRectPath(ctx, 195, 88, 690, 64, 32);
+  roundRectPath(ctx, 140, 88, 800, 64, 32);
   ctx.fillStyle = 'rgba(6, 22, 18, 0.76)';
   ctx.fill();
   ctx.lineWidth = 1.8;
@@ -209,8 +223,8 @@ export async function renderStoryCardPng(opts = {}) {
 
   ctx.textAlign = 'center';
   ctx.fillStyle = '#fde68a';
-  ctx.font = '800 23px "Plus Jakarta Sans", system-ui, sans-serif';
-  ctx.fillText('✦  AKCELERÁTOR ALTRUISMU • KRAJINA DOBRA', 540, 129);
+  ctx.font = '800 22px "Plus Jakarta Sans", system-ui, sans-serif';
+  ctx.fillText('✦  AKCELERÁTOR ALTRUISMU • POMÁHÁME LIDEM POMÁHAT', 540, 129);
 
   // 6. Main Headline
   ctx.fillStyle = '#ffffff';

@@ -3,6 +3,7 @@
   import {
     trackEvent,
     trackFunnel,
+    startedActionIds,
     markActionStarted,
     openBrokenLinkReport,
   } from "../../../lib/analytics.js";
@@ -123,6 +124,11 @@
   $: if (bestAction?.id) {
     lastShownActionId = bestAction.id;
   }
+  $: isBestStarted = Boolean(
+    bestAction?.id &&
+      Array.isArray($startedActionIds) &&
+      $startedActionIds.includes(bestAction.id),
+  );
 
   $: sideAlternatives = recommendations.slice(1, 4);
   $: activeCity = CZECH_CITIES.find((c) => c.id === cityId) || CZECH_CITIES[0];
@@ -202,6 +208,8 @@
     triggerPlanPulse();
     persistPrefs();
     trackEvent("aa_guided_situation", { situation: id });
+    trackFunnel("intent_selected", { surface: "guided", situation: id });
+    trackFunnel("recommendation_shown", { surface: "guided", situation: id });
   }
 
   function toggleTopic(key) {
@@ -217,6 +225,22 @@
     triggerPlanPulse();
     persistPrefs();
     trackEvent("aa_guided_topic_toggle", { topics: selectedTopics.join(",") });
+    trackFunnel("intent_selected", {
+      surface: "guided_topic",
+      topics: selectedTopics.join(","),
+    });
+  }
+
+  function applyAdaptiveFilter(updateFn, filterName = "param") {
+    excludePrevId = "";
+    rotationSeed = 0;
+    updateFn();
+    triggerPlanPulse();
+    trackFunnel("intent_selected", { surface: "guided_adaptive", filterName });
+    trackFunnel("recommendation_shown", {
+      surface: "guided_adaptive",
+      filterName,
+    });
   }
 
   function cycleRecommendation() {
@@ -226,6 +250,11 @@
     trackEvent("aa_guided_cycle_tip", {
       seed: rotationSeed,
       situation: activeSituationId,
+    });
+    trackFunnel("recommendation_shown", {
+      surface: "guided",
+      situation: activeSituationId,
+      seed: rotationSeed,
     });
   }
 
@@ -399,10 +428,8 @@
               type="button"
               class="topic-pill"
               class:selected={recipientMacro === "people"}
-              on:click={() => {
-                recipientMacro = "people";
-                rotationSeed = 0;
-              }}
+              on:click={() =>
+                applyAdaptiveFilter(() => (recipientMacro = "people"), "recipient")}
             >
               👥 Lidem
             </button>
@@ -410,10 +437,11 @@
               type="button"
               class="topic-pill"
               class:selected={recipientMacro === "animals"}
-              on:click={() => {
-                recipientMacro = "animals";
-                rotationSeed = 0;
-              }}
+              on:click={() =>
+                applyAdaptiveFilter(
+                  () => (recipientMacro = "animals"),
+                  "recipient",
+                )}
             >
               🐾 Zvířatům
             </button>
@@ -421,10 +449,8 @@
               type="button"
               class="topic-pill"
               class:selected={recipientMacro === "nature"}
-              on:click={() => {
-                recipientMacro = "nature";
-                rotationSeed = 0;
-              }}
+              on:click={() =>
+                applyAdaptiveFilter(() => (recipientMacro = "nature"), "recipient")}
             >
               🌿 Přírodě
             </button>
@@ -440,10 +466,8 @@
               type="button"
               class="topic-pill"
               class:selected={contactLevel === "any"}
-              on:click={() => {
-                contactLevel = "any";
-                rotationSeed = 0;
-              }}
+              on:click={() =>
+                applyAdaptiveFilter(() => (contactLevel = "any"), "contact")}
             >
               Nezáleží
             </button>
@@ -451,10 +475,11 @@
               type="button"
               class="topic-pill"
               class:selected={contactLevel === "anonymous"}
-              on:click={() => {
-                contactLevel = "anonymous";
-                rotationSeed = 0;
-              }}
+              on:click={() =>
+                applyAdaptiveFilter(
+                  () => (contactLevel = "anonymous"),
+                  "contact",
+                )}
             >
               🔒 Zcela anonymně
             </button>
@@ -462,10 +487,11 @@
               type="button"
               class="topic-pill"
               class:selected={contactLevel === "contact_ok"}
-              on:click={() => {
-                contactLevel = "contact_ok";
-                rotationSeed = 0;
-              }}
+              on:click={() =>
+                applyAdaptiveFilter(
+                  () => (contactLevel = "contact_ok"),
+                  "contact",
+                )}
             >
               👋 Nevadí mi kontakt
             </button>
@@ -481,10 +507,8 @@
               type="button"
               class="topic-pill"
               class:selected={commitment === "any"}
-              on:click={() => {
-                commitment = "any";
-                rotationSeed = 0;
-              }}
+              on:click={() =>
+                applyAdaptiveFilter(() => (commitment = "any"), "commitment")}
             >
               Nezáleží
             </button>
@@ -492,10 +516,11 @@
               type="button"
               class="topic-pill"
               class:selected={commitment === "one_off"}
-              on:click={() => {
-                commitment = "one_off";
-                rotationSeed = 0;
-              }}
+              on:click={() =>
+                applyAdaptiveFilter(
+                  () => (commitment = "one_off"),
+                  "commitment",
+                )}
             >
               ⚡ Jednorázově
             </button>
@@ -503,10 +528,11 @@
               type="button"
               class="topic-pill"
               class:selected={commitment === "long_term"}
-              on:click={() => {
-                commitment = "long_term";
-                rotationSeed = 0;
-              }}
+              on:click={() =>
+                applyAdaptiveFilter(
+                  () => (commitment = "long_term"),
+                  "commitment",
+                )}
             >
               🌱 Dlouhodobě
             </button>
@@ -522,17 +548,27 @@
                 <button
                   type="button"
                   class:active={commitment === "any"}
-                  on:click={() => (commitment = "any")}>Vše</button
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (commitment = "any"), "commitment")}
+                  >Vše</button
                 >
                 <button
                   type="button"
                   class:active={commitment === "one_off"}
-                  on:click={() => (commitment = "one_off")}>Jednorázově</button
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (commitment = "one_off"),
+                      "commitment",
+                    )}>Jednorázově</button
                 >
                 <button
                   type="button"
                   class:active={commitment === "long_term"}
-                  on:click={() => (commitment = "long_term")}>Dlouhodobě</button
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (commitment = "long_term"),
+                      "commitment",
+                    )}>Dlouhodobě</button
                 >
               </div>
             </div>
@@ -543,17 +579,27 @@
                 <button
                   type="button"
                   class:active={contactLevel === "any"}
-                  on:click={() => (contactLevel = "any")}>Vše</button
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (contactLevel = "any"), "contact")}
+                  >Vše</button
                 >
                 <button
                   type="button"
                   class:active={contactLevel === "anonymous"}
-                  on:click={() => (contactLevel = "anonymous")}>Anonymně</button
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (contactLevel = "anonymous"),
+                      "contact",
+                    )}>Anonymně</button
                 >
                 <button
                   type="button"
                   class:active={contactLevel === "contact_ok"}
-                  on:click={() => (contactLevel = "contact_ok")}
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (contactLevel = "contact_ok"),
+                      "contact",
+                    )}
                   >Nevadí kontakt</button
                 >
               </div>
@@ -565,22 +611,38 @@
                 <button
                   type="button"
                   class:active={recipientMacro === "any"}
-                  on:click={() => (recipientMacro = "any")}>Všem</button
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (recipientMacro = "any"),
+                      "recipient",
+                    )}>Všem</button
                 >
                 <button
                   type="button"
                   class:active={recipientMacro === "people"}
-                  on:click={() => (recipientMacro = "people")}>Lidem</button
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (recipientMacro = "people"),
+                      "recipient",
+                    )}>Lidem</button
                 >
                 <button
                   type="button"
                   class:active={recipientMacro === "animals"}
-                  on:click={() => (recipientMacro = "animals")}>Zvířatům</button
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (recipientMacro = "animals"),
+                      "recipient",
+                    )}>Zvířatům</button
                 >
                 <button
                   type="button"
                   class:active={recipientMacro === "nature"}
-                  on:click={() => (recipientMacro = "nature")}>Přírodě</button
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (recipientMacro = "nature"),
+                      "recipient",
+                    )}>Přírodě</button
                 >
               </div>
             </div>
@@ -591,18 +653,25 @@
                 <button
                   type="button"
                   class:active={socialOverride === "any"}
-                  on:click={() => (socialOverride = "any")}
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (socialOverride = "any"), "social")}
                   >Podle situace</button
                 >
                 <button
                   type="button"
                   class:active={socialOverride === "solo"}
-                  on:click={() => (socialOverride = "solo")}>Sám</button
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (socialOverride = "solo"), "social")}
+                  >Sám</button
                 >
                 <button
                   type="button"
                   class:active={socialOverride === "group"}
-                  on:click={() => (socialOverride = "group")}
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (socialOverride = "group"),
+                      "social",
+                    )}
                   >S ostatními</button
                 >
               </div>
@@ -614,17 +683,23 @@
                 <button
                   type="button"
                   class:active={modeOverride === "any"}
-                  on:click={() => (modeOverride = "any")}>Podle situace</button
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (modeOverride = "any"), "mode")}
+                  >Podle situace</button
                 >
                 <button
                   type="button"
                   class:active={modeOverride === "online"}
-                  on:click={() => (modeOverride = "online")}>Z domova</button
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (modeOverride = "online"), "mode")}
+                  >Z domova</button
                 >
                 <button
                   type="button"
                   class:active={modeOverride === "local"}
-                  on:click={() => (modeOverride = "local")}>Venku</button
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (modeOverride = "local"), "mode")}
+                  >Venku</button
                 >
               </div>
             </div>
@@ -635,18 +710,25 @@
                 <button
                   type="button"
                   class:active={costOverride === "any"}
-                  on:click={() => (costOverride = "any")}>Podle situace</button
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (costOverride = "any"), "cost")}
+                  >Podle situace</button
                 >
                 <button
                   type="button"
                   class:active={costOverride === "free"}
-                  on:click={() => (costOverride = "free")}
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (costOverride = "free"), "cost")}
                   >Bez peněz (0 Kč)</button
                 >
                 <button
                   type="button"
                   class:active={costOverride === "donation"}
-                  on:click={() => (costOverride = "donation")}
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (costOverride = "donation"),
+                      "cost",
+                    )}
                   >Mohu darovat</button
                 >
               </div>
@@ -658,23 +740,31 @@
                 <button
                   type="button"
                   class:active={evidenceTier === "any"}
-                  on:click={() => (evidenceTier = "any")}>Vše (A–C)</button
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (evidenceTier = "any"),
+                      "evidence",
+                    )}>Vše (A–C)</button
                 >
                 <button
                   type="button"
                   class:active={evidenceTier === "A"}
-                  on:click={() => (evidenceTier = "A")}>A · Silné důkazy</button
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (evidenceTier = "A"), "evidence")}
+                  >A · Silné důkazy</button
                 >
                 <button
                   type="button"
                   class:active={evidenceTier === "B"}
-                  on:click={() => (evidenceTier = "B")}
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (evidenceTier = "B"), "evidence")}
                   >B · Doložený přínos</button
                 >
                 <button
                   type="button"
                   class:active={evidenceTier === "C"}
-                  on:click={() => (evidenceTier = "C")}
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (evidenceTier = "C"), "evidence")}
                   >C · Komunitní smysl</button
                 >
               </div>
@@ -789,6 +879,7 @@
             <button
               type="button"
               class="btn-done-action"
+              class:initiated={isBestStarted}
               on:click={() =>
                 recordSmallWin({
                   id: bestAction.id,
@@ -796,7 +887,7 @@
                   surface: "guided",
                 })}
             >
-              ✓ Hotovo
+              {isBestStarted ? "✓ Dokončeno" : "✓ Hotovo"}
             </button>
           </div>
 

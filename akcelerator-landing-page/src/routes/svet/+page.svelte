@@ -800,11 +800,12 @@
     storyBusy = true;
     try {
       const skyStars = activeLights
-        .filter((l) => l.zone === 'sky')
+        .slice(0, 10)
         .map((l) => ({
           x: l.x,
           y: l.y,
-          color: ELEMENT_MAP[l.element]?.softColor || '#fde68a'
+          color: ELEMENT_MAP[l.element]?.softColor || '#fde68a',
+          lightType: l.lightType || 'star'
         }));
 
       const res = await renderStoryCardPng({

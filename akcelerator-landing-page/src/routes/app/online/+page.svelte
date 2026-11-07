@@ -2,6 +2,8 @@
   import { onMount } from 'svelte';
   import {
     trackEvent,
+    trackFunnel,
+    startedActionIds,
     markActionStarted,
     openBrokenLinkReport
   } from '../../../lib/analytics.js';
@@ -175,6 +177,7 @@
           activeFilter = f.id;
           visibleLimit = 3;
           trackEvent('aa_online_filter', { filter: f.id });
+          trackFunnel('intent_selected', { surface: 'online', filter: f.id });
         }}
       >
         {f.label}
@@ -273,6 +276,7 @@
             <button
               type="button"
               class="cta secondary"
+              class:initiated={Array.isArray($startedActionIds) && $startedActionIds.includes(o.id)}
               on:click={() =>
                 recordSmallWin({
                   id: o.id,
@@ -280,7 +284,7 @@
                   surface: 'online'
                 })}
             >
-              ✓ Hotovo
+              {Array.isArray($startedActionIds) && $startedActionIds.includes(o.id) ? '✓ Dokončeno' : '✓ Hotovo'}
             </button>
             <button
               type="button"

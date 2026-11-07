@@ -231,9 +231,27 @@ test('standardized GoodAction cards, Evidence A/B/C badges, verified sources, an
   await feedbackDialog.locator('button[aria-label="Zavřít"]').click();
   await expect(feedbackDialog).toBeHidden();
 
+  // Dual brand identity in both navbar and footer
+  await expect(page.locator('.top-nav .brand')).toContainText('Pomáháme lidem pomáhat');
+  await expect(page.locator('.site-footer .footer-brand')).toContainText('Pomáháme lidem pomáhat');
+
   // Verified statistics with primary source in .quiet-hope
   await expect(page.locator('.quiet-hope')).toContainText('17 400 tun jídla ročně');
   await expect(page.locator('.quiet-hope')).toContainText('Primární zdroj');
+
+  // Action initiation tracking: clicking primary CTA highlights completion button and updates 6-stage funnel
+  const doneBtn = page.locator('.instant-card .done-btn');
+  await expect(doneBtn).not.toHaveClass(/initiated/);
+  await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
+  await expect(doneBtn).toHaveClass(/initiated/);
+  await expect(doneBtn).toContainText('Dokončeno');
+  await doneBtn.click();
+  const funnelCounts = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem('aa_funnel_counts_v1') || '{}')
+  );
+  expect(funnelCounts.action_started).toBeGreaterThanOrEqual(1);
+  expect(funnelCounts.action_completed_self_reported).toBeGreaterThanOrEqual(1);
+  expect(funnelCounts.real_world_conversion).toBeGreaterThanOrEqual(1);
 });
 
 test('/near never renders 0 míst v okolí, preserves verified orgs with website filter, and handles empty search edge case', async ({ page }) => {
@@ -271,11 +289,13 @@ test('/app/guided adaptive parameters, Evidence Tier A filter, and methodology t
   await page.locator('.topic-pills .topic-pill:has-text("Zvířata")').click();
   await expect(adaptiveBlock).toContainText('3. Chceš zůstat úplně anonymní?');
 
-  // Open adaptive parameters drawer and filter by Evidence Tier A
+  // Open adaptive parameters drawer and filter by Evidence Tier A and C
   const paramsDrawer = page.locator('details.adaptive-params-drawer');
   await paramsDrawer.locator('summary').click();
   await paramsDrawer.locator('button:has-text("A · Silné důkazy")').click();
   await expect(page.locator('.highlight-card .rec-evidence-pill')).toContainText('Důkazy A');
+  await paramsDrawer.locator('button:has-text("C · Komunitní smysl")').click();
+  await expect(page.locator('.highlight-card .rec-evidence-pill')).toContainText('Důkazy C');
 
   // Methodology drawer has 5-row table & GiveWell / EA CZ links
   const methDrawer = page.locator('details.methodology-drawer');

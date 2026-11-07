@@ -4,6 +4,7 @@
   import {
     trackEvent,
     trackFunnel,
+    startedActionIds,
     markActionStarted,
     openBrokenLinkReport
   } from '../../lib/analytics.js';
@@ -169,6 +170,9 @@
   })();
 
   $: visiblePlaces = filteredPlaces.slice(0, visibleCount);
+  $: allOutsideRadius =
+    filteredPlaces.length > 0 &&
+    filteredPlaces.every((p) => (p.distanceKm ?? 0) > radiusKm);
 
   function setTileLayer(style) {
     if (!map || !leaflet) return;
@@ -311,14 +315,19 @@
   }
 
   function mergeCuratedAndApiPlaces(curatedList, apiList) {
-    const out = [...curatedList];
-    const seenIds = new Set(curatedList.map((c) => c.id));
-    const seenNames = new Set(curatedList.map((c) => String(c.name || '').trim().toLowerCase()));
+    const localCurated = curatedList.filter((c) => (c.distanceKm ?? 999) <= Math.max(radiusKm, 15));
+    const seedCurated =
+      localCurated.length > 0 || apiList.filter((a) => !!a.website).length >= 2
+        ? localCurated
+        : curatedList.slice(0, 3);
+    const out = [...seedCurated];
+    const seenIds = new Set(out.map((c) => c.id));
+    const seenNames = new Set(out.map((c) => String(c.name || '').trim().toLowerCase()));
 
     for (const item of apiList) {
       const normName = String(item.name || '').trim().toLowerCase();
       if (seenIds.has(item.id) || (normName && seenNames.has(normName))) continue;
-      const isNearDuplicate = curatedList.some(
+      const isNearDuplicate = out.some(
         (c) => haversineKm(c.lat, c.lon, item.lat, item.lon) < 0.15 && c.kind === item.kind
       );
       if (isNearDuplicate) continue;
@@ -431,7 +440,7 @@
     onlyWithWebsite = false;
     activePresetId = 'all';
     kinds = ['ngo', 'community', 'food', 'animals'];
-    radiusKm = Math.max(radiusKm, 20);
+    radiusKm = Math.max(radiusKm, 15);
     updateRadiusOverlay(centerLat, centerLon);
     fetchNearby(centerLat, centerLon);
   }
@@ -470,6 +479,7 @@
 
   async function pickGeocodeResult(r) {
     if (!r || typeof r.lat !== 'number' || typeof r.lon !== 'number') return;
+    query = '';
     geoResults = [];
     geoStatus = 'idle';
     geoMessage = '';
@@ -488,6 +498,7 @@
     gpsMessage = 'Čekám na povolení polohy v prohlížeči…';
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
+        query = '';
         gpsStatus = 'ok';
         gpsMessage = 'Poloha nalezena! Zobrazuji nejbližší místa kolem tebe.';
         moveMapCenter(pos.coords.latitude, pos.coords.longitude, 14);
@@ -592,6 +603,7 @@
 
         map.on('click', async (e) => {
           const { lat, lng } = e.latlng;
+          query = '';
           moveMapCenter(lat, lng, map.getZoom());
           await fetchNearby(lat, lng);
         });
@@ -722,7 +734,7 @@
     </div>
   </div>
 
-  {#if isExpandedToNearest}
+  {#if isExpandedToNearest || allOutsideRadius}
     <div class="smart-nearest-banner" role="status">
       📍 Přímo v okruhu {radiusKm} km nebyla evidovaná pobočka — ukazujeme nejbližší ověřená místa v tvém regionu.
     </div>
@@ -859,6 +871,7 @@
               <button
                 type="button"
                 class="pc-btn done"
+                class:initiated={Array.isArray($startedActionIds) && $startedActionIds.includes(p.id)}
                 on:click={() =>
                   recordSmallWin({
                     id: p.id,
@@ -866,7 +879,7 @@
                     surface: 'near'
                   })}
               >
-                ✓ Hotovo
+                {Array.isArray($startedActionIds) && $startedActionIds.includes(p.id) ? '✓ Dokončeno' : '✓ Hotovo'}
               </button>
             </div>
 
@@ -932,7 +945,7 @@
             </p>
             <div class="near-empty-actions">
               <button type="button" class="pc-btn primary" on:click={resetAndExpandSearch}>
-                Rozšířit okruh na 20 km a zrušit filtry
+                Rozšířit okruh na 15 km a zrušit filtry
               </button>
               <a href="/app/online" class="pc-btn ghost">
                 Zkusit 2minutový skutek online →
