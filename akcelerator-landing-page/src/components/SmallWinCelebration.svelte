@@ -82,6 +82,9 @@
       {#if !restingMode}
         <div class="win-overline">{activeElementMeta.icon} Klidné poděkování</div>
         <h3 id="win-title" class="win-title">{$activeCelebration.title}</h3>
+        <p class="win-rest-reassurance">
+          Dnes jsi udělal něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.
+        </p>
         <p class="win-message">
           {$activeCelebration.concreteImpact || $activeCelebration.message}
         </p>
@@ -104,9 +107,9 @@
         </div>
       {:else}
         <div class="rest-icon" aria-hidden="true">🌿</div>
-        <h3 id="win-title" class="win-title">Děkujeme, pro dnešek je hotovo</h3>
+        <h3 id="win-title" class="win-title">Dnes jsi udělal něco dobrého</h3>
         <p class="win-message">
-          Udělal/a jsi konkrétní dobrou věc pro druhé. Klidně teď odlož telefon a dopřej si chvíli ticha.
+          Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout, odložit telefon a dopřát si ticho.
         </p>
         <div class="win-actions">
           <a href="/svet#dech" class="btn-world" on:click={handleGoToWorld}>
@@ -182,9 +185,17 @@
     line-height: 1.25;
   }
 
+  .win-rest-reassurance {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1.5;
+    color: #065f46;
+  }
+
   .win-message {
     margin: 0 0 1.4rem 0;
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     line-height: 1.6;
     color: #3d5247;
   }

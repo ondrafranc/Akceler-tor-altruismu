@@ -29,29 +29,37 @@
   $: dawnLayerOpacity = atmosphereMode === 'dawn' ? 0.88 : 0.14;
 
   // 8 living deed lights seeded across the sky & lake — each linked to a real Czech micro-action
+  // 3 semantic light types: lantern (Osobní skutek), star (Inspirace), wave (Pomoc druhému)
   const INSPIRING_DEED_SEEDS = [
-    { actionId: 'zvirata_utulek_online', element: 'animals', x: 0.23, y: 0.69, zone: 'water' },
-    { actionId: 'missing_maps', element: 'care', x: 0.2, y: 0.21, zone: 'sky' },
-    { actionId: 'knihobudka_kniha', element: 'community', x: 0.46, y: 0.74, zone: 'water' },
-    { actionId: 'birdlife_ptaci_pasti', element: 'nature', x: 0.41, y: 0.15, zone: 'sky' },
-    { actionId: 'estudanky_pramen', element: 'nature', x: 0.66, y: 0.66, zone: 'water' },
-    { actionId: 'remobil_telefon', element: 'nature', x: 0.62, y: 0.23, zone: 'sky' },
-    { actionId: 'letters_seniors', element: 'community', x: 0.79, y: 0.18, zone: 'sky' },
-    { actionId: 'trash_hero_uklid', element: 'nature', x: 0.81, y: 0.72, zone: 'water' }
+    { actionId: 'zvirata_utulek_online', element: 'animals', x: 0.23, y: 0.69, zone: 'water', lightType: 'lantern' },
+    { actionId: 'missing_maps', element: 'care', x: 0.2, y: 0.21, zone: 'sky', lightType: 'star' },
+    { actionId: 'knihobudka_kniha', element: 'community', x: 0.46, y: 0.74, zone: 'water', lightType: 'wave' },
+    { actionId: 'birdlife_ptaci_pasti', element: 'nature', x: 0.41, y: 0.15, zone: 'sky', lightType: 'star' },
+    { actionId: 'estudanky_pramen', element: 'nature', x: 0.66, y: 0.66, zone: 'water', lightType: 'lantern' },
+    { actionId: 'remobil_telefon', element: 'nature', x: 0.62, y: 0.23, zone: 'sky', lightType: 'star' },
+    { actionId: 'letters_seniors', element: 'community', x: 0.79, y: 0.18, zone: 'sky', lightType: 'star' },
+    { actionId: 'trash_hero_uklid', element: 'nature', x: 0.81, y: 0.72, zone: 'water', lightType: 'wave' }
   ];
 
   const QUICK_OFFLINE_DEEDS = [
-    { label: '🥣 Miska útulku', title: 'Naplněná miska pro zvířata v útulku', element: 'animals' },
-    { label: '🤝 Pomoc v okolí', title: 'Drobná pomoc člověku v mém okolí', element: 'community' },
-    { label: '🌿 Sebraný odpadek', title: 'Sebraný odpadek cestou v přírodě či ulici', element: 'nature' },
-    { label: '💌 Zpráva blízkému', title: 'Zpráva nebo zavolání člověku, na kterém záleží', element: 'care' }
+    { label: '🥣 Miska útulku', title: 'Naplněná miska pro zvířata v útulku', element: 'animals', lightType: 'lantern' },
+    { label: '🤝 Pomoc druhému', title: 'Drobná pomoc člověku v mém okolí', element: 'community', lightType: 'wave' },
+    { label: '🌿 Sebraný odpadek', title: 'Sebraný odpadek cestou v přírodě či ulici', element: 'nature', lightType: 'lantern' },
+    { label: '✦ Tichá inspirace', title: 'Zpráva nebo vlídná myšlenka pro druhého', element: 'care', lightType: 'star' }
   ];
 
-  /** @type {'water' | 'sky'} */
+  /** @type {'water' | 'sky' | 'wave'} */
   let ritualMode = 'water';
   let ritualInput = '';
   let gentleToast = '';
   let toastTimer = null;
+
+  function getLightSemanticLabel(light) {
+    const lt = light?.lightType || (light?.zone === 'sky' ? 'star' : 'lantern');
+    if (lt === 'wave') return '〰️ Vlna · Pomoc druhému';
+    if (lt === 'star') return '✦ Hvězda · Inspirace';
+    return '🏮 Lucerna · Osobní skutek';
+  }
 
   function cleanTitle(str) {
     return String(str || '').replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\s]+/u, '').trim() || str;
@@ -334,6 +342,7 @@
         x: seed.x,
         y: seed.y,
         zone: /** @type {'sky' | 'water'} */ (seed.zone),
+        lightType: seed.lightType || (seed.zone === 'sky' ? 'star' : 'lantern'),
         isMine: false
       };
     })
@@ -345,6 +354,7 @@
       .map((s, idx) => {
         const pos = s.plantedPos || deterministicPos(idx, s.element);
         const linked = ACTION_BY_ID[s.id] || null;
+        const zone = /** @type {'sky' | 'water'} */ (pos.zone || (pos.y < 0.53 ? 'sky' : 'water'));
         return {
           uid: s.uid,
           actionId: s.id,
@@ -358,26 +368,31 @@
           element: s.element || 'care',
           x: pos.x,
           y: pos.y,
-          zone: /** @type {'sky' | 'water'} */ (pos.zone || (pos.y < 0.53 ? 'sky' : 'water')),
+          zone,
+          lightType: s.lightType || pos.lightType || (zone === 'sky' ? 'star' : 'lantern'),
           isMine: true
         };
       }),
-    ...($sanctuaryWishes || []).map((w) => ({
-      uid: w.uid,
-      actionId: '',
-      action: null,
-      title: w.title,
-      note: '',
-      concreteImpact: 'Dobrý skutek přidaný do tvé Krajiny dobra.',
-      orgName: '',
-      minutes: 0,
-      url: '',
-      element: w.element || 'care',
-      x: w.x,
-      y: w.y,
-      zone: /** @type {'sky' | 'water'} */ (w.zone || (w.y < 0.53 ? 'sky' : 'water')),
-      isMine: true
-    }))
+    ...($sanctuaryWishes || []).map((w) => {
+      const zone = /** @type {'sky' | 'water'} */ (w.zone || (w.y < 0.53 ? 'sky' : 'water'));
+      return {
+        uid: w.uid,
+        actionId: '',
+        action: null,
+        title: w.title,
+        note: '',
+        concreteImpact: 'Dobrý skutek přidaný do tvé Krajiny dobra.',
+        orgName: '',
+        minutes: 0,
+        url: '',
+        element: w.element || 'care',
+        x: w.x,
+        y: w.y,
+        zone,
+        lightType: w.lightType || (w.kind === 'wave' ? 'wave' : zone === 'sky' ? 'star' : 'lantern'),
+        isMine: true
+      };
+    })
   ];
 
   $: activeLights = [...seededDeedLights, ...userLights];
@@ -575,23 +590,26 @@
 
   function markDeedLightDone(light) {
     if (!light) return;
+    const semanticType = light.lightType || (light.zone === 'sky' ? 'star' : 'lantern');
     if (light.action) {
       const entry = recordSmallWin({
         id: light.action.id,
         title: light.action.title,
         surface: 'svet_landscape',
         element: light.element,
+        lightType: semanticType,
         concreteImpact: light.concreteImpact,
         silent: true
       });
       if (entry) {
-        plantStepLight(entry.uid, { x: light.x, y: light.y });
+        plantStepLight(entry.uid, { x: light.x, y: light.y, lightType: semanticType });
       }
     } else {
       addSanctuaryWish({
         x: light.x,
         y: light.y,
-        kind: 'deed',
+        kind: semanticType === 'wave' ? 'wave' : 'deed',
+        lightType: semanticType,
         title: light.title,
         element: light.element || 'care'
       });
@@ -599,17 +617,26 @@
     triggerLightBloom(light.x, light.y, '#fde68a', light.zone === 'water', true);
     playChime(light.zone === 'water' ? 'water' : 'sky');
     selectedLight = { ...light, isMine: true };
-    showGentleToast(`Skvělé! Skutek „${cleanTitle(light.title)}“ teď v krajině září jako tvůj.`);
+    showGentleToast(
+      `Dnes jsi udělal něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.`
+    );
   }
 
   function addQuickOfflineDeed(deed) {
-    const isWater = ritualMode === 'water';
+    const isWater = ritualMode === 'water' || ritualMode === 'wave' || deed.lightType === 'wave';
+    const semanticType =
+      ritualMode === 'wave'
+        ? 'wave'
+        : ritualMode === 'sky'
+        ? 'star'
+        : deed.lightType || 'lantern';
     const nx = 0.16 + Math.random() * 0.68;
     const ny = isWater ? 0.61 + Math.random() * 0.19 : 0.14 + Math.random() * 0.26;
     const saved = addSanctuaryWish({
       x: nx,
       y: ny,
-      kind: 'deed',
+      kind: semanticType === 'wave' ? 'wave' : 'deed',
+      lightType: semanticType,
       title: deed.title,
       element: deed.element
     });
@@ -617,9 +644,7 @@
     triggerLightBloom(saved.x, saved.y, ELEMENT_MAP[deed.element]?.softColor || '#fde68a', isWater, true);
     playChime(isWater ? 'water' : 'sky');
     showGentleToast(
-      isWater
-        ? `Lucerna za skutek „${deed.title}“ vyplula na hladinu.`
-        : `Hvězda za skutek „${deed.title}“ vystoupala na oblohu.`
+      `Dnes jsi udělal něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.`
     );
   }
 
@@ -716,24 +741,25 @@
     if (nextSeedToPlant) {
       const elMeta = ELEMENT_MAP[nextSeedToPlant.element] || SANCTUARY_ELEMENTS[0];
       const isWater = ny >= 0.53;
-      plantStepLight(nextSeedToPlant.uid, { x: nx, y: ny });
+      const semanticType = !isWater ? 'star' : ritualMode === 'wave' ? 'wave' : 'lantern';
+      plantStepLight(nextSeedToPlant.uid, { x: nx, y: ny, lightType: semanticType });
       triggerLightBloom(nx, ny, elMeta.softColor, isWater, true);
       playChime(isWater ? 'water' : 'sky');
       showGentleToast(
-        isWater
-          ? 'Lucerna za tvůj dobrý skutek vyplula na hladinu.'
-          : 'Hvězda za tvůj dobrý skutek vystoupala na oblohu.'
+        'Dnes jsi udělal něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.'
       );
       return;
     }
 
     const text = ritualInput.trim();
     const clickedWater = ny >= 0.53;
+    const semanticType = !clickedWater ? 'star' : ritualMode === 'wave' ? 'wave' : 'lantern';
     const yClamped = clickedWater ? Math.max(0.58, ny) : Math.min(0.46, ny);
     const saved = addSanctuaryWish({
       x: nx,
       y: yClamped,
-      kind: 'deed',
+      kind: semanticType === 'wave' ? 'wave' : 'deed',
+      lightType: semanticType,
       title: text || 'Drobný dobrý skutek ze dneška',
       element: clickedWater ? 'community' : 'care'
     });
@@ -742,32 +768,30 @@
     triggerLightBloom(saved.x, saved.y, clickedWater ? '#fed7aa' : '#fde68a', clickedWater, true);
     playChime(clickedWater ? 'water' : 'sky');
     showGentleToast(
-      clickedWater
-        ? 'Nová lucerna za dobrý skutek pluje po hladině.'
-        : 'Nová hvězda za dobrý skutek září nad údolím.'
+      'Dnes jsi udělal něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.'
     );
   }
 
   function submitRitualBar() {
-    const isWater = ritualMode === 'water';
+    const isWater = ritualMode === 'water' || ritualMode === 'wave';
+    const semanticType = ritualMode === 'wave' ? 'wave' : ritualMode === 'sky' ? 'star' : 'lantern';
     const nx = 0.18 + Math.random() * 0.64;
     const ny = isWater ? 0.62 + Math.random() * 0.18 : 0.15 + Math.random() * 0.25;
     const text = ritualInput.trim();
     const saved = addSanctuaryWish({
       x: nx,
       y: ny,
-      kind: 'deed',
+      kind: semanticType === 'wave' ? 'wave' : 'deed',
+      lightType: semanticType,
       title: text || 'Drobný dobrý skutek ze dneška',
       element: isWater ? 'community' : 'care'
     });
     ritualInput = '';
     selectedLight = null;
-    triggerLightBloom(saved.x, saved.y, isWater ? '#fed7aa' : '#fde68a', isWater, true);
+    triggerLightBloom(saved.x, saved.y, semanticType === 'wave' ? '#6ee7b7' : isWater ? '#fed7aa' : '#fde68a', isWater, true);
     playChime(isWater ? 'water' : 'sky');
     showGentleToast(
-      isWater
-        ? 'Lucerna za tvůj dobrý skutek vyplula na hladinu.'
-        : 'Hvězda za tvůj dobrý skutek vystoupala na oblohu.'
+      'Dnes jsi udělal něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.'
     );
   }
 
@@ -1338,78 +1362,117 @@
             }
             ctx.restore();
 
-            // Gentle water ring around lantern base
-            ctx.strokeStyle =
-              wl.isMine || isSelected || isHovered
-                ? 'rgba(253, 230, 138, 0.72)'
-                : 'rgba(253, 230, 138, 0.32)';
-            ctx.lineWidth = isSelected || isHovered ? 1.6 : 1.05;
-            ctx.beginPath();
-            ctx.ellipse(
-              bobX,
-              bobY + 4.5 * totalScale,
-              (wl.isMine ? 16 : 13) * totalScale + Math.sin(t * 1.9 + i) * 1.5,
-              3.8 * totalScale,
-              0,
-              0,
-              Math.PI * 2
-            );
-            ctx.stroke();
+            if (wl.lightType === 'wave') {
+              // Semantic Wave ("Vlna · Pomoc druhému"): 3 expanding concentric bioluminescent pond rings + droplet core
+              ctx.save();
+              ctx.translate(bobX, bobY);
+              ctx.scale(totalScale, totalScale);
 
-            // Crafted glowing paper lantern silhouette (Tōrō / lotus lantern)
-            ctx.save();
-            ctx.translate(bobX, bobY);
-            ctx.rotate(Math.sin(t * 1.1 + i) * 0.04 + rippleTilt);
-            ctx.scale(totalScale, totalScale);
+              for (let ringIdx = 0; ringIdx < 3; ringIdx++) {
+                const phase = ((t * 0.55 + i * 0.37 + ringIdx * 0.33) % 1);
+                const rx = 6 + phase * (wl.isMine ? 24 : 20);
+                const ry = rx * 0.38;
+                const ringAlpha = (1 - phase) * (wl.isMine || isSelected || isHovered ? 0.78 : 0.48);
+                ctx.strokeStyle =
+                  ringIdx % 2 === 0
+                    ? `rgba(110, 231, 183, ${ringAlpha.toFixed(3)})`
+                    : `rgba(253, 230, 138, ${ringAlpha.toFixed(3)})`;
+                ctx.lineWidth = isSelected || isHovered ? 1.85 : 1.3;
+                ctx.beginPath();
+                ctx.ellipse(0, 2, rx, ry, 0, 0, Math.PI * 2);
+                ctx.stroke();
+              }
 
-            const lw = wl.isMine ? 13 : 11;
-            const lh = wl.isMine ? 16 : 13.5;
+              // Luminous water droplet core
+              const dropAura = ctx.createRadialGradient(0, 0, 0.5, 0, 0, 10);
+              dropAura.addColorStop(0, 'rgba(209, 250, 229, 0.92)');
+              dropAura.addColorStop(0.5, 'rgba(52, 211, 153, 0.42)');
+              dropAura.addColorStop(1, 'rgba(16, 185, 129, 0)');
+              ctx.fillStyle = dropAura;
+              ctx.beginPath();
+              ctx.arc(0, 0, 10, 0, Math.PI * 2);
+              ctx.fill();
 
-            // Warm outer candle aura around the paper body
-            const aura = ctx.createRadialGradient(0, -lh * 0.4, 1, 0, -lh * 0.4, lw * 1.6);
-            aura.addColorStop(0, 'rgba(254, 243, 199, 0.55)');
-            aura.addColorStop(1, 'rgba(251, 146, 60, 0)');
-            ctx.fillStyle = aura;
-            ctx.beginPath();
-            ctx.arc(0, -lh * 0.4, lw * 1.6, 0, Math.PI * 2);
-            ctx.fill();
+              ctx.fillStyle = '#ffffff';
+              ctx.beginPath();
+              ctx.arc(0, 0, 2.6 * flicker, 0, Math.PI * 2);
+              ctx.fill();
 
-            // Floating wooden lotus base
-            ctx.fillStyle = 'rgba(62, 35, 16, 0.9)';
-            ctx.beginPath();
-            ctx.ellipse(0, 3.2, lw * 0.86, 2.4, 0, 0, Math.PI * 2);
-            ctx.fill();
+              ctx.restore();
+            } else {
+              // Gentle water ring around lantern base
+              ctx.strokeStyle =
+                wl.isMine || isSelected || isHovered
+                  ? 'rgba(253, 230, 138, 0.72)'
+                  : 'rgba(253, 230, 138, 0.32)';
+              ctx.lineWidth = isSelected || isHovered ? 1.6 : 1.05;
+              ctx.beginPath();
+              ctx.ellipse(
+                bobX,
+                bobY + 4.5 * totalScale,
+                (wl.isMine ? 16 : 13) * totalScale + Math.sin(t * 1.9 + i) * 1.5,
+                3.8 * totalScale,
+                0,
+                0,
+                Math.PI * 2
+              );
+              ctx.stroke();
 
-            // Glowing warm paper lantern body
-            const bodyGrad = ctx.createLinearGradient(0, -lh + 3, 0, 3.2);
-            bodyGrad.addColorStop(0, '#fde68a');
-            bodyGrad.addColorStop(0.5, '#fffbeb');
-            bodyGrad.addColorStop(1, '#fb923c');
-            ctx.fillStyle = bodyGrad;
-            ctx.beginPath();
-            ctx.roundRect(-lw * 0.54, -lh + 3, lw * 1.08, lh, 4);
-            ctx.fill();
+              // Crafted glowing paper lantern silhouette (Tōrō / lotus lantern)
+              ctx.save();
+              ctx.translate(bobX, bobY);
+              ctx.rotate(Math.sin(t * 1.1 + i) * 0.04 + rippleTilt);
+              ctx.scale(totalScale, totalScale);
 
-            // Delicate top wooden cap & subtle vertical ribs
-            ctx.strokeStyle = 'rgba(120, 66, 24, 0.42)';
-            ctx.lineWidth = 0.85;
-            ctx.beginPath();
-            ctx.moveTo(-lw * 0.22, -lh + 3.5);
-            ctx.lineTo(-lw * 0.22, 2.8);
-            ctx.moveTo(lw * 0.22, -lh + 3.5);
-            ctx.lineTo(lw * 0.22, 2.8);
-            ctx.stroke();
+              const lw = wl.isMine ? 13 : 11;
+              const lh = wl.isMine ? 16 : 13.5;
 
-            ctx.fillStyle = 'rgba(78, 44, 18, 0.82)';
-            ctx.fillRect(-lw * 0.48, -lh + 2.4, lw * 0.96, 1.6);
+              // Warm outer candle aura around the paper body
+              const aura = ctx.createRadialGradient(0, -lh * 0.4, 1, 0, -lh * 0.4, lw * 1.6);
+              aura.addColorStop(0, 'rgba(254, 243, 199, 0.55)');
+              aura.addColorStop(1, 'rgba(251, 146, 60, 0)');
+              ctx.fillStyle = aura;
+              ctx.beginPath();
+              ctx.arc(0, -lh * 0.4, lw * 1.6, 0, Math.PI * 2);
+              ctx.fill();
 
-            // Bright inner candle flame core
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.ellipse(0, -2.2 * flicker, 2.3, 3.9 * flicker, 0, 0, Math.PI * 2);
-            ctx.fill();
+              // Floating wooden lotus base
+              ctx.fillStyle = 'rgba(62, 35, 16, 0.9)';
+              ctx.beginPath();
+              ctx.ellipse(0, 3.2, lw * 0.86, 2.4, 0, 0, Math.PI * 2);
+              ctx.fill();
 
-            ctx.restore();
+              // Glowing warm paper lantern body
+              const bodyGrad = ctx.createLinearGradient(0, -lh + 3, 0, 3.2);
+              bodyGrad.addColorStop(0, '#fde68a');
+              bodyGrad.addColorStop(0.5, '#fffbeb');
+              bodyGrad.addColorStop(1, '#fb923c');
+              ctx.fillStyle = bodyGrad;
+              ctx.beginPath();
+              ctx.roundRect(-lw * 0.54, -lh + 3, lw * 1.08, lh, 4);
+              ctx.fill();
+
+              // Delicate top wooden cap & subtle vertical ribs
+              ctx.strokeStyle = 'rgba(120, 66, 24, 0.42)';
+              ctx.lineWidth = 0.85;
+              ctx.beginPath();
+              ctx.moveTo(-lw * 0.22, -lh + 3.5);
+              ctx.lineTo(-lw * 0.22, 2.8);
+              ctx.moveTo(lw * 0.22, -lh + 3.5);
+              ctx.lineTo(lw * 0.22, 2.8);
+              ctx.stroke();
+
+              ctx.fillStyle = 'rgba(78, 44, 18, 0.82)';
+              ctx.fillRect(-lw * 0.48, -lh + 2.4, lw * 0.96, 1.6);
+
+              // Bright inner candle flame core
+              ctx.fillStyle = '#ffffff';
+              ctx.beginPath();
+              ctx.ellipse(0, -2.2 * flicker, 2.3, 3.9 * flicker, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              ctx.restore();
+            }
           }
 
           // 11. Expanding Luminous Shockwaves
@@ -1681,7 +1744,7 @@
         >
           <div class="mw-head">
             <span class="mw-overline">
-              {selMeta.icon} {selMeta.title}
+              {selMeta.icon} {selMeta.title} · {getLightSemanticLabel(selectedLight)}
               {#if selectedLight.isMine} · ✦ Tvůj skutek{/if}
             </span>
             <button type="button" class="mw-close" on:click={() => (selectedLight = null)} aria-label="Zavřít">✕</button>
@@ -1741,7 +1804,7 @@
             class:active={ritualMode === 'water'}
             on:click={() => (ritualMode = 'water')}
           >
-            🏮 Hladina
+            🏮 Lucerna · Osobní skutek
           </button>
           <button
             type="button"
@@ -1749,7 +1812,15 @@
             class:active={ritualMode === 'sky'}
             on:click={() => (ritualMode = 'sky')}
           >
-            ✦ Obloha
+            ✦ Hvězda · Inspirace
+          </button>
+          <button
+            type="button"
+            class="ritual-pill"
+            class:active={ritualMode === 'wave'}
+            on:click={() => (ritualMode = 'wave')}
+          >
+            〰️ Vlna · Pomoc druhému
           </button>
         </div>
 
@@ -1762,7 +1833,11 @@
         />
 
         <button type="submit" class="ritual-send-btn">
-          {ritualMode === 'water' ? '🏮 Rozsvítit lucernu' : '✦ Rozsvítit hvězdu'}
+          {ritualMode === 'wave'
+            ? '〰️ Vyslat vlnu'
+            : ritualMode === 'water'
+            ? '🏮 Rozsvítit lucernu'
+            : '✦ Rozsvítit hvězdu'}
         </button>
       </div>
 
@@ -1937,6 +2012,17 @@
       <button type="button" class="qp-next" on:click={() => (proofIndex = (proofIndex + 1) % HOPE_PROOFS.length)}>
         ↻ Další dobrá zpráva
       </button>
+      {#if currentProof.sourceUrl}
+        <span>·</span>
+        <a
+          href={currentProof.sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="qp-link"
+        >
+          Ověřeno {currentProof.verifiedAt || '2026'} · Zdroj: {currentProof.sourceLabel} ↗
+        </a>
+      {/if}
       <span>·</span>
       <a href="/app/guided" class="qp-link">Vybrat si dnešní skutek →</a>
     </div>

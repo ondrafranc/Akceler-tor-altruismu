@@ -11,7 +11,7 @@
   const siteMeta = {
     title: 'Akcelerátor altruismu — Pomáháme lidem pomáhat',
     description:
-      'Praktický český rozcestník k dobrým skutkům v okolí i z domova. Najdi jeden lehký, ověřený krok pro lidi, zvířata nebo přírodu za pár minut.',
+      'Praktický český akcelerátor dobrých skutků v okolí i z domova. Pomáháme lidem pomáhat: vyber si jeden lehký, ověřený krok pro lidi, zvířata nebo přírodu za pár minut.',
     keywords: 'altruismus, pomoc, dobrovolnictví, mapa pomoci, neziskovky v okolí, dobré skutky'
   };
 
@@ -117,15 +117,15 @@
       <div class="footer-col">
         <div class="footer-brand">
           <span class="footer-dot"></span>
-          Akcelerátor altruismu
+          Akcelerátor altruismu · <span class="footer-subbrand">Pomáháme lidem pomáhat</span>
         </div>
         <p class="footer-desc">
-          Místo, které lidem usnadňuje pomáhat — druhým, zvířatům i přírodě kolem nás. Vyber si drobný, ověřený krok podle toho, kolik máš zrovna dnes času a sil.
+          Místo, které lidem usnadňuje přejít od dobrého úmyslu ke skutečné pomoci — druhým, zvířatům i přírodě kolem nás. Vyber si drobný, ověřený krok podle toho, kolik máš zrovna dnes času a sil.
         </p>
         <div class="footer-trust">
           <span>Zdarma a bez účtu</span>
           <span>•</span>
-          <span>Ověřené české organizace</span>
+          <span>Ověřené zdroje a transparentní dopad (A/B/C)</span>
           <span>•</span>
           <span>V okolí i z domova</span>
         </div>

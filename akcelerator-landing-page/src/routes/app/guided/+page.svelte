@@ -1,93 +1,122 @@
 <script>
-  import { onMount } from 'svelte';
-  import { trackEvent } from '../../../lib/analytics.js';
+  import { onMount } from "svelte";
+  import {
+    trackEvent,
+    trackFunnel,
+    markActionStarted,
+    openBrokenLinkReport,
+  } from "../../../lib/analytics.js";
   import {
     VALUES,
     CZECH_CITIES,
     CURATED_FALLBACK_PLACES,
+    EVIDENCE_TIERS,
+    EVIDENCE_METHODOLOGY,
     recommendActions,
-    buildFirstContactTemplate
-  } from '../../../lib/data/czech-actions.js';
-  import { recordSmallWin, completedSteps } from '../../../lib/progress.js';
+    buildFirstContactTemplate,
+  } from "../../../lib/data/czech-actions.js";
+  import { recordSmallWin, completedSteps } from "../../../lib/progress.js";
 
   const SITUATIONS = [
     {
-      id: 'couch',
-      emoji: '🛋️',
-      title: '2 minuty z domova',
-      sub: 'Rychlý skutek z mobilu',
-      timeBucket: '5',
-      mode: 'online',
-      social: 'solo',
-      cost: 'free'
+      id: "couch",
+      emoji: "🛋️",
+      title: "2 minuty z domova",
+      sub: "Rychlý skutek z mobilu",
+      timeBucket: "5",
+      mode: "online",
+      social: "solo",
+      cost: "free",
     },
     {
-      id: 'focus',
-      emoji: '💻',
-      title: '15 minut u počítače',
-      sub: 'Mapování nebo věda z domova',
-      timeBucket: '15',
-      mode: 'online',
-      social: 'solo',
-      cost: 'free'
+      id: "focus",
+      emoji: "💻",
+      title: "15 minut u počítače",
+      sub: "Mapování nebo věda z domova",
+      timeBucket: "15",
+      mode: "online",
+      social: "solo",
+      cost: "free",
     },
     {
-      id: 'walk',
-      emoji: '🌿',
-      title: 'Při procházce venku',
-      sub: 'Užitečná věc cestou v okolí',
-      timeBucket: '15',
-      mode: 'local',
-      social: 'solo',
-      cost: 'free'
+      id: "walk",
+      emoji: "🌿",
+      title: "Při procházce venku",
+      sub: "Užitečná věc cestou v okolí",
+      timeBucket: "15",
+      mode: "local",
+      social: "solo",
+      cost: "free",
     },
     {
-      id: 'people',
-      emoji: '🤝',
-      title: 'Mezi lidmi v partě',
-      sub: 'Společná akce ve městě či přírodě',
-      timeBucket: '45',
-      mode: 'local',
-      social: 'group',
-      cost: 'free'
+      id: "people",
+      emoji: "🤝",
+      title: "Mezi lidmi v partě",
+      sub: "Společná akce ve městě či přírodě",
+      timeBucket: "45",
+      mode: "local",
+      social: "group",
+      cost: "free",
     },
     {
-      id: 'donate',
-      emoji: '💚',
-      title: 'Poslat drobný dar',
-      sub: 'Od 50 Kč přímo na pomoc',
-      timeBucket: '5',
-      mode: 'online',
-      social: 'solo',
-      cost: 'donation'
-    }
+      id: "donate",
+      emoji: "💚",
+      title: "Poslat drobný dar",
+      sub: "Od 50 Kč přímo na pomoc",
+      timeBucket: "5",
+      mode: "online",
+      social: "solo",
+      cost: "donation",
+    },
   ];
 
-  let activeSituationId = 'couch';
+  let activeSituationId = "couch";
   /** @type {string[]} */
   let selectedTopics = [];
-  let cityId = 'praha';
+  let cityId = "praha";
   let rotationSeed = 0;
-  let lastShownActionId = '';
-  let excludePrevId = '';
+  let lastShownActionId = "";
+  let excludePrevId = "";
   let openTemplateId = null;
   let copiedTemplateId = null;
   let planFlash = false;
   let localDrawerOpen = false;
 
-  $: activeSituation = SITUATIONS.find((s) => s.id === activeSituationId) || SITUATIONS[0];
-  $: localDrawerOpen = activeSituationId === 'walk' || activeSituationId === 'people';
+  // Adaptivní parametry průvodce (sekce 4.2 + 5.2)
+  let commitment = "any"; // 'any' | 'one_off' | 'long_term'
+  let contactLevel = "any"; // 'any' | 'anonymous' | 'contact_ok'
+  let recipientMacro = "any"; // 'any' | 'people' | 'animals' | 'nature'
+  let socialOverride = "any"; // 'any' | 'solo' | 'group'
+  let modeOverride = "any"; // 'any' | 'online' | 'local'
+  let costOverride = "any"; // 'any' | 'free' | 'donation'
+  let evidenceTier = "any"; // 'any' | 'A' | 'B' | 'C'
+
+  $: activeSituation =
+    SITUATIONS.find((s) => s.id === activeSituationId) || SITUATIONS[0];
+  $: localDrawerOpen =
+    activeSituationId === "walk" || activeSituationId === "people";
   $: completedIds = ($completedSteps || []).map((s) => s.id);
+
+  $: effectiveCost =
+    costOverride !== "any" ? costOverride : activeSituation.cost;
+  $: effectiveMode =
+    modeOverride !== "any" ? modeOverride : activeSituation.mode;
+  $: effectiveSocial =
+    socialOverride !== "any" ? socialOverride : activeSituation.social;
 
   $: recommendations = recommendActions({
     values: selectedTopics,
     timeBucket: activeSituation.timeBucket,
-    cost: activeSituation.cost,
-    mode: activeSituation.mode,
-    social: activeSituation.social,
+    cost: effectiveCost,
+    mode: effectiveMode,
+    social: effectiveSocial,
+    commitment,
+    contactLevel,
+    recipientMacro,
+    evidenceTier,
     completedIds,
     excludeIds: excludePrevId ? [excludePrevId] : [],
-    seed: `${activeSituationId}:${selectedTopics.join(',')}:${rotationSeed}`
+    seed: `${activeSituationId}:${selectedTopics.join(",")}:${commitment}:${contactLevel}:${recipientMacro}:${evidenceTier}:${rotationSeed}`,
   });
 
   $: bestAction = recommendations[0] || null;
@@ -106,7 +135,7 @@
         for (const mk of found.mapKinds) s.add(mk);
       }
     }
-    return s.size ? Array.from(s) : ['animals', 'food', 'community', 'ngo'];
+    return s.size ? Array.from(s) : ["animals", "food", "community", "ngo"];
   })();
 
   function haversineKm(lat1, lon1, lat2, lon2) {
@@ -115,15 +144,20 @@
     const dLon = ((lon2 - lon1) * Math.PI) / 180;
     const a =
       Math.sin(dLat / 2) ** 2 +
-      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) ** 2;
     return 2 * R * Math.asin(Math.sqrt(a));
   }
 
   $: localMatches = (() => {
     const withDist = CURATED_FALLBACK_PLACES.map((p) => ({
       ...p,
-      distKm: Math.round(haversineKm(activeCity.lat, activeCity.lon, p.lat, p.lon) * 10) / 10,
-      kindMatch: targetMapKinds.includes(p.kind) ? 1 : 0
+      distKm:
+        Math.round(
+          haversineKm(activeCity.lat, activeCity.lon, p.lat, p.lon) * 10,
+        ) / 10,
+      kindMatch: targetMapKinds.includes(p.kind) ? 1 : 0,
     }));
 
     const nearby = withDist.filter((p) => p.distKm <= 32);
@@ -137,16 +171,23 @@
       .slice(0, 3);
   })();
 
-  $: nearUrl = `/near?lat=${activeCity.lat}&lon=${activeCity.lon}&r=10&kinds=${encodeURIComponent(targetMapKinds.join(','))}`;
+  $: nearUrl = `/near?lat=${activeCity.lat}&lon=${activeCity.lon}&r=10&kinds=${encodeURIComponent(targetMapKinds.join(","))}`;
 
   function cleanTitle(str) {
-    return String(str || '').replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\s]+/u, '').trim() || str;
+    return (
+      String(str || "")
+        .replace(
+          /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\s]+/u,
+          "",
+        )
+        .trim() || str
+    );
   }
 
   function cleanMeta(str) {
-    return String(str || '')
-      .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F]/gu, '')
-      .replace(/\s{2,}/g, ' ')
+    return String(str || "")
+      .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F]/gu, "")
+      .replace(/\s{2,}/g, " ")
       .trim();
   }
 
@@ -160,12 +201,12 @@
     rotationSeed = 0;
     triggerPlanPulse();
     persistPrefs();
-    trackEvent('aa_guided_situation', { situation: id });
+    trackEvent("aa_guided_situation", { situation: id });
   }
 
   function toggleTopic(key) {
     excludePrevId = lastShownActionId;
-    if (key === 'all') {
+    if (key === "all") {
       selectedTopics = [];
     } else if (selectedTopics.includes(key)) {
       selectedTopics = selectedTopics.filter((x) => x !== key);
@@ -175,18 +216,21 @@
     rotationSeed = 0;
     triggerPlanPulse();
     persistPrefs();
-    trackEvent('aa_guided_topic_toggle', { topics: selectedTopics.join(',') });
+    trackEvent("aa_guided_topic_toggle", { topics: selectedTopics.join(",") });
   }
 
   function cycleRecommendation() {
     excludePrevId = lastShownActionId;
     rotationSeed += 1;
     triggerPlanPulse();
-    trackEvent('aa_guided_cycle_tip', { seed: rotationSeed, situation: activeSituationId });
+    trackEvent("aa_guided_cycle_tip", {
+      seed: rotationSeed,
+      situation: activeSituationId,
+    });
   }
 
   function promoteAlternative(altAction) {
-    excludePrevId = '';
+    excludePrevId = "";
     const idx = recommendations.findIndex((r) => r.id === altAction.id);
     if (idx > 0) {
       rotationSeed += idx;
@@ -194,8 +238,8 @@
       rotationSeed += 1;
     }
     triggerPlanPulse();
-    const el = document.getElementById('personal-plan');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const el = document.getElementById("personal-plan");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
   function triggerPlanPulse() {
@@ -207,9 +251,15 @@
 
   function persistPrefs() {
     try {
-      localStorage.setItem('aa_values', JSON.stringify(selectedTopics));
-      localStorage.setItem('aa_guided_values_v2', JSON.stringify(selectedTopics));
-      localStorage.setItem('aa_prefs_near', JSON.stringify({ situation: activeSituationId, cityId }));
+      localStorage.setItem("aa_values", JSON.stringify(selectedTopics));
+      localStorage.setItem(
+        "aa_guided_values_v2",
+        JSON.stringify(selectedTopics),
+      );
+      localStorage.setItem(
+        "aa_prefs_near",
+        JSON.stringify({ situation: activeSituationId, cityId }),
+      );
     } catch {}
   }
 
@@ -231,18 +281,29 @@
   onMount(() => {
     try {
       const sp = new URLSearchParams(window.location.search);
-      const topicParam = sp.get('topic');
+      const topicParam = sp.get("topic");
       if (topicParam && VALUES.some((v) => v.key === topicParam)) {
         selectedTopics = [topicParam];
-        localStorage.setItem('aa_values', JSON.stringify(selectedTopics));
+        localStorage.setItem("aa_values", JSON.stringify(selectedTopics));
         return;
       }
-      const s = JSON.parse(localStorage.getItem('aa_values') || localStorage.getItem('aa_guided_values_v2') || '[]');
+      const s = JSON.parse(
+        localStorage.getItem("aa_values") ||
+          localStorage.getItem("aa_guided_values_v2") ||
+          "[]",
+      );
       if (Array.isArray(s) && s.length) {
-        selectedTopics = s.filter((k) => VALUES.some((v) => v.key === k)).slice(0, 2);
+        selectedTopics = s
+          .filter((k) => VALUES.some((v) => v.key === k))
+          .slice(0, 2);
       }
-      const nearSaved = JSON.parse(localStorage.getItem('aa_prefs_near') || '{}');
-      if (nearSaved?.cityId && CZECH_CITIES.some((c) => c.id === nearSaved.cityId)) {
+      const nearSaved = JSON.parse(
+        localStorage.getItem("aa_prefs_near") || "{}",
+      );
+      if (
+        nearSaved?.cityId &&
+        CZECH_CITIES.some((c) => c.id === nearSaved.cityId)
+      ) {
         cityId = nearSaved.cityId;
       }
     } catch {}
@@ -256,9 +317,12 @@
 <div class="page">
   <header class="subpage-hero header">
     <div class="hero-kicker">PRŮVODCE NA MÍRU</div>
-    <h1 class="title">Jak chceš dneska <span class="serif-accent">pomoct</span>?</h1>
+    <h1 class="title">
+      Jak chceš dneska <span class="serif-accent">pomoct</span>?
+    </h1>
     <p class="subtitle">
-      Zvol si, kolik máš zrovna času a jaké téma ti je blízké — hned uvidíš jeden konkrétní, ověřený skutek.
+      Zvol si, kolik máš zrovna času a jaké téma ti je blízké — hned uvidíš
+      jeden konkrétní, ověřený skutek.
     </p>
   </header>
 
@@ -268,7 +332,11 @@
       <div class="step-block">
         <div class="block-label">1. Kolik máš zrovna času?</div>
 
-        <div class="situation-grid" role="radiogroup" aria-label="Dnešní situace a kapacita">
+        <div
+          class="situation-grid"
+          role="radiogroup"
+          aria-label="Dnešní situace a kapacita"
+        >
           {#each SITUATIONS as s}
             <button
               type="button"
@@ -290,14 +358,16 @@
       <div class="divider"></div>
 
       <div class="step-block">
-        <div class="block-label">2. Blízké téma <span class="opt-tag">(volitelné)</span></div>
+        <div class="block-label">
+          2. Blízké téma <span class="opt-tag">(volitelné)</span>
+        </div>
 
         <div class="topic-pills" role="group" aria-label="Výběr tématu pomoci">
           <button
             type="button"
             class="topic-pill"
             class:selected={selectedTopics.length === 0}
-            on:click={() => toggleTopic('all')}
+            on:click={() => toggleTopic("all")}
           >
             ✨ Cokoliv
           </button>
@@ -313,23 +383,341 @@
           {/each}
         </div>
       </div>
+
+      <div class="divider"></div>
+
+      <!-- 3. ADAPTIVNÍ OTÁZKA PODLE KONTEXTU + ROZBALOVACÍ PARAMETRY (4.2) -->
+      <div class="step-block adaptive-step-block">
+        {#if selectedTopics.length === 0 && recipientMacro === "any"}
+          <div class="block-label">
+            3. Komu chceš dnes nejvíc pomoct? <span class="opt-tag"
+              >(adaptivní volba)</span
+            >
+          </div>
+          <div class="topic-pills">
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={recipientMacro === "people"}
+              on:click={() => {
+                recipientMacro = "people";
+                rotationSeed = 0;
+              }}
+            >
+              👥 Lidem
+            </button>
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={recipientMacro === "animals"}
+              on:click={() => {
+                recipientMacro = "animals";
+                rotationSeed = 0;
+              }}
+            >
+              🐾 Zvířatům
+            </button>
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={recipientMacro === "nature"}
+              on:click={() => {
+                recipientMacro = "nature";
+                rotationSeed = 0;
+              }}
+            >
+              🌿 Přírodě
+            </button>
+          </div>
+        {:else if activeSituationId === "couch" || activeSituationId === "focus"}
+          <div class="block-label">
+            3. Chceš zůstat úplně anonymní? <span class="opt-tag"
+              >(adaptivní volba)</span
+            >
+          </div>
+          <div class="topic-pills">
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={contactLevel === "any"}
+              on:click={() => {
+                contactLevel = "any";
+                rotationSeed = 0;
+              }}
+            >
+              Nezáleží
+            </button>
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={contactLevel === "anonymous"}
+              on:click={() => {
+                contactLevel = "anonymous";
+                rotationSeed = 0;
+              }}
+            >
+              🔒 Zcela anonymně
+            </button>
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={contactLevel === "contact_ok"}
+              on:click={() => {
+                contactLevel = "contact_ok";
+                rotationSeed = 0;
+              }}
+            >
+              👋 Nevadí mi kontakt
+            </button>
+          </div>
+        {:else}
+          <div class="block-label">
+            3. Jednorázově, nebo dlouhodobě? <span class="opt-tag"
+              >(adaptivní volba)</span
+            >
+          </div>
+          <div class="topic-pills">
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={commitment === "any"}
+              on:click={() => {
+                commitment = "any";
+                rotationSeed = 0;
+              }}
+            >
+              Nezáleží
+            </button>
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={commitment === "one_off"}
+              on:click={() => {
+                commitment = "one_off";
+                rotationSeed = 0;
+              }}
+            >
+              ⚡ Jednorázově
+            </button>
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={commitment === "long_term"}
+              on:click={() => {
+                commitment = "long_term";
+                rotationSeed = 0;
+              }}
+            >
+              🌱 Dlouhodobě
+            </button>
+          </div>
+        {/if}
+
+        <details class="adaptive-params-drawer">
+          <summary>Upřesnit všechny parametry (6 voleb + důkazy A/B/C)</summary>
+          <div class="adaptive-params-grid">
+            <div class="ap-group">
+              <span class="ap-label">Závazek:</span>
+              <div class="ap-pills">
+                <button
+                  type="button"
+                  class:active={commitment === "any"}
+                  on:click={() => (commitment = "any")}>Vše</button
+                >
+                <button
+                  type="button"
+                  class:active={commitment === "one_off"}
+                  on:click={() => (commitment = "one_off")}>Jednorázově</button
+                >
+                <button
+                  type="button"
+                  class:active={commitment === "long_term"}
+                  on:click={() => (commitment = "long_term")}>Dlouhodobě</button
+                >
+              </div>
+            </div>
+
+            <div class="ap-group">
+              <span class="ap-label">Anonymita:</span>
+              <div class="ap-pills">
+                <button
+                  type="button"
+                  class:active={contactLevel === "any"}
+                  on:click={() => (contactLevel = "any")}>Vše</button
+                >
+                <button
+                  type="button"
+                  class:active={contactLevel === "anonymous"}
+                  on:click={() => (contactLevel = "anonymous")}>Anonymně</button
+                >
+                <button
+                  type="button"
+                  class:active={contactLevel === "contact_ok"}
+                  on:click={() => (contactLevel = "contact_ok")}
+                  >Nevadí kontakt</button
+                >
+              </div>
+            </div>
+
+            <div class="ap-group">
+              <span class="ap-label">Komu pomoci:</span>
+              <div class="ap-pills">
+                <button
+                  type="button"
+                  class:active={recipientMacro === "any"}
+                  on:click={() => (recipientMacro = "any")}>Všem</button
+                >
+                <button
+                  type="button"
+                  class:active={recipientMacro === "people"}
+                  on:click={() => (recipientMacro = "people")}>Lidem</button
+                >
+                <button
+                  type="button"
+                  class:active={recipientMacro === "animals"}
+                  on:click={() => (recipientMacro = "animals")}>Zvířatům</button
+                >
+                <button
+                  type="button"
+                  class:active={recipientMacro === "nature"}
+                  on:click={() => (recipientMacro = "nature")}>Přírodě</button
+                >
+              </div>
+            </div>
+
+            <div class="ap-group">
+              <span class="ap-label">Sám / s lidmi:</span>
+              <div class="ap-pills">
+                <button
+                  type="button"
+                  class:active={socialOverride === "any"}
+                  on:click={() => (socialOverride = "any")}
+                  >Podle situace</button
+                >
+                <button
+                  type="button"
+                  class:active={socialOverride === "solo"}
+                  on:click={() => (socialOverride = "solo")}>Sám</button
+                >
+                <button
+                  type="button"
+                  class:active={socialOverride === "group"}
+                  on:click={() => (socialOverride = "group")}
+                  >S ostatními</button
+                >
+              </div>
+            </div>
+
+            <div class="ap-group">
+              <span class="ap-label">Prostředí:</span>
+              <div class="ap-pills">
+                <button
+                  type="button"
+                  class:active={modeOverride === "any"}
+                  on:click={() => (modeOverride = "any")}>Podle situace</button
+                >
+                <button
+                  type="button"
+                  class:active={modeOverride === "online"}
+                  on:click={() => (modeOverride = "online")}>Z domova</button
+                >
+                <button
+                  type="button"
+                  class:active={modeOverride === "local"}
+                  on:click={() => (modeOverride = "local")}>Venku</button
+                >
+              </div>
+            </div>
+
+            <div class="ap-group">
+              <span class="ap-label">Finanční náročnost:</span>
+              <div class="ap-pills">
+                <button
+                  type="button"
+                  class:active={costOverride === "any"}
+                  on:click={() => (costOverride = "any")}>Podle situace</button
+                >
+                <button
+                  type="button"
+                  class:active={costOverride === "free"}
+                  on:click={() => (costOverride = "free")}
+                  >Bez peněz (0 Kč)</button
+                >
+                <button
+                  type="button"
+                  class:active={costOverride === "donation"}
+                  on:click={() => (costOverride = "donation")}
+                  >Mohu darovat</button
+                >
+              </div>
+            </div>
+
+            <div class="ap-group">
+              <span class="ap-label">Třída důkazů účinnosti:</span>
+              <div class="ap-pills">
+                <button
+                  type="button"
+                  class:active={evidenceTier === "any"}
+                  on:click={() => (evidenceTier = "any")}>Vše (A–C)</button
+                >
+                <button
+                  type="button"
+                  class:active={evidenceTier === "A"}
+                  on:click={() => (evidenceTier = "A")}>A · Silné důkazy</button
+                >
+                <button
+                  type="button"
+                  class:active={evidenceTier === "B"}
+                  on:click={() => (evidenceTier = "B")}
+                  >B · Doložený přínos</button
+                >
+                <button
+                  type="button"
+                  class:active={evidenceTier === "C"}
+                  on:click={() => (evidenceTier = "C")}
+                  >C · Komunitní smysl</button
+                >
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
     </section>
 
-    <!-- RIGHT: CLEAN FOCUSED RECOMMENDATION (ZERO NESTED COLORED BOXES) -->
-    <section id="personal-plan" class="plan-section" class:flash={planFlash} aria-live="polite">
+    <!-- RIGHT: CLEAN FOCUSED RECOMMENDATION (STANDARDIZED 6-PART GOODACTION CARD) -->
+    <section
+      id="personal-plan"
+      class="plan-section"
+      class:flash={planFlash}
+      aria-live="polite"
+    >
       {#if bestAction}
         <div class="card highlight-card">
           <div class="rec-top-row">
             <div class="rec-meta-line">
-              <strong>{bestAction.org}</strong>
+              <span class="rec-quick-tags"
+                >{bestAction.quickTagsLabel || "2 min · Zdarma · Online"}</span
+              >
               <span>·</span>
-              <span>{cleanMeta(bestAction.metaLabel)}</span>
+              <span
+                class="rec-evidence-pill tier-{bestAction.impactEvidence ||
+                  'B'}"
+                title={EVIDENCE_TIERS[bestAction.impactEvidence || "B"]?.desc}
+              >
+                Důkazy {bestAction.impactEvidence || "B"} · {EVIDENCE_TIERS[
+                  bestAction.impactEvidence || "B"
+                ]?.shortLabel}
+              </span>
               {#if isDone(bestAction.id)}
                 <span class="done-inline">· ✓ Splněno</span>
               {/if}
             </div>
 
-            <button type="button" class="btn-cycle-inline" on:click={cycleRecommendation}>
+            <button
+              type="button"
+              class="btn-cycle-inline"
+              on:click={cycleRecommendation}
+            >
               ↻ Jiný nápad
             </button>
           </div>
@@ -337,11 +725,21 @@
           <h2 class="rec-title">{cleanTitle(bestAction.title)}</h2>
           <p class="rec-desc">{bestAction.desc}</p>
 
-          {#if bestAction.concreteImpact || bestAction.selfBenefit}
+          <div class="rec-impact-block">
             <p class="rec-impact-line">
+              <strong>Přínos ({bestAction.impactBasis || "doložený"}):</strong>
               {bestAction.concreteImpact || bestAction.selfBenefit}
             </p>
-          {/if}
+            <div class="rec-partner-line">
+              <span
+                >{bestAction.registrationRequired
+                  ? "Krátká registrace u partnera"
+                  : "Bez registrace na našem webu"}</span
+              >
+              <span>·</span>
+              <span>Aktivita probíhá u <strong>{bestAction.org}</strong></span>
+            </div>
+          </div>
 
           {#if bestAction.steps?.length}
             <ol class="clean-steps">
@@ -351,19 +749,40 @@
             </ol>
           {/if}
 
+          {#if bestAction.impactChain}
+            <div class="rec-impact-chain">
+              <span
+                ><strong>Aktivita:</strong>
+                {bestAction.impactChain.activity}</span
+              >
+              <span class="chain-sep">→</span>
+              <span
+                ><strong>Výsledek:</strong>
+                {bestAction.impactChain.immediateOutput}</span
+              >
+              <span class="chain-sep">→</span>
+              <span
+                ><strong>Skutečný dopad:</strong>
+                {bestAction.impactChain.realImpact}</span
+              >
+            </div>
+          {/if}
+
           <div class="cta-row">
             <a
               class="btn-gold-action"
               href={bestAction.url}
               target="_blank"
               rel="noopener noreferrer"
-              on:click={() =>
-                trackEvent('aa_clickout', {
-                  surface: 'guided_best',
-                  id: bestAction.id
-                })}
+              on:click={() => {
+                markActionStarted(bestAction.id, "guided_best");
+                trackEvent("aa_clickout", {
+                  surface: "guided_best",
+                  id: bestAction.id,
+                });
+              }}
             >
-              <span>{bestAction.cta || 'Otevřít projekt'}</span>
+              <span>Začít pomáhat ({bestAction.cta || "Otevřít"})</span>
               <span>↗</span>
             </a>
 
@@ -374,10 +793,38 @@
                 recordSmallWin({
                   id: bestAction.id,
                   title: bestAction.title,
-                  surface: 'guided'
+                  surface: "guided",
                 })}
             >
               ✓ Hotovo
+            </button>
+          </div>
+
+          <div class="rec-verify-footer">
+            <span>
+              Ověřeno: <strong>{bestAction.lastVerifiedAt || "11/2026"}</strong>
+              · Zdroj:
+              <a
+                href={bestAction.sourceUrl || bestAction.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="rec-source-link"
+              >
+                {bestAction.org} ↗
+              </a>
+            </span>
+            <button
+              type="button"
+              class="rec-broken-btn"
+              on:click={() =>
+                openBrokenLinkReport({
+                  id: bestAction.id,
+                  title: cleanTitle(bestAction.title),
+                  org: bestAction.org,
+                  url: bestAction.url,
+                })}
+            >
+              Nahlásit nefunkční odkaz
             </button>
           </div>
         </div>
@@ -386,25 +833,44 @@
       {#if sideAlternatives.length}
         <details class="calm-drawer alts-drawer">
           <summary>
-            <span>Další {sideAlternatives.length} nápady pro tohle nastavení</span>
+            <span
+              >Další {sideAlternatives.length} nápady pro tohle nastavení</span
+            >
           </summary>
           <div class="alts-grid">
             {#each sideAlternatives as alt (alt.id)}
               <article class="alt-card">
-                <div class="alt-meta">{alt.org} · {cleanMeta(alt.metaLabel)}</div>
+                <div class="alt-meta">
+                  {alt.quickTagsLabel || cleanMeta(alt.metaLabel)} · Důkazy {alt.impactEvidence ||
+                    "B"} · Ověřeno {alt.lastVerifiedAt || "11/2026"}
+                </div>
                 <h4>{cleanTitle(alt.title)}</h4>
                 <p>{alt.desc}</p>
+                <div class="alt-impact-note">
+                  <strong>Přínos ({alt.impactBasis || "doložený"}):</strong>
+                  {alt.concreteImpact}
+                </div>
                 <div class="alt-actions">
                   <a
                     href={alt.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     class="alt-open"
-                    on:click={() => trackEvent('aa_clickout', { surface: 'guided_alt', id: alt.id })}
+                    on:click={() => {
+                      markActionStarted(alt.id, "guided_alt");
+                      trackEvent("aa_clickout", {
+                        surface: "guided_alt",
+                        id: alt.id,
+                      });
+                    }}
                   >
-                    Otevřít ↗
+                    Začít pomáhat ↗
                   </a>
-                  <button type="button" class="alt-detail" on:click={() => promoteAlternative(alt)}>
+                  <button
+                    type="button"
+                    class="alt-detail"
+                    on:click={() => promoteAlternative(alt)}
+                  >
                     Detail ↑
                   </button>
                 </div>
@@ -413,6 +879,58 @@
           </div>
         </details>
       {/if}
+
+      <!-- 5.1 & 5.2 OVĚŘENÁ ÚČINNOST A METODIKA DOPADU -->
+      <details class="calm-drawer methodology-drawer">
+        <summary>
+          <span
+            >⚖️ Jak poznáme, že pomoc skutečně pomohla? (Hodnocení důkazů A / B
+            / C)</span
+          >
+        </summary>
+        <div class="methodology-body">
+          <p class="meth-intro">{EVIDENCE_METHODOLOGY.intro}</p>
+
+          <div class="meth-tiers">
+            {#each Object.values(EVIDENCE_TIERS) as tier}
+              <div class="meth-tier-item">
+                <strong>Důkazy {tier.tier} — {tier.label}:</strong>
+                <span>{tier.desc}</span>
+              </div>
+            {/each}
+          </div>
+
+          <div class="meth-table-wrap">
+            <table class="meth-table">
+              <thead>
+                <tr>
+                  <th>Aktivita</th>
+                  <th>Možný přínos</th>
+                  <th>Co u dopadu rozlišujeme</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each EVIDENCE_METHODOLOGY.comparisonRows as row}
+                  <tr>
+                    <td><strong>{row.activity}</strong></td>
+                    <td>{row.benefit}</td>
+                    <td>{row.distinction}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="meth-links">
+            <span>Další zdroje k efektivnímu altruismu a evaluaci dopadu:</span>
+            {#each EVIDENCE_METHODOLOGY.sources as src}
+              <a href={src.url} target="_blank" rel="noopener noreferrer"
+                >{src.label} ↗</a
+              >
+            {/each}
+          </div>
+        </div>
+      </details>
     </section>
   </div>
 
@@ -447,8 +965,9 @@
           {@const tpl = buildFirstContactTemplate(place)}
           <article class="local-card">
             <div class="lc-top">
-              <span>{place.subcategory || 'Místo pomoci'}</span>
-              <span class="lc-dist">~{place.distKm} km ({activeCity.name})</span>
+              <span>{place.subcategory || "Místo pomoci"}</span>
+              <span class="lc-dist">~{place.distKm} km ({activeCity.name})</span
+              >
             </div>
             <h3>{place.name}</h3>
             <p class="lc-desc">{place.quickMission || place.description}</p>
@@ -458,14 +977,21 @@
 
             <div class="lc-actions">
               {#if place.website}
-                <a href={place.website} target="_blank" rel="noopener noreferrer" class="lc-btn primary">
+                <a
+                  href={place.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="lc-btn primary"
+                >
                   Web ↗
                 </a>
               {/if}
               <button
                 type="button"
                 class="lc-btn ghost"
-                on:click={() => (openTemplateId = openTemplateId === place.id ? null : place.id)}
+                on:click={() =>
+                  (openTemplateId =
+                    openTemplateId === place.id ? null : place.id)}
               >
                 💬 Vzor zprávy
               </button>
@@ -476,7 +1002,9 @@
                 <pre>{tpl.body}</pre>
                 <div class="tpl-btns">
                   <button type="button" on:click={() => copyTemplate(place)}>
-                    {copiedTemplateId === place.id ? '✓ Zkopírováno' : '📋 Zkopírovat'}
+                    {copiedTemplateId === place.id
+                      ? "✓ Zkopírováno"
+                      : "📋 Zkopírovat"}
                   </button>
                   {#if tpl.mailtoUrl}
                     <a href={tpl.mailtoUrl}>✉️ E-mail</a>
@@ -655,6 +1183,235 @@
     color: #fde68a;
   }
 
+  .adaptive-params-drawer {
+    margin-top: 0.85rem;
+    font-size: 0.8rem;
+  }
+
+  .adaptive-params-drawer summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--emerald-600);
+    list-style: none;
+  }
+
+  .adaptive-params-drawer summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .adaptive-params-grid {
+    margin-top: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .ap-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .ap-label {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--text-muted);
+  }
+
+  .ap-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+
+  .ap-pills button {
+    border: 1px solid rgba(22, 82, 56, 0.12);
+    background: #f6faf7;
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+
+  .ap-pills button.active {
+    background: #0f3022;
+    border-color: #0f3022;
+    color: #fde68a;
+  }
+
+  .rec-quick-tags {
+    font-weight: 800;
+    color: #0d2e20;
+  }
+
+  .rec-evidence-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.14rem 0.52rem;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    background: #ecfdf5;
+    color: #047857;
+  }
+
+  .rec-evidence-pill.tier-C {
+    background: #f8fafc;
+    color: #334155;
+  }
+
+  .rec-impact-block {
+    margin: 0 0 1rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid rgba(22, 82, 56, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .rec-partner-line {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+
+  .rec-impact-chain {
+    margin: 0 0 1.2rem;
+    padding-top: 0.6rem;
+    border-top: 1px dashed rgba(22, 82, 56, 0.14);
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+
+  .chain-sep {
+    color: var(--emerald-600);
+    font-weight: 800;
+  }
+
+  .rec-verify-footer {
+    margin-top: 0.85rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid rgba(22, 82, 56, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.76rem;
+    color: var(--text-muted);
+  }
+
+  .rec-source-link {
+    color: var(--forest-800);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .rec-source-link:hover {
+    color: var(--emerald-600);
+    text-decoration: underline;
+  }
+
+  .rec-broken-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .rec-broken-btn:hover {
+    color: #b45309;
+  }
+
+  .alt-impact-note {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    margin: 0 0 0.55rem;
+  }
+
+  .methodology-drawer {
+    margin-top: 0.85rem;
+  }
+
+  .methodology-body {
+    margin-top: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+  }
+
+  .meth-intro {
+    margin: 0;
+  }
+
+  .meth-tiers {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .meth-tier-item strong {
+    color: var(--forest-850);
+  }
+
+  .meth-table-wrap {
+    overflow-x: auto;
+  }
+
+  .meth-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+  }
+
+  .meth-table th,
+  .meth-table td {
+    text-align: left;
+    padding: 0.45rem 0.6rem;
+    border-bottom: 1px solid rgba(22, 82, 56, 0.1);
+  }
+
+  .meth-table th {
+    font-weight: 800;
+    color: var(--forest-850);
+  }
+
+  .meth-links {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+    font-size: 0.8rem;
+  }
+
+  .meth-links a {
+    color: var(--emerald-600);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .meth-links a:hover {
+    text-decoration: underline;
+  }
+
   /* CLEAN PERSONAL RECOMMENDATION CARD */
   .plan-section {
     position: sticky;
@@ -662,7 +1419,9 @@
   }
 
   .plan-section.flash .highlight-card {
-    box-shadow: 0 22px 44px -14px rgba(16, 185, 129, 0.24), 0 0 0 2px rgba(16, 185, 129, 0.42);
+    box-shadow:
+      0 22px 44px -14px rgba(16, 185, 129, 0.24),
+      0 0 0 2px rgba(16, 185, 129, 0.42);
   }
 
   .highlight-card {
@@ -691,11 +1450,6 @@
     flex-wrap: wrap;
     font-size: 0.82rem;
     color: var(--text-muted);
-  }
-
-  .rec-meta-line strong {
-    color: var(--emerald-600);
-    font-weight: 700;
   }
 
   .done-inline {

@@ -3,15 +3,15 @@
 </script>
 
 <svelte:head>
-  <title>Rozcestník pomoci — Akcelerátor altruismu</title>
+  <title>Akcelerátor altruismu — Pomáháme lidem pomáhat</title>
 </svelte:head>
 
 <div class="app-page">
   <div class="subpage-hero header">
-    <div class="hero-kicker">ROZCESTNÍK POMOCI</div>
-    <h1 class="title">Kudy se ti dnes <span class="serif-accent">chce vydat?</span></h1>
+    <div class="hero-kicker">AKCELERÁTOR ALTRUISMU · POMÁHÁME LIDEM POMÁHAT</div>
+    <h1 class="title">Kudy se ti dnes <span class="serif-accent">chce pomoci?</span></h1>
     <p class="subtitle">
-      Ať máš minutu u telefonu, nebo volné odpoledne venku — vyber si cestu, která ti dnes sedí.
+      Ať máš 2 minuty u telefonu, nebo volné odpoledne venku — vyber si přímou cestu ke skutečnému dobrému skutku.
     </p>
   </div>
 

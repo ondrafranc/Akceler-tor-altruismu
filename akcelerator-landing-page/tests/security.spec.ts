@@ -205,3 +205,104 @@ test('calm UX guard: zero stacked callout clutter on cards and interactive Kraji
 
   expect(consoleErrors).toEqual([]);
 });
+
+test('standardized GoodAction cards, Evidence A/B/C badges, verified sources, and broken-link report work across surfaces', async ({ page }) => {
+  await page.goto('/');
+
+  // Practical decision intents on homepage
+  const energyTabs = page.locator('.instant-card .energy-tab');
+  await expect(energyTabs.nth(0)).toContainText('Mám 2 min');
+  await expect(energyTabs.nth(1)).toContainText('Mám 15 min');
+  await expect(energyTabs.nth(2)).toContainText('Osobně');
+  await expect(energyTabs.nth(3)).toContainText('Dlouhodobě');
+
+  // Standardized 6-part card metadata on homepage
+  await expect(page.locator('.instant-card .evidence-pill')).toContainText('Důkazy');
+  await expect(page.locator('.instant-card .impact-benefit-line')).toContainText('Přínos');
+  await expect(page.locator('.instant-card .partner-trust-line')).toContainText('Bez registrace na našem webu');
+  await expect(page.locator('.instant-card .action-verify-footer')).toContainText('Ověřeno:');
+  await expect(page.locator('.instant-card .action-verify-footer')).toContainText('Zdroj:');
+
+  // Clicking "Nahlásit nefunkční odkaz" opens the pre-filled FeedbackModal
+  await page.locator('.instant-card .broken-link-btn').click();
+  const feedbackDialog = page.locator('.modal-backdrop[role="dialog"]');
+  await expect(feedbackDialog).toBeVisible();
+  await expect(feedbackDialog.locator('textarea')).toHaveValue(/Hlášení k aktivitě/);
+  await feedbackDialog.locator('button[aria-label="Zavřít"]').click();
+  await expect(feedbackDialog).toBeHidden();
+
+  // Verified statistics with primary source in .quiet-hope
+  await expect(page.locator('.quiet-hope')).toContainText('17 400 tun jídla ročně');
+  await expect(page.locator('.quiet-hope')).toContainText('Primární zdroj');
+});
+
+test('/near never renders 0 míst v okolí, preserves verified orgs with website filter, and handles empty search edge case', async ({ page }) => {
+  await page.goto('/near');
+
+  // Never starts at 0 míst v okolí
+  const countHeading = page.locator('.count-heading');
+  await expect(countHeading).not.toContainText('0 míst v okolí');
+  await expect(page.locator('.place-card .pc-verified').first()).toContainText('Ověřená organizace');
+
+  // Clicking "⚡ S přímým webem" still keeps verified organizations visible (never 0)
+  await page.locator('button:has-text("⚡ S přímým webem")').click();
+  await expect(page.locator('.places-stack .place-card').first()).toBeVisible();
+  await expect(countHeading).not.toContainText('0 míst v okolí');
+
+  // Search box is visible when >3 places or query active; test non-existent search query edge case
+  const searchInput = page.locator('.list-filters input[type="search"]');
+  await expect(searchInput).toBeVisible();
+  await searchInput.fill('xyznonexistentplace999');
+
+  // Empty fallback explains why, offers nearest verified centers, and 1-click reset restores cards
+  const emptyFallback = page.locator('.near-empty-fallback');
+  await expect(emptyFallback).toBeVisible();
+  await expect(emptyFallback.locator('.nv-item')).toHaveCount(3);
+  await emptyFallback.locator('.near-empty-actions button').click();
+  await expect(page.locator('.places-stack .place-card').first()).toBeVisible();
+});
+
+test('/app/guided adaptive parameters, Evidence Tier A filter, and methodology table work', async ({ page }) => {
+  await page.goto('/app/guided');
+
+  // Contextual Step 3 question adapts when topic is selected
+  const adaptiveBlock = page.locator('.adaptive-step-block');
+  await expect(adaptiveBlock).toContainText('3. Komu chceš dnes nejvíc pomoct?');
+  await page.locator('.topic-pills .topic-pill:has-text("Zvířata")').click();
+  await expect(adaptiveBlock).toContainText('3. Chceš zůstat úplně anonymní?');
+
+  // Open adaptive parameters drawer and filter by Evidence Tier A
+  const paramsDrawer = page.locator('details.adaptive-params-drawer');
+  await paramsDrawer.locator('summary').click();
+  await paramsDrawer.locator('button:has-text("A · Silné důkazy")').click();
+  await expect(page.locator('.highlight-card .rec-evidence-pill')).toContainText('Důkazy A');
+
+  // Methodology drawer has 5-row table & GiveWell / EA CZ links
+  const methDrawer = page.locator('details.methodology-drawer');
+  await methDrawer.locator('summary').click();
+  await expect(methDrawer.locator('.meth-table tbody tr')).toHaveCount(5);
+  await expect(methDrawer).toContainText('GiveWell');
+  await expect(methDrawer).toContainText('Efektivní altruismus ČR');
+});
+
+test('/app/online Evidence A filter and /svet 3 semantic light types + post-deed rest reassurance work', async ({ page }) => {
+  await page.goto('/app/online');
+  await page.locator('.filters-bar .filter-chip:has-text("Důkazy A")').click();
+  await expect(page.locator('.grid .card .card-evidence-badge').first()).toContainText('Důkazy A');
+  await expect(page.locator('.grid .card .card-verify-footer').first()).toContainText('Ověřeno:');
+
+  await page.goto('/svet');
+  const ritualModes = page.locator('.ritual-modes .ritual-pill');
+  await expect(ritualModes).toHaveCount(3);
+  await expect(ritualModes.nth(0)).toContainText('Lucerna · Osobní skutek');
+  await expect(ritualModes.nth(1)).toContainText('Hvězda · Inspirace');
+  await expect(ritualModes.nth(2)).toContainText('Vlna · Pomoc druhému');
+
+  // Select Vlna · Pomoc druhému and submit a deed -> verify post-deed rest reassurance
+  await ritualModes.nth(2).click();
+  await page.locator('.ritual-bar input[type="text"]').fill('Pomoc sousedce s nákupem');
+  await page.locator('.ritual-send-btn').click();
+  await expect(page.locator('.gentle-toast')).toContainText(
+    'Dnes jsi udělal něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.'
+  );
+});

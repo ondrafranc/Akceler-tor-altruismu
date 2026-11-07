@@ -1,7 +1,12 @@
 <script>
   import { onMount, tick } from 'svelte';
   import 'leaflet/dist/leaflet.css';
-  import { trackEvent } from '../../lib/analytics.js';
+  import {
+    trackEvent,
+    trackFunnel,
+    markActionStarted,
+    openBrokenLinkReport
+  } from '../../lib/analytics.js';
   import {
     PORTALS,
     CZECH_CITIES,
@@ -37,6 +42,32 @@
   let query = '';
   let sortBy = 'easy'; // easy | distance | name
 
+  function formatDist(km) {
+    if (!Number.isFinite(km)) return '';
+    if (km < 1) return `${Math.max(100, Math.round(km * 10) * 100)} m`;
+    return `${km < 10 ? km.toFixed(1) : Math.round(km)} km`;
+  }
+
+  function getInstantCurated(lat, lon, activeKinds) {
+    const kList = activeKinds?.length ? activeKinds : ['ngo', 'community', 'food', 'animals'];
+    const allWithDist = CURATED_FALLBACK_PLACES.filter((p) => kList.includes(p.kind))
+      .map((p) => {
+        const d = haversineKm(lat, lon, p.lat, p.lon);
+        return {
+          ...p,
+          curated: true,
+          sourceType: 'verified_org',
+          verifiedAt: p.verifiedAt || '11/2026',
+          website: normalizeUrl(p.website),
+          distanceKm: Math.round(d * 10) / 10
+        };
+      })
+      .sort((a, b) => a.distanceKm - b.distanceKm);
+
+    const near = allWithDist.filter((p) => p.distanceKm <= Math.max(radiusKm, 15));
+    return near.length >= 3 ? near : allWithDist.slice(0, 6);
+  }
+
   // Geocode & GPS
   let locationQuery = '';
   let geoStatus = 'idle';
@@ -65,8 +96,12 @@
   let isFallbackData = false;
   let isExpandedToNearest = false;
 
-  /** @type {Array<any>} */
-  let places = [];
+  /**
+   * Seed verified places immediately at initialization (including SSR)
+   * so the user never sees "0 míst v okolí" on first load.
+   * @type {Array<any>}
+   */
+  let places = getInstantCurated(centerLat, centerLon, kinds);
   /** @type {Array<any>} */
   let communityItems = [];
   let activePlaceId = null;
@@ -77,29 +112,15 @@
   let openTemplateId = null;
   let copiedTemplateId = null;
 
-  function formatDist(km) {
-    if (!Number.isFinite(km)) return '';
-    if (km < 1) return `${Math.max(100, Math.round(km * 10) * 100)} m`;
-    return `${km < 10 ? km.toFixed(1) : Math.round(km)} km`;
-  }
-
-  function getInstantCurated(lat, lon, activeKinds) {
-    const kList = activeKinds?.length ? activeKinds : ['ngo', 'community', 'food', 'animals'];
-    const allWithDist = CURATED_FALLBACK_PLACES.filter((p) => kList.includes(p.kind))
-      .map((p) => {
-        const d = haversineKm(lat, lon, p.lat, p.lon);
-        return {
-          ...p,
-          curated: true,
-          website: normalizeUrl(p.website),
-          distanceKm: Math.round(d * 10) / 10
-        };
-      })
-      .sort((a, b) => a.distanceKm - b.distanceKm);
-
-    const near = allWithDist.filter((p) => p.distanceKm <= Math.max(radiusKm, 15));
-    return near.length >= 2 ? near : allWithDist.slice(0, 6);
-  }
+  $: nearestVerifiedOrgs = CURATED_FALLBACK_PLACES.map((p) => ({
+    ...p,
+    curated: true,
+    verifiedAt: p.verifiedAt || '11/2026',
+    website: normalizeUrl(p.website),
+    distanceKm: Math.round(haversineKm(centerLat, centerLon, p.lat, p.lon) * 10) / 10
+  }))
+    .sort((a, b) => a.distanceKm - b.distanceKm)
+    .slice(0, 3);
 
   function concreteActionHint(p) {
     if (p?.quickMission) return p.quickMission;
@@ -289,10 +310,34 @@
     renderMarkers();
   }
 
+  function mergeCuratedAndApiPlaces(curatedList, apiList) {
+    const out = [...curatedList];
+    const seenIds = new Set(curatedList.map((c) => c.id));
+    const seenNames = new Set(curatedList.map((c) => String(c.name || '').trim().toLowerCase()));
+
+    for (const item of apiList) {
+      const normName = String(item.name || '').trim().toLowerCase();
+      if (seenIds.has(item.id) || (normName && seenNames.has(normName))) continue;
+      const isNearDuplicate = curatedList.some(
+        (c) => haversineKm(c.lat, c.lon, item.lat, item.lon) < 0.15 && c.kind === item.kind
+      );
+      if (isNearDuplicate) continue;
+      seenIds.add(item.id);
+      if (normName) seenNames.add(normName);
+      out.push({
+        ...item,
+        sourceType: item.curated ? 'verified_org' : 'osm',
+        verifiedAt: item.curated ? item.verifiedAt || '11/2026' : null
+      });
+    }
+    return out;
+  }
+
   async function fetchNearby(lat, lon) {
     isFetching = true;
     // 1. Instant zero-wait curated places so map is IMMEDIATELY useful!
-    places = getInstantCurated(lat, lon, kinds);
+    const curatedInstant = getInstantCurated(lat, lon, kinds);
+    places = curatedInstant;
     syncUrlState(lat, lon);
 
     const communityPromise = fetch(
@@ -325,7 +370,7 @@
           };
         });
         if (apiPlaces.length > 0) {
-          places = apiPlaces;
+          places = mergeCuratedAndApiPlaces(curatedInstant, apiPlaces);
         }
       }
     } catch {
@@ -351,19 +396,23 @@
 
   async function selectQuickCity(city) {
     selectedCity = city;
+    query = '';
     locationQuery = '';
     geoResults = [];
     geoMessage = '';
     moveMapCenter(city.lat, city.lon, 13);
     await fetchNearby(city.lat, city.lon);
     trackEvent('aa_near_city_pick', { city: city.id });
+    trackFunnel('intent_selected', { surface: 'near_city', city: city.id });
   }
 
   function applyPreset(preset) {
     activePresetId = preset.id;
+    query = '';
     kinds = [...preset.kinds];
     onlyWithWebsite = !!preset.onlyWeb;
     fetchNearby(centerLat, centerLon);
+    trackFunnel('intent_selected', { surface: 'near_preset', preset: preset.id });
   }
 
   function toggleKind(k) {
@@ -372,7 +421,18 @@
     } else {
       kinds = [...kinds, k];
     }
+    query = '';
     activePresetId = 'custom';
+    fetchNearby(centerLat, centerLon);
+  }
+
+  function resetAndExpandSearch() {
+    query = '';
+    onlyWithWebsite = false;
+    activePresetId = 'all';
+    kinds = ['ngo', 'community', 'food', 'animals'];
+    radiusKm = Math.max(radiusKm, 20);
+    updateRadiusOverlay(centerLat, centerLon);
     fetchNearby(centerLat, centerLon);
   }
 
@@ -712,7 +772,7 @@
           <strong>{filteredPlaces.length}</strong> {filteredPlaces.length === 1 ? 'místo v okolí' : filteredPlaces.length >= 2 && filteredPlaces.length <= 4 ? 'místa v okolí' : 'míst v okolí'}
         </div>
         <div class="list-filters">
-          {#if visibleCount > 6}
+          {#if places.length > 3 || query.trim().length > 0}
             <input
               type="search"
               class="filter-input"
@@ -743,9 +803,17 @@
               <span class="pc-cat">{meta.emoji} {p.subcategory || meta.label}</span>
               <span>·</span>
               <span class="pc-dist">{formatDist(p.distanceKm)}</span>
-              {#if p.curated}
-                <span>·</span>
-                <span class="pc-verified">✦ Ověřeno</span>
+              <span>·</span>
+              {#if p.curated || p.sourceType === 'verified_org'}
+                <span class="pc-verified" title="Ručně ověřená organizace v ČR">
+                  ✦ Ověřená organizace · Ověřeno {p.verifiedAt || '11/2026'}
+                </span>
+              {:else if p.sourceType === 'community'}
+                <span class="pc-community-badge">🌱 Komunitní tip</span>
+              {:else}
+                <span class="pc-osm-badge" title="Veřejný komunitní bod z OpenStreetMap">
+                  🗺️ Komunitní bod (OSM)
+                </span>
               {/if}
             </div>
 
@@ -764,7 +832,10 @@
                   target="_blank"
                   rel="noopener noreferrer"
                   class="pc-btn primary"
-                  on:click={() => trackEvent('aa_clickout', { surface: 'near_place', id: p.id })}
+                  on:click={() => {
+                    markActionStarted(p.id, 'near_place');
+                    trackEvent('aa_clickout', { surface: 'near_place', id: p.id });
+                  }}
                 >
                   Web ↗
                 </a>
@@ -773,7 +844,10 @@
               <button
                 type="button"
                 class="pc-btn msg"
-                on:click={() => (openTemplateId = openTemplateId === p.id ? null : p.id)}
+                on:click={() => {
+                  markActionStarted(p.id, 'near_place_msg');
+                  openTemplateId = openTemplateId === p.id ? null : p.id;
+                }}
               >
                 {openTemplateId === p.id ? 'Skrýt zprávu' : '💬 Co napsat'}
               </button>
@@ -824,7 +898,76 @@
                 </div>
               </div>
             {/if}
+
+            <div class="pc-verify-footer">
+              <span>
+                {p.curated ? `Zdroj: Ověřený katalog (${p.verifiedAt || '11/2026'})` : 'Zdroj: OpenStreetMap ČR'}
+              </span>
+              <button
+                type="button"
+                class="pc-report-btn"
+                on:click={() =>
+                  openBrokenLinkReport({
+                    id: p.id,
+                    title: p.name,
+                    org: p.subcategory || 'Místo na mapě',
+                    url: webUrl || ''
+                  })}
+              >
+                Nahlásit nefunkční údaj
+              </button>
+            </div>
           </article>
+        {:else}
+          <div class="near-empty-fallback">
+            <h3>V okruhu {radiusKm} km teď neodpovídá žádné místo zvolenému filtru</h3>
+            <p>
+              {#if query.trim()}
+                Hledaný výraz <strong>„{query.trim()}“</strong> v aktuálním výřezu nenašel shodu.
+              {:else if onlyWithWebsite}
+                V tomto okruhu jsou především komunitní místa bez vlastního webu (např. veřejné knihobudky).
+              {:else}
+                V menších obcích nemusí být organizace zanesená přímo v OpenStreetMap v okruhu {radiusKm} km.
+              {/if}
+            </p>
+            <div class="near-empty-actions">
+              <button type="button" class="pc-btn primary" on:click={resetAndExpandSearch}>
+                Rozšířit okruh na 20 km a zrušit filtry
+              </button>
+              <a href="/app/online" class="pc-btn ghost">
+                Zkusit 2minutový skutek online →
+              </a>
+            </div>
+
+            {#if nearestVerifiedOrgs.length > 0}
+              <div class="nearest-verified-box">
+                <span class="nv-label">Nejbližší ověřené organizace v regionu:</span>
+                <div class="nv-list">
+                  {#each nearestVerifiedOrgs as org}
+                    <div class="nv-item">
+                      <div>
+                        <strong>{org.name}</strong>
+                        <span class="nv-meta"> · {formatDist(org.distanceKm)} · Ověřeno {org.verifiedAt}</span>
+                      </div>
+                      <button
+                        type="button"
+                        class="nv-jump-btn"
+                        on:click={() => {
+                          query = '';
+                          onlyWithWebsite = false;
+                          kinds = ['ngo', 'community', 'food', 'animals'];
+                          moveMapCenter(org.lat, org.lon, 13);
+                          fetchNearby(org.lat, org.lon);
+                        }}
+                      >
+                        Přejít sem →
+                      </button>
+                    </div>
+                  {/each}
+                </div>
+              </div>
+            {/if}
+          </div>
         {/each}
       </div>
 
@@ -1321,6 +1464,122 @@
   .pc-verified {
     font-weight: 700;
     color: #0d4a33;
+  }
+
+  .pc-osm-badge,
+  .pc-community-badge {
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .pc-verify-footer {
+    margin-top: 0.7rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid rgba(22, 66, 48, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.73rem;
+    color: var(--text-muted);
+  }
+
+  .pc-report-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    font-size: 0.73rem;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .pc-report-btn:hover {
+    color: #b45309;
+  }
+
+  .near-empty-fallback {
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(22, 66, 48, 0.12);
+    border-radius: 22px;
+    padding: 1.45rem 1.5rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .near-empty-fallback h3 {
+    margin: 0 0 0.45rem;
+    font-size: 1.08rem;
+    font-weight: 800;
+    color: var(--forest-850);
+  }
+
+  .near-empty-fallback p {
+    margin: 0 0 1rem;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: var(--text-secondary);
+  }
+
+  .near-empty-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.1rem;
+  }
+
+  .nearest-verified-box {
+    padding-top: 0.85rem;
+    border-top: 1px solid rgba(22, 66, 48, 0.09);
+  }
+
+  .nv-label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.5rem;
+  }
+
+  .nv-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .nv-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+  }
+
+  .nv-meta {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+  }
+
+  .nv-jump-btn {
+    border: none;
+    background: rgba(16, 185, 129, 0.12);
+    color: #065f46;
+    font-family: var(--font-sans);
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.28rem 0.65rem;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+
+  .nv-jump-btn:hover {
+    background: #059669;
+    color: #ffffff;
   }
 
   .pc-title {

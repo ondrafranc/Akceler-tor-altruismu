@@ -1,7 +1,16 @@
 <script>
   import { onMount } from 'svelte';
-  import { trackEvent } from '../../../lib/analytics.js';
-  import { MICRO_ACTIONS, VALUES } from '../../../lib/data/czech-actions.js';
+  import {
+    trackEvent,
+    markActionStarted,
+    openBrokenLinkReport
+  } from '../../../lib/analytics.js';
+  import {
+    MICRO_ACTIONS,
+    VALUES,
+    EVIDENCE_TIERS,
+    EVIDENCE_METHODOLOGY
+  } from '../../../lib/data/czech-actions.js';
   import { recordSmallWin, completedSteps } from '../../../lib/progress.js';
 
   let activeFilter = 'all';
@@ -19,7 +28,8 @@
     { id: 'writing', label: 'Z gauče' },
     { id: 'outdoor', label: 'Venku' },
     { id: 'tutoring', label: 'U počítače' },
-    { id: 'donation', label: 'Drobný dar' }
+    { id: 'donation', label: 'Drobný dar' },
+    { id: 'evidenceA', label: '✦ Důkazy A' }
   ];
 
   onMount(() => {
@@ -108,6 +118,7 @@
     if (activeFilter === 'outdoor' && a.mode !== 'local') return false;
     if (activeFilter === 'tutoring' && !(a.categoryTag === 'tutoring' || a.categoryTag === 'tech')) return false;
     if (activeFilter === 'donation' && a.cost !== 'donation') return false;
+    if (activeFilter === 'evidenceA' && a.impactEvidence !== 'A') return false;
 
     const q = searchQuery.trim().toLowerCase();
     if (q) {
@@ -195,39 +206,69 @@
           class:spotlight={spotlightId === o.id}
           class:done-card={isCompleted(o.id)}
         >
+          <!-- 1. Standardizované štítky: Čas · Cena · Režim + Důkazy A/B/C -->
           <div class="card-meta-top">
-            <span class="topic-label">{primaryTopicFor(o)}</span>
+            <span class="quick-tags-inline">{o.quickTagsLabel || cleanMeta(o.metaLabel)}</span>
             <span>·</span>
-            <span>{cleanMeta(o.metaLabel)}</span>
+            <span
+              class="card-evidence-badge tier-{o.impactEvidence || 'B'}"
+              title={EVIDENCE_TIERS[o.impactEvidence || 'B']?.desc}
+            >
+              Důkazy {o.impactEvidence || 'B'}
+            </span>
             {#if isCompleted(o.id)}
               <span class="done-dot">· ✓ Splněno</span>
             {/if}
           </div>
 
+          <!-- 2. Název a popis -->
           <h2 class="card-title">{cleanTitle(o.title)}</h2>
-          <div class="org-name">{o.org}</div>
           <p class="card-desc">{o.desc}</p>
+
+          <!-- 3. Přínos + Partner & Bez registrace -->
+          <div class="card-impact-box">
+            <div class="card-benefit-line">
+              <strong>Přínos ({o.impactBasis || 'doložený'}):</strong>
+              <span>{o.concreteImpact}</span>
+            </div>
+            <div class="card-partner-line">
+              <span>{o.registrationRequired ? 'Krátká registrace u partnera' : 'Bez registrace na našem webu'}</span>
+              <span>·</span>
+              <span>Aktivita probíhá u <strong>{o.org}</strong></span>
+            </div>
+          </div>
 
           {#if o.steps?.length}
             <details class="steps-inline">
-              <summary>Jak na to ({o.steps.length} {o.steps.length === 1 ? 'krok' : o.steps.length < 5 ? 'kroky' : 'kroků'})</summary>
+              <summary>Jak se zapojit ({o.steps.length} {o.steps.length === 1 ? 'krok' : o.steps.length < 5 ? 'kroky' : 'kroků'}) a dopad</summary>
               <ol>
                 {#each o.steps as step}
                   <li>{step}</li>
                 {/each}
               </ol>
+              {#if o.impactChain}
+                <div class="card-chain-line">
+                  <span><strong>Aktivita:</strong> {o.impactChain.activity}</span> →
+                  <span><strong>Výsledek:</strong> {o.impactChain.immediateOutput}</span> →
+                  <span><strong>Dopad:</strong> {o.impactChain.realImpact}</span>
+                </div>
+              {/if}
             </details>
           {/if}
 
+          <!-- 4. Akční tlačítka -->
           <div class="actions-row">
             <a
               class="cta primary"
               href={o.url}
               target="_blank"
               rel="noopener noreferrer"
-              on:click={() => trackEvent('aa_clickout', { surface: 'online', id: o.id })}
+              on:click={() => {
+                markActionStarted(o.id, 'online');
+                trackEvent('aa_clickout', { surface: 'online', id: o.id });
+              }}
             >
-              {o.cta || 'Otevřít'} ↗
+              Začít pomáhat ↗
             </a>
             <button
               type="button"
@@ -249,6 +290,34 @@
               on:click={() => shareAction(o)}
             >
               {copiedId === o.id ? '✓' : '↗'}
+            </button>
+          </div>
+
+          <!-- 5. Patička ověření + Nahlásit nefunkční odkaz -->
+          <div class="card-verify-footer">
+            <span>
+              Ověřeno: <strong>{o.lastVerifiedAt || '11/2026'}</strong> · Zdroj:
+              <a
+                href={o.sourceUrl || o.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="card-source-link"
+              >
+                {o.org} ↗
+              </a>
+            </span>
+            <button
+              type="button"
+              class="card-broken-btn"
+              on:click={() =>
+                openBrokenLinkReport({
+                  id: o.id,
+                  title: cleanTitle(o.title),
+                  org: o.org,
+                  url: o.url
+                })}
+            >
+              Nahlásit chybu
             </button>
           </div>
         </article>
@@ -275,6 +344,23 @@
       </div>
     {/if}
   {/if}
+
+  <details class="calm-drawer online-methodology-drawer">
+    <summary>⚖️ Jak hodnotíme účinnost a důkazy dopadu (A / B / C)?</summary>
+    <div class="om-body">
+      <p>{EVIDENCE_METHODOLOGY.intro}</p>
+      <div class="om-tiers">
+        {#each Object.values(EVIDENCE_TIERS) as t}
+          <div><strong>Důkazy {t.tier} ({t.shortLabel}):</strong> {t.desc}</div>
+        {/each}
+      </div>
+      <div class="om-links">
+        {#each EVIDENCE_METHODOLOGY.sources as s}
+          <a href={s.url} target="_blank" rel="noopener noreferrer">{s.label} ↗</a>
+        {/each}
+      </div>
+    </div>
+  </details>
 </div>
 
 <style>
@@ -445,6 +531,139 @@
   .topic-label {
     font-weight: 700;
     color: var(--text-secondary);
+  }
+
+  .quick-tags-inline {
+    font-weight: 800;
+    color: var(--forest-850);
+  }
+
+  .card-evidence-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.72rem;
+    background: #ecfdf5;
+    color: #047857;
+  }
+
+  .card-evidence-badge.tier-C {
+    background: #f8fafc;
+    color: #334155;
+  }
+
+  .card-impact-box {
+    margin: 0 0 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(22, 66, 48, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: 0.8rem;
+    line-height: 1.45;
+  }
+
+  .card-benefit-line strong {
+    color: #047857;
+  }
+
+  .card-partner-line {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+    font-size: 0.74rem;
+    color: var(--text-muted);
+  }
+
+  .card-chain-line {
+    margin-top: 0.45rem;
+    padding-top: 0.4rem;
+    border-top: 1px dashed rgba(22, 66, 48, 0.12);
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  .card-verify-footer {
+    margin-top: 0.7rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid rgba(22, 66, 48, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+
+  .card-source-link {
+    color: var(--forest-800);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .card-source-link:hover {
+    color: var(--emerald-600);
+    text-decoration: underline;
+  }
+
+  .card-broken-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .card-broken-btn:hover {
+    color: #b45309;
+  }
+
+  .online-methodology-drawer {
+    margin-top: 2rem;
+  }
+
+  .om-body {
+    margin-top: 0.65rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+  }
+
+  .om-body p {
+    margin: 0;
+  }
+
+  .om-tiers {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .om-links {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .om-links a {
+    color: var(--emerald-600);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .om-links a:hover {
+    text-decoration: underline;
   }
 
   .done-dot {

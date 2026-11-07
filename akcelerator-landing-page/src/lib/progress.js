@@ -1,9 +1,39 @@
 import { writable, derived } from 'svelte/store';
 import { getRandomEncouragement, MICRO_ACTIONS } from './data/czech-actions.js';
-import { trackEvent } from './analytics.js';
+import { trackEvent, trackFunnel, hasActionStarted } from './analytics.js';
 
 const STORAGE_KEY = 'aa_completed_steps_v2';
 const WISHES_STORAGE_KEY = 'aa_sanctuary_wishes_v1';
+
+/**
+ * Tři sémantické typy světel v Krajině dobra (/svet):
+ * - Lucerna (lantern): Osobní skutek na vodní hladině
+ * - Hvězda (star): Inspirace na obloze
+ * - Vlna (wave): Pomoc druhému (soustředné kruhy na hladině)
+ */
+export const LIGHT_TYPES = [
+  {
+    key: 'lantern',
+    icon: '🏮',
+    label: 'Lucerna',
+    meaning: 'Osobní skutek',
+    defaultZone: 'water'
+  },
+  {
+    key: 'star',
+    icon: '✦',
+    label: 'Hvězda',
+    meaning: 'Inspirace',
+    defaultZone: 'sky'
+  },
+  {
+    key: 'wave',
+    icon: '〰️',
+    label: 'Vlna',
+    meaning: 'Pomoc druhému',
+    defaultZone: 'water'
+  }
+];
 
 /**
  * Pět přírodních motivů v Krajině dobra (/svet).
@@ -73,16 +103,19 @@ export const SANCTUARY_ELEMENTS = [
 ];
 
 /**
- * Skutečné příběhy a čísla o pomoci v Česku.
+ * Skutečné příběhy a čísla o pomoci v Česku s primárními zdroji a daty ověření.
  */
 export const HOPE_PROOFS = [
   {
     id: 'click_feed',
-    title: 'Stovky tun krmiva z obyčejných kliknutí z domova',
+    title: '1 068+ tun krmiva (37,2 mil. misek) ve 448 útulcích z kliknutí',
     realWorldProof:
-      'V českém projektu Click and Feed už lidé jednoduchým bezplatným kliknutím poslali stovky tun granulí do útulků po celé republice.',
+      'V českém projektu Click and Feed už lidé bezplatným kliknutím (1 klik = cca 25 g krmiva od sponzora Brit) naplnili přes 37,2 milionu misek ve 448 útulcích.',
     psychNote:
-      'I patnáctivteřinová pomoc ti připomene, že na světě kolem sebe máš reálný podíl.'
+      'I patnáctivteřinová pomoc ti připomene, že na světě kolem sebe máš reálný podíl.',
+    sourceLabel: 'Click and Feed (Brit)',
+    sourceUrl: 'https://clickandfeed.cz/',
+    verifiedAt: '11/2026'
   },
   {
     id: 'bird_stops',
@@ -90,31 +123,43 @@ export const HOPE_PROOFS = [
     realWorldProof:
       'Díky dvouminutovým hlášením kolemjdoucích v projektu Ptačí pasti ČSO už desítky českých obcí bezpečně polepily prosklené zastávky.',
     psychNote:
-      'Když si na cestě ven všímáš okolí, pomůžeš přírodě a zároveň příjemně zpomalíš vlastní hlavu.'
+      'Když si na cestě ven všímáš okolí, pomůžeš přírodě a zároveň příjemně zpomalíš vlastní hlavu.',
+    sourceLabel: 'Česká společnost ornitologická – Ptačí pasti',
+    sourceUrl: 'https://projekty.birds.cz/ptacipasti/',
+    verifiedAt: '11/2026'
   },
   {
     id: 'remobil_drawers',
-    title: 'Přes 400 000 starých mobilů ze šuplíků dostalo nový smysl',
+    title: '221 060 starých mobilů ze šuplíků (2,21 mil. Kč pro charitu)',
     realWorldProof:
-      'Lidé v Česku už přes Remobil poslali přes 400 tisíc nepotřebných telefonů — vznikla tak práce pro lidi s hendikepem a podpora pro charitu.',
+      'Lidé v Česku už přes neziskový projekt Remobil odevzdali 221 060 nepotřebných telefonů (10 Kč z každého jde na charitu) — vznikla tak práce pro lidi s hendikepem a úspora surovin.',
     psychNote:
-      'Poslat dál jednu nepotřebnou věc z domova uleví prostoru kolem tebe a hned pomůže někomu dalšímu.'
+      'Poslat dál jednu nepotřebnou věc z domova uleví prostoru kolem tebe a hned pomůže někomu dalšímu.',
+    sourceLabel: 'Remobil z.s. – Oficiální statistiky sběru',
+    sourceUrl: 'https://remobil.cz/',
+    verifiedAt: '11/2026'
   },
   {
     id: 'marrow_youth',
-    title: '120 000 mladých lidí v registru dárců kostní dřeně',
+    title: '170 104 registrovaných dárců dřeně a 2 939 skutečných odběrů',
     realWorldProof:
-      'Jednoduchý pětiminutový stěr z úst od dobrovolníků už v Česku dal druhou šanci na život více než 2 000 vážně nemocným pacientům.',
+      'Jednoduchý pětiminutový stěr z úst od dobrovolníků v ČNRDD už umožnil 2 939 odběrů krvetvorných buněk pro vážně nemocné pacienty.',
     psychNote:
-      'Většina dobrých věcí kolem nás se děje potichu — i proto je jich mnohem víc, než je vidět ve zprávách.'
+      'Většina dobrých věcí kolem nás se děje potichu — i proto je jich mnohem víc, než je vidět ve zprávách.',
+    sourceLabel: 'ČNRDD – Aktuální čísla registru',
+    sourceUrl: 'https://registr.kostnidren.cz/o-registru/aktualni-cisla/',
+    verifiedAt: '09/2026'
   },
   {
     id: 'food_saved',
-    title: 'Tisíce tun zachráněného jídla pro rodiny a seniory',
+    title: '17 400 tun zachráněného jídla ročně pro 430 000 lidí v nouzi',
     realWorldProof:
-      'České potravinové banky každoročně díky dobrovolníkům zachrání tisíce tun dobrého jídla pro samoživitele, seniory a lidi v tísni.',
+      'České potravinové banky každoročně díky dobrovolníkům zachrání 17 400 tun dobrého jídla pro samoživitele, seniory a rodiny v tísni.',
     psychNote:
-      'Podle výzkumů sociálních sítí se každý dobrý skutek přirozeně šíří od člověka k člověku až o tři stupně dál.'
+      'Podle výzkumů sociálních sítí se každý dobrý skutek přirozeně šíří od člověka k člověku až o tři stupně dál.',
+    sourceLabel: 'Česká federace potravinových bank (Výroční zpráva)',
+    sourceUrl: 'https://www.potravinovebanky.cz/uploads/dms/pdf/6a2004ae277ef699586774.pdf',
+    verifiedAt: '02/2026'
   }
 ];
 
@@ -259,7 +304,7 @@ export const activeCelebration = writable(null);
 
 /**
  * Zaznamená dokončený malý krok a otevře klidné, nenátlakové poděkování.
- * @param {{ id?: string, title: string, surface?: string, category?: string, element?: string, concreteImpact?: string }} step
+ * @param {{ id?: string, title: string, surface?: string, category?: string, element?: string, concreteImpact?: string, lightType?: 'lantern' | 'star' | 'wave', silent?: boolean }} step
  */
 export function recordSmallWin(step) {
   const catalogMatch = Array.isArray(MICRO_ACTIONS)
@@ -267,15 +312,22 @@ export function recordSmallWin(step) {
     : null;
   const element = inferStepElement(step || catalogMatch);
   const concreteImpact = step?.concreteImpact || catalogMatch?.concreteImpact || '';
+  const stepId = step?.id || 'step';
+  const verifiedInitiation = hasActionStarted(stepId);
+  const defaultLightType =
+    step?.lightType ||
+    (catalogMatch?.recipientMacro === 'people' && catalogMatch?.social === 'group' ? 'wave' : 'lantern');
 
   const entry = {
     uid: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    id: step?.id || 'step',
+    id: stepId,
     title: step?.title || 'Malý dobrý krok',
     surface: step?.surface || 'app',
     category: step?.category || '',
     element,
     concreteImpact,
+    lightType: defaultLightType,
+    verifiedInitiation,
     awaitingPlant: true,
     plantedPos: null,
     note: '',
@@ -291,7 +343,14 @@ export function recordSmallWin(step) {
   trackEvent('aa_small_win', {
     surface: entry.surface,
     id: entry.id,
-    element
+    element,
+    verifiedInitiation
+  });
+
+  trackFunnel('action_completed_self_reported', {
+    id: entry.id,
+    surface: entry.surface,
+    verified_initiation: verifiedInitiation
   });
 
   if (!step?.silent) {
@@ -309,22 +368,24 @@ export function recordSmallWin(step) {
 }
 
 /**
- * Uloží souřadnice hvězdy nebo vodní lucerny v Tichém útočišti (/svet).
+ * Uloží souřadnice hvězdy, vodní lucerny nebo vlny v Krajině dobra (/svet).
  * @param {string} uid
- * @param {{ x: number, y: number }} pos
+ * @param {{ x: number, y: number, lightType?: 'lantern' | 'star' | 'wave' }} pos
  */
 export function plantStepLight(uid, pos) {
   const clampedX = Math.max(0.06, Math.min(0.94, Number(pos?.x) || 0.5));
   const clampedY = Math.max(0.07, Math.min(0.88, Number(pos?.y) || 0.28));
   const zone = clampedY < 0.53 ? 'sky' : 'water';
+  const lightType = pos?.lightType || (zone === 'sky' ? 'star' : 'lantern');
 
   completedSteps.update((list) => {
     const next = list.map((item) =>
       item.uid === uid
         ? {
             ...item,
+            lightType,
             awaitingPlant: false,
-            plantedPos: { x: clampedX, y: clampedY, zone }
+            plantedPos: { x: clampedX, y: clampedY, zone, lightType }
           }
         : item
     );
@@ -332,26 +393,40 @@ export function plantStepLight(uid, pos) {
     return next;
   });
 
-  trackEvent('aa_world_seed_planted', { zone });
+  trackEvent('aa_world_seed_planted', { zone, lightType });
 }
 
 /**
- * Přidá do Krajiny dobra vlastní dobrý skutek (na hladinu jako lucernu nebo na oblohu jako hvězdu).
- * @param {{ x: number, y: number, kind?: 'deed' | 'gratitude' | 'release', title?: string, element?: string, concreteImpact?: string }} item
+ * Přidá do Krajiny dobra vlastní dobrý skutek (lucerna = osobní skutek, hvězda = inspirace, vlna = pomoc druhému).
+ * @param {{ x: number, y: number, kind?: 'deed' | 'gratitude' | 'release' | 'wave' | 'lantern' | 'star', lightType?: 'lantern' | 'star' | 'wave', title?: string, element?: string, concreteImpact?: string }} item
  */
 export function addSanctuaryWish(item) {
   const clampedX = Math.max(0.06, Math.min(0.94, Number(item?.x) || 0.5));
   const clampedY = Math.max(0.07, Math.min(0.88, Number(item?.y) || 0.68));
-  const zone = clampedY < 0.53 ? 'sky' : 'water';
+  const explicitType = item?.lightType || (item?.kind === 'wave' ? 'wave' : item?.kind === 'star' ? 'star' : undefined);
+  const zone = explicitType === 'star' ? 'sky' : explicitType === 'wave' || explicitType === 'lantern' ? 'water' : clampedY < 0.53 ? 'sky' : 'water';
+  const lightType = explicitType || (zone === 'sky' ? 'star' : 'lantern');
   const rawTitle = String(item?.title || '').trim();
   const inferredEl = item?.element || inferStepElement({ title: rawTitle });
+  const defaultTitle =
+    lightType === 'wave'
+      ? 'Vlna pomoci pro druhého člověka'
+      : lightType === 'star'
+        ? 'Hvězda tiché inspirace'
+        : 'Drobný osobní skutek v běžném dni';
+  const defaultImpact =
+    lightType === 'wave'
+      ? 'Pomoc druhému — podpora, která se šíří dál'
+      : lightType === 'star'
+        ? 'Inspirace pro klidnou všímavost a dobro'
+        : 'Osobní dobrý skutek v běžném dni';
+
   const entry = {
     uid: `deed-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    kind: item?.kind || 'deed',
-    title:
-      rawTitle ||
-      (zone === 'water' ? 'Drobná pomoc člověku nebo místu v okolí' : 'Dobrý skutek poslaný dál'),
-    concreteImpact: item?.concreteImpact || 'Osobní dobrý skutek v běžném dni',
+    kind: item?.kind || lightType,
+    lightType,
+    title: rawTitle || defaultTitle,
+    concreteImpact: item?.concreteImpact || defaultImpact,
     element: inferredEl,
     x: clampedX,
     y: clampedY,
@@ -374,13 +449,17 @@ export function clearSanctuaryWishes() {
 }
 
 export function saveStepReflection(uid, note) {
+  const cleaned = String(note || '').slice(0, 240);
   completedSteps.update((list) => {
     const next = list.map((item) =>
-      item.uid === uid ? { ...item, note: String(note || '').slice(0, 240) } : item
+      item.uid === uid ? { ...item, note: cleaned } : item
     );
     saveSteps(next);
     return next;
   });
+  if (cleaned.trim().length > 0) {
+    trackFunnel('reflection_saved', { uid });
+  }
 }
 
 export function closeCelebration() {

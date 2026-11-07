@@ -1,13 +1,29 @@
+<script context="module">
+  import { openBrokenLinkReport as _openBrokenLinkReport } from '../lib/analytics.js';
+  export const openBrokenLinkReport = _openBrokenLinkReport;
+</script>
+
 <script>
   import { onDestroy } from 'svelte';
+  import { feedbackReportRequest } from '../lib/analytics.js';
 
   let isOpen = false;
+  let modalTitle = '💬 Zpětná vazba';
   let feedback = '';
   let rating = 0;
   let isSubmitting = false;
   let statusMessage = '';
   let statusType = '';
   let closeTimer = null;
+
+  $: if ($feedbackReportRequest?.open) {
+    isOpen = true;
+    modalTitle = $feedbackReportRequest.title || '💬 Nahlásit nefunkční údaj';
+    feedback = $feedbackReportRequest.prefill || '';
+    statusMessage = '';
+    statusType = '';
+    feedbackReportRequest.set(null);
+  }
 
   $: isFormValid = feedback.trim().length > 0;
 
@@ -21,6 +37,7 @@
 
   function openModal() {
     isOpen = true;
+    modalTitle = '💬 Zpětná vazba';
     statusMessage = '';
     statusType = '';
   }
@@ -104,7 +121,7 @@
   >
     <div class="modal-card">
       <div class="modal-head">
-        <h2 id="fb-title">💬 Zpětná vazba</h2>
+        <h2 id="fb-title">{modalTitle}</h2>
         <button type="button" class="close-btn" on:click={closeModal} aria-label="Zavřít">✕</button>
       </div>
 
