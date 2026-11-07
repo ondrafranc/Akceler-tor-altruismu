@@ -1,5 +1,14 @@
 import { test, expect } from '@playwright/test';
 
+test.beforeEach(async ({ page }) => {
+  const origGoto = page.goto.bind(page);
+  page.goto = async (url, options) => {
+    const res = await origGoto(url, options);
+    await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 15000 });
+    return res;
+  };
+});
+
 const BANNED_RENDERED_COPY = [
   'PRO LIDI, NE PRO FIRMY',
   'pro lidi, ne pro firmy',
@@ -360,4 +369,203 @@ test('/app/online Evidence A filter and /svet 3 semantic light types + post-deed
   await expect(page.locator('.gentle-toast')).toContainText(
     'Dnes jsi udělal něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.'
   );
+});
+
+test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #action=), and return-tab dopamine loop', async ({ page, request }) => {
+  // 1. Verify PWA binary PNG icons return 200 and valid PNG magic bytes
+  for (const iconPath of ['/icon-192.png', '/icon-512.png', '/apple-touch-icon-czech.png', '/favicon-czech.png']) {
+    const res = await request.get(iconPath);
+    expect(res.status()).toBe(200);
+    expect(res.headers()['content-type']).toContain('image/png');
+    const buf = await res.body();
+    expect(buf.slice(0, 4).toString('hex')).toBe('89504e47');
+  }
+
+  // Desktop (1280x800) and Unfolded OnePlus Open (820x960) keep .mobile-bottom-nav hidden
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/');
+  await expect(page.locator('.mobile-bottom-nav')).toBeHidden();
+  await page.setViewportSize({ width: 820, height: 960 });
+  await expect(page.locator('.mobile-bottom-nav')).toBeHidden();
+
+  // 2. Mobile 360x800 & 360x660 (In-App Browser) viewport checks
+  await page.setViewportSize({ width: 360, height: 660 });
+  await page.goto('/');
+  const topNavBox = await page.locator('.top-nav').boundingBox();
+  const heroTitleBox = await page.locator('.hero-title').boundingBox();
+  const cardBox660 = await page.locator('.instant-card').boundingBox();
+  const ctaBox660 = await page.locator('.instant-card .btn-studio-primary').boundingBox();
+  const doneBox660 = await page.locator('.instant-card .btn-studio-done').boundingBox();
+  expect(topNavBox).not.toBeNull();
+  expect(heroTitleBox).not.toBeNull();
+  expect(cardBox660).not.toBeNull();
+  expect(ctaBox660).not.toBeNull();
+  expect(doneBox660).not.toBeNull();
+  // Hero title and instant-card must NOT be clipped above the screen or hidden behind .top-nav
+  expect(heroTitleBox!.y).toBeGreaterThanOrEqual(topNavBox!.y + topNavBox!.height - 4);
+  expect(cardBox660!.y).toBeGreaterThanOrEqual(topNavBox!.y + topNavBox!.height);
+  // Zero horizontal clipping inside .hero-stage on 360x660
+  expect(heroTitleBox!.x + heroTitleBox!.width).toBeLessThanOrEqual(360);
+  expect(cardBox660!.x + cardBox660!.width).toBeLessThanOrEqual(360);
+  expect(ctaBox660!.x + ctaBox660!.width).toBeLessThanOrEqual(360);
+  expect(doneBox660!.x + doneBox660!.width).toBeLessThanOrEqual(360);
+  // Primary CTA fits above the fold even in a 360x660 Instagram/TikTok in-app browser
+  expect(ctaBox660!.y + ctaBox660!.height).toBeLessThan(650);
+
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto('/');
+
+  // Bottom nav is visible with 5 tabs; floating feedback/crisis pills are hidden
+  const bottomNav = page.locator('.mobile-bottom-nav');
+  await expect(bottomNav).toBeVisible();
+  await expect(bottomNav.locator('.mb-tab')).toHaveCount(5);
+  await expect(page.locator('.feedback-pill')).toBeHidden();
+  await expect(page.locator('.crisis-pill')).toBeHidden();
+
+  // Primary CTA and Done button inside .instant-card are 100% inside 360px width and above the fold (y + height < 740)
+  const cardBox800 = await page.locator('.instant-card').boundingBox();
+  const primaryCta = page.locator('.instant-card .btn-studio-primary');
+  const doneBtn800 = page.locator('.instant-card .btn-studio-done');
+  await expect(primaryCta).toBeVisible();
+  const ctaBox = await primaryCta.boundingBox();
+  const doneBox = await doneBtn800.boundingBox();
+  expect(cardBox800).not.toBeNull();
+  expect(ctaBox).not.toBeNull();
+  expect(doneBox).not.toBeNull();
+  expect(cardBox800!.x + cardBox800!.width).toBeLessThanOrEqual(360);
+  expect(ctaBox!.x + ctaBox!.width).toBeLessThanOrEqual(360);
+  expect(doneBox!.x + doneBox!.width).toBeLessThanOrEqual(360);
+  expect((ctaBox?.y || 0) + (ctaBox?.height || 0)).toBeLessThan(740);
+
+  // Header Opora button toggles crisis panel above bottom nav
+  await page.locator('.mobile-header-actions .mh-crisis').click();
+  await expect(page.locator('.crisis-panel')).toBeVisible();
+  await page.locator('.crisis-panel .close-btn').click();
+  await expect(page.locator('.crisis-panel')).toBeHidden();
+
+  // 3. Deep-link /?action=click-and-feed, #action=wikipedie_cz, and interaction with personal values filter
+  await page.evaluate(() => localStorage.setItem('aa_values', JSON.stringify(['animals'])));
+  await page.goto('/?action=wikipedie_cz');
+  await expect(page.locator('.instant-card .action-title')).toContainText('Opravit překlep nebo doplnit fakt na české Wikipedii');
+
+  // Toggling personal values filter unpins the deep-linked action and filters by saved topic ('animals')
+  const personalPill = page.locator('.instant-card .personal-values-pill');
+  await expect(personalPill).toBeVisible();
+  await personalPill.click();
+  await expect(page.locator('.instant-card .action-title')).not.toContainText('Opravit překlep nebo doplnit fakt na české Wikipedii');
+
+  // Navigating between /?action=click-and-feed, /?action=doucovani_deti (ZWJ emoji), and #action=wikipedie_cz
+  await page.goto('/?action=doucovani_deti');
+  const zwjHomeTitle = (await page.locator('.instant-card .action-title').innerText()).trim();
+  expect(zwjHomeTitle).toMatch(/^[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ0-9]/i);
+
+  await page.goto('/?action=click-and-feed');
+  await expect(page.locator('.instant-card .action-title')).toContainText('Naplnit misku v českém útulku jedním klikem');
+  await page.evaluate(() => {
+    window.location.hash = '#action=wikipedie_cz';
+  });
+  await expect(page.locator('.instant-card .action-title')).toContainText('Opravit překlep nebo doplnit fakt na české Wikipedii');
+
+  // Direct link copy button
+  const shareBtn = page.locator('.instant-card .direct-link-share-btn');
+  await expect(shareBtn).toBeVisible();
+  await shareBtn.click();
+  await expect(shareBtn).toContainText('✓ Odkaz zkopírován');
+
+  // 4. Return-tab instant dopamine prompt on visibilitychange (with >3s guard)
+  await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
+  const returnStrip = page.locator('.return-dopamine-strip');
+  // Immediate return (< 3s) does NOT trigger the prompt
+  await page.evaluate(() => {
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(returnStrip).toBeHidden();
+
+  // Return after > 3 seconds triggers the celebratory prompt
+  await page.waitForTimeout(3050);
+  await page.evaluate(() => {
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(returnStrip).toBeVisible();
+  await expect(returnStrip).toContainText('Vítej zpět!');
+  const returnStripBox = await returnStrip.boundingBox();
+  expect(returnStripBox).not.toBeNull();
+  expect(returnStripBox!.x + returnStripBox!.width).toBeLessThanOrEqual(360);
+  await returnStrip.locator('.return-dopamine-btn').click();
+  await expect(returnStrip).toBeHidden();
+
+  // 5. /svet on 360x800: .seed-ceremony-banner (both from localStorage and direct ?seed= URL) and .memory-whisper do NOT overlap canvas.world-canvas
+  await page.evaluate(() => localStorage.removeItem('aa_completed_steps_v2'));
+  await page.goto('/svet?seed=zvirata_utulek_online&title=Naplnit%20misku');
+  const canvasBox = await page.locator('canvas.world-canvas').boundingBox();
+  expect(canvasBox).not.toBeNull();
+  const seedBanner = page.locator('.seed-ceremony-banner');
+  await expect(seedBanner).toBeVisible();
+  await expect(seedBanner).toContainText('Naplnit misku');
+  const seedBox = await seedBanner.boundingBox();
+  expect(seedBox).not.toBeNull();
+  // Seed banner is stacked below canvas on mobile (seedBox.y >= canvasBox.y + canvasBox.height - 2)
+  expect(seedBox!.y).toBeGreaterThanOrEqual(canvasBox!.y + canvasBox!.height - 2);
+  await seedBanner.locator('.seed-auto-btn').click();
+  await expect(seedBanner).toBeHidden();
+
+  await page.locator('.explore-deed-btn').click();
+  const whisper = page.locator('.memory-whisper');
+  await expect(whisper).toBeVisible();
+  const whisperBox = await whisper.boundingBox();
+  expect(whisperBox).not.toBeNull();
+  expect(whisperBox!.y).toBeGreaterThanOrEqual(canvasBox!.y + canvasBox!.height - 2);
+
+  // Tapping stage while .memory-whisper is open dismisses .memory-whisper without planting an accidental wish
+  await page.locator('.sanctuary-viewport').click({ position: { x: 20, y: 20 } });
+  await expect(whisper).toBeHidden();
+
+  // 6. /near on 360x800: first .place-card has y < 520 (above the fold)
+  await page.goto('/near');
+  const firstPlace = page.locator('.place-card').first();
+  await expect(firstPlace).toBeVisible();
+  const placeBox = await firstPlace.boundingBox();
+  expect(placeBox).not.toBeNull();
+  expect(placeBox!.y).toBeLessThan(520);
+
+  // 7. /app/guided on 360x800: .situation-grid is a compact 2-column CSS grid & preview bar is visible
+  await page.goto('/app/guided');
+  const sitGridDisplay = await page.locator('.situation-grid').evaluate((el) => getComputedStyle(el).display);
+  expect(sitGridDisplay).toBe('grid');
+  const sitGridBox = await page.locator('.situation-grid').boundingBox();
+  expect(sitGridBox).not.toBeNull();
+  expect(sitGridBox!.height).toBeLessThan(180);
+  await expect(page.locator('.mobile-guided-preview-bar')).toBeVisible();
+
+  // 8. /app/online on 360x800: first card primary CTA is visible above the fold (y + height < 740)
+  await page.goto('/app/online');
+  const firstOnlineCta = page.locator('.grid .card .cta.primary').first();
+  await expect(firstOnlineCta).toBeVisible();
+  const onlineCtaBox = await firstOnlineCta.boundingBox();
+  expect(onlineCtaBox).not.toBeNull();
+  expect(onlineCtaBox!.y + onlineCtaBox!.height).toBeLessThan(740);
+
+  // 9. Zero horizontal overflow on 360x800 across all 5 main routes + 320px long ?title= edge case on /svet
+  for (const route of ['/', '/app/online', '/near', '/svet', '/app/guided']) {
+    await page.goto(route);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+    );
+    expect(overflow, `Horizontal overflow on ${route}`).toBe(false);
+  }
+
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.goto('/svet?seed=pomoc_sousedovi_s_nakupem');
+  await expect(page.locator('.seed-ceremony-banner')).toContainText('Pomoc sousedovi s nakupem');
+  await page.goto(
+    '/svet?seed=custom&title=' +
+      encodeURIComponent('Velmi dlouhý název dobrého skutku pro kontrolu zalomení textu bez přetékání na úzkém displeji 320px')
+  );
+  const narrowSeedBox = await page.locator('.seed-ceremony-banner').boundingBox();
+  expect(narrowSeedBox).not.toBeNull();
+  expect(narrowSeedBox!.x + narrowSeedBox!.width).toBeLessThanOrEqual(320);
+  const narrowOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+  );
+  expect(narrowOverflow).toBe(false);
 });

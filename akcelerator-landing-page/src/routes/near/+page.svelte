@@ -32,6 +32,49 @@
     animals: { emoji: '🐾', label: 'Zvířata a útulek', color: '#2563eb' }
   };
 
+  const ALL_KINDS = ['ngo', 'community', 'food', 'animals'];
+
+  const QUICK_TOWNS = [
+    ...CZECH_CITIES.map((c) => ({ label: `${c.name}`, lat: c.lat, lon: c.lon })),
+    { label: 'Kladno, Středočeský kraj', lat: 50.1473, lon: 14.1028 },
+    { label: 'Most, Ústecký kraj', lat: 50.503, lon: 13.6362 },
+    { label: 'Opava, Moravskoslezský kraj', lat: 49.9387, lon: 17.9026 },
+    { label: 'Frýdek-Místek, Moravskoslezský kraj', lat: 49.6853, lon: 18.3504 },
+    { label: 'Havířov, Moravskoslezský kraj', lat: 49.7798, lon: 18.4369 },
+    { label: 'Teplice, Ústecký kraj', lat: 50.6404, lon: 13.8245 },
+    { label: 'Karviná, Moravskoslezský kraj', lat: 49.854, lon: 18.5417 },
+    { label: 'Děčín, Ústecký kraj', lat: 50.7821, lon: 14.2148 },
+    { label: 'Chomutov, Ústecký kraj', lat: 50.4605, lon: 13.4178 },
+    { label: 'Jablonec nad Nisou, Liberecký kraj', lat: 50.7243, lon: 15.1711 },
+    { label: 'Mladá Boleslav, Středočeský kraj', lat: 50.4113, lon: 14.9032 },
+    { label: 'Prostějov, Olomoucký kraj', lat: 49.4719, lon: 17.1118 },
+    { label: 'Přerov, Olomoucký kraj', lat: 49.4551, lon: 17.4509 },
+    { label: 'Tábor, Jihočeský kraj', lat: 49.4144, lon: 14.6578 },
+    { label: 'Třebíč, Kraj Vysočina', lat: 49.2149, lon: 15.8817 },
+    { label: 'Znojmo, Jihomoravský kraj', lat: 48.8555, lon: 16.0488 },
+    { label: 'Kolín, Středočeský kraj', lat: 50.0281, lon: 15.2006 },
+    { label: 'Příbram, Středočeský kraj', lat: 49.6899, lon: 14.0104 },
+    { label: 'Cheb, Karlovarský kraj', lat: 50.0796, lon: 12.3739 },
+    { label: 'Písek, Jihočeský kraj', lat: 49.3088, lon: 14.1475 },
+    { label: 'Trutnov, Královéhradecký kraj', lat: 50.561, lon: 15.9127 },
+    { label: 'Kroměříž, Zlínský kraj', lat: 49.2979, lon: 17.3931 },
+    { label: 'Vsetín, Zlínský kraj', lat: 49.3387, lon: 17.9962 },
+    { label: 'Uherské Hradiště, Zlínský kraj', lat: 49.0697, lon: 17.4597 },
+    { label: 'Šumperk, Olomoucký kraj', lat: 49.9653, lon: 16.9706 },
+    { label: 'Břeclav, Jihomoravský kraj', lat: 48.759, lon: 16.882 },
+    { label: 'Hodonín, Jihomoravský kraj', lat: 48.8489, lon: 17.1324 },
+    { label: 'Česká Lípa, Liberecký kraj', lat: 50.6855, lon: 14.5376 },
+    { label: 'Chrudim, Pardubický kraj', lat: 49.9511, lon: 15.7956 }
+  ];
+
+  function normSearchStr(s) {
+    return String(s || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
   let activePresetId = 'all';
   let selectedCity = CZECH_CITIES[0];
   let centerLat = selectedCity.lat;
@@ -49,8 +92,8 @@
     return `${km < 10 ? km.toFixed(1) : Math.round(km)} km`;
   }
 
-  function getInstantCurated(lat, lon, activeKinds) {
-    const kList = activeKinds?.length ? activeKinds : ['ngo', 'community', 'food', 'animals'];
+  function getInstantCurated(lat, lon, activeKinds = ALL_KINDS) {
+    const kList = activeKinds?.length ? activeKinds : ALL_KINDS;
     const allWithDist = CURATED_FALLBACK_PLACES.filter((p) => kList.includes(p.kind))
       .map((p) => {
         const d = haversineKm(lat, lon, p.lat, p.lon);
@@ -79,17 +122,30 @@
   let gpsMessage = '';
   let shareMessage = '';
 
+  $: instantTownSuggestions = (() => {
+    const q = normSearchStr(locationQuery);
+    if (q.length < 2 || geoResults.length > 0) return [];
+    return QUICK_TOWNS.filter((t) => {
+      const n = normSearchStr(t.label);
+      return n.includes(q) && n.split(',')[0] !== q;
+    }).slice(0, 5);
+  })();
+
   // Map state
   let mapEl;
   let map = null;
   let leaflet = null;
   let tileLayer = null;
-  let tileStyle = 'osm'; // 'osm' | 'hot'
+  let tileStyle = 'osm'; // 'osm' | 'voyager'
   let markersLayer = null;
   let userMarker = null;
   let radiusCircle = null;
   /** @type {Map<string, any>} */
   let markerById = new Map();
+  /** @type {{ lat: number, lon: number } | null} */
+  let pannedCenter = null;
+  /** @type {AbortController | null} */
+  let nearbyAbortController = null;
 
   let isLoadingMap = true;
   let mapBootError = '';
@@ -179,28 +235,29 @@
     tileStyle = style;
     if (tileLayer) tileLayer.remove();
 
-    // 100% free, zero-API-key OpenStreetMap & Humanitarian OSM tile servers
-    const url =
-      style === 'hot'
-        ? 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png'
-        : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+    const isVoyager = style === 'voyager';
+    const url = isVoyager
+      ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+      : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-    const attribution =
-      style === 'hot'
-        ? '&copy; OpenStreetMap přispěvatelé, styl Humanitarian OSM'
-        : '&copy; OpenStreetMap přispěvatelé';
+    const attribution = isVoyager
+      ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+      : '&copy; OpenStreetMap přispěvatelé';
 
     tileLayer = leaflet.tileLayer(url, {
       maxZoom: 19,
-      subdomains: style === 'hot' ? ['a', 'b', 'c'] : ['a', 'b', 'c'],
+      subdomains: isVoyager ? 'abcd' : ['a', 'b', 'c'],
+      keepBuffer: 4,
+      updateWhenZooming: false,
+      updateWhenIdle: false,
       attribution
     });
 
-    if (style === 'hot') {
+    if (isVoyager) {
       let tileErrors = 0;
       tileLayer.on('tileerror', () => {
         tileErrors += 1;
-        if (tileErrors >= 3 && tileStyle === 'hot') {
+        if (tileErrors >= 3 && tileStyle === 'voyager') {
           setTileLayer('osm');
         }
       });
@@ -230,6 +287,7 @@
   function moveMapCenter(lat, lon, zoom = 13) {
     centerLat = lat;
     centerLon = lon;
+    pannedCenter = null;
     if (!map || !leaflet) return;
     map.setView([lat, lon], zoom, { animate: true });
     if (userMarker) userMarker.remove();
@@ -256,12 +314,25 @@
 
   function renderMarkers() {
     if (!map || !leaflet) return;
-    if (markersLayer) markersLayer.remove();
-    markersLayer = leaflet.layerGroup().addTo(map);
-    markerById = new Map();
+    if (!markersLayer) {
+      markersLayer = leaflet.layerGroup().addTo(map);
+    }
 
-    for (const p of filteredPlaces.slice(0, 160)) {
+    const nextSlice = filteredPlaces.slice(0, 160);
+    const nextIds = new Set(nextSlice.map((p) => p.id));
+
+    // Remove only markers that are no longer in filteredPlaces (zero DOM flicker for existing pins!)
+    for (const [existingId, existingMarker] of markerById.entries()) {
+      if (!nextIds.has(existingId)) {
+        markersLayer.removeLayer(existingMarker);
+        markerById.delete(existingId);
+      }
+    }
+
+    for (const p of nextSlice) {
       if (typeof p.lat !== 'number' || typeof p.lon !== 'number') continue;
+      if (markerById.has(p.id)) continue;
+
       const meta = KIND_META[p.kind] || KIND_META.ngo;
       const isCurated = !!p.curated;
 
@@ -343,30 +414,41 @@
   }
 
   async function fetchNearby(lat, lon) {
+    if (nearbyAbortController) {
+      nearbyAbortController.abort();
+    }
+    const controller = new AbortController();
+    nearbyAbortController = controller;
+
     isFetching = true;
-    // 1. Instant zero-wait curated places so map is IMMEDIATELY useful!
-    const curatedInstant = getInstantCurated(lat, lon, kinds);
+    pannedCenter = null;
+    // Always seed all 4 kinds so switching category pills is 0ms in-memory!
+    const curatedInstant = getInstantCurated(lat, lon, ALL_KINDS);
     places = curatedInstant;
     syncUrlState(lat, lon);
 
     const communityPromise = fetch(
-      `/api/community-nearby?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&radius_m=${encodeURIComponent(radiusKm * 1000)}`
+      `/api/community-nearby?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&radius_m=${encodeURIComponent(radiusKm * 1000)}`,
+      { signal: controller.signal }
     )
       .then((r) => (r.ok ? r.json() : { items: [] }))
       .then((d) => {
-        communityItems = Array.isArray(d?.items) ? d.items : [];
+        if (!controller.signal.aborted) {
+          communityItems = Array.isArray(d?.items) ? d.items : [];
+        }
       })
       .catch(() => {
-        communityItems = [];
+        if (!controller.signal.aborted) communityItems = [];
       });
 
     try {
       const resp = await fetch(
         `/api/nearby?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&radius_m=${encodeURIComponent(
           radiusKm * 1000
-        )}&kinds=${encodeURIComponent(kinds.join(','))}&include_associations=${includeAssociations ? '1' : '0'}`
+        )}&kinds=${encodeURIComponent(ALL_KINDS.join(','))}&include_associations=${includeAssociations ? '1' : '0'}`,
+        { signal: controller.signal }
       );
-      if (resp.ok) {
+      if (resp.ok && !controller.signal.aborted) {
         const data = await resp.json();
         isFallbackData = !!data?.fallback;
         isExpandedToNearest = !!data?.expandedToNearest;
@@ -382,12 +464,16 @@
           places = mergeCuratedAndApiPlaces(curatedInstant, apiPlaces);
         }
       }
-    } catch {
-      isFallbackData = true;
+    } catch (err) {
+      if (err?.name !== 'AbortError') {
+        isFallbackData = true;
+      }
     } finally {
       await communityPromise;
-      visibleCount = 3;
-      isFetching = false;
+      if (!controller.signal.aborted) {
+        visibleCount = 3;
+        isFetching = false;
+      }
     }
   }
 
@@ -416,15 +502,18 @@
   }
 
   function applyPreset(preset) {
+    // 0ms instant in-memory filter — no network call or map wipe needed!
     activePresetId = preset.id;
     query = '';
     kinds = [...preset.kinds];
     onlyWithWebsite = !!preset.onlyWeb;
-    fetchNearby(centerLat, centerLon);
+    visibleCount = 3;
+    syncUrlState(centerLat, centerLon);
     trackFunnel('intent_selected', { surface: 'near_preset', preset: preset.id });
   }
 
   function toggleKind(k) {
+    // 0ms instant in-memory filter
     if (kinds.includes(k)) {
       if (kinds.length > 1) kinds = kinds.filter((x) => x !== k);
     } else {
@@ -432,7 +521,18 @@
     }
     query = '';
     activePresetId = 'custom';
-    fetchNearby(centerLat, centerLon);
+    visibleCount = 3;
+    syncUrlState(centerLat, centerLon);
+  }
+
+  async function searchPannedArea() {
+    if (!pannedCenter) return;
+    const { lat, lon } = pannedCenter;
+    pannedCenter = null;
+    query = '';
+    moveMapCenter(lat, lon, map ? map.getZoom() : 13);
+    await fetchNearby(lat, lon);
+    trackEvent('aa_near_pan_search', { lat: Math.round(lat * 100) / 100, lon: Math.round(lon * 100) / 100 });
   }
 
   function resetAndExpandSearch() {
@@ -452,6 +552,12 @@
       geoMessage = 'Zadej aspoň 2 znaky (obec, město nebo PSČ).';
       return;
     }
+    // Check instant local match first if user presses Enter on a known city name
+    const exactLocal = QUICK_TOWNS.find((t) => normSearchStr(t.label.split(',')[0]) === normSearchStr(q));
+    if (exactLocal) {
+      await pickGeocodeResult(exactLocal);
+      return;
+    }
     geoStatus = 'loading';
     geoMessage = 'Hledám místo v Česku…';
     geoResults = [];
@@ -462,7 +568,7 @@
       geoResults = res;
       if (!res.length) {
         geoStatus = 'error';
-        geoMessage = 'Místo jsme nenašli – zkus název okresu nebo klikni přímo do mapy.';
+        geoMessage = 'Místo jsme nenašli – zkus název okresu nebo posuň mapu.';
         return;
       }
       if (res.length === 1) {
@@ -473,7 +579,7 @@
       }
     } catch {
       geoStatus = 'error';
-      geoMessage = 'Vyhledávání teď neodpovídá – vyber prosím město nahoře nebo klikni do mapy.';
+      geoMessage = 'Vyhledávání teď neodpovídá – vyber prosím město nahoře nebo posuň mapu.';
     }
   }
 
@@ -580,7 +686,7 @@
       } catch {}
 
       // Seed curated places BEFORE map finishes mounting so list is instant
-      places = getInstantCurated(centerLat, centerLon, kinds);
+      places = getInstantCurated(centerLat, centerLon, ALL_KINDS);
 
       try {
         const mod = await import('leaflet');
@@ -591,7 +697,8 @@
 
         map = leaflet.map(mapEl, {
           zoomControl: true,
-          scrollWheelZoom: true
+          scrollWheelZoom: true,
+          preferCanvas: true
         });
 
         setTileLayer('osm');
@@ -601,11 +708,15 @@
         // Ensure tiles fill container cleanly
         resizeTimer = setTimeout(() => map?.invalidateSize(), 120);
 
-        map.on('click', async (e) => {
-          const { lat, lng } = e.latlng;
-          query = '';
-          moveMapCenter(lat, lng, map.getZoom());
-          await fetchNearby(lat, lng);
+        map.on('moveend', () => {
+          if (!map) return;
+          const c = map.getCenter();
+          const distFromActive = haversineKm(centerLat, centerLon, c.lat, c.lng);
+          if (distFromActive >= 1.8) {
+            pannedCenter = { lat: c.lat, lon: c.lng };
+          } else {
+            pannedCenter = null;
+          }
         });
 
         await fetchNearby(centerLat, centerLon);
@@ -620,6 +731,7 @@
     return () => {
       destroyed = true;
       if (resizeTimer) clearTimeout(resizeTimer);
+      if (nearbyAbortController) nearbyAbortController.abort();
       if (map) {
         map.remove();
         map = null;
@@ -700,6 +812,16 @@
     {#if geoMessage}
       <div class="info-note">{geoMessage}</div>
     {/if}
+    {#if instantTownSuggestions.length > 0}
+      <div class="geo-dropdown" role="listbox" aria-label="Rychlý výběr města">
+        {#each instantTownSuggestions as t}
+          <button type="button" class="geo-opt" on:click={() => pickGeocodeResult(t)}>
+            <strong>📍 {t.label.split(',')[0]}</strong>
+            <span>{t.label} · okamžitý přesun</span>
+          </button>
+        {/each}
+      </div>
+    {/if}
     {#if geoResults.length > 0}
       <div class="geo-dropdown">
         {#each geoResults as r}
@@ -741,10 +863,21 @@
   {/if}
 
   <!-- MOBILE VIEW SWITCHER -->
-  <div class="mobile-tabs">
-    <button type="button" class:active={mobileView === 'both'} on:click={() => setMobileMode('both')}>Mapa + Seznam</button>
-    <button type="button" class:active={mobileView === 'map'} on:click={() => setMobileMode('map')}>Jen mapa</button>
-    <button type="button" class:active={mobileView === 'list'} on:click={() => setMobileMode('list')}>Seznam ({filteredPlaces.length})</button>
+  <div class="mobile-tabs" role="tablist" aria-label="Přepnout zobrazení seznamu a mapy">
+    <button
+      type="button"
+      class:active={mobileView === 'both' || mobileView === 'list'}
+      on:click={() => setMobileMode('both')}
+    >
+      📋 Seznam ({filteredPlaces.length})
+    </button>
+    <button
+      type="button"
+      class:active={mobileView === 'map'}
+      on:click={() => setMobileMode('map')}
+    >
+      🗺️ Mapa
+    </button>
   </div>
 
   <!-- SPLIT VIEW: INTERACTIVE LEAFLET MAP + CLEAN ACTIONABLE CARDS -->
@@ -757,13 +890,19 @@
           <div class="map-status-pill">Aktualizuji okolí…</div>
         {/if}
 
+        {#if pannedCenter && !isFetching}
+          <button type="button" class="search-area-btn" on:click={searchPannedArea}>
+            🔄 Hledat v této oblasti mapy
+          </button>
+        {/if}
+
         <div class="map-floating-tools">
           <button
             type="button"
             class="tile-switch-btn"
-            on:click={() => setTileLayer(tileStyle === 'osm' ? 'hot' : 'osm')}
+            on:click={() => setTileLayer(tileStyle === 'voyager' ? 'osm' : 'voyager')}
           >
-            {tileStyle === 'osm' ? '🌿 Jemný podklad' : '🗺️ Klasická mapa'}
+            {tileStyle === 'voyager' ? '🗺️ Klasická mapa' : '🌿 Jemný podklad'}
           </button>
         </div>
 
@@ -771,9 +910,9 @@
           <div class="map-error-box">{mapBootError}</div>
         {/if}
 
-        <div bind:this={mapEl} class="leaflet-canvas"></div>
+        <div bind:this={mapEl} class="leaflet-canvas" class:map-expanded={mobileView === 'map'}></div>
         <div class="map-foot-hint">
-          Kliknutím kamkoliv do mapy přesuneš střed hledání na vybranou obec či ulici.
+          Posuň mapu kamkoliv po Česku a klikni na „Hledat v této oblasti mapy“.
         </div>
       </div>
     </div>
@@ -801,7 +940,7 @@
       </div>
 
       <!-- PLACES CARDS (CLEAN, ZERO BOX-IN-BOX) -->
-      <div class="places-stack">
+      <div class="places-stack places-grid">
         {#each visiblePlaces as p, idx (p.id)}
           {@const meta = KIND_META[p.kind] || KIND_META.ngo}
           {@const webUrl = normalizeUrl(p.website)}
@@ -1356,6 +1495,32 @@
     backdrop-filter: blur(8px);
   }
 
+  .search-area-btn {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 520;
+    padding: 0.44rem 0.92rem;
+    border-radius: 999px;
+    border: 1px solid rgba(16, 185, 129, 0.45);
+    background: rgba(8, 25, 18, 0.92);
+    color: #fde68a;
+    font-family: var(--font-sans);
+    font-size: 0.78rem;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(6, 21, 15, 0.25);
+    backdrop-filter: blur(8px);
+    white-space: nowrap;
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+
+  .search-area-btn:hover {
+    transform: translateX(-50%) scale(1.03);
+    background: #064e3b;
+  }
+
   .map-floating-tools {
     position: absolute;
     top: 12px;
@@ -1857,6 +2022,174 @@
     }
     .portals-mini-grid {
       grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 680px) {
+    .near-page {
+      padding: 0.25rem 0.6rem 1.8rem;
+    }
+
+    .subpage-hero.near-header {
+      padding: 0.45rem 0.75rem;
+      margin-bottom: 0.35rem;
+      border-radius: 16px;
+    }
+
+    .near-header .hero-kicker,
+    .near-header .subtitle {
+      display: none !important;
+    }
+
+    .near-header .title {
+      font-size: 1.12rem;
+      line-height: 1.15;
+      margin: 0;
+    }
+
+    .controls-card {
+      padding: 0.48rem 0.55rem;
+      margin-bottom: 0.35rem;
+      border-radius: 14px;
+    }
+
+    .controls-top {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 0.3rem;
+    }
+
+    .gps-btn {
+      padding: 0.34rem 0.52rem;
+      font-size: 0.72rem;
+      flex-shrink: 0;
+    }
+
+    .search-box {
+      min-width: 0;
+      flex: 1 1 auto;
+      gap: 0.28rem;
+    }
+
+    .search-box input {
+      min-width: 0;
+      padding: 0.34rem 0.5rem;
+      font-size: 0.76rem;
+    }
+
+    .btn-find {
+      padding: 0.34rem 0.55rem;
+      font-size: 0.74rem;
+      flex-shrink: 0;
+    }
+
+    .city-jump-select,
+    .radius-box {
+      display: none;
+    }
+
+    .controls-bottom {
+      margin-top: 0.3rem;
+      padding-top: 0.28rem;
+      gap: 0.28rem;
+    }
+
+    .presets-bar {
+      display: flex;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      gap: 0.26rem;
+      width: 100%;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .presets-bar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .preset-pill {
+      flex: 0 0 auto;
+      white-space: nowrap;
+      padding: 0.26rem 0.54rem;
+      font-size: 0.72rem;
+    }
+
+    .controls-links {
+      display: none;
+    }
+
+    .smart-nearest-banner {
+      margin-bottom: 0.35rem;
+      padding: 0.38rem 0.6rem;
+      font-size: 0.74rem;
+    }
+
+    .mobile-tabs {
+      margin-bottom: 0.32rem;
+      gap: 0.3rem;
+    }
+
+    .mobile-tabs button {
+      padding: 0.3rem 0.55rem;
+      font-size: 0.75rem;
+      border-radius: 10px;
+    }
+
+    .split-layout {
+      gap: 0.35rem;
+    }
+
+    .leaflet-canvas {
+      height: 140px;
+    }
+
+    .leaflet-canvas.map-expanded {
+      height: 62dvh;
+    }
+
+    .map-foot-hint {
+      display: none;
+    }
+
+    .list-toolbar {
+      margin-bottom: 0.3rem;
+      padding: 0.05rem 0;
+      gap: 0.35rem;
+      flex-wrap: nowrap;
+    }
+
+    .count-heading {
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+
+    .count-heading strong {
+      font-size: 0.92rem;
+    }
+
+    .list-filters {
+      flex-wrap: nowrap;
+      gap: 0.28rem;
+      min-width: 0;
+      flex: 1;
+      justify-content: flex-end;
+    }
+
+    .filter-input,
+    .sort-select {
+      padding: 0.28rem 0.45rem;
+      font-size: 0.73rem;
+      min-width: 0;
+    }
+
+    .filter-input {
+      max-width: 115px;
+    }
+
+    .place-card {
+      padding: 0.8rem 0.85rem;
+      border-radius: 16px;
     }
   }
 </style>

@@ -1,5 +1,17 @@
 <script>
+  import { onMount } from 'svelte';
+
   let isExpanded = false;
+
+  onMount(() => {
+    const handleToggle = () => {
+      isExpanded = !isExpanded;
+    };
+    window.addEventListener('akcelerator:toggle-crisis', handleToggle);
+    return () => {
+      window.removeEventListener('akcelerator:toggle-crisis', handleToggle);
+    };
+  });
 
   const resources = [
     {
@@ -77,7 +89,7 @@
 
   <button
     type="button"
-    class="crisis-pill"
+    class="crisis-pill crisis-trigger"
     on:click={toggleHelp}
     aria-expanded={isExpanded}
   >
@@ -237,20 +249,25 @@
     color: var(--text-secondary);
   }
 
-  @media (max-width: 520px) {
+  @media (max-width: 680px) {
+    .crisis-pill,
+    .crisis-trigger {
+      display: none !important;
+    }
+
     .crisis-widget {
-      right: 10px;
-      bottom: 12px;
+      z-index: 980;
     }
-    .crisis-pill {
-      padding: 0.46rem 0.72rem;
-      max-width: calc(100vw - 68px);
-    }
-    .pill-label {
-      font-size: 0.75rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+
+    .crisis-panel {
+      position: fixed;
+      bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+      left: 12px;
+      right: 12px;
+      width: auto;
+      z-index: 980;
+      max-height: calc(100dvh - 130px);
+      overflow-y: auto;
     }
   }
 </style>

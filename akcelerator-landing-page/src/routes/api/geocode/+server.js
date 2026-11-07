@@ -41,7 +41,30 @@ const LOCAL_CZECH_TOWNS = [
   { label: 'Trutnov, Královéhradecký kraj, Česko', lat: 50.561, lon: 15.9127, type: 'city' },
   { label: 'Kroměříž, Zlínský kraj, Česko', lat: 49.2979, lon: 17.3931, type: 'city' },
   { label: 'Vsetín, Zlínský kraj, Česko', lat: 49.3387, lon: 17.9962, type: 'city' },
-  { label: 'Uherské Hradiště, Zlínský kraj, Česko', lat: 49.0697, lon: 17.4597, type: 'city' }
+  { label: 'Uherské Hradiště, Zlínský kraj, Česko', lat: 49.0697, lon: 17.4597, type: 'city' },
+  { label: 'Břeclav, Jihomoravský kraj, Česko', lat: 48.759, lon: 16.882, type: 'city' },
+  { label: 'Hodonín, Jihomoravský kraj, Česko', lat: 48.8489, lon: 17.1324, type: 'city' },
+  { label: 'Česká Lípa, Liberecký kraj, Česko', lat: 50.6855, lon: 14.5376, type: 'city' },
+  { label: 'Nový Jičín, Moravskoslezský kraj, Česko', lat: 49.5944, lon: 18.0103, type: 'city' },
+  { label: 'Šumperk, Olomoucký kraj, Česko', lat: 49.9653, lon: 16.9706, type: 'city' },
+  { label: 'Chrudim, Pardubický kraj, Česko', lat: 49.9511, lon: 15.7956, type: 'city' },
+  { label: 'Havlíčkův Brod, Kraj Vysočina, Česko', lat: 49.6078, lon: 15.5807, type: 'city' },
+  { label: 'Žďár nad Sázavou, Kraj Vysočina, Česko', lat: 49.5626, lon: 15.9392, type: 'city' },
+  { label: 'Jindřichův Hradec, Jihočeský kraj, Česko', lat: 49.144, lon: 15.003, type: 'city' },
+  { label: 'Strakonice, Jihočeský kraj, Česko', lat: 49.2614, lon: 13.9024, type: 'city' },
+  { label: 'Klatovy, Plzeňský kraj, Česko', lat: 49.3955, lon: 13.2951, type: 'city' },
+  { label: 'Sokolov, Karlovarský kraj, Česko', lat: 50.1813, lon: 12.6402, type: 'city' },
+  { label: 'Litoměřice, Ústecký kraj, Česko', lat: 50.5335, lon: 14.1319, type: 'city' },
+  { label: 'Beroun, Středočeský kraj, Česko', lat: 49.9638, lon: 14.072, type: 'city' },
+  { label: 'Benešov, Středočeský kraj, Česko', lat: 49.7816, lon: 14.6869, type: 'city' },
+  { label: 'Kutná Hora, Středočeský kraj, Česko', lat: 49.9484, lon: 15.2682, type: 'city' },
+  { label: 'Mělník, Středočeský kraj, Česko', lat: 50.3505, lon: 14.4741, type: 'city' },
+  { label: 'Náchod, Královéhradecký kraj, Česko', lat: 50.4167, lon: 16.1629, type: 'city' },
+  { label: 'Jičín, Královéhradecký kraj, Česko', lat: 50.437, lon: 15.3517, type: 'city' },
+  { label: 'Svitavy, Pardubický kraj, Česko', lat: 49.7559, lon: 16.4682, type: 'city' },
+  { label: 'Ústí nad Orlicí, Pardubický kraj, Česko', lat: 49.9739, lon: 16.3936, type: 'city' },
+  { label: 'Vyškov, Jihomoravský kraj, Česko', lat: 49.2775, lon: 16.999, type: 'city' },
+  { label: 'Blansko, Jihomoravský kraj, Česko', lat: 49.3631, lon: 16.6445, type: 'city' }
 ];
 
 function stripDiacritics(str) {
@@ -52,8 +75,20 @@ function stripDiacritics(str) {
 }
 
 function searchLocalTowns(q, limit = 5) {
-  const normQ = stripDiacritics(q);
-  return LOCAL_CZECH_TOWNS.filter((t) => stripDiacritics(t.label).includes(normQ)).slice(0, limit);
+  const normQ = stripDiacritics(q).trim();
+  if (!normQ) return [];
+  const exactOrPrefix = [];
+  const substring = [];
+  for (const t of LOCAL_CZECH_TOWNS) {
+    const cityPart = stripDiacritics(t.label.split(',')[0]);
+    const fullNorm = stripDiacritics(t.label);
+    if (cityPart === normQ || cityPart.startsWith(normQ)) {
+      exactOrPrefix.push(t);
+    } else if (fullNorm.includes(normQ)) {
+      substring.push(t);
+    }
+  }
+  return [...exactOrPrefix, ...substring].slice(0, limit);
 }
 
 async function throttleUpstream(minIntervalMs = 1100) {
@@ -154,6 +189,25 @@ export async function GET({ url, request, getClientAddress }) {
         'cache-control': 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800'
       }
     });
+  }
+
+  // Zero-latency fast path for known Czech cities/towns (when user isn't typing a postcode/street number)
+  if (!/\d/.test(q)) {
+    const instantMatches = searchLocalTowns(q, limit);
+    const normQ = stripDiacritics(q).trim();
+    const hasStrongCityMatch = instantMatches.some((t) => {
+      const cityPart = stripDiacritics(t.label.split(',')[0]);
+      return cityPart === normQ || (normQ.length >= 3 && cityPart.startsWith(normQ));
+    });
+    if (hasStrongCityMatch) {
+      const fastPayload = { results: instantMatches, instant: true };
+      setBoundedCache(CACHE, key, fastPayload, 24 * 60 * 60 * 1000, 300);
+      return json(fastPayload, {
+        headers: {
+          'cache-control': 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800'
+        }
+      });
+    }
   }
 
   if (INFLIGHT.has(key)) {

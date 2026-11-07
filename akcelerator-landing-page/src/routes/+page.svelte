@@ -1,5 +1,6 @@
 <script>
   import { onMount } from "svelte";
+  import { page } from "$app/stores";
   import {
     PORTALS,
     MICRO_ACTIONS,
@@ -59,13 +60,100 @@
 
   const QUICK_CITIES = CZECH_CITIES.slice(0, 8);
 
+  const ACTION_ALIASES = {
+    "click-and-feed": "zvirata_utulek_online",
+    click_and_feed: "zvirata_utulek_online",
+    mapswipe: "missing_maps",
+  };
+
   let energyMode = "couch";
   let suggestionIndex = 0;
   let lastQuickActionId = "";
   let excludeQuickId = "";
+  let pinnedActionId = "";
   let hopeIdx = 0;
   let savedValues = [];
   let usePersonalValues = false;
+
+  let awaitingPartnerReturn = false;
+  let partnerLeaveTimestamp = 0;
+  let partnerReturnPromptVisible = false;
+  let justCompleted = false;
+  let copiedDirectLink = false;
+  let copyLinkTimer = null;
+
+  function resolveActionFromParam(rawParam) {
+    if (!rawParam) return null;
+    const cleaned = String(rawParam).trim().replace(/^[#?]+/, "");
+    if (!cleaned) return null;
+    const aliased = ACTION_ALIASES[cleaned.toLowerCase()] || cleaned;
+    const normalizedUnderscore = aliased.replace(/-/g, "_").toLowerCase();
+    const normalizedHyphen = aliased.replace(/_/g, "-").toLowerCase();
+    return (
+      MICRO_ACTIONS.find(
+        (a) =>
+          a.id === aliased ||
+          a.id.toLowerCase() === normalizedUnderscore ||
+          a.id.toLowerCase().replace(/_/g, "-") === normalizedHyphen,
+      ) || null
+    );
+  }
+
+  function inferEnergyModeForAction(action) {
+    if (!action) return "couch";
+    if (action.commitment === "long_term") return "people";
+    if (action.mode === "local") return "walk";
+    if (Number(action.timeMinutes) > 5) return "focus";
+    return "couch";
+  }
+
+  function applyUrlDeepLink(targetUrl, preferHash = false) {
+    try {
+      const url =
+        targetUrl instanceof URL
+          ? targetUrl
+          : typeof window !== "undefined"
+            ? new URL(window.location.href)
+            : null;
+      if (!url) return;
+      const intentParam = url.searchParams.get("intent");
+      if (intentParam && HOME_MODES[intentParam]) {
+        energyMode = intentParam;
+      }
+
+      const queryAction = url.searchParams.get("action");
+      const rawHash =
+        (targetUrl instanceof URL ? targetUrl.hash : "") ||
+        (typeof window !== "undefined" ? window.location.hash : "") ||
+        "";
+      let hashAction = null;
+      if (rawHash) {
+        const hashRaw = rawHash.replace(/^#/, "");
+        if (hashRaw.startsWith("action=")) {
+          hashAction = decodeURIComponent(hashRaw.slice("action=".length));
+        } else if (hashRaw.includes("action=")) {
+          const hashParams = new URLSearchParams(hashRaw);
+          hashAction = hashParams.get("action");
+        }
+      }
+
+      const actionParam = preferHash ? (hashAction || queryAction) : (hashAction || queryAction);
+      if (actionParam) {
+        const matched = resolveActionFromParam(actionParam);
+        if (matched) {
+          energyMode = inferEnergyModeForAction(matched);
+          pinnedActionId = matched.id;
+          lastQuickActionId = matched.id;
+        }
+      } else {
+        pinnedActionId = "";
+      }
+    } catch {}
+  }
+
+  $: if ($page?.url) {
+    applyUrlDeepLink($page.url);
+  }
 
   onMount(() => {
     try {
@@ -77,6 +165,49 @@
         }
       }
     } catch {}
+
+    applyUrlDeepLink();
+
+    const handleHashChange = () => applyUrlDeepLink(undefined, true);
+
+    const triggerPartnerReturnIfReady = () => {
+      if (!awaitingPartnerReturn || partnerReturnPromptVisible || justCompleted) return;
+      const elapsed = Date.now() - partnerLeaveTimestamp;
+      if (elapsed >= 3000) {
+        awaitingPartnerReturn = false;
+        partnerReturnPromptVisible = true;
+        try {
+          if (typeof navigator !== "undefined" && navigator.vibrate) {
+            navigator.vibrate(40);
+          }
+        } catch {}
+        trackEvent("aa_partner_return_prompt", {
+          id: currentQuickAction?.id || lastQuickActionId,
+          elapsedMs: elapsed,
+        });
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        triggerPartnerReturnIfReady();
+      }
+    };
+
+    const handleWindowFocus = () => {
+      triggerPartnerReturnIfReady();
+    };
+
+    window.addEventListener("hashchange", handleHashChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleWindowFocus);
+
+    return () => {
+      window.removeEventListener("hashchange", handleHashChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleWindowFocus);
+      if (copyLinkTimer) clearTimeout(copyLinkTimer);
+    };
   });
 
   const FIREFLIES = [
@@ -145,7 +276,11 @@
     seed: `home:${energyMode}:${suggestionIndex}`,
   });
 
-  $: currentQuickAction = quickPool.length ? quickPool[0] : null;
+  $: pinnedAction = pinnedActionId
+    ? MICRO_ACTIONS.find((a) => a.id === pinnedActionId) || null
+    : null;
+  $: currentQuickAction =
+    pinnedAction || (quickPool.length ? quickPool[0] : null);
   $: if (currentQuickAction?.id) {
     lastQuickActionId = currentQuickAction.id;
   }
@@ -158,6 +293,10 @@
   $: activeHope = HOPE_FACTS[hopeIdx % HOPE_FACTS.length];
 
   function setEnergyMode(mode) {
+    pinnedActionId = "";
+    awaitingPartnerReturn = false;
+    partnerReturnPromptVisible = false;
+    justCompleted = false;
     if (energyMode === mode) {
       nextQuickIdea();
       return;
@@ -175,6 +314,10 @@
   }
 
   function nextQuickIdea() {
+    pinnedActionId = "";
+    awaitingPartnerReturn = false;
+    partnerReturnPromptVisible = false;
+    justCompleted = false;
     excludeQuickId = lastQuickActionId;
     suggestionIndex += 1;
     trackEvent("aa_home_next_idea", {
@@ -190,15 +333,63 @@
 
   function handleStartQuickAction(action) {
     if (!action) return;
+    awaitingPartnerReturn = true;
+    partnerLeaveTimestamp = Date.now();
+    partnerReturnPromptVisible = false;
+    justCompleted = false;
     markActionStarted(action.id, "home_instant");
     trackEvent("aa_clickout", { surface: "home_instant", id: action.id });
+  }
+
+  function completeQuickAction(action) {
+    if (!action) return;
+    justCompleted = true;
+    awaitingPartnerReturn = false;
+    partnerReturnPromptVisible = false;
+    recordSmallWin({
+      id: action.id,
+      title: action.title,
+      surface: "home_instant",
+    });
+    trackEvent("aa_small_win_done", {
+      surface: "home_instant",
+      id: action.id,
+      initiated: isCurrentStarted,
+    });
+  }
+
+  async function shareDirectActionLink(action) {
+    if (!action || typeof window === "undefined") return;
+    const shareUrl = `${window.location.origin}/?action=${encodeURIComponent(action.id)}`;
+    let copied = false;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        copied = true;
+      }
+    } catch {}
+    if (!copied && typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: cleanTitle(action.title),
+          url: shareUrl,
+        });
+        copied = true;
+      } catch {}
+    }
+    copiedDirectLink = true;
+    if (copyLinkTimer) clearTimeout(copyLinkTimer);
+    copyLinkTimer = setTimeout(() => {
+      copiedDirectLink = false;
+    }, 2600);
+    trackEvent("aa_share_direct_action", { id: action.id });
   }
 
   function cleanTitle(str) {
     return (
       String(str || "")
         .replace(
-          /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\s]+/u,
+          /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u,
           "",
         )
         .trim() || str
@@ -206,11 +397,11 @@
   }
 
   function getSavedValueLabels(ids) {
-    return VALUES.filter((v) => ids.includes(v.id))
+    return VALUES.filter((v) => ids.includes(v.key || v.id))
       .map((v) =>
         v.label
           .replace(
-            /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\s]+/u,
+            /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u,
             "",
           )
           .trim(),
@@ -302,6 +493,7 @@
                 class="personal-values-pill"
                 class:active={usePersonalValues}
                 on:click={() => {
+                  pinnedActionId = "";
                   usePersonalValues = !usePersonalValues;
                   suggestionIndex = 0;
                   trackEvent("aa_home_personal_filter", {
@@ -467,6 +659,29 @@
             {/if}
 
             <!-- 5. Primární akce (Začít pomáhat) + potvrzení dokončení -->
+            {#if partnerReturnPromptVisible && !justCompleted}
+              <div class="return-dopamine-strip" role="status" aria-live="polite">
+                <div class="return-dopamine-text">
+                  ✨ <strong>Vítej zpět! Povedlo se?</strong> Klikni na „✓ Hotovo“ a rozsviť svou lucernu v Krajině dobra.
+                </div>
+                <div class="return-dopamine-actions">
+                  <button
+                    type="button"
+                    class="return-dopamine-btn"
+                    on:click={() => completeQuickAction(currentQuickAction)}
+                  >
+                    ✨ Hotovo – rozsvítit stopu
+                  </button>
+                  <a
+                    href={`/svet?ritual=lantern&seed=${encodeURIComponent(currentQuickAction.id)}&title=${encodeURIComponent(cleanTitle(currentQuickAction.title))}`}
+                    class="return-dopamine-svet-link"
+                  >
+                    Do Krajiny dobra →
+                  </a>
+                </div>
+              </div>
+            {/if}
+
             <div class="instant-actions">
               <a
                 href={currentQuickAction.url}
@@ -491,19 +706,8 @@
               <button
                 type="button"
                 class="btn-studio-done done-btn"
-                class:initiated={isCurrentStarted}
-                on:click={() => {
-                  recordSmallWin({
-                    id: currentQuickAction.id,
-                    title: currentQuickAction.title,
-                    surface: "home_instant",
-                  });
-                  trackEvent("aa_small_win_done", {
-                    surface: "home_instant",
-                    id: currentQuickAction.id,
-                    initiated: isCurrentStarted,
-                  });
-                }}
+                class:initiated={isCurrentStarted || partnerReturnPromptVisible}
+                on:click={() => completeQuickAction(currentQuickAction)}
               >
                 <svg
                   width="15"
@@ -520,7 +724,7 @@
               </button>
             </div>
 
-            <!-- 6. Transparentní patička ověření + nahlášení nefunkčního odkazu -->
+            <!-- 6. Transparentní patička ověření + přímý odkaz + nahlášení nefunkčního odkazu -->
             <div class="action-verify-footer">
               <span class="verify-meta">
                 Ověřeno: <strong
@@ -536,19 +740,31 @@
                   {currentQuickAction.org} ↗
                 </a>
               </span>
-              <button
-                type="button"
-                class="broken-link-btn"
-                on:click={() =>
-                  openBrokenLinkReport({
-                    id: currentQuickAction.id,
-                    title: cleanTitle(currentQuickAction.title),
-                    org: currentQuickAction.org,
-                    url: currentQuickAction.url,
-                  })}
-              >
-                Nahlásit nefunkční odkaz
-              </button>
+              <div class="verify-footer-actions">
+                <button
+                  type="button"
+                  class="direct-link-share-btn"
+                  on:click={() => shareDirectActionLink(currentQuickAction)}
+                  title="Zkopírovat přímý odkaz na tento skutek pro sdílení v diskuzi nebo zprávě"
+                >
+                  {copiedDirectLink
+                    ? "✓ Odkaz zkopírován"
+                    : "🔗 Zkopírovat přímý odkaz na tento skutek"}
+                </button>
+                <button
+                  type="button"
+                  class="broken-link-btn"
+                  on:click={() =>
+                    openBrokenLinkReport({
+                      id: currentQuickAction.id,
+                      title: cleanTitle(currentQuickAction.title),
+                      org: currentQuickAction.org,
+                      url: currentQuickAction.url,
+                    })}
+                >
+                  Nahlásit nefunkční odkaz
+                </button>
+              </div>
             </div>
           </div>
         {/if}
@@ -885,9 +1101,15 @@
     max-width: 1140px;
     margin: 0 auto;
     display: grid;
-    grid-template-columns: 1.08fr 0.92fr;
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
     gap: 2.8rem;
     align-items: center;
+  }
+
+  .hero-copy {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .hero-overline {
@@ -1001,6 +1223,9 @@
   /* MINIMALIST STUDIO CARD (ZERO CLUTTER) */
   .instant-card {
     position: relative;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
     background: rgba(255, 255, 255, 0.97);
     color: var(--text-primary);
     border-radius: 28px;
@@ -1028,6 +1253,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
+    min-width: 0;
     gap: 0.5rem;
     margin-bottom: 0.65rem;
   }
@@ -1849,10 +2076,92 @@
     text-decoration: underline;
   }
 
+  .return-dopamine-strip {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    margin-bottom: 0.55rem;
+    padding: 0.65rem 0.85rem;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(254, 243, 199, 0.92), rgba(209, 250, 229, 0.92));
+    border: 1px solid rgba(217, 119, 6, 0.35);
+    color: #064e3b;
+    font-size: 0.84rem;
+    line-height: 1.38;
+    animation: returnPulse 0.35s ease-out;
+  }
+
+  @keyframes returnPulse {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .return-dopamine-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .return-dopamine-btn {
+    appearance: none;
+    border: 1px solid rgba(5, 150, 105, 0.38);
+    background: #059669;
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 800;
+    padding: 0.42rem 0.78rem;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.24);
+  }
+
+  .return-dopamine-svet-link {
+    color: #065f46;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-decoration: underline;
+  }
+
+  .verify-footer-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+  }
+
+  .direct-link-share-btn {
+    appearance: none;
+    background: none;
+    border: none;
+    padding: 0;
+    color: #047857;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .direct-link-share-btn:hover {
+    color: #064e3b;
+  }
+
   @media (max-width: 1024px) {
     .hero-inner,
     .sanctuary-portal-card {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
       gap: 2rem;
     }
     .bento-paths,
@@ -1863,15 +2172,191 @@
 
   @media (max-width: 680px) {
     .hero-stage {
-      padding: 6.8rem 0.95rem 4.6rem;
+      margin-top: -3.2rem;
+      padding: 3.45rem 0.65rem 0.9rem;
     }
+
+    .hero-inner {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.32rem;
+    }
+
+    .hero-copy {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .hero-overline,
+    .hero-lead,
+    .hero-ctas {
+      display: none !important;
+    }
+
+    .hero-title {
+      font-size: 1.05rem;
+      line-height: 1.15;
+      margin: 0 0 0.08rem 0;
+      letter-spacing: -0.02em;
+      overflow-wrap: break-word;
+    }
+
+    .hero-serif {
+      display: block;
+      font-size: 1.08rem;
+      line-height: 1.15;
+      margin-top: 0.04rem;
+    }
+
     .instant-card {
-      padding: 1.35rem 1.25rem;
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+      padding: 0.64rem 0.74rem;
+      border-radius: 20px;
     }
+
+    .studio-head {
+      margin-bottom: 0.26rem;
+      padding-bottom: 0.16rem;
+    }
+
+    .studio-label {
+      font-size: 0.76rem;
+    }
+
+    .cycle-link {
+      padding: 0.2rem 0.42rem;
+      font-size: 0.73rem;
+    }
+
     .energy-tabs {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      border-radius: 18px;
+      display: flex;
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      gap: 0.22rem;
+      padding: 0.18rem;
+      margin-bottom: 0.34rem;
+      border-radius: 14px;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
     }
+
+    .energy-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .energy-tab {
+      flex: 0 0 auto;
+      padding: 0.3rem 0.46rem;
+      font-size: 0.72rem;
+      white-space: nowrap;
+      border-radius: 10px;
+    }
+
+    .instant-body {
+      min-width: 0;
+      max-width: 100%;
+      gap: 0.24rem;
+    }
+
+    .action-meta-line {
+      font-size: 0.69rem;
+      gap: 0.22rem;
+      margin-bottom: 0.22rem;
+    }
+
+    .quick-tags-pill,
+    .evidence-pill {
+      padding: 0.1rem 0.38rem;
+      font-size: 0.67rem;
+    }
+
+    .action-title {
+      font-size: 1.02rem;
+      line-height: 1.18;
+      margin: 0.04rem 0 0.18rem 0;
+    }
+
+    .action-desc {
+      font-size: 0.78rem;
+      line-height: 1.28;
+      margin: 0 0 0.26rem 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .action-impact-summary {
+      margin: 0 0 0.3rem 0;
+      padding: 0.28rem 0.45rem;
+      gap: 0.1rem;
+      border-radius: 12px;
+    }
+
+    .impact-benefit-line {
+      font-size: 0.74rem;
+      line-height: 1.24;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .partner-trust-line {
+      font-size: 0.68rem;
+      line-height: 1.16;
+    }
+
+    .how-toggle {
+      margin: 0 0 0.3rem 0;
+      padding: 0.2rem 0.4rem;
+      border-radius: 10px;
+    }
+
+    .how-toggle summary {
+      font-size: 0.72rem;
+    }
+
+    .return-dopamine-strip {
+      margin-bottom: 0.32rem;
+      padding: 0.45rem 0.62rem;
+      font-size: 0.75rem;
+      gap: 0.32rem;
+    }
+
+    .instant-actions {
+      padding-top: 0.08rem;
+      gap: 0.35rem;
+    }
+
+    .btn-studio-primary {
+      padding: 0.56rem 0.78rem;
+      font-size: 0.85rem;
+      border-radius: 12px;
+    }
+
+    .btn-studio-done {
+      padding: 0.56rem 0.68rem;
+      font-size: 0.79rem;
+      border-radius: 12px;
+    }
+
+    .action-verify-footer {
+      margin-top: 0.32rem;
+      padding-top: 0.24rem;
+      font-size: 0.66rem;
+      gap: 0.2rem;
+    }
+
+    .direct-link-share-btn,
+    .broken-link-btn {
+      font-size: 0.67rem;
+    }
+
     .sanctuary-portal-card {
       padding: 1.65rem 1.35rem;
     }

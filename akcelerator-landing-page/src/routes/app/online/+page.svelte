@@ -167,7 +167,7 @@
     </div>
   </header>
 
-  <div class="filters-bar" role="group" aria-label="Filtrovat mikro-kroky">
+  <div class="filters-bar filter-toolbar" role="group" aria-label="Filtrovat mikro-kroky">
     {#each FILTERS as f}
       <button
         type="button"
@@ -807,6 +807,138 @@
   @media (max-width: 640px) {
     .grid {
       grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 680px) {
+    .page {
+      padding: 0.35rem 0.65rem 2.2rem;
+    }
+
+    .subpage-hero.header {
+      padding: 0.7rem 0.75rem 0.65rem;
+      margin-bottom: 0.45rem;
+      border-radius: 18px;
+    }
+
+    .header .hero-kicker,
+    .header .subtitle {
+      display: none !important;
+    }
+
+    .header .title {
+      font-size: 1.2rem;
+      line-height: 1.18;
+      margin: 0;
+    }
+
+    .hero-tools-row {
+      margin-top: 0.5rem;
+      gap: 0.35rem;
+      flex-wrap: nowrap;
+    }
+
+    .search-wrap {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .search-wrap input {
+      padding: 0.42rem 0.65rem;
+      font-size: 0.78rem;
+      border-radius: 10px;
+    }
+
+    .btn-random-spark {
+      padding: 0.42rem 0.65rem;
+      font-size: 0.75rem;
+      border-radius: 10px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .filters-bar,
+    .filter-toolbar {
+      display: flex;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      justify-content: flex-start;
+      gap: 0.3rem;
+      margin-bottom: 0.55rem;
+      padding-bottom: 0.15rem;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .filters-bar::-webkit-scrollbar,
+    .filter-toolbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .filter-chip {
+      flex: 0 0 auto;
+      white-space: nowrap;
+      padding: 0.34rem 0.62rem;
+      font-size: 0.75rem;
+    }
+
+    .grid {
+      grid-template-columns: 1fr;
+      gap: 0.65rem;
+    }
+
+    .card {
+      padding: 0.78rem 0.85rem;
+      border-radius: 16px;
+    }
+
+    .card-meta-top {
+      font-size: 0.71rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .card-title {
+      font-size: 1.04rem;
+      line-height: 1.22;
+      margin: 0 0 0.25rem;
+    }
+
+    .card-desc {
+      font-size: 0.82rem;
+      line-height: 1.38;
+      margin: 0 0 0.45rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-impact-box {
+      padding: 0.38rem 0.55rem;
+      margin-bottom: 0.45rem;
+      font-size: 0.78rem;
+      gap: 0.16rem;
+    }
+
+    .steps-inline {
+      margin-bottom: 0.45rem;
+      font-size: 0.76rem;
+    }
+
+    .actions-row {
+      gap: 0.4rem;
+      padding-top: 0.1rem;
+    }
+
+    .cta {
+      padding: 0.58rem 0.8rem;
+      font-size: 0.82rem;
+    }
+
+    .card-verify-footer {
+      margin-top: 0.45rem;
+      padding-top: 0.35rem;
+      font-size: 0.68rem;
     }
   }
 </style>

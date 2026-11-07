@@ -16,8 +16,10 @@
   };
 
   $: pathname = $page.url.pathname;
+  let hydrated = false;
 
   onMount(() => {
+    hydrated = true;
     try {
       inject();
     } catch {}
@@ -33,7 +35,6 @@
   <meta name="description" content={siteMeta.description} />
   <meta name="keywords" content={siteMeta.keywords} />
   <meta name="author" content="Akcelerátor altruismu" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://akcelerator-altruismu.cz" />
@@ -43,7 +44,6 @@
   <meta property="og:locale" content="cs_CZ" />
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="apple-touch-icon" href="/favicon.svg" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
@@ -53,7 +53,7 @@
   />
 </svelte:head>
 
-<div class="app-shell">
+<div class="app-shell" data-hydrated={hydrated ? 'true' : undefined}>
   <header class="top-nav">
     <div class="nav-capsule">
       <a href="/" class="brand">
@@ -77,9 +77,29 @@
         </span>
         <span class="brand-copy">
           <span class="brand-text">Akcelerátor <span class="brand-accent">altruismu</span></span>
-          <span class="brand-sub">Pomáháme lidem pomáhat</span>
+          <span class="brand-sub brand-claim">Pomáháme lidem pomáhat</span>
         </span>
       </a>
+
+      <div class="mobile-header-actions">
+        <a href="/submit" class="mh-btn" class:active={pathname.startsWith('/submit')} aria-label="Přidat tip">➕ Tip</a>
+        <button
+          type="button"
+          class="mh-btn mh-crisis"
+          on:click={() => window.dispatchEvent(new CustomEvent('akcelerator:toggle-crisis'))}
+          aria-label="Krizové kontakty a okamžitá opora"
+        >
+          🛡️ Opora
+        </button>
+        <button
+          type="button"
+          class="mh-btn"
+          on:click={() => window.dispatchEvent(new CustomEvent('akcelerator:open-feedback'))}
+          aria-label="Poslat zpětnou vazbu"
+        >
+          💬 Názor
+        </button>
+      </div>
 
       <nav class="nav-links" aria-label="Hlavní navigace">
         <a href="/" class="nav-pill" class:active={pathname === '/' || pathname === '/app'}>
@@ -147,6 +167,29 @@
       </div>
     </div>
   </footer>
+
+  <nav class="mobile-bottom-nav" aria-label="Mobilní navigace">
+    <a href="/" class="mb-tab" class:active={pathname === '/' || pathname === '/app'}>
+      <span class="mb-icon" aria-hidden="true">⚡</span>
+      <span class="mb-label">Dnes</span>
+    </a>
+    <a href="/app/online" class="mb-tab" class:active={pathname.startsWith('/app/online')}>
+      <span class="mb-icon" aria-hidden="true">⏱️</span>
+      <span class="mb-label">2–15 min</span>
+    </a>
+    <a href="/near" class="mb-tab" class:active={pathname.startsWith('/near')}>
+      <span class="mb-icon" aria-hidden="true">📍</span>
+      <span class="mb-label">V okolí</span>
+    </a>
+    <a href="/svet" class="mb-tab" class:active={pathname.startsWith('/svet')}>
+      <span class="mb-icon" aria-hidden="true">✨</span>
+      <span class="mb-label">Krajina</span>
+    </a>
+    <a href="/app/guided" class="mb-tab" class:active={pathname.startsWith('/app/guided')}>
+      <span class="mb-icon" aria-hidden="true">🧭</span>
+      <span class="mb-label">Průvodce</span>
+    </a>
+  </nav>
 </div>
 
 <ImmediateHelp />
@@ -155,7 +198,7 @@
 
 <style>
   .app-shell {
-    min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
   }
@@ -435,6 +478,158 @@
       flex-shrink: 0;
       font-size: 0.8rem;
       padding: 0.36rem 0.7rem;
+    }
+  }
+
+  .mobile-header-actions,
+  .mobile-bottom-nav {
+    display: none;
+  }
+
+  @media (max-width: 680px) {
+    .app-shell {
+      min-height: 100dvh;
+      padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .top-nav {
+      padding: 0.25rem 0.5rem;
+    }
+
+    .nav-capsule {
+      padding: 0.32rem 0.48rem;
+      border-radius: 999px;
+      flex-wrap: nowrap;
+      gap: 0.28rem;
+      max-width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    .brand {
+      font-size: 0.82rem;
+      gap: 0.32rem;
+      white-space: nowrap;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .brand-copy {
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .brand-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .brand-mark {
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+
+    .brand-accent {
+      font-size: 0.94rem;
+    }
+
+    .brand-sub,
+    .brand-claim,
+    .nav-links {
+      display: none !important;
+    }
+
+    .mobile-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.2rem;
+      flex-shrink: 0;
+    }
+
+    .mh-btn {
+      appearance: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.16rem;
+      padding: 0.24rem 0.42rem;
+      border-radius: 999px;
+      border: 1px solid rgba(22, 82, 56, 0.16);
+      background: rgba(255, 255, 255, 0.86);
+      color: #163a2a;
+      font-family: inherit;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      line-height: 1.1;
+      white-space: nowrap;
+    }
+
+    .mh-btn.mh-crisis {
+      border-color: rgba(180, 83, 9, 0.24);
+      background: rgba(254, 243, 199, 0.55);
+      color: #78350f;
+    }
+
+    .mh-btn.active {
+      background: #bbf7d0;
+      border-color: rgba(5, 150, 105, 0.32);
+    }
+
+    .mobile-bottom-nav {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 950;
+      height: calc(58px + env(safe-area-inset-bottom, 0px));
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      background: rgba(252, 250, 245, 0.96);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top: 1px solid rgba(20, 62, 48, 0.12);
+      box-shadow: 0 -4px 20px rgba(15, 42, 32, 0.06);
+    }
+
+    .mb-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.12rem;
+      text-decoration: none;
+      color: #466354;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.25rem 0.15rem;
+      border-top: 2px solid transparent;
+      transition: color 0.15s ease, background 0.15s ease;
+    }
+
+    .mb-icon {
+      font-size: 1.05rem;
+      line-height: 1;
+    }
+
+    .mb-label {
+      line-height: 1.1;
+      white-space: nowrap;
+    }
+
+    .mb-tab.active {
+      color: #064e3b;
+      font-weight: 800;
+      border-top-color: #059669;
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.12) 0%, transparent 100%);
+    }
+
+    .site-footer {
+      padding: 2rem 1rem 2.5rem 1rem;
+      margin-top: 2rem;
     }
   }
 </style>

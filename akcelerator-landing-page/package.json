@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
+    "check": "svelte-kit sync",
     "preview": "vite preview",
     "sync": "svelte-kit sync",
     "test": "playwright test",

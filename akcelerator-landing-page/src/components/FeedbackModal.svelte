@@ -4,7 +4,7 @@
 </script>
 
 <script>
-  import { onDestroy } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { feedbackReportRequest } from '../lib/analytics.js';
 
   let isOpen = false;
@@ -90,6 +90,16 @@
       isSubmitting = false;
     }
   }
+
+  onMount(() => {
+    const handleOpen = () => {
+      openModal();
+    };
+    window.addEventListener('akcelerator:open-feedback', handleOpen);
+    return () => {
+      window.removeEventListener('akcelerator:open-feedback', handleOpen);
+    };
+  });
 
   onDestroy(() => {
     if (closeTimer) clearTimeout(closeTimer);
@@ -348,12 +358,13 @@
     cursor: not-allowed;
   }
 
-  @media (max-width: 520px) {
-    .fb-label {
-      display: none;
-    }
+  @media (max-width: 680px) {
     .feedback-pill {
-      padding: 0.5rem 0.65rem;
+      display: none !important;
+    }
+
+    .modal-backdrop {
+      z-index: 990;
     }
   }
 </style>

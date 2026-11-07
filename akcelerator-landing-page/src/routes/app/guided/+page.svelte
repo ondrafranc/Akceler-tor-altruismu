@@ -777,7 +777,7 @@
     <!-- RIGHT: CLEAN FOCUSED RECOMMENDATION (STANDARDIZED 6-PART GOODACTION CARD) -->
     <section
       id="personal-plan"
-      class="plan-section"
+      class="plan-section recommendation-section"
       class:flash={planFlash}
       aria-live="polite"
     >
@@ -1118,6 +1118,23 @@
       </div>
     </section>
   </details>
+
+  {#if bestAction}
+    <div class="mobile-guided-preview-bar" role="region" aria-label="Náhled doporučeného kroku">
+      <span class="mgp-title">🎯 Doporučení: {cleanTitle(bestAction.title)}</span>
+      <button
+        type="button"
+        class="mgp-btn"
+        on:click={() =>
+          document.getElementById("personal-plan")?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          })}
+      >
+        Zobrazit krok ↓
+      </button>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -1947,6 +1964,130 @@
     .compass-shell,
     .highlight-card {
       padding: 1.35rem 1.2rem;
+    }
+  }
+
+  .mobile-guided-preview-bar {
+    display: none;
+  }
+
+  @media (max-width: 680px) {
+    .page {
+      padding: 0.35rem 0.65rem 4.2rem;
+    }
+
+    .subpage-hero.header {
+      padding: 0.55rem 0.85rem;
+      margin-bottom: 0.45rem;
+      border-radius: 16px;
+    }
+
+    .header .hero-kicker,
+    .header .subtitle {
+      display: none !important;
+    }
+
+    .header .title {
+      font-size: 1.18rem;
+      line-height: 1.18;
+      margin: 0;
+    }
+
+    .guided-workspace {
+      gap: 0.75rem;
+    }
+
+    .compass-shell,
+    .highlight-card {
+      padding: 0.75rem 0.82rem;
+      border-radius: 18px;
+    }
+
+    .block-label {
+      font-size: 0.78rem;
+      margin-bottom: 0.42rem;
+    }
+
+    .situation-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.38rem;
+    }
+
+    .situation-card {
+      padding: 0.46rem 0.55rem;
+      border-radius: 12px;
+      gap: 0.38rem;
+    }
+
+    .sit-emoji {
+      font-size: 1rem;
+    }
+
+    .sit-sub {
+      display: none !important;
+    }
+
+    .sit-title {
+      font-size: 0.75rem;
+      line-height: 1.18;
+    }
+
+    .divider {
+      margin: 0.6rem 0;
+    }
+
+    .topic-pills {
+      gap: 0.3rem;
+    }
+
+    .topic-pill {
+      padding: 0.32rem 0.62rem;
+      font-size: 0.74rem;
+    }
+
+    .mobile-guided-preview-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      position: fixed;
+      bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+      left: 10px;
+      right: 10px;
+      z-index: 940;
+      padding: 0.52rem 0.75rem;
+      border-radius: 14px;
+      background: rgba(15, 48, 34, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(253, 230, 138, 0.4);
+      color: #f8faf8;
+      box-shadow: 0 10px 24px rgba(6, 22, 15, 0.28);
+    }
+
+    .mgp-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+    }
+
+    .mgp-btn {
+      appearance: none;
+      border: none;
+      border-radius: 999px;
+      padding: 0.36rem 0.68rem;
+      background: linear-gradient(135deg, #fde68a 0%, #6ee7b7 100%);
+      color: #062015;
+      font-family: inherit;
+      font-size: 0.74rem;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
   }
 </style>

@@ -1,11 +1,13 @@
 <script>
   import { onMount } from 'svelte';
+  import { page } from '$app/stores';
   import {
     completedSteps,
     unplantedSteps,
     sanctuaryWishes,
     SANCTUARY_ELEMENTS,
     HOPE_PROOFS,
+    inferStepElement,
     recordSmallWin,
     plantStepLight,
     addSanctuaryWish,
@@ -310,9 +312,104 @@
   let storyCopiedMsg = '';
   let storyDrawerOpen = false;
 
+  const ACTION_ALIASES = {
+    'click-and-feed': 'zvirata_utulek_online',
+    click_and_feed: 'zvirata_utulek_online',
+    mapswipe: 'missing_maps'
+  };
+
+  function resolveActionFromSeed(rawSeed) {
+    if (!rawSeed) return null;
+    const cleaned = String(rawSeed).trim();
+    if (!cleaned) return null;
+    const aliased = ACTION_ALIASES[cleaned.toLowerCase()] || cleaned;
+    if (ACTION_BY_ID[aliased]) return ACTION_BY_ID[aliased];
+    const normUnder = aliased.replace(/-/g, '_').toLowerCase();
+    const normHyphen = aliased.replace(/_/g, '-').toLowerCase();
+    return (
+      MICRO_ACTIONS.find(
+        (a) =>
+          a.id.toLowerCase() === normUnder ||
+          a.id.toLowerCase().replace(/_/g, '-') === normHyphen
+      ) || null
+    );
+  }
+
+  let urlSeedPlanted = false;
+  let lastUrlSeedKey = '';
+
+  $: rawUrlSeed = $page?.url?.searchParams?.get('seed') || '';
+  $: rawUrlTitle = $page?.url?.searchParams?.get('title') || '';
+  $: currentUrlSeedKey = `${rawUrlSeed}::${rawUrlTitle}`;
+  $: if (currentUrlSeedKey !== lastUrlSeedKey) {
+    lastUrlSeedKey = currentUrlSeedKey;
+    urlSeedPlanted = false;
+  }
+
+  function humanizeSeedFallback(raw) {
+    const trimmed = cleanTitle(raw);
+    if (!trimmed || /^(true|false|\d+|step|seed|custom)$/i.test(trimmed)) {
+      return 'Dobrý skutek ze dneška';
+    }
+    const spaced = trimmed.replace(/[_-]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    if (!spaced) return 'Dobrý skutek ze dneška';
+    return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+  }
+
+  $: urlSeedFallback = (() => {
+    if (urlSeedPlanted || (!rawUrlSeed && !rawUrlTitle)) return null;
+    const matched = resolveActionFromSeed(rawUrlSeed);
+    const baseTitle = rawUrlTitle
+      ? cleanTitle(rawUrlTitle)
+      : matched?.title
+        ? cleanTitle(matched.title)
+        : humanizeSeedFallback(rawUrlSeed);
+    const resolvedTitle = String(baseTitle || '').slice(0, 110).trim();
+    if (!resolvedTitle) return null;
+    const resolvedId = matched?.id || rawUrlSeed || 'step';
+    return {
+      uid: `url-seed-${resolvedId}`,
+      id: resolvedId,
+      title: resolvedTitle,
+      element: inferStepElement(matched || { id: resolvedId, title: resolvedTitle }),
+      fromUrlFallback: true
+    };
+  })();
+
   $: latestStep = ($completedSteps || [])[($completedSteps || []).length - 1] || null;
-  $: nextSeedToPlant = ($unplantedSteps || [])[0] || null;
+  $: nextSeedToPlant = (() => {
+    const unplanted = $unplantedSteps || [];
+    if (urlSeedFallback) {
+      const matchingUnplanted = unplanted.find((s) => s.id === urlSeedFallback.id);
+      if (matchingUnplanted) {
+        return rawUrlTitle
+          ? { ...matchingUnplanted, title: urlSeedFallback.title }
+          : matchingUnplanted;
+      }
+      return urlSeedFallback;
+    }
+    return unplanted[0] || null;
+  })();
   $: completedActionIds = new Set(($completedSteps || []).map((s) => s.id));
+
+  function plantActiveSeed(seed, pos) {
+    if (!seed) return;
+    urlSeedPlanted = true;
+    if (seed.fromUrlFallback) {
+      const entry = recordSmallWin({
+        id: seed.id,
+        title: seed.title,
+        element: seed.element,
+        surface: 'svet_seed_url',
+        silent: true
+      });
+      if (entry) {
+        plantStepLight(entry.uid, pos);
+      }
+    } else {
+      plantStepLight(seed.uid, pos);
+    }
+  }
 
   function deterministicPos(index, elementKey) {
     const golden = (index * 0.61803398875 + 0.17) % 1;
@@ -731,6 +828,11 @@
 
     const closest = findClosestLight(nx, ny, rect.height / rect.width);
 
+    if (closest && selectedLight && closest.uid === selectedLight.uid) {
+      selectedLight = null;
+      return;
+    }
+
     if (closest && !nextSeedToPlant && !ritualInput.trim()) {
       selectedLight = closest;
       triggerLightBloom(closest.x, closest.y, ELEMENT_MAP[closest.element]?.softColor || '#fde68a', closest.zone === 'water', false);
@@ -738,11 +840,16 @@
       return;
     }
 
+    if (selectedLight) {
+      selectedLight = null;
+      return;
+    }
+
     if (nextSeedToPlant) {
       const elMeta = ELEMENT_MAP[nextSeedToPlant.element] || SANCTUARY_ELEMENTS[0];
       const isWater = ny >= 0.53;
       const semanticType = !isWater ? 'star' : ritualMode === 'wave' ? 'wave' : 'lantern';
-      plantStepLight(nextSeedToPlant.uid, { x: nx, y: ny, lightType: semanticType });
+      plantActiveSeed(nextSeedToPlant, { x: nx, y: ny, lightType: semanticType });
       triggerLightBloom(nx, ny, elMeta.softColor, isWater, true);
       playChime(isWater ? 'water' : 'sky');
       showGentleToast(
@@ -915,6 +1022,11 @@
     // Gentle entrance shimmer when user enters /svet (especially after completing a deed!)
     try {
       const sp = new URLSearchParams(window.location.search);
+      const ritualParam = sp.get('ritual');
+      if (ritualParam === 'lantern' || ritualParam === 'water') ritualMode = 'water';
+      else if (ritualParam === 'star' || ritualParam === 'sky') ritualMode = 'sky';
+      else if (ritualParam === 'wave') ritualMode = 'wave';
+
       if (sp.get('just_lit') === '1' && !reducedMotion) {
         setTimeout(() => {
           triggerLightBloom(0.48, 0.26, '#fde68a', false, true);
@@ -1663,49 +1775,55 @@
     </div>
 
     <!-- FULL-BLEED PAINTERLY ART + 60FPS INTERACTIVE DEED LIGHTS -->
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
-    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-    <div
-      class="sanctuary-viewport"
-      bind:this={stageWrapEl}
-      on:click={handleStageClick}
-      on:pointermove={handlePointerMove}
-      on:pointerleave={handlePointerLeave}
-      role="application"
-      aria-label="Krajina dobra: kliknutím na světlo zobrazíš konkrétní dobrý skutek, kliknutím na hladinu nebo oblohu rozsvítíš vlastní skutek"
-    >
-      <div class="art-parallax-wrap" style={parallaxStyle}>
-        <img
-          src="/art/sanctuary-twilight.jpg"
-          alt="Šumavské údolí s lesní tůní a světly dobrých skutků"
-          class="art-layer twilight"
-          draggable="false"
-        />
+    <div class="sanctuary-canvas-shell canvas-stage">
+      <!-- svelte-ignore a11y-click-events-have-key-events -->
+      <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+      <div
+        class="sanctuary-viewport"
+        bind:this={stageWrapEl}
+        on:click={handleStageClick}
+        on:pointermove={handlePointerMove}
+        on:pointerleave={handlePointerLeave}
+        role="application"
+        aria-label="Krajina dobra: kliknutím na světlo zobrazíš konkrétní dobrý skutek, kliknutím na hladinu nebo oblohu rozsvítíš vlastní skutek"
+      >
+        <div class="art-parallax-wrap" style={parallaxStyle}>
+          <img
+            src="/art/sanctuary-twilight.jpg"
+            alt="Šumavské údolí s lesní tůní a světly dobrých skutků"
+            class="art-layer twilight"
+            draggable="false"
+          />
 
-        <img
-          src="/art/sanctuary-dawn.jpg"
-          alt=""
-          aria-hidden="true"
-          class="art-layer dawn"
-          style={`opacity: ${dawnLayerOpacity.toFixed(2)};`}
-          draggable="false"
-        />
-      </div>
-
-      <canvas bind:this={canvasEl} class="sanctuary-canvas"></canvas>
-
-      <!-- MAGNETIC HOVER TOOLTIP PREVIEW -->
-      {#if hoveredLight && (!selectedLight || selectedLight.uid !== hoveredLight.uid)}
-        {@const hMeta = ELEMENT_MAP[hoveredLight.element] || SANCTUARY_ELEMENTS[3]}
-        <div
-          class="light-hover-pill"
-          style={`left: ${Math.min(86, Math.max(14, hoveredLight.x * 100)).toFixed(1)}%; top: ${Math.max(10, hoveredLight.y * 100 - 6).toFixed(1)}%;`}
-        >
-          <span>{hMeta.icon}</span>
-          <strong>{cleanTitle(hoveredLight.title)}</strong>
-          <span class="hp-hint">· klikni</span>
+          <img
+            src="/art/sanctuary-dawn.jpg"
+            alt=""
+            aria-hidden="true"
+            class="art-layer dawn"
+            style={`opacity: ${dawnLayerOpacity.toFixed(2)};`}
+            draggable="false"
+          />
         </div>
-      {/if}
+
+        <canvas bind:this={canvasEl} class="sanctuary-canvas world-canvas"></canvas>
+
+        <!-- MAGNETIC HOVER TOOLTIP PREVIEW -->
+        {#if hoveredLight && (!selectedLight || selectedLight.uid !== hoveredLight.uid)}
+          {@const hMeta = ELEMENT_MAP[hoveredLight.element] || SANCTUARY_ELEMENTS[3]}
+          <div
+            class="light-hover-pill"
+            style={`left: ${Math.min(86, Math.max(14, hoveredLight.x * 100)).toFixed(1)}%; top: ${Math.max(10, hoveredLight.y * 100 - 6).toFixed(1)}%;`}
+          >
+            <span>{hMeta.icon}</span>
+            <strong>{cleanTitle(hoveredLight.title)}</strong>
+            <span class="hp-hint">· klikni</span>
+          </div>
+        {/if}
+
+        {#if gentleToast}
+          <div class="gentle-toast" role="status">{gentleToast}</div>
+        {/if}
+      </div>
 
       {#if nextSeedToPlant}
         <div class="seed-ceremony-banner">
@@ -1719,7 +1837,7 @@
             type="button"
             class="seed-auto-btn"
             on:click|stopPropagation={() => {
-              plantStepLight(nextSeedToPlant.uid, { x: 0.48, y: 0.24 });
+              plantActiveSeed(nextSeedToPlant, { x: 0.48, y: 0.24 });
               triggerLightBloom(0.48, 0.24, '#fde68a', false, true);
               playChime('sky');
             }}
@@ -1727,10 +1845,6 @@
             ✨ Rozsvítit hvězdu
           </button>
         </div>
-      {/if}
-
-      {#if gentleToast}
-        <div class="gentle-toast" role="status">{gentleToast}</div>
       {/if}
 
       {#if selectedLight}
@@ -2251,11 +2365,15 @@
     color: #fde68a;
   }
 
+  .sanctuary-canvas-shell {
+    position: relative;
+  }
+
   .sanctuary-viewport {
     position: relative;
     width: 100%;
     aspect-ratio: 16 / 8.4;
-    max-height: 57vh;
+    max-height: 57dvh;
     min-height: 340px;
     border-radius: 24px;
     overflow: hidden;
@@ -2356,11 +2474,18 @@
 
   .seed-copy {
     flex: 1;
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
     display: flex;
     flex-direction: column;
     gap: 0.08rem;
     font-size: 0.79rem;
     color: rgba(236, 253, 245, 0.9);
+  }
+
+  .seed-copy strong {
+    overflow-wrap: anywhere;
   }
 
   .seed-tag {
@@ -3149,6 +3274,119 @@
     }
     .sanctuary-viewport {
       aspect-ratio: 4 / 3;
+    }
+  }
+
+  @media (max-width: 680px) {
+    .sanctuary-page {
+      padding: 0.35rem 0.6rem 2rem;
+      gap: 1.2rem;
+    }
+
+    .sanctuary-stage {
+      padding: 0.75rem 0.75rem 0.85rem;
+      border-radius: 20px;
+    }
+
+    .sanctuary-top {
+      gap: 0.45rem;
+      margin-bottom: 0.55rem;
+    }
+
+    .kicker {
+      font-size: 0.65rem;
+      margin-bottom: 0.1rem;
+    }
+
+    h1 {
+      font-size: 1.32rem;
+      margin: 0;
+    }
+
+    .sanctuary-intro .lead {
+      display: none;
+    }
+
+    .atmosphere-controls {
+      width: 100%;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+    }
+
+    .atmo-pill-group {
+      padding: 0.16rem;
+    }
+
+    .atmo-btn {
+      padding: 0.28rem 0.55rem;
+      font-size: 0.72rem;
+    }
+
+    .explore-deed-btn,
+    .sound-btn {
+      padding: 0.28rem 0.55rem;
+      font-size: 0.72rem;
+    }
+
+    .sanctuary-canvas-shell {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .sanctuary-viewport {
+      min-height: 250px;
+      height: 44dvh;
+      max-height: 360px;
+      aspect-ratio: auto;
+      border-radius: 16px;
+    }
+
+    .seed-ceremony-banner,
+    .memory-whisper {
+      position: relative !important;
+      top: auto !important;
+      bottom: auto !important;
+      left: auto !important;
+      right: auto !important;
+      transform: none !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+      box-sizing: border-box;
+    }
+
+    .seed-ceremony-banner {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      padding: 0.75rem 0.85rem;
+      gap: 0.5rem;
+    }
+
+    .seed-ceremony-banner .seed-orb {
+      display: none;
+    }
+
+    .seed-ceremony-banner .seed-auto-btn {
+      width: 100%;
+      text-align: center;
+      justify-content: center;
+    }
+
+    .ritual-modes {
+      width: 100%;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .ritual-pill {
+      padding: 0.34rem 0.55rem;
+      font-size: 0.72rem;
+      white-space: nowrap;
     }
   }
 </style>
