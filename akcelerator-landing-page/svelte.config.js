@@ -12,7 +12,7 @@ const config = {
 				"default-src": ["self"],
 				"script-src": ["self", "'unsafe-inline'", "'unsafe-eval'", "https:"],
 				"style-src": ["self", "'unsafe-inline'", "https:"],
-				"img-src": ["self", "data:", "https:"],
+				"img-src": ["self", "data:", "blob:", "https:"],
 				"font-src": ["self", "https:", "data:"],
 				"connect-src": ["self", "https:"],
 				"frame-src": ["https:"],

@@ -1,56 +1,16 @@
 <script>
-  import { currentLanguage } from '../../lib/stores.js';
+  import { CZECH_CITIES, LOCAL_COMMUNITY_ITEMS } from '../../lib/data/czech-actions.js';
+  import { recordSmallWin } from '../../lib/progress.js';
   import { trackEvent } from '../../lib/analytics.js';
 
-  let language = 'czech';
-  currentLanguage.subscribe((v) => (language = v));
-
-  const UI = {
-    czech: {
-      back: '← Zpět na mapu',
-      title: '➕ Přidat organizaci / akci',
-      subtitle: 'Pošlete nám tip. My ověříme a pak se to může objevit na webu.',
-      orgTab: '🏛️ Organizace / místo',
-      eventTab: '📅 Akce / příležitost',
-      name: 'Název',
-      category: 'Kategorie (volitelné)',
-      website: 'Web (volitelné)',
-      email: 'Email (volitelné)',
-      phone: 'Telefon (volitelné)',
-      desc: 'Krátký popis (volitelné)',
-      location: 'Město / PSČ (vyhledat polohu)',
-      locationHint: 'Vyberte výsledek – uloží se souřadnice pro mapu.',
-      eventUrl: 'Odkaz na přihlášení / detail akce',
-      eventStart: 'Začátek (volitelné)',
-      eventEnd: 'Konec (volitelné)',
-      submit: 'Odeslat ke schválení',
-      sending: 'Odesílám…',
-      success: 'Díky! Tip jsme přijali. Ověříme a případně přidáme.',
-      error: 'Něco se pokazilo. Zkuste to prosím znovu.'
-    },
-    english: {
-      back: '← Back to map',
-      title: '➕ Submit an organization / event',
-      subtitle: 'Send us a tip. We’ll verify it and then it may appear on the site.',
-      orgTab: '🏛️ Organization / place',
-      eventTab: '📅 Event / opportunity',
-      name: 'Name',
-      category: 'Category (optional)',
-      website: 'Website (optional)',
-      email: 'Email (optional)',
-      phone: 'Phone (optional)',
-      desc: 'Short description (optional)',
-      location: 'Town / ZIP (find location)',
-      locationHint: 'Pick a result — we’ll store coordinates for the map.',
-      eventUrl: 'Signup / event detail link',
-      eventStart: 'Start (optional)',
-      eventEnd: 'End (optional)',
-      submit: 'Submit for review',
-      sending: 'Submitting…',
-      success: 'Thanks! We received it. We’ll verify and add if helpful.',
-      error: 'Something went wrong. Please try again.'
-    }
-  };
+  const QUICK_CATEGORIES = [
+    '🐾 Zvířata a útulky',
+    '🥫 Potraviny a šatníky',
+    '📚 Knihobudka / Re-use místo',
+    '🤝 Komunita a sousedé',
+    '👴 Senioři',
+    '🌱 Příroda a úklid'
+  ];
 
   let kind = 'org'; // org | event
 
@@ -65,7 +25,7 @@
   let eventStartLocal = '';
   let eventEndLocal = '';
 
-  // Location picker (via /api/geocode)
+  // Location picker (1-click city OR /api/geocode)
   let locationQuery = '';
   let geoStatus = 'idle'; // idle | loading | ok | error
   let geoMessage = '';
@@ -82,6 +42,7 @@
   let isSubmitting = false;
   let submitStatus = null; // null | success | error
   let submitMessage = '';
+  let submittedMapUrl = '/near';
 
   function safeText(v) {
     return typeof v === 'string' ? v.trim() : '';
@@ -93,17 +54,27 @@
     return s.split(',')[0] || s;
   }
 
+  function pickQuickCity(city) {
+    lat = city.lat;
+    lon = city.lon;
+    addressLabel = city.name;
+    locationQuery = city.name;
+    geoResults = [];
+    geoStatus = 'ok';
+    geoMessage = `Vybráno město: ${city.name}`;
+  }
+
   async function searchLocation() {
     const q = safeText(locationQuery);
     if (!q || q.length < 2) {
       geoStatus = 'error';
-      geoMessage = language === 'czech' ? 'Zadejte aspoň 2 znaky.' : 'Enter at least 2 characters.';
+      geoMessage = 'Zadej aspoň 2 znaky.';
       geoResults = [];
       return;
     }
 
     geoStatus = 'loading';
-    geoMessage = language === 'czech' ? 'Hledám…' : 'Searching…';
+    geoMessage = 'Hledám přesnou adresu…';
     geoResults = [];
 
     try {
@@ -113,14 +84,14 @@
       geoResults = results;
       if (!results.length) {
         geoStatus = 'error';
-        geoMessage = language === 'czech' ? 'Nic jsem nenašel.' : 'No results.';
+        geoMessage = 'Přesnou adresu jsem nenašel – můžeš kliknout na nejbližší město výše.';
         return;
       }
       geoStatus = 'ok';
-      geoMessage = language === 'czech' ? 'Vyberte výsledek:' : 'Pick a result:';
+      geoMessage = 'Vyber přesné místo ze seznamu:';
     } catch {
       geoStatus = 'error';
-      geoMessage = UI[language].error;
+      geoMessage = 'Vyhledávání adresy je dočasně nedostupné – vyber prosím město tlačítkem výše.';
     }
   }
 
@@ -130,7 +101,7 @@
     addressLabel = safeText(r?.label);
     locationQuery = firstText(addressLabel);
     geoResults = [];
-    geoMessage = language === 'czech' ? 'Poloha vybrána.' : 'Location selected.';
+    geoMessage = 'Poloha vybrána.';
     geoStatus = 'ok';
   }
 
@@ -148,19 +119,19 @@
     const n = safeText(name);
     if (!n) {
       submitStatus = 'error';
-      submitMessage = language === 'czech' ? 'Vyplňte název.' : 'Please enter a name.';
+      submitMessage = 'Vyplň prosím název místa, spolku nebo akce.';
       return;
     }
 
     if (lat == null || lon == null) {
       submitStatus = 'error';
-      submitMessage = language === 'czech' ? 'Vyberte polohu (město/PSČ) a klikněte na výsledek.' : 'Please select a location.';
+      submitMessage = 'Klikni na město nebo vyhledej polohu, ať víme, kam tip umístit na mapě.';
       return;
     }
 
     if (kind === 'event' && !safeText(eventUrl)) {
       submitStatus = 'error';
-      submitMessage = language === 'czech' ? 'U akce prosím přidejte odkaz.' : 'Please add an event link.';
+      submitMessage = 'U akce prosím přidej odkaz na detail nebo událost.';
       return;
     }
 
@@ -195,244 +166,592 @@
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok || !data?.success) {
         submitStatus = 'error';
-        submitMessage = data?.error || UI[language].error;
+        submitMessage = data?.error || 'Něco se pokazilo. Zkus to prosím znovu.';
         return;
       }
 
+      submittedMapUrl = `/near?lat=${lat}&lon=${lon}`;
       submitStatus = 'success';
-      submitMessage = UI[language].success;
+      submitMessage = 'Díky! Tip jsme uložili a hned pomáhá dalším lidem v okolí.';
       trackEvent('aa_submission_sent', { kind });
+      recordSmallWin({ id: `submit_${Date.now()}`, title: `Přidán sousedský tip: ${n}`, surface: 'submit' });
     } catch {
       submitStatus = 'error';
-      submitMessage = UI[language].error;
+      submitMessage = 'Něco se pokazilo. Zkus to prosím znovu.';
     } finally {
       isSubmitting = false;
     }
   }
 </script>
 
+<svelte:head>
+  <title>Přidat místo nebo akci na mapu — Akcelerátor altruismu</title>
+</svelte:head>
+
 <div class="page">
-  <div class="header">
-    <a class="back" href="/near">{UI[language].back}</a>
-    <div class="title">{UI[language].title}</div>
-    <div class="subtitle">{UI[language].subtitle}</div>
-  </div>
+  <header class="subpage-hero header">
+    <div class="hero-kicker">TIPY Z TVÉHO OKOLÍ • SPOLEČNÁ MAPA POMOCI</div>
+    <h1 class="title">Přidej místo nebo akci, <span class="serif-accent">kde se dá pomoct</span></h1>
+    <p class="subtitle">
+      Víš o útulku, komunitním šatníku, knihobudce nebo sousedské brigádě? Stačí název a obec — tvůj tip pomůže dalším lidem v okolí.
+    </p>
+  </header>
 
-  <div class="card">
-    <div class="tabs">
-      <button class="tab" class:active={kind === 'org'} type="button" on:click={() => (kind = 'org')}>{UI[language].orgTab}</button>
-      <button class="tab" class:active={kind === 'event'} type="button" on:click={() => (kind = 'event')}>{UI[language].eventTab}</button>
-    </div>
-
-    <form class="form" on:submit|preventDefault={submit}>
-      <!-- Honeypot (hidden) -->
-      <div class="hp" aria-hidden="true">
-        <label for="hp_company">Company</label>
-        <input id="hp_company" type="text" bind:value={hp} tabindex="-1" autocomplete="off" />
-      </div>
-
-      <div class="grid">
-        <div class="field">
-          <label for="name">{UI[language].name}</label>
-          <input id="name" type="text" bind:value={name} placeholder="Např. Charita Zlín" maxlength="120" />
-        </div>
-
-        <div class="field">
-          <label for="category">{UI[language].category}</label>
-          <input id="category" type="text" bind:value={category} placeholder="např. potraviny, senioři, děti…" maxlength="80" />
-        </div>
-
-        <div class="field">
-          <label for="website">{UI[language].website}</label>
-          <input id="website" type="text" bind:value={website} placeholder="https://…" maxlength="220" />
-        </div>
-
-        <div class="field">
-          <label for="email">{UI[language].email}</label>
-          <input id="email" type="email" bind:value={email} placeholder="info@…" maxlength="120" />
-        </div>
-
-        <div class="field">
-          <label for="phone">{UI[language].phone}</label>
-          <input id="phone" type="tel" bind:value={phone} placeholder="+420 …" maxlength="60" />
-        </div>
-      </div>
-
-      <div class="field">
-        <label for="desc">{UI[language].desc}</label>
-        <textarea id="desc" bind:value={description} rows="4" maxlength="600" placeholder="Co dělají? Pro koho? Jak se zapojit?"></textarea>
-      </div>
-
-      <div class="field">
-        <label for="loc">{UI[language].location}</label>
-        <div class="loc-search">
-          <input
-            id="loc"
-            type="text"
-            bind:value={locationQuery}
-            placeholder="Např. 602 00, Brno, Pardubice…"
-            on:input={() => {
-              geoResults = [];
-              geoMessage = '';
-              geoStatus = 'idle';
-            }}
-            on:keydown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                searchLocation();
-              }
-            }}
-            disabled={geoStatus === 'loading'}
-          />
-          <button class="btn secondary" type="button" on:click={searchLocation} disabled={geoStatus === 'loading' || locationQuery.trim().length < 2}>
-            {geoStatus === 'loading' ? 'Hledám…' : 'Najít'}
-          </button>
-        </div>
-        <div class="hint">{UI[language].locationHint}</div>
-
-        {#if geoMessage}
-          <div class={"banner " + geoStatus} aria-live="polite">{geoMessage}</div>
-        {/if}
-
-        {#if geoResults.length}
-          <div class="geo-results">
-            {#each geoResults as r}
-              <button class="geo-item" type="button" on:click={() => pickLocation(r)}>
-                <span class="geo-title">{firstText(r.label)}</span>
-                <span class="geo-sub">{r.label}</span>
-              </button>
-            {/each}
-          </div>
-        {/if}
-
-        {#if lat != null && lon != null && addressLabel}
-          <div class="picked">✅ Vybráno: <strong>{addressLabel}</strong></div>
-        {/if}
-      </div>
-
-      {#if kind === 'event'}
-        <div class="grid">
-          <div class="field wide">
-            <label for="event_url">{UI[language].eventUrl}</label>
-            <input id="event_url" type="text" bind:value={eventUrl} placeholder="https://…" maxlength="220" />
-          </div>
-        </div>
-        <div class="grid">
-          <div class="field">
-            <label for="event_start">{UI[language].eventStart}</label>
-            <input id="event_start" type="datetime-local" bind:value={eventStartLocal} />
-          </div>
-          <div class="field">
-            <label for="event_end">{UI[language].eventEnd}</label>
-            <input id="event_end" type="datetime-local" bind:value={eventEndLocal} />
-          </div>
-        </div>
-      {/if}
-
-      <div class="actions">
-        <button class="btn primary" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? UI[language].sending : UI[language].submit}
+  <div class="submit-layout">
+    <!-- FORM COLUMN -->
+    <div class="card">
+      <div class="tabs">
+        <button class="tab" class:active={kind === 'org'} type="button" on:click={() => (kind = 'org')}>
+          📍 Místo / spolek / knihobudka
+        </button>
+        <button class="tab" class:active={kind === 'event'} type="button" on:click={() => (kind = 'event')}>
+          📅 Sousedská akce / brigáda
         </button>
       </div>
 
-      {#if submitStatus}
-        <div class={"banner " + submitStatus} aria-live="polite">{submitMessage}</div>
-      {/if}
-    </form>
+      <form class="form" on:submit|preventDefault={submit}>
+        <!-- Honeypot -->
+        <div class="hp" aria-hidden="true">
+          <label for="hp_company">Company</label>
+          <input id="hp_company" type="text" bind:value={hp} tabindex="-1" autocomplete="off" />
+        </div>
+
+        <div class="field wide">
+          <label for="name">Název místa nebo akce *</label>
+          <input
+            id="name"
+            type="text"
+            bind:value={name}
+            placeholder="Např. Knihobudka v parku / Útulek Tlapka / Komunitní swap oblečení"
+            maxlength="120"
+          />
+        </div>
+
+        <div class="field">
+          <label for="desc">Jak se tam dá zapojit? (lidsky, 1–2 věty)</label>
+          <textarea
+            id="desc"
+            bind:value={description}
+            rows="3"
+            maxlength="600"
+            placeholder="Např. Každé úterý odpoledne berou čisté zimní bundy, nebo mají od 14:00 veřejné venčení psů bez registrace…"
+          ></textarea>
+        </div>
+
+        <div class="field">
+          <label for="loc">Kde to v ČR je? * (1 klikem město, nebo přesná ulice)</label>
+          <div class="quick-pills">
+            {#each CZECH_CITIES as city}
+              <button
+                type="button"
+                class="q-pill"
+                class:active={addressLabel === city.name}
+                on:click={() => pickQuickCity(city)}
+              >
+                📍 {city.name}
+              </button>
+            {/each}
+          </div>
+
+          <div class="loc-search">
+            <input
+              id="loc"
+              type="text"
+              bind:value={locationQuery}
+              placeholder="Nebo napiš menší obec či ulici (např. Litomyšl, Znojmo, Písek)…"
+              on:input={() => {
+                geoResults = [];
+                geoMessage = '';
+                geoStatus = 'idle';
+              }}
+              on:keydown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  searchLocation();
+                }
+              }}
+              disabled={geoStatus === 'loading'}
+            />
+            <button class="btn secondary" type="button" on:click={searchLocation} disabled={geoStatus === 'loading' || locationQuery.trim().length < 2}>
+              {geoStatus === 'loading' ? 'Hledám…' : 'Najít v ČR'}
+            </button>
+          </div>
+
+          {#if geoMessage}
+            <div class={'banner ' + geoStatus} aria-live="polite">{geoMessage}</div>
+          {/if}
+
+          {#if geoResults.length}
+            <div class="geo-results">
+              {#each geoResults as r}
+                <button class="geo-item" type="button" on:click={() => pickLocation(r)}>
+                  <span class="geo-title">{firstText(r.label)}</span>
+                  <span class="geo-sub">{r.label}</span>
+                </button>
+              {/each}
+            </div>
+          {/if}
+
+          {#if lat != null && lon != null && addressLabel}
+            <div class="picked">✅ Poloha vybrána: <strong>{addressLabel}</strong></div>
+          {/if}
+        </div>
+
+        {#if kind === 'event'}
+          <div class="grid">
+            <div class="field wide">
+              <label for="event_url">Odkaz na událost / detail *</label>
+              <input id="event_url" type="text" bind:value={eventUrl} placeholder="https://…" maxlength="220" />
+            </div>
+            <div class="field">
+              <label for="event_start">Začátek (volitelné)</label>
+              <input id="event_start" type="datetime-local" bind:value={eventStartLocal} />
+            </div>
+            <div class="field">
+              <label for="event_end">Konec (volitelné)</label>
+              <input id="event_end" type="datetime-local" bind:value={eventEndLocal} />
+            </div>
+          </div>
+        {/if}
+
+        <details class="calm-drawer optional-fields">
+          <summary>Doplnit štítek, web nebo kontaktní e-mail (volitelné)</summary>
+          <div class="grid opt-grid">
+            <div class="field wide">
+              <label for="category">O co jde? (volitelné)</label>
+              <input id="category" type="text" bind:value={category} placeholder="Klikni na štítek níže nebo napiš vlastní…" maxlength="80" />
+              <div class="quick-pills">
+                {#each QUICK_CATEGORIES as qc}
+                  <button
+                    type="button"
+                    class="q-pill"
+                    class:active={category === qc}
+                    on:click={() => (category = qc)}
+                  >
+                    {qc}
+                  </button>
+                {/each}
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="website">Web / FB / Instagram (volitelné)</label>
+              <input id="website" type="text" bind:value={website} placeholder="https://…" maxlength="220" />
+            </div>
+
+            <div class="field">
+              <label for="email">Kontaktní e-mail (volitelné)</label>
+              <input id="email" type="email" bind:value={email} placeholder="info@…" maxlength="120" />
+            </div>
+          </div>
+        </details>
+
+        <div class="actions">
+          <button class="btn submit-btn" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Ukládám…' : '✦ Připnout sousedský tip na mapu'}
+          </button>
+        </div>
+
+        {#if submitStatus}
+          <div class={'banner ' + submitStatus} aria-live="polite">
+            <div>{submitMessage}</div>
+            {#if submitStatus === 'success'}
+              <a href={submittedMapUrl} class="map-jump-link">🗺️ Ukázat místo na mapě →</a>
+            {/if}
+          </div>
+        {/if}
+      </form>
+    </div>
+
+    <!-- SIDEBAR: LIVE NEIGHBORHOOD INSPIRATION -->
+    <aside class="side-board">
+      <div class="board-box">
+        <span class="board-kicker">🌿 ŽIVÉ PŘÍKLADY Z ČESKA</span>
+        <h3>Co sem lidé nejčastěji přidávají?</h3>
+        <ul class="idea-list">
+          <li>🐾 <strong>Menší útulky a depozita</strong>, kde uvítají staré deky nebo vyvenčení psa.</li>
+          <li>📚 <strong>Veřejné knihobudky a ReUse poličky</strong> na nádražích a v parcích.</li>
+          <li>🧥 <strong>Komunitní šatníky a potravinové skříňky</strong> pro samoživitele.</li>
+          <li>🌳 <strong>Sousedské úklidy potoka, výsadby stromů</strong> nebo studentské swapy.</li>
+        </ul>
+      </div>
+
+      <div class="board-box light">
+        <span class="board-kicker dark">📌 UŽ NA NÁSTĚNCE</span>
+        <h3>Ověřené komunitní body</h3>
+        <div class="seed-stack">
+          {#each LOCAL_COMMUNITY_ITEMS.slice(0, 2) as item}
+            <a href={`/near?lat=${item.lat}&lon=${item.lon}&r=8`} class="seed-card">
+              <div class="seed-cat">{item.category}</div>
+              <strong>{item.name}</strong>
+              <span>📍 {item.address_label}</span>
+            </a>
+          {/each}
+        </div>
+      </div>
+    </aside>
   </div>
 </div>
 
 <style>
-  .page { max-width: 880px; margin: 0 auto; padding: 1rem 1rem 2rem 1rem; }
-  .header { text-align: center; margin-bottom: 1rem; }
-  .back { display:inline-block; margin-bottom:0.5rem; color: var(--text-secondary); text-decoration:none; }
-  .back:hover { text-decoration: underline; }
-  .title { font-family:'Inter',sans-serif; font-weight:900; color: var(--czech-forest); font-size: clamp(1.7rem, 3vw, 2.3rem); }
-  .subtitle { color: var(--text-secondary); margin-top:0.35rem; }
+  .page {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0.75rem 1.25rem 3.5rem;
+  }
+
+  .header {
+    text-align: center;
+  }
+
+  .opt-grid {
+    margin-top: 0.85rem;
+  }
+
+  .hero-kicker {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    color: #047857;
+    margin-bottom: 0.35rem;
+  }
+
+  .title {
+    font-family: var(--font-sans);
+    font-weight: 800;
+    color: #0e281c;
+    font-size: clamp(1.95rem, 3.4vw, 2.75rem);
+    margin: 0;
+    letter-spacing: -0.03em;
+  }
+
+  .title .serif-accent {
+    color: #059669;
+    font-weight: 400;
+  }
+
+  .subtitle {
+    color: #365244;
+    margin: 0.55rem auto 0;
+    max-width: 58ch;
+    line-height: 1.55;
+  }
+
+  .submit-layout {
+    display: grid;
+    grid-template-columns: 1.35fr 0.65fr;
+    gap: 1.15rem;
+    align-items: start;
+    margin-top: 1.15rem;
+  }
 
   .card {
-    background: rgba(255,255,255,0.92);
-    border: 1px solid rgba(44, 62, 45, 0.12);
-    border-radius: 18px;
-    box-shadow: 0 10px 28px rgba(0,0,0,0.08);
-    padding: 1.05rem;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(22, 66, 48, 0.12);
+    border-radius: 24px;
+    box-shadow: var(--shadow-md);
+    padding: 1.65rem;
   }
 
-  .tabs { display:flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+  .tabs {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.1rem;
+  }
+
   .tab {
     border-radius: 999px;
-    border: 1px solid rgba(44, 62, 45, 0.12);
-    background: rgba(242, 247, 242, 0.8);
-    padding: 0.55rem 0.75rem;
+    border: 1px solid rgba(22, 66, 48, 0.14);
+    background: #f5f3eb;
+    padding: 0.58rem 1rem;
     cursor: pointer;
-    font-weight: 900;
-    color: var(--czech-forest);
+    font-family: var(--font-sans);
+    font-weight: 800;
+    font-size: 0.88rem;
+    color: var(--text-primary);
   }
-  .tab.active { background: var(--czech-forest); color: white; }
 
-  .form { display:flex; flex-direction: column; gap: 0.9rem; }
-  .grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem; }
-  .field { display:flex; flex-direction: column; gap: 0.35rem; }
-  .field.wide { grid-column: 1 / -1; }
-  label { font-size: 0.9rem; color: var(--text-secondary); }
-  input, textarea {
-    padding: 0.55rem 0.65rem;
+  .tab.active {
+    background: #0d2b1f;
+    color: #fde68a;
+    border-color: #0d2b1f;
+  }
+
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.95rem;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .field.wide {
+    grid-column: 1 / -1;
+  }
+
+  label {
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: var(--text-primary);
+  }
+
+  input,
+  textarea {
+    padding: 0.65rem 0.8rem;
     border-radius: 12px;
-    border: 1px solid rgba(44, 62, 45, 0.12);
-    background: white;
+    border: 1px solid rgba(22, 66, 48, 0.16);
+    background: #ffffff;
     font-family: inherit;
-  }
-  textarea { resize: vertical; }
-  .hint { color: var(--text-secondary); font-size: 0.88rem; margin-top: 0.2rem; }
-
-  .loc-search { display:flex; gap: 0.6rem; align-items:center; flex-wrap: wrap; }
-  .loc-search input { flex: 1; min-width: 240px; }
-
-  .geo-results { margin-top: 0.6rem; display:grid; grid-template-columns: 1fr; gap: 0.5rem; }
-  .geo-item {
-    text-align: left;
-    padding: 0.65rem 0.75rem;
-    border-radius: 14px;
-    border: 1px solid rgba(44, 62, 45, 0.12);
-    background: rgba(255,255,255,0.92);
-    cursor: pointer;
-  }
-  .geo-item:hover { filter: brightness(0.985); }
-  .geo-title { display:block; font-weight: 900; color: var(--czech-forest); }
-  .geo-sub { display:block; margin-top: 0.15rem; color: var(--text-secondary); font-size: 0.9rem; }
-  .picked { margin-top: 0.65rem; color: var(--text-secondary); }
-
-  .actions { display:flex; justify-content: flex-start; margin-top: 0.2rem; }
-  .btn {
-    border-radius: 12px;
-    padding: 0.7rem 0.9rem;
-    font-weight: 900;
-    cursor: pointer;
-    border: 1px solid rgba(44, 62, 45, 0.12);
-  }
-  .btn.primary { background: var(--czech-forest); color: white; }
-  .btn.secondary { background: white; color: var(--czech-forest); }
-  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-  .banner {
-    margin-top: 0.6rem;
-    padding: 0.55rem 0.75rem;
-    border-radius: 12px;
-    border: 1px solid rgba(44, 62, 45, 0.12);
-    background: rgba(242, 247, 242, 0.7);
-    color: var(--text-secondary);
     font-size: 0.92rem;
   }
-  .banner.error { background: rgba(254, 242, 242, 0.75); border-color: rgba(127, 29, 29, 0.15); }
-  .banner.success { background: rgba(236, 253, 245, 0.75); border-color: rgba(6, 95, 70, 0.15); }
-  .banner.ok { background: rgba(236, 253, 245, 0.75); border-color: rgba(6, 95, 70, 0.15); }
-  .banner.loading { background: rgba(255, 251, 235, 0.8); border-color: rgba(180, 83, 9, 0.14); }
 
-  .hp { display:none; }
+  textarea {
+    resize: vertical;
+  }
 
-  @media (max-width: 820px) {
-    .grid { grid-template-columns: 1fr; }
+  .quick-pills {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    margin-top: 0.2rem;
+  }
+
+  .q-pill {
+    padding: 0.32rem 0.68rem;
+    border-radius: 999px;
+    border: 1px solid rgba(22, 66, 48, 0.14);
+    background: #f6f4ec;
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .q-pill:hover {
+    background: #ecfdf5;
+    border-color: #059669;
+  }
+
+  .q-pill.active {
+    background: #0d2b1f;
+    color: #fde68a;
+    border-color: #0d2b1f;
+  }
+
+  .loc-search {
+    display: flex;
+    gap: 0.55rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 0.25rem;
+  }
+
+  .loc-search input {
+    flex: 1;
+    min-width: 220px;
+  }
+
+  .geo-results {
+    margin-top: 0.5rem;
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .geo-item {
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    border-radius: 12px;
+    border: 1px solid rgba(22, 66, 48, 0.12);
+    background: #ffffff;
+    cursor: pointer;
+  }
+
+  .geo-title {
+    display: block;
+    font-weight: 800;
+    color: var(--text-primary);
+  }
+
+  .geo-sub {
+    display: block;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+  }
+
+  .picked {
+    margin-top: 0.4rem;
+    color: #065f46;
+    font-size: 0.9rem;
+  }
+
+  .btn {
+    border-radius: 14px;
+    padding: 0.75rem 1.15rem;
+    font-family: var(--font-sans);
+    font-weight: 800;
+    cursor: pointer;
+    border: 1px solid rgba(22, 66, 48, 0.14);
+  }
+
+  .btn.secondary {
+    background: #ffffff;
+    color: var(--text-primary);
+  }
+
+  .submit-btn {
+    background: linear-gradient(135deg, #123828 0%, #1c523a 100%);
+    border: 1.5px solid rgba(251, 191, 36, 0.5);
+    color: #fde68a;
+    font-size: 0.95rem;
+    box-shadow: 0 10px 24px -8px rgba(14, 40, 28, 0.28);
+  }
+
+  .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .banner {
+    margin-top: 0.5rem;
+    padding: 0.65rem 0.85rem;
+    border-radius: 12px;
+    border: 1px solid rgba(22, 66, 48, 0.12);
+    background: #f5f3eb;
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+  }
+
+  .banner.error {
+    background: #fef2f2;
+    border-color: rgba(153, 27, 27, 0.2);
+    color: #991b1b;
+  }
+
+  .banner.success,
+  .banner.ok {
+    background: #ecfdf5;
+    border-color: rgba(6, 95, 70, 0.22);
+    color: #065f46;
+  }
+
+  .map-jump-link {
+    display: inline-block;
+    margin-top: 0.4rem;
+    font-weight: 800;
+    color: #065f46;
+  }
+
+  .hp {
+    display: none;
+  }
+
+  /* Sidebar */
+  .side-board {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .board-box {
+    padding: 1.35rem;
+    border-radius: 22px;
+    background: linear-gradient(155deg, #ebf6ef, #f6faf7);
+    border: 1px solid rgba(22, 82, 56, 0.14);
+    color: #0e281c;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .board-box.light {
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(22, 66, 48, 0.12);
+    color: var(--text-primary);
+  }
+
+  .board-kicker {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: #047857;
+  }
+
+  .board-kicker.dark {
+    color: #059669;
+  }
+
+  .board-box h3 {
+    margin: 0.3rem 0 0.75rem;
+    font-size: 1.08rem;
+    font-weight: 800;
+  }
+
+  .idea-list {
+    margin: 0;
+    padding-left: 1.15rem;
+    font-size: 0.85rem;
+    line-height: 1.55;
+    color: #2f4b3d;
+  }
+
+  .idea-list li {
+    margin-bottom: 0.45rem;
+  }
+
+  .seed-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .seed-card {
+    padding: 0.7rem 0.85rem;
+    border-radius: 14px;
+    background: #faf9f4;
+    border: 1px solid rgba(22, 66, 48, 0.1);
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    transition: border-color 0.15s ease;
+  }
+
+  .seed-card:hover {
+    border-color: #10b981;
+  }
+
+  .seed-cat {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #059669;
+  }
+
+  .seed-card strong {
+    font-size: 0.86rem;
+    color: var(--text-primary);
+  }
+
+  .seed-card span {
+    font-size: 0.76rem;
+    color: var(--text-secondary);
+  }
+
+  @media (max-width: 920px) {
+    .submit-layout {
+      grid-template-columns: 1fr;
+    }
+    .grid {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
-
-

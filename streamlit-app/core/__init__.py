@@ -1,1 +1,0 @@
-"""Core components for Akcelerátor altruismu""" 

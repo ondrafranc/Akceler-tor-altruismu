@@ -1,10 +1,75 @@
 import { test, expect } from '@playwright/test';
 
-test('test-supabase API responds JSON (even if error)', async ({ request, baseURL }) => {
+test('test-supabase API responds 200 JSON on GET and POST', async ({ request, baseURL }) => {
   const res = await request.get(baseURL! + '/api/test-supabase');
-  expect(res.ok() || res.status() === 500).toBeTruthy();
+  expect(res.status()).toBe(200);
   const ct = res.headers()['content-type'] || '';
   expect(ct).toMatch(/application\/json/);
+
+  const postRes = await request.post(baseURL! + '/api/test-supabase', {
+    data: { feedback_text: 'Skvělý web, moc mi pomohl najít útulek v okolí!', rating: 5 }
+  });
+  expect(postRes.status()).toBe(200);
+  const postBody = await postRes.json();
+  expect(postBody.success).toBe(true);
 });
 
+test('nearby API returns places array quickly', async ({ request, baseURL }) => {
+  const res = await request.get(baseURL! + '/api/nearby?lat=50.0755&lon=14.4378&radius_m=5000&kinds=ngo,community,food,animals');
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(Array.isArray(body.places)).toBeTruthy();
+  expect(body.places.length).toBeGreaterThan(0);
+});
 
+test('community-nearby and submissions APIs work end-to-end', async ({ request, baseURL }) => {
+  const getRes = await request.get(baseURL! + '/api/community-nearby?lat=50.0755&lon=14.4378&radius_m=15000');
+  expect(getRes.status()).toBe(200);
+  const getBody = await getRes.json();
+  expect(Array.isArray(getBody.items)).toBeTruthy();
+  expect(getBody.items.length).toBeGreaterThan(0);
+
+  const subRes = await request.post(baseURL! + '/api/submissions', {
+    data: {
+      hp: '',
+      started_at: Date.now() - 5000,
+      kind: 'org',
+      name: 'Testovací komunitní zahrada Praha',
+      category: '🌱 Příroda a úklid',
+      lat: 50.0755,
+      lon: 14.4378,
+      address_label: 'Praha'
+    }
+  });
+  expect(subRes.status()).toBe(200);
+  const subBody = await subRes.json();
+  expect(subBody.success).toBe(true);
+});
+
+test('anywhere in Czechia (even rural Šumava / Vysočina) always returns nearest actions sorted by distance', async ({ request, baseURL }) => {
+  // Remote Šumava coordinates with a tiny 1km radius
+  const ruralLat = 49.025;
+  const ruralLon = 13.625;
+  const nearRes = await request.get(
+    `${baseURL!}/api/nearby?lat=${ruralLat}&lon=${ruralLon}&radius_m=1000&kinds=ngo,community,food,animals`
+  );
+  expect(nearRes.status()).toBe(200);
+  const nearBody = await nearRes.json();
+  expect(Array.isArray(nearBody.places)).toBeTruthy();
+  expect(nearBody.places.length).toBeGreaterThanOrEqual(2);
+
+  const commRes = await request.get(`${baseURL!}/api/community-nearby?lat=${ruralLat}&lon=${ruralLon}&radius_m=1000`);
+  expect(commRes.status()).toBe(200);
+  const commBody = await commRes.json();
+  expect(Array.isArray(commBody.items)).toBeTruthy();
+  expect(commBody.items.length).toBeGreaterThanOrEqual(2);
+  // Nearest regional capitals to central Šumava are České Budějovice / Plzeň
+  expect(commBody.items[0].distanceKm).toBeLessThanOrEqual(commBody.items[1].distanceKm);
+
+  // Geocode test (with diacritics-free query)
+  const geoRes = await request.get(`${baseURL!}/api/geocode?q=Tabor&limit=3`);
+  expect(geoRes.status()).toBe(200);
+  const geoBody = await geoRes.json();
+  expect(Array.isArray(geoBody.results)).toBeTruthy();
+  expect(geoBody.results.length).toBeGreaterThan(0);
+});

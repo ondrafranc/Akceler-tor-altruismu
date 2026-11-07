@@ -1,626 +1,285 @@
-/* Czech Cultural Theme - "Czech Forest Wisdom" Palette */
+/* ==========================================================================
+   AKCELERÁTOR ALTRUISMU v3.0 — "CALM BOHEMIAN LINDEN & SANCTUARY" DESIGN SYSTEM
+   Restorative, painterly, zero-pressure editorial UI designed for peace & hope.
+   ========================================================================== */
+
 :root {
-  /* Primary - Czech forest green */
-  --czech-forest: #2E5D31;
-  --czech-forest-light: #4A7C59;
-  --czech-forest-dark: #1A3A1D;
-  
-  /* Secondary - Moravian earth tones */
-  --moravian-earth: #8B7355;
-  --moravian-earth-light: #A68B6F;
-  --bohemian-mist: #E8F2E8;
-  
-  /* Accent - Gentle warmth */
-  --warm-stone: #F5F1E8;
-  --copper-detail: #B08D57;
-  --copper-light: #C4A374;
-  
-  /* Text colors - Enhanced contrast */
-  --text-primary: #1E2D1F;
-  --text-secondary: #4A5B4A;
-  --text-muted: #6B7B6B;
-  
-  /* Background gradients - More dynamic */
-  --bg-primary: linear-gradient(135deg, #F8FBF8 0%, #F0F6F0 100%);
-  --bg-secondary: linear-gradient(135deg, #E8F2E8 0%, #D4E7D4 100%);
-  --bg-accent: linear-gradient(135deg, #F5F8F5 0%, #EDF2ED 100%);
-  --bg-hero: linear-gradient(135deg, #E8F2E8 0%, #D4E7D4 50%, #F0F6F0 100%);
-  
-  /* Semantic colors */
-  --success: #4A7C59;
-  --warning: #B08D57;
-  --info: #6B8DA6;
-  --subtle-border: #D4E7D4;
-  --strong-border: #B8CEB8;
-  
-  /* Animation timings - Czech-appropriate (thoughtful, not rushed) */
+  /* Deep Forest & Botanical Sage Spectrum */
+  --forest-950: #06150f;
+  --forest-900: #0b2218;
+  --forest-850: #0f2d20;
+  --forest-800: #163e2c;
+  --forest-700: #1e523b;
+  --czech-forest: #164230;
+  --czech-forest-light: #246b4d;
+  --czech-forest-dark: #091d14;
+
+  /* Living Emerald & Morning Sunlight Accents */
+  --emerald-600: #059669;
+  --emerald-500: #10b981;
+  --emerald-400: #34d399;
+  --emerald-glow: rgba(16, 185, 129, 0.24);
+
+  --amber-500: #d97706;
+  --amber-400: #f59e0b;
+  --amber-300: #fbbf24;
+  --gold-soft: #fde68a;
+  --copper-detail: #c9934b;
+  --copper-light: #e0b375;
+
+  /* Restorative Warm Surfaces (Morning sage, soft linen, airy ivory) */
+  --surface-page: #eef4ef;
+  --surface-warm: #e4efe7;
+  --surface-card: rgba(255, 255, 255, 0.96);
+  --surface-glass: rgba(255, 255, 255, 0.88);
+  --bohemian-mist: #e2eee6;
+  --warm-stone: #f4f6f1;
+
+  /* Calm, High-Legibility Typography Colors */
+  --text-primary: #0f261b;
+  --text-secondary: #385245;
+  --text-muted: #5e7669;
+
+  /* Gentle Borders & Airy Shadows */
+  --subtle-border: rgba(22, 66, 48, 0.09);
+  --strong-border: rgba(22, 66, 48, 0.18);
+  --shadow-sm: 0 4px 14px rgba(9, 29, 20, 0.04), 0 1px 3px rgba(9, 29, 20, 0.03);
+  --shadow-md: 0 16px 36px -10px rgba(9, 29, 20, 0.08), 0 4px 12px -2px rgba(9, 29, 20, 0.04);
+  --shadow-lg: 0 26px 52px -14px rgba(9, 29, 20, 0.13), 0 8px 20px -4px rgba(9, 29, 20, 0.05);
+  --shadow-xl: 0 34px 68px -18px rgba(6, 21, 15, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --shadow-glow: 0 12px 32px -6px rgba(16, 185, 129, 0.28);
+
+  /* Typography Families */
+  --font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+
+  /* Motion */
   --timing-quick: 0.2s;
-  --timing-medium: 0.4s;
-  --timing-slow: 0.8s;
-  --timing-thoughtful: 1.2s;
-  
-  /* Easing curves - gentle, natural feeling */
-  --ease-gentle: cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  --ease-natural: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --timing-medium: 0.38s;
+  --ease-gentle: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  
-  /* Spacing system - Consistent rhythm */
+
+  /* Spacing */
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
   --space-md: 1rem;
   --space-lg: 1.5rem;
   --space-xl: 2rem;
   --space-2xl: 3rem;
-  --space-3xl: 4rem;
-  
-  /* Shadow system - Depth and elevation */
-  --shadow-sm: 0 2px 4px rgba(46, 93, 49, 0.08);
-  --shadow-md: 0 4px 12px rgba(46, 93, 49, 0.15);
-  --shadow-lg: 0 8px 24px rgba(46, 93, 49, 0.2);
-  --shadow-xl: 0 12px 40px rgba(46, 93, 49, 0.25);
+  --space-3xl: 4.5rem;
 }
 
-/* Enhanced Typography Scale - More refined hierarchy */
-.czech-heading-xl {
-  font-family: 'Inter', sans-serif;
-  font-size: clamp(2.25rem, 5vw, 4rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-  color: var(--czech-forest);
-  text-shadow: 0 2px 4px rgba(46, 93, 49, 0.1);
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
-.czech-heading-lg {
-  font-family: 'Inter', sans-serif;
-  font-size: clamp(1.75rem, 4vw, 2.75rem);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
-  color: var(--czech-forest);
-}
-
-.czech-heading-md {
-  font-family: 'Inter', sans-serif;
-  font-size: clamp(1.25rem, 3vw, 1.95rem);
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  line-height: 1.25;
-  color: var(--czech-forest);
-}
-
-.czech-body {
-  font-family: 'Source Sans Pro', sans-serif;
-  font-size: clamp(1rem, 2.5vw, 1.125rem);
-  line-height: 1.7;
-  color: var(--text-secondary);
-}
-
-.czech-body-large {
-  font-family: 'Source Sans Pro', sans-serif;
-  font-size: clamp(1.125rem, 3vw, 1.35rem);
-  line-height: 1.6;
+html {
+  scroll-behavior: smooth;
+  background-color: var(--surface-page);
   color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  background-color: var(--surface-page);
+  background-image:
+    radial-gradient(at 12% 6%, rgba(167, 243, 208, 0.34) 0px, transparent 50%),
+    radial-gradient(at 88% 16%, rgba(254, 243, 199, 0.38) 0px, transparent 50%),
+    radial-gradient(at 50% 88%, rgba(110, 231, 183, 0.16) 0px, transparent 56%),
+    linear-gradient(180deg, #f5f9f5 0%, #eef4ef 52%, #f6f7f1 100%);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+/* Editorial Display Accents */
+.serif-accent {
+  font-family: var(--font-serif);
+  font-style: italic;
   font-weight: 400;
+  letter-spacing: 0.01em;
 }
 
-/* Enhanced Button System - More engaging */
-.czech-button-primary {
-  background: linear-gradient(135deg, var(--czech-forest) 0%, var(--czech-forest-light) 100%);
-  color: white;
-  padding: 1rem 2rem;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 1.05rem;
-  transition: all var(--timing-medium) var(--ease-gentle);
-  border: none;
-  cursor: pointer;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-sm);
-  box-shadow: var(--shadow-md);
+/* ==========================================================================
+   SUNLIT WATERCOLOR MEADOW SUBPAGE HERO BANNER
+   Shared across /app, /app/guided, /app/online, /near, /submit
+   ========================================================================== */
+.subpage-hero {
   position: relative;
   overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(238, 247, 241, 0.82) 52%, rgba(251, 249, 242, 0.88) 100%),
+    url('/art/meadow-soft-bg.jpg') center 42% / cover no-repeat;
+  color: #0e281c;
+  border-radius: 30px;
+  padding: 2.35rem 2.25rem;
+  margin-bottom: 1.65rem;
+  box-shadow:
+    0 20px 44px -18px rgba(15, 45, 32, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(22, 82, 56, 0.13);
 }
 
-.czech-button-primary::before {
+.subpage-hero::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-  transition: left 0.5s;
-}
-
-.czech-button-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-  background: linear-gradient(135deg, var(--czech-forest-light) 0%, var(--czech-forest) 100%);
-}
-
-.czech-button-primary:hover::before {
-  left: 100%;
-}
-
-.czech-button-primary:active {
-  transform: translateY(0);
-  box-shadow: var(--shadow-md);
-}
-
-.czech-button-secondary {
-  background: transparent;
-  color: var(--czech-forest);
-  padding: 0.875rem 1.75rem;
-  border: 2px solid var(--czech-forest);
-  border-radius: 12px;
-  font-weight: 500;
-  font-size: 1rem;
-  transition: all var(--timing-medium) var(--ease-gentle);
-  cursor: pointer;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-sm);
-  box-shadow: var(--shadow-sm);
-}
-
-.czech-button-secondary:hover {
-  background: var(--czech-forest);
-  color: white;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
-/* Enhanced Card System */
-.solidarity-card {
-  background: var(--bg-primary);
-  border: 1px solid var(--subtle-border);
-  border-radius: 16px;
-  padding: var(--space-xl);
-  transition: all var(--timing-medium) var(--ease-gentle);
-  box-shadow: var(--shadow-sm);
-  position: relative;
-  overflow: hidden;
-}
-
-.solidarity-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, var(--copper-detail), var(--czech-forest-light));
-  opacity: 0;
-  transition: opacity var(--timing-medium) var(--ease-gentle);
-}
-
-.solidarity-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
-  border-color: var(--czech-forest-light);
-}
-
-.solidarity-card:hover::before {
-  opacity: 1;
-}
-
-/* Interactive Elements - Enhanced feedback */
-.interactive-element {
-  position: relative;
-  transition: all var(--timing-medium) var(--ease-gentle);
-}
-
-.interactive-element:hover {
-  transform: scale(1.05);
-}
-
-.interactive-element:active {
-  transform: scale(0.98);
-}
-
-.interactive-element::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  background: radial-gradient(circle, rgba(176, 141, 87, 0.3) 0%, transparent 70%);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  transition: all 0.3s ease;
+  inset: 0;
+  background:
+    radial-gradient(circle at 16% 20%, rgba(167, 243, 208, 0.28), transparent 48%),
+    radial-gradient(circle at 84% 24%, rgba(254, 243, 199, 0.34), transparent 50%);
   pointer-events: none;
-  z-index: -1;
 }
 
-.interactive-element:hover::after {
-  width: 120%;
-  height: 120%;
+.subpage-hero > * {
+  position: relative;
+  z-index: 1;
 }
 
-/* Enhanced Animations */
-@keyframes fadeInDown {
-  from {
-    opacity: 0;
-    transform: translateY(-30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes gentleGlow {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: var(--shadow-sm);
-  }
-  50% {
-    transform: scale(1.02);
-    box-shadow: var(--shadow-md);
-  }
-}
-
-@keyframes seedGrowth {
-  0% {
-    transform: scale(0) translateY(20px);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(0.7) translateY(10px);
-    opacity: 0.8;
-  }
-  100% {
-    transform: scale(1) translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes pulseGentle {
-  0%, 100% {
-    opacity: 0.7;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.08);
-  }
-}
-
-@keyframes floatingParticle {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  33% {
-    transform: translateY(-10px) rotate(120deg);
-  }
-  66% {
-    transform: translateY(5px) rotate(240deg);
-  }
-}
-
-/* Responsive Design - Enhanced mobile experience */
-@media (max-width: 768px) {
-  .solidarity-card {
-    padding: var(--space-lg);
-    margin: var(--space-sm) 0;
-  }
-  
-  .czech-button-primary {
-    padding: 0.875rem 1.5rem;
-    font-size: 0.95rem;
-    border-radius: 10px;
-  }
-  
-  .czech-button-secondary {
-    padding: 0.75rem 1.25rem;
-    font-size: 0.9rem;
-    border-radius: 10px;
-  }
-  
-  .quiet-celebration {
-    padding: var(--space-md);
-    border-radius: 8px;
-  }
-}
-
-/* Enhanced Focus States - Better accessibility */
-.czech-button-primary:focus-visible,
-.czech-button-secondary:focus-visible {
-  outline: 3px solid var(--copper-detail);
-  outline-offset: 3px;
-  box-shadow: 0 0 0 6px rgba(176, 141, 87, 0.2);
-}
-
-.interactive-element:focus-visible {
-  outline: 2px solid var(--copper-detail);
-  outline-offset: 2px;
-  border-radius: 4px;
-  box-shadow: 0 0 0 4px rgba(176, 141, 87, 0.15);
-}
-
-/* Czech-specific utility classes - Enhanced */
-.czech-container {
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 0 var(--space-lg);
-}
-
-.czech-section {
-  padding: var(--space-3xl) 0;
-}
-
-@media (max-width: 768px) {
-  .czech-container {
-    padding: 0 var(--space-md);
-  }
-  
-  .czech-section {
-    padding: var(--space-2xl) 0;
-  }
-}
-
-.czech-grid {
-  display: grid;
-  gap: var(--space-xl);
-}
-
-.czech-flex-center {
+/* ==========================================================================
+   CALM PROGRESSIVE DISCLOSURE CONTROLS (Anti-Overwhelm)
+   ========================================================================== */
+.calm-more-wrap {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-}
-
-.czech-text-center {
+  gap: 0.55rem;
+  margin: 1.6rem auto 0.5rem;
   text-align: center;
 }
 
-/* Enhanced margin/padding utilities */
-.mb-4 { margin-bottom: var(--space-lg); }
-.mb-6 { margin-bottom: var(--space-xl); }
-.mb-8 { margin-bottom: var(--space-2xl); }
-.mb-12 { margin-bottom: var(--space-3xl); }
+.calm-more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.82rem 1.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(22, 66, 48, 0.16);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--forest-850);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.22s var(--ease-gentle);
+}
 
-.mt-4 { margin-top: var(--space-lg); }
-.mt-6 { margin-top: var(--space-xl); }
-.mt-8 { margin-top: var(--space-2xl); }
+.calm-more-btn:hover {
+  background: #ffffff;
+  border-color: rgba(16, 185, 129, 0.4);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
 
-.px-4 { padding-left: var(--space-lg); padding-right: var(--space-lg); }
-.py-4 { padding-top: var(--space-lg); padding-bottom: var(--space-lg); }
+.calm-more-hint {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
 
-/* Enhanced Parallax and Hero elements */
-.parallax-container {
-  position: relative;
-  overflow: hidden;
-  min-height: 100vh;
-  background: var(--bg-hero);
+.calm-drawer {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(22, 66, 48, 0.1);
+  border-radius: 22px;
+  padding: 1rem 1.35rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.calm-drawer > summary {
+  list-style: none;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-weight: 700;
+  font-size: 0.94rem;
+  color: var(--forest-850);
 }
 
-.parallax-forest {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 120%;
-  height: 120%;
-  background: var(--bg-hero);
-  background-size: cover;
-  background-position: center;
-  opacity: 0.4;
-  transform: translateZ(0);
-  will-change: transform;
+.calm-drawer > summary::-webkit-details-marker {
+  display: none;
 }
 
-/* Accessibility - Enhanced support */
+.calm-drawer > summary::after {
+  content: 'Rozbalit ↓';
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--emerald-600);
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.calm-drawer[open] > summary::after {
+  content: 'Skrýt ↑';
+}
+
+/* Global Interactive Focus */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--emerald-500);
+  outline-offset: 2px;
+}
+
+/* Keyframes for Atmospheric Glimmers */
+@keyframes floatFirefly {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translate3d(12px, -22px, 0) scale(1.25);
+    opacity: 0.9;
+  }
+}
+
+@keyframes pulseBeacon {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.65);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+}
+
+@keyframes shimmerSweep {
+  0% {
+    transform: translateX(-120%) skewX(-18deg);
+  }
+  100% {
+    transform: translateX(220%) skewX(-18deg);
+  }
+}
+
+@media (max-width: 680px) {
+  .subpage-hero {
+    padding: 2rem 1.35rem;
+    border-radius: 24px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  
-  .parallax-forest {
-    transform: none !important;
-  }
 }
-
-/* High contrast mode - Enhanced support */
-@media (prefers-contrast: high) {
-  :root {
-    --czech-forest: #1A3A1D;
-    --text-primary: #000000;
-    --text-secondary: #333333;
-    --subtle-border: #999999;
-    --strong-border: #666666;
-  }
-  
-  .czech-button-primary,
-  .czech-button-secondary,
-  .solidarity-card {
-    border-width: 2px;
-  }
-}
-
-/* Dark mode support - Future-ready */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-primary: linear-gradient(135deg, #1E2D1F 0%, #2A3E2A 100%);
-    --bg-secondary: linear-gradient(135deg, #2A3E2A 0%, #364636 100%);
-    --text-primary: #E8F2E8;
-    --text-secondary: #B8CEB8;
-    --text-muted: #8A9A8A;
-  }
-}
-
-/* Print styles - Enhanced */
-@media print {
-  .czech-button-primary,
-  .czech-button-secondary {
-    background: white !important;
-    color: black !important;
-    border: 2px solid black !important;
-  }
-  
-  .solidarity-card {
-    border: 1px solid #ccc !important;
-    box-shadow: none !important;
-    break-inside: avoid;
-  }
-  
-  .parallax-container {
-    min-height: auto !important;
-    background: white !important;
-  }
-  
-  .particle-container {
-    display: none !important;
-  }
-}
-
-/* Czech Cultural Elements */
-.quiet-celebration {
-  background: var(--bg-accent);
-  border-left: 4px solid var(--czech-forest);
-  padding: 1rem 1.5rem;
-  border-radius: 6px;
-  animation: gentleGlow var(--timing-thoughtful) var(--ease-gentle);
-}
-
-/* Interactive elements */
-.interactive-seed {
-  cursor: pointer;
-  transition: all var(--timing-medium) var(--ease-spring);
-  transform-origin: center bottom;
-}
-
-.interactive-seed:hover {
-  transform: scale(1.1);
-}
-
-.regional-pulse {
-  animation: pulseGentle 3s ease-in-out infinite;
-  cursor: pointer;
-  transition: all var(--timing-medium) var(--ease-gentle);
-}
-
-.regional-pulse:hover {
-  animation-play-state: paused;
-  transform: scale(1.2);
-  opacity: 1;
-}
-
-/* Enhanced loading states */
-.loading-state {
-  opacity: 0.6;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-
-.loading-spinner {
-  border: 3px solid var(--subtle-border);
-  border-top: 3px solid var(--czech-forest);
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  animation: spin 1s linear infinite;
-  display: inline-block;
-  margin-right: 0.5rem;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Enhanced error states */
-.error-state {
-  color: #d32f2f;
-  background: rgba(211, 47, 47, 0.1);
-  border: 1px solid rgba(211, 47, 47, 0.3);
-  border-radius: 8px;
-  padding: 1rem;
-  margin: 1rem 0;
-}
-
-/* Enhanced success states */
-.success-state {
-  color: var(--czech-forest);
-  background: rgba(46, 93, 49, 0.1);
-  border: 1px solid var(--czech-forest-light);
-  border-radius: 8px;
-  padding: 1rem;
-  margin: 1rem 0;
-}
-
-/* Enhanced link styles */
-a:focus-visible {
-  outline: 2px solid var(--copper-detail);
-  outline-offset: 2px;
-  border-radius: 2px;
-}
-
-/* Enhanced form elements */
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  outline: 2px solid var(--czech-forest);
-  outline-offset: 2px;
-  border-color: var(--czech-forest-light);
-  box-shadow: 0 0 0 3px rgba(46, 93, 49, 0.1);
-}
-
-/* Enhanced skip links for screen readers */
-.skip-link {
-  position: absolute;
-  top: -40px;
-  left: 6px;
-  background: var(--czech-forest);
-  color: white;
-  padding: 8px;
-  text-decoration: none;
-  border-radius: 4px;
-  z-index: 10000;
-  transition: top 0.3s ease;
-}
-
-.skip-link:focus {
-  top: 6px;
-}
-
-/* Enhanced responsive typography */
-@media (max-width: 480px) {
-  .czech-heading-xl {
-    font-size: 2rem;
-    line-height: 1.1;
-  }
-  
-  .czech-heading-lg {
-    font-size: 1.5rem;
-    line-height: 1.2;
-  }
-  
-  .czech-body-large {
-    font-size: 1rem;
-    line-height: 1.5;
-  }
-} 

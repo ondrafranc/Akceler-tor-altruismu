@@ -1,14 +1,16 @@
-// Nearby places in Czechia (OpenStreetMap via Overpass API)
-// This is best-effort and cached to avoid hammering public Overpass instances.
+// Nearby places in Czechia (OpenStreetMap via Overpass API + Curated Czech Verified Network)
+// Cached in memory and guaranteed to return rich, human-actionable places anywhere in Czechia.
 
 import { json } from '@sveltejs/kit';
+import { CURATED_FALLBACK_PLACES } from '$lib/data/czech-actions.js';
 
 /** @type {Map<string, { expiresAt: number, data: any }>} */
 const CACHE = new Map();
 
 const OVERPASS_ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
-  'https://lz4.overpass-api.de/api/interpreter'
+  'https://lz4.overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter'
 ];
 
 function clamp(n, min, max) {
@@ -35,6 +37,19 @@ function firstText(...vals) {
   return null;
 }
 
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
 function buildAddress(tags) {
   const street = firstText(tags['addr:street'], tags['addr:place']);
   const house = firstText(tags['addr:housenumber'], tags['addr:conscriptionnumber'], tags['addr:streetnumber']);
@@ -56,7 +71,8 @@ function deriveSubcategory(tags) {
   const office = tags.office;
   const sf = tags.social_facility;
 
-  if (amenity === 'animal_shelter') return 'Útulek';
+  if (amenity === 'animal_shelter') return 'Útulek pro zvířata';
+  if (amenity === 'public_bookcase') return 'Veřejná knihobudka';
 
   if (amenity === 'food_bank' || sf === 'food_bank') return 'Potravinová banka';
   if (amenity === 'soup_kitchen' || sf === 'soup_kitchen') return 'Výdej jídla';
@@ -64,82 +80,88 @@ function deriveSubcategory(tags) {
   if (amenity === 'community_centre') return 'Komunitní centrum';
 
   if (amenity === 'social_facility') {
-    if (sf === 'shelter') return 'Azyl / ubytování';
-    if (sf === 'outreach') return 'Terénní služba';
-    if (sf === 'day_care') return 'Denní centrum';
+    if (sf === 'clothing_bank') return 'Komunitní šatník';
+    if (sf === 'shelter') return 'Azylový dům';
+    if (sf === 'outreach') return 'Terénní pomoc';
+    if (sf === 'day_care') return 'Denní stacionář';
     if (sf === 'nursing_home') return 'Domov pro seniory';
     if (sf === 'group_home') return 'Chráněné bydlení';
-    if (sf === 'clothing_bank') return 'Oblečení';
     return 'Sociální služba';
   }
 
-  if (office === 'ngo') return 'Neziskovka';
-  if (office === 'association') return 'Spolek';
+  if (office === 'ngo') return 'Nezisková organizace';
+  if (office === 'association') return 'Místní spolek';
 
   return null;
 }
 
 function makeOverpassQuery(lat, lon, radiusM, kinds, includeAssociations) {
-  const tagQueries = [];
+  const tagSet = new Set();
 
   for (const k of kinds) {
     if (k === 'ngo') {
-      tagQueries.push('["office"="ngo"]');
+      tagSet.add('["office"="ngo"]');
       if (includeAssociations) {
-        tagQueries.push('["office"="association"]');
+        tagSet.add('["office"="association"]');
       }
     }
     if (k === 'community') {
-      tagQueries.push('["amenity"="community_centre"]');
-      tagQueries.push('["amenity"="social_facility"]');
+      tagSet.add('["amenity"="community_centre"]');
+      tagSet.add('["amenity"="public_bookcase"]');
+      tagSet.add('["amenity"="social_facility"]');
     }
     if (k === 'food') {
-      tagQueries.push('["amenity"="food_bank"]');
-      tagQueries.push('["amenity"="soup_kitchen"]');
-      tagQueries.push('["amenity"="social_facility"]["social_facility"="food_bank"]');
-      tagQueries.push('["amenity"="social_facility"]["social_facility"="soup_kitchen"]');
+      tagSet.add('["amenity"="food_bank"]');
+      tagSet.add('["amenity"="soup_kitchen"]');
+      tagSet.add('["amenity"="social_facility"]["social_facility"="food_bank"]');
+      tagSet.add('["amenity"="social_facility"]["social_facility"="clothing_bank"]');
     }
     if (k === 'animals') {
-      tagQueries.push('["amenity"="animal_shelter"]');
+      tagSet.add('["amenity"="animal_shelter"]');
     }
   }
 
-  // Default: show NGO + community
-  if (tagQueries.length === 0) {
-    tagQueries.push('["office"="ngo"]');
-    tagQueries.push('["amenity"="community_centre"]');
+  if (tagSet.size === 0) {
+    tagSet.add('["office"="ngo"]');
+    tagSet.add('["amenity"="community_centre"]');
+    tagSet.add('["amenity"="public_bookcase"]');
+    tagSet.add('["amenity"="animal_shelter"]');
   }
 
-  const parts = [];
-  for (const tq of tagQueries) {
-    parts.push(`node(around:${radiusM},${lat},${lon})${tq};`);
-    parts.push(`way(around:${radiusM},${lat},${lon})${tq};`);
-    parts.push(`relation(around:${radiusM},${lat},${lon})${tq};`);
-  }
+  const deltaLat = radiusM / 111_320;
+  const deltaLon = radiusM / (111_320 * Math.max(0.2, Math.cos((lat * Math.PI) / 180)));
+  const minLat = (lat - deltaLat).toFixed(5);
+  const maxLat = (lat + deltaLat).toFixed(5);
+  const minLon = (lon - deltaLon).toFixed(5);
+  const maxLon = (lon + deltaLon).toFixed(5);
 
-  return `[out:json][timeout:25];(${parts.join('')});out center tags 100;`;
+  const parts = Array.from(tagSet).map((tq) => `nw${tq};`);
+
+  return `[out:json][timeout:3][bbox:${minLat},${minLon},${maxLat},${maxLon}];(${parts.join('')});out center tags 120;`;
+}
+
+async function fetchOneOverpass(url, query, timeoutMs = 2200) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded; charset=utf-8',
+        'user-agent': 'AkceleratorAltruismu/2.5 (SvelteKit; Czech-only)'
+      },
+      body: query,
+      signal: controller.signal
+    });
+    if (!res.ok) throw new Error(`Overpass ${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function postOverpass(query) {
-  let lastErr;
-  for (const url of OVERPASS_ENDPOINTS) {
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/x-www-form-urlencoded; charset=utf-8',
-          // Please replace contact when you have a public email.
-          'user-agent': 'AkceleratorAltruismu/1.0 (SvelteKit; Czech-only; contact: none)'
-        },
-        body: query
-      });
-      if (!res.ok) throw new Error(`Overpass ${res.status}`);
-      return await res.json();
-    } catch (e) {
-      lastErr = e;
-    }
-  }
-  throw lastErr ?? new Error('Overpass failed');
+  return await Promise.any(OVERPASS_ENDPOINTS.map((url) => fetchOneOverpass(url, query, 2200)));
 }
 
 function extractLatLon(el) {
@@ -148,103 +170,138 @@ function extractLatLon(el) {
   return null;
 }
 
+function getFallbackPlaces(lat, lon, radiusM, kinds) {
+  const activeKinds = kinds.length ? kinds : ['ngo', 'community', 'food', 'animals'];
+  const maxKm = Math.max(radiusM / 1000, 15);
+  const withDist = CURATED_FALLBACK_PLACES.filter((p) => activeKinds.includes(p.kind))
+    .map((p) => ({
+      ...p,
+      curated: true,
+      distanceKm: Math.round(haversineKm(lat, lon, p.lat, p.lon) * 10) / 10
+    }))
+    .sort((a, b) => a.distanceKm - b.distanceKm);
+
+  const withinRadius = withDist.filter((p) => p.distanceKm <= maxKm);
+  if (withinRadius.length >= 2) {
+    return withinRadius;
+  }
+  return withDist.slice(0, 6);
+}
+
 /** @type {import('./$types').RequestHandler} */
 export async function GET({ url }) {
   const lat = parseFloatSafe(url.searchParams.get('lat'));
   const lon = parseFloatSafe(url.searchParams.get('lon'));
-  const radius = parseIntSafe(url.searchParams.get('radius_m')) ?? 3000;
-  const kindsRaw = (url.searchParams.get('kinds') || '').split(',').map(s => s.trim()).filter(Boolean);
+  const radius = parseIntSafe(url.searchParams.get('radius_m')) ?? 5000;
+  const kindsRaw = (url.searchParams.get('kinds') || '').split(',').map((s) => s.trim()).filter(Boolean);
   const includeAssociations = url.searchParams.get('include_associations') === '1';
 
   if (lat == null || lon == null) {
-    return json(
-      { error: 'Missing lat/lon' },
-      {
-        status: 400,
-        headers: {
-          'cache-control': 'no-store'
-        }
-      }
-    );
+    return json({ error: 'Missing lat/lon' }, { status: 400, headers: { 'cache-control': 'no-store' } });
   }
 
-  // Czech-only product, but still validate inputs
-  const radiusM = clamp(radius, 250, 12_000);
-  const kinds = kindsRaw.filter(k => ['ngo', 'community', 'food', 'animals'].includes(k));
+  const radiusM = clamp(radius, 250, 25_000);
+  const kinds = kindsRaw.filter((k) => ['ngo', 'community', 'food', 'animals'].includes(k));
 
-  const cacheKey = `${lat.toFixed(4)}:${lon.toFixed(4)}:${radiusM}:${includeAssociations ? 'assoc1' : 'assoc0'}:${kinds.sort().join(',')}`;
+  const cacheKey = `v25:${lat.toFixed(4)}:${lon.toFixed(4)}:${radiusM}:${includeAssociations ? 'a1' : 'a0'}:${kinds.sort().join(',')}`;
   const cached = CACHE.get(cacheKey);
   const now = Date.now();
   if (cached && cached.expiresAt > now) {
     return json(cached.data, {
-      headers: {
-        // Cache at the CDN; avoid long browser caching (privacy + freshness).
-        // On Vercel, s-maxage / stale-while-revalidate are consumed by the edge cache.
-        'cache-control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400'
-      }
+      headers: { 'cache-control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400' }
     });
   }
 
   const query = makeOverpassQuery(lat, lon, radiusM, kinds, includeAssociations);
-  const data = await postOverpass(query);
 
-  const places = [];
-  for (const el of data?.elements || []) {
-    const ll = extractLatLon(el);
-    if (!ll) continue;
-    const tags = el.tags || {};
-    const name = tags.name || tags.operator || tags.brand || null;
-    const website = tags.website || tags['contact:website'] || null;
-    const phone = firstText(tags.phone, tags['contact:phone']);
-    const email = firstText(tags.email, tags['contact:email']);
-    const opening_hours = firstText(tags.opening_hours);
-    const description = firstText(tags.description);
-    const address = buildAddress(tags);
-    const kind =
-      tags.amenity === 'animal_shelter'
-        ? 'animals'
-        : tags.amenity === 'food_bank' ||
-            tags.amenity === 'soup_kitchen' ||
-            tags.social_facility === 'food_bank' ||
-            tags.social_facility === 'soup_kitchen'
-          ? 'food'
-          : tags.amenity === 'community_centre' || tags.amenity === 'social_facility'
-            ? 'community'
-            : tags.office === 'ngo' || tags.office === 'association'
-              ? 'ngo'
-              : 'other';
-    const subcategory = deriveSubcategory(tags);
+  try {
+    const data = await postOverpass(query);
+    const places = [];
+    for (const el of data?.elements || []) {
+      const ll = extractLatLon(el);
+      if (!ll) continue;
+      const tags = el.tags || {};
+      let name = firstText(tags.name, tags['name:cs'], tags.operator, tags.brand);
+      if (!name && tags.amenity === 'public_bookcase') {
+        name = 'Veřejná knihobudka';
+      }
+      // Skip nameless obscure nodes that offer no actionable info for users
+      if (!name) continue;
 
-    places.push({
-      id: `${el.type}:${el.id}`,
-      osm_type: el.type,
-      osm_id: el.id,
-      osm_url: osmUrl(el.type, el.id),
-      name,
-      lat: ll[0],
-      lon: ll[1],
-      kind,
-      subcategory,
-      website,
-      address,
-      phone,
-      email,
-      opening_hours,
-      description,
-      tags
+      const website = firstText(tags.website, tags['contact:website'], tags.url);
+      const phone = firstText(tags.phone, tags['contact:phone']);
+      const email = firstText(tags.email, tags['contact:email']);
+      const opening_hours = firstText(tags.opening_hours);
+      const description = firstText(tags['description:cs'], tags.description);
+      const address = buildAddress(tags);
+      const kind =
+        tags.amenity === 'animal_shelter'
+          ? 'animals'
+          : tags.amenity === 'food_bank' ||
+              tags.amenity === 'soup_kitchen' ||
+              tags.social_facility === 'food_bank' ||
+              tags.social_facility === 'soup_kitchen' ||
+              tags.social_facility === 'clothing_bank'
+            ? 'food'
+            : tags.amenity === 'community_centre' ||
+                tags.amenity === 'public_bookcase' ||
+                tags.amenity === 'social_facility'
+              ? 'community'
+              : tags.office === 'ngo' || tags.office === 'association'
+                ? 'ngo'
+                : 'other';
+      const subcategory = deriveSubcategory(tags);
+
+      places.push({
+        id: `${el.type}:${el.id}`,
+        osm_type: el.type,
+        osm_id: el.id,
+        osm_url: osmUrl(el.type, el.id),
+        name,
+        lat: ll[0],
+        lon: ll[1],
+        kind,
+        subcategory,
+        website,
+        address,
+        phone,
+        email,
+        opening_hours,
+        description,
+        tags
+      });
+    }
+
+    const curatedNearby = getFallbackPlaces(lat, lon, radiusM, kinds);
+    for (const cp of curatedNearby) {
+      if (haversineKm(lat, lon, cp.lat, cp.lon) * 1000 <= radiusM) {
+        if (!places.some((p) => p.name && cp.name && p.name.toLowerCase().includes(cp.name.slice(0, 12).toLowerCase()))) {
+          places.unshift(cp);
+        }
+      }
+    }
+
+    let expandedToNearest = false;
+    if (places.length < 2) {
+      expandedToNearest = true;
+      for (const cp of curatedNearby) {
+        if (!places.some((p) => p.id === cp.id || (p.name && cp.name && p.name.toLowerCase().includes(cp.name.slice(0, 12).toLowerCase())))) {
+          places.push(cp);
+        }
+      }
+    }
+
+    const payload = { places, radius_m: radiusM, lat, lon, fallback: false, expandedToNearest };
+    CACHE.set(cacheKey, { expiresAt: now + 60 * 60 * 1000, data: payload });
+
+    return json(payload, {
+      headers: { 'cache-control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400' }
+    });
+  } catch {
+    const fallbackPlaces = getFallbackPlaces(lat, lon, radiusM, kinds);
+    const payload = { places: fallbackPlaces, radius_m: radiusM, lat, lon, fallback: true };
+    return json(payload, {
+      headers: { 'cache-control': 'public, max-age=0, s-maxage=300, stale-while-revalidate=3600' }
     });
   }
-
-  const payload = { places, radius_m: radiusM, lat, lon };
-  CACHE.set(cacheKey, { expiresAt: now + 60 * 60 * 1000, data: payload });
-
-  return json(payload, {
-    headers: {
-      // Cache at the CDN; avoid long browser caching (privacy + freshness).
-      // On Vercel, s-maxage / stale-while-revalidate are consumed by the edge cache.
-      'cache-control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400'
-    }
-  });
 }
-
-

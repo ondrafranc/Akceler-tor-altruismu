@@ -1,30 +1,67 @@
-# 🚀 Deployment instructions
+# 🚀 Nasazení a databáze (Deployment & Supabase Guide)
 
-This repo is **SvelteKit-first** (Vercel). Streamlit is kept **only as legacy** during migration.
+Aplikace **Akcelerátor altruismu v2** je postavená na **SvelteKitu** (`akcelerator-landing-page/`) a je navržená tak, aby fungovala **okamžitě i bez externí databáze** (má vestavěný in-memory a kurátorovaný český fallback). Pokud připojíš Supabase, zpětná vazba a komunitní tipy se budou trvale ukládat do PostgreSQL.
 
-## 1) Deploy SvelteKit to Vercel
+---
 
-### Vercel settings
-- **Root Directory**: `akcelerator-landing-page`
-- **Framework**: SvelteKit
-- **Build Command**: `npm run build`
-- **Install Command**: default
+## 1. Nasazení na Vercel
 
-### Environment variables (optional)
-Set these in Vercel if you use Supabase feedback:
-- `PUBLIC_SUPABASE_URL`
-- `PUBLIC_SUPABASE_ANON_KEY`
+1. V administraci Vercelu nastav:
+   - **Root Directory**: `akcelerator-landing-page`
+   - **Framework Preset**: `SvelteKit`
+   - **Build Command**: `npm run build`
+2. (Volitelné) Nastav Environment Variables:
+   - `PUBLIC_SUPABASE_URL` = `https://<tvuj-projekt>.supabase.co`
+   - `PUBLIC_SUPABASE_ANON_KEY` = `<tvuj-public-anon-key>`
 
-### Smoke-check
-- `/` loads
-- `/app` loads
-- `/near` map renders
-- `/api/nearby?lat=50.0755&lon=14.4378&radius_m=1500&kinds=ngo,community` returns JSON
+---
 
-## 2) (Optional) Deploy Streamlit
+## 2. Volitelné nastavení Supabase (SQL schéma)
 
-If you still need the legacy Streamlit app:
-- Main file: `streamlit-app/app.py`
-- Requirements: `streamlit-app/requirements.txt`
+Pokud chceš ukládat zpětnou vazbu a komunitní tipy do nového projektu v Supabase, spusť v **Supabase SQL Editoru** tento skript:
 
+```sql
+-- 1. Tabulka pro anonymní zpětnou vazbu
+CREATE TABLE IF NOT EXISTS feedback (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    text TEXT NOT NULL,
+    emotion TEXT,
+    rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
+ALTER TABLE feedback ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow anonymous feedback insert" ON feedback
+    FOR INSERT TO anon WITH CHECK (true);
+
+-- 2. Tabulka pro komunitní tipy na organizace a akce (/submit -> /near)
+CREATE TABLE IF NOT EXISTS community_submissions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    kind TEXT NOT NULL CHECK (kind IN ('org', 'event')),
+    name TEXT NOT NULL,
+    category TEXT,
+    description TEXT,
+    website TEXT,
+    email TEXT,
+    phone TEXT,
+    address_label TEXT,
+    city TEXT,
+    postcode TEXT,
+    lat DOUBLE PRECISION NOT NULL,
+    lon DOUBLE PRECISION NOT NULL,
+    event_url TEXT,
+    event_start TIMESTAMP WITH TIME ZONE,
+    event_end TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE community_submissions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow anonymous submission insert" ON community_submissions
+    FOR INSERT TO anon WITH CHECK (status = 'pending');
+
+CREATE POLICY "Allow public read of approved submissions" ON community_submissions
+    FOR SELECT TO anon USING (status = 'approved');
+```

@@ -1,154 +1,109 @@
 <script>
-  import { page } from '$app/stores';
   import { trackEvent } from '../lib/analytics.js';
 </script>
 
 <svelte:head>
-  <title>Chyba - Akcelerátor altruismu</title>
+  <title>Stránka nenalezena — Akcelerátor altruismu</title>
 </svelte:head>
 
-<div class="error-container">
-  <div class="error-content">
-    <h1>🌱 Akcelerátor altruismu</h1>
-    <h2>Něco se pokazilo, ale neztrácejme naději!</h2>
-    
+<div class="error-wrap">
+  <div class="subpage-hero error-card">
+    <div class="kicker">TICHÁ ODBOČKA</div>
+    <h1>Tady zrovna nic není, ale <span class="serif-accent">naděje nekončí</span>.</h1>
     <p>
-      Omlouváme se za technické problémy. Mezitím můžete přímo navštívit náš akcelerátor:
+      Možná šlo o starší odkaz. Pojďme tě rovnou vrátit tam, kde během minuty najdeš jeden lehký, skutečný krok v Česku.
     </p>
-    
+
     <div class="error-actions">
-      <a 
-        		href="/app" 
-        class="primary-button"
+      <a
+        href="/"
+        class="btn-primary"
         on:click={() => trackEvent('aa_launch', { from: 'error_page' })}
       >
-        🚀 Spustit akcelerátor
+        Zpět na Rychlý start →
       </a>
-      
-      <button 
-        class="secondary-button"
-        on:click={() => window.location.reload()}
-      >
-        🔄 Zkusit znovu
-      </button>
-    </div>
-    
-    <div class="error-details">
-      <p><strong>Vítej v Akcelerátoru altruismu</strong></p>
-      <p>Pomáhej lidem po celé ČR – snadno, lokálně a prakticky.</p>
-      <p>Najdi svou cestu od empatie k praktické akci.</p>
+      <a href="/near" class="btn-glass">
+        Otevřít mapu v okolí
+      </a>
     </div>
   </div>
 </div>
 
 <style>
-  .error-container {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem;
-    background: linear-gradient(135deg, #F8FBF8 0%, #F0F6F0 100%);
-    font-family: 'Source Sans Pro', sans-serif;
+  .error-wrap {
+    max-width: 760px;
+    margin: 2rem auto 4rem;
+    padding: 0 1.25rem;
   }
-  
-  .error-content {
-    max-width: 600px;
+
+  .error-card {
     text-align: center;
-    background: white;
-    padding: 3rem 2rem;
-    border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(46, 93, 49, 0.1);
-    border: 1px solid #D4E7D4;
+    padding: 3.5rem 2rem;
   }
-  
-  h1 {
-    color: #2E5D31;
-    font-size: 2rem;
-    margin-bottom: 1rem;
-    font-weight: 600;
-  }
-  
-  h2 {
-    color: #4A7C59;
-    font-size: 1.3rem;
-    margin-bottom: 1.5rem;
-    font-weight: 500;
-  }
-  
-  p {
-    color: #5A6B5A;
-    line-height: 1.6;
-    margin-bottom: 1rem;
-  }
-  
-  .error-actions {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-    margin: 2rem 0;
-    flex-wrap: wrap;
-  }
-  
-  .primary-button {
-    background: linear-gradient(135deg, #2E5D31 0%, #4A7C59 100%);
-    color: white;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: 500;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    transition: transform 0.2s ease;
-  }
-  
-  .primary-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(46, 93, 49, 0.25);
-  }
-  
-  .secondary-button {
-    background: transparent;
-    color: #2E5D31;
-    padding: 0.75rem 1.5rem;
-    border: 2px solid #2E5D31;
-    border-radius: 8px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-  
-  .secondary-button:hover {
-    background: #2E5D31;
-    color: white;
-  }
-  
-  .error-details {
-    margin-top: 2rem;
-    padding-top: 2rem;
-    border-top: 1px solid #D4E7D4;
-  }
-  
-  .error-details p {
+
+  .kicker {
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    color: #047857;
     margin-bottom: 0.5rem;
   }
-  
-  @media (max-width: 600px) {
-    .error-content {
-      padding: 2rem 1rem;
-    }
-    
-    .error-actions {
-      flex-direction: column;
-      align-items: center;
-    }
-    
-    .primary-button,
-    .secondary-button {
-      width: 100%;
-      max-width: 250px;
-      justify-content: center;
-    }
+
+  h1 {
+    font-family: var(--font-sans);
+    font-size: clamp(1.85rem, 3.4vw, 2.6rem);
+    font-weight: 800;
+    color: #0e281c;
+    margin: 0 0 0.85rem;
+    letter-spacing: -0.03em;
+    line-height: 1.12;
   }
-</style> 
+
+  h1 .serif-accent {
+    color: #059669;
+    font-weight: 400;
+  }
+
+  p {
+    color: #365244;
+    line-height: 1.6;
+    max-width: 50ch;
+    margin: 0 auto 1.8rem;
+  }
+
+  .error-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    padding: 0.82rem 1.35rem;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #0f3d2a 0%, #165b3f 100%);
+    color: #ffffff;
+    font-weight: 800;
+    text-decoration: none;
+    transition: transform 0.18s ease;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+  }
+
+  .btn-glass {
+    padding: 0.82rem 1.35rem;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(22, 82, 56, 0.18);
+    color: #0e281c;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background 0.18s ease;
+  }
+
+  .btn-glass:hover {
+    background: #ffffff;
+  }
+</style>
