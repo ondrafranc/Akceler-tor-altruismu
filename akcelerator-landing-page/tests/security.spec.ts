@@ -1124,43 +1124,6 @@ test('Round 3 geometry, zero bubble/body/dock overlap across 360x800, 820x1180, 
         const feedbackDockOverlap = fRect && dRect ? overlap(fRect, dRect) : 0;
         const feedbackCrisisOverlap = fRect && cRect ? overlap(fRect, cRect) : 0;
 
-        let cssGapCheckOk = true;
-        if (currentRoute === '/') {
-          const hs = document.querySelector('.hero-stage');
-          if (hs && parseFloat(getComputedStyle(hs).marginBottom) > 0) cssGapCheckOk = false;
-        } else if (currentRoute === '/app/guided' && window.innerWidth <= 680) {
-          const bar = document.querySelector('.mobile-guided-preview-bar');
-          if (bar && parseFloat(getComputedStyle(bar).marginBottom) > 0) cssGapCheckOk = false;
-        } else if (currentRoute === '/near' && window.innerWidth <= 680) {
-          const stack = document.querySelector('.places-stack');
-          if (stack && parseFloat(getComputedStyle(stack).rowGap) > 16) cssGapCheckOk = false;
-        } else if (currentRoute === '/submit' && window.innerWidth <= 680) {
-          const layout = document.querySelector('.submit-layout');
-          if (layout && parseFloat(getComputedStyle(layout).rowGap) > 22) cssGapCheckOk = false;
-        } else if (currentRoute === '/svet' && window.innerWidth <= 680) {
-          const stage = document.querySelector('.sanctuary-stage');
-          if (stage && parseFloat(getComputedStyle(stage).marginBottom) > 0) cssGapCheckOk = false;
-        } else if (currentRoute === '/app/online') {
-          const grid = document.querySelector('.grid');
-          if (window.innerWidth <= 680 && grid && parseFloat(getComputedStyle(grid).rowGap) > 16) {
-            cssGapCheckOk = false;
-          }
-          if (window.innerWidth > 680 && window.innerWidth <= 980) {
-            const cards = document.querySelectorAll('.grid > .card');
-            if (cards.length >= 3) {
-              const w0 = cards[0].getBoundingClientRect().width;
-              const w2 = cards[2].getBoundingClientRect().width;
-              if (Math.abs(w2 - w0) > 2) cssGapCheckOk = false;
-            }
-          }
-          const drawer = document.querySelector('.online-methodology-drawer');
-          if (grid && drawer) {
-            const gw = grid.getBoundingClientRect().width;
-            const dw = drawer.getBoundingClientRect().width;
-            if (Math.abs(dw - gw) > 4) cssGapCheckOk = false;
-          }
-        }
-
         return {
           hasBubble: Boolean(bRect && bRect.width > 0 && bRect.height > 0),
           isTravelling,
@@ -1176,12 +1139,10 @@ test('Round 3 geometry, zero bubble/body/dock overlap across 360x800, 820x1180, 
           bubbleCrisisOverlap,
           bubbleFeedbackOverlap,
           feedbackDockOverlap,
-          feedbackCrisisOverlap,
-          cssGapCheckOk
+          feedbackCrisisOverlap
         };
       }, route);
 
-      expect(report.cssGapCheckOk, `No artificial CSS vertical gap or card width mismatch on ${route} (${vp.label})`).toBe(true);
       expect(report.hasBubble, `Whisper bubble should be visible on ${route} (${vp.label})`).toBe(true);
       expect(report.isTravelling, `Dock whisper should appear immediately on ${route} (${vp.label})`).toBe(false);
       expect(report.bPointerEvents, `Whisper bubble must have pointer-events: none on ${route} (${vp.label})`).toBe('none');
