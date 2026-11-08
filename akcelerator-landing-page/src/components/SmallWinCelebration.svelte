@@ -134,7 +134,7 @@
           </div>
         {/if}
         <p class="win-rest-reassurance">
-          Dnes jsi udělal něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.
+          Dnes se ti povedlo něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.
         </p>
         <p class="win-message">
           {$activeCelebration.concreteImpact || $activeCelebration.message}
@@ -158,7 +158,7 @@
         </div>
       {:else}
         <div class="rest-icon" aria-hidden="true">🌿</div>
-        <h3 id="win-title" class="win-title">Dnes jsi udělal něco dobrého</h3>
+        <h3 id="win-title" class="win-title">Dnes se ti povedlo něco dobrého</h3>
         <p class="win-message">
           Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout, odložit telefon a dopřát si ticho.
         </p>

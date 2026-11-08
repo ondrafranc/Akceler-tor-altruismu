@@ -31,6 +31,7 @@
     impactCanvas,
     triggerCanvasBurst,
     fetchAmbientPulse,
+    describeAmbientPulse,
   } from "../lib/sensoryEngine.js";
   import { notifyMollySpark } from "../lib/mollyStore.js";
   import { cleanTitle, stripLeadingEmoji, safeGetItem } from "../lib/utils.js";
@@ -102,7 +103,10 @@
   let showEffectPreview = true;
   let sparkBoosted = false;
   let cardCanvasNode = null;
-  let ambientPulseText = "Před chvílí někdo v Brně naplnil misku v útulku";
+  /** @type {any} */
+  let ambientPulse = null;
+  // Pozn.: reaktivní text pulsu je až POD `currentQuickAction` (viz níže). Kdyby stál tady,
+  // Svelte by kvůli závislosti spočítal kartu dřív, než deep-link (?action=) nastaví pinnedActionId.
   let stopHoldSpark = null;
 
   function resolveActionFromParam(rawParam) {
@@ -256,7 +260,7 @@
 
     const pulseTimer = setTimeout(async () => {
       const pulse = await fetchAmbientPulse();
-      if (pulse?.message) ambientPulseText = pulse.message;
+      ambientPulse = pulse;
     }, 250);
 
     window.addEventListener("hashchange", handleHashChange);
@@ -350,6 +354,7 @@
   $: if (currentQuickAction?.id) {
     lastQuickActionId = currentQuickAction.id;
   }
+  $: ambientPulseText = describeAmbientPulse(ambientPulse, { inCard: true, actionId: currentQuickAction?.id });
   $: isCurrentStarted = Boolean(
     currentQuickAction?.id &&
       Array.isArray($startedActionIds) &&
@@ -674,7 +679,7 @@
                       enabled: usePersonalValues,
                     });
                   }}
-                  title="Přizpůsobit podle témat, která sis dříve vybral/a v průvodci"
+                  title="Přizpůsobit podle témat vybraných v průvodci"
                 >
                   {usePersonalValues
                     ? `✦ Tvoje témata (${getSavedValueLabels(savedValues)})`
@@ -772,7 +777,7 @@
                 <div class="mde-verify">
                   <span>
                     Ověřeno: <strong
-                      >{currentQuickAction.lastVerifiedAt || "11/2026"}</strong
+                      >{currentQuickAction.verifiedLabel}</strong
                     >
                     · Zdroj:
                     <a
@@ -806,7 +811,7 @@
                           url: currentQuickAction.url,
                         })}
                     >
-                      Nahlásit nefunkční odkaz
+                      Nahlásit chybu
                     </button>
                   </div>
                 </div>
@@ -823,7 +828,7 @@
               >
                 <div class="inline-celebration-head">
                   <span class="kicker"
-                    >Klidné poděkování · +1 rozsvícené světlo</span
+                    >Klidné poděkování · světlo čeká v Krajině dobra</span
                   >
                   <span class="impact-payoff-badge">
                     {getActionEffectMeta(currentQuickAction, kibbleGrams).badge}
@@ -838,9 +843,9 @@
                   aria-label="Fyzikální vizualizace dopadu dobrého skutku"
                 ></canvas>
                 <div class="molly-celebration-note">
-                  🐾 Molly si právě pochutnala na odměně: <strong
+                  🐾 Pamlsek pro Molly: <strong
                     >{getActionEffectMeta(currentQuickAction, kibbleGrams)
-                      .mollyTreat?.name || "lososová granulka pro Molly"}</strong
+                      .mollyTreat?.name || "lososová granulka"}</strong
                   >
                 </div>
                 <div class="return-dopamine-actions">
@@ -848,7 +853,7 @@
                     href={`/svet?just_lit=1&ritual=lantern&seed=${encodeURIComponent(currentQuickAction.id)}&title=${encodeURIComponent(cleanTitle(currentQuickAction.title))}`}
                     class="return-dopamine-btn btn-world"
                   >
-                    ✨ Rozsvítit tenhle skutek v Krajině dobra →
+                    ✨ Rozsvítit tenhle skutek v Krajině&nbsp;dobra&nbsp;→
                   </a>
                   <button
                     type="button"
@@ -868,7 +873,7 @@
               >
                 <div class="inline-celebration-head">
                   <div class="return-dopamine-text">
-                    ✨ <strong>Vítej zpět! Povedlo se?</strong> Klikni na „✓ Hotovo“ a rozsviť svou lucernu v Krajině dobra.
+                    ✨ <strong>Vítej zpět! Povedlo se?</strong> Klikni na „Hotovo“ a rozsviť svou lucernu v Krajině dobra.
                   </div>
                   <span class="impact-payoff-badge">
                     {getActionEffectMeta(currentQuickAction, kibbleGrams, {
@@ -884,9 +889,9 @@
                   aria-label="Fyzikální vizualizace dopadu dobrého skutku"
                 ></canvas>
                 <div class="molly-celebration-note">
-                  🐾 Molly si právě pochutnala na odměně: <strong
+                  🐾 Po kliknutí na „Hotovo“ dostane Molly pamlsek: <strong
                     >{getActionEffectMeta(currentQuickAction, kibbleGrams)
-                      .mollyTreat?.name || "lososová granulka pro Molly"}</strong
+                      .mollyTreat?.name || "lososová granulka"}</strong
                   >
                 </div>
                 <div class="return-dopamine-actions">
@@ -915,6 +920,7 @@
                   rel="noopener noreferrer"
                   class="btn-studio-primary"
                   data-hold-spark="true"
+                  data-molly-guide="true"
                   on:pointerdown={handlePrimaryPointerDown}
                   on:pointerup={() => handlePrimaryPointerEnd(true)}
                   on:pointerleave={() => handlePrimaryPointerEnd(false)}
@@ -1012,7 +1018,7 @@
             <div class="action-verify-footer">
               <span class="verify-meta">
                 Ověřeno: <strong
-                  >{currentQuickAction.lastVerifiedAt || "11/2026"}</strong
+                  >{currentQuickAction.verifiedLabel}</strong
                 >
                 · Zdroj:
                 <a
@@ -1046,7 +1052,7 @@
                       url: currentQuickAction.url,
                     })}
                 >
-                  Nahlásit nefunkční odkaz
+                  Nahlásit chybu
                 </button>
               </div>
             </div>
@@ -1100,7 +1106,7 @@
           Útulky, potravinové banky, knihobudky a sousedská místa na mapě ČR — i
           s připravenou zprávou na oslovení.
         </p>
-        <span class="bento-cta">Otevřít mapu v okolí →</span>
+        <span class="bento-cta">Otevřít mapu v&nbsp;okolí&nbsp;→</span>
       </a>
 
       <a href="/app/guided" class="bento-card">
@@ -1124,7 +1130,7 @@
           Nevíš, kde začít? Zvol si čas a blízké téma — ukážeme ti jeden
           konkrétní skutek na míru.
         </p>
-        <span class="bento-cta">Spustit průvodce →</span>
+        <span class="bento-cta">Spustit průvodce&nbsp;→</span>
       </a>
 
       <a href="/app/online" class="bento-card">
@@ -1141,12 +1147,12 @@
             ><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg
           >
         </div>
-        <h3>Drobné skutky na dálku</h3>
+        <h3>Drobné skutky na pár minut</h3>
         <p class="bento-desc">
           Rychlá pomoc z mobilu či počítače: naplnění misky v útulku, mapování
           pro Lékaře bez hranic nebo dopis seniorovi.
         </p>
-        <span class="bento-cta">Prohlédnout online tipy →</span>
+        <span class="bento-cta">Prohlédnout online tipy&nbsp;→</span>
       </a>
     </div>
 
@@ -1256,7 +1262,7 @@
           >
           <span class="qh-sep">·</span>
           <button type="button" class="qh-next" on:click={() => (hopeIdx += 1)}>
-            ↻ Další číslo naděje
+            ↻ Další důkaz naděje
           </button>
         </div>
       </div>
@@ -2644,8 +2650,7 @@
 
     .hero-stage {
       margin-top: -3.2rem;
-      padding: 3.55rem 0.75rem 1.35rem;
-      min-height: calc(100dvh - 58px - env(safe-area-inset-bottom, 0px));
+      padding: 3.35rem 0.75rem 1.15rem;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;

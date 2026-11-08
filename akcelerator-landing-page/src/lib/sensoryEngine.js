@@ -1,4 +1,5 @@
 import { safeGetItem, safeSetItem } from './utils.js';
+import { CLICK_AND_FEED, FREERICE, czPlural as pl } from './data/impactFacts.js';
 import {
   MOLLY_TREAT_BY_FOOD,
   MODE_TO_MOLLY_FOOD,
@@ -73,6 +74,65 @@ export const toggleSoundMuted = () => {
 export const prefersReducedMotion = () =>
   !!(win() && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 
+let cachedLowPower = null;
+
+/**
+ * Heuristika pro slabší zařízení (telefony, levné tablety, in-app prohlížeče, úsporný režim dat).
+ * Na nich vypínáme drahé `shadowBlur` záře a snižujeme rozlišení pláten, aby animace nesekaly.
+ * Výsledek se cachuje — zařízení se během session nemění.
+ */
+export function isLowPowerDevice() {
+  if (cachedLowPower !== null) return cachedLowPower;
+  if (!win()) return false;
+  try {
+    const nav = /** @type {any} */ (navigator);
+    const coarse = !!window.matchMedia?.('(pointer: coarse)').matches;
+    const narrow = (window.innerWidth || 1280) <= 820;
+    const cores = Number(nav.hardwareConcurrency) || 4;
+    const devMem = Number(nav.deviceMemory) || 4;
+    const saveData = !!nav.connection?.saveData;
+    cachedLowPower = saveData || cores <= 2 || devMem <= 2 || coarse || (narrow && cores <= 4);
+  } catch {
+    cachedLowPower = false;
+  }
+  return cachedLowPower;
+}
+
+/**
+ * Maximální devicePixelRatio pro animovaná plátna (Retina 3× by zbytečně čtyřnásobila počet pixelů).
+ */
+export function getCanvasDprCap() {
+  return isLowPowerDevice() ? 1.5 : 2;
+}
+
+/**
+ * Na slabších zařízeních udělá z `shadowBlur` no-op pro konkrétní 2D kontext.
+ * Gaussovský rozmaz stínu se počítá na CPU při každém vykreslení tvaru a je hlavní příčinou sekání
+ * částicových scén na telefonech. Barvy, tvary i aditivní záře (`lighter`) zůstávají zachované.
+ * @param {CanvasRenderingContext2D | null | undefined} ctx
+ */
+export function optimizeCanvasContext(ctx) {
+  if (!ctx || !isLowPowerDevice()) return ctx;
+  try {
+    Object.defineProperty(ctx, 'shadowBlur', {
+      configurable: true,
+      get: () => 0,
+      set: () => {}
+    });
+  } catch {}
+  return ctx;
+}
+
+/**
+ * Normalizovaný krok snímku vůči 60 fps (1 = 16,7 ms). Omezený, aby se po přepnutí záložky
+ * nebo zaseknutí hlavního vlákna částice „neteleportovaly“.
+ * @param {number} dtMs
+ */
+export function frameStep(dtMs) {
+  if (!Number.isFinite(dtMs) || dtMs <= 0) return 1;
+  return Math.max(0.25, Math.min(3, dtMs / 16.667));
+}
+
 export const isAnimalAction = (a) =>
   /zvirata_utulek_online|donio_utulky|click[-_]and[-_]feed|utulek|útulk|misk/i.test(
     `${a?.id || ''} ${a?.category || ''} ${a?.kind || ''} ${a?.subcategory || ''} ${a?.title || ''} ${a?.name || ''}`
@@ -87,7 +147,7 @@ export const ACTION_EFFECT_CATALOG = {
     mode: 'kibble',
     asmr: 'kibble',
     icon: '🐾',
-    target: 25,
+    target: CLICK_AND_FEED.gramsPerClick,
     label: 'Plnění misky v útulku',
     colors: ['#f59e0b', '#fbbf24', '#34d399', '#fde68a'],
     format: (v) => `+${v} g v misce 🐾`
@@ -96,7 +156,7 @@ export const ACTION_EFFECT_CATALOG = {
     mode: 'shelter_care',
     asmr: 'kibble',
     icon: '🐾',
-    target: 25,
+    target: CLICK_AND_FEED.gramsPerClick,
     label: 'Podpora útulku a plná miska',
     colors: ['#f59e0b', '#fbbf24', '#10b981', '#fde68a'],
     format: (v) => `+${v} g v misce a péče 🐾`
@@ -108,7 +168,10 @@ export const ACTION_EFFECT_CATALOG = {
     target: 12,
     label: 'Bezpečná skla pro ptáky',
     colors: ['#38bdf8', '#7dd3fc', '#34d399', '#fbbf24'],
-    format: (v) => `🐦 +${v} ochranných bodů skla`
+    format: (v) =>
+      v <= 1
+        ? '🐦 +1 nahlášená prosklená plocha'
+        : `🐦 +${v} ${pl(v, 'nahlášená prosklená plocha', 'nahlášené prosklené plochy', 'ochranných bodů skla')}`
   },
   strnadi_nareci: {
     mode: 'birds_song',
@@ -126,7 +189,7 @@ export const ACTION_EFFECT_CATALOG = {
     target: 34,
     label: 'Pohotovost záchranných stanic',
     colors: ['#fbbf24', '#34d399', '#10b981', '#fde68a'],
-    format: (v) => `🦔 ${v} stanic v pohotovosti`
+    format: (v) => `🦔 ${v} ${pl(v, 'stanice', 'stanice', 'stanic')} v pohotovosti`
   },
   aplikace_zachranka: {
     mode: 'ecg_rescue',
@@ -144,7 +207,7 @@ export const ACTION_EFFECT_CATALOG = {
     target: 3,
     label: 'Kapka krve pro 3 životy',
     colors: ['#f43f5e', '#fb7185', '#fda4af', '#fbbf24'],
-    format: (v) => `🩸 Až ${v} zachráněné životy`
+    format: (v) => `🩸 Až ${v} ${pl(v, 'zachráněný život', 'zachráněné životy', 'zachráněných životů')}`
   },
   kostni_dren: {
     mode: 'dna_helix',
@@ -171,7 +234,7 @@ export const ACTION_EFFECT_CATALOG = {
     target: 5,
     label: 'Vlna duševní opory',
     colors: ['#818cf8', '#c084fc', '#34d399', '#fde68a'],
-    format: (v) => `🧠 +${v} kroků psychické opory`
+    format: (v) => `🧠 +${v} ${pl(v, 'krok', 'kroky', 'kroků')} psychické opory`
   },
   opatruj_se_nudz: {
     mode: 'breath_lotus',
@@ -189,7 +252,7 @@ export const ACTION_EFFECT_CATALOG = {
     target: 7,
     label: 'Spektrum bezpečné opory',
     colors: ['#fb7185', '#fbbf24', '#facc15', '#34d399', '#38bdf8', '#c084fc'],
-    format: (v) => `🌈 ${v}/7 tipů přijetí`
+    format: (v) => `🌈 ${v}/7 tipů pro přijetí`
   },
   wikipedie_cz: {
     mode: 'wiki_ink',
@@ -216,7 +279,7 @@ export const ACTION_EFFECT_CATALOG = {
     target: 8,
     label: 'Digitální síť pomoci',
     colors: ['#38bdf8', '#60a5fa', '#34d399', '#fbbf24'],
-    format: (v) => `💻 +${v} propojených uzlů`
+    format: (v) => `💻 +${v} ${pl(v, 'propojený uzel', 'propojené uzly', 'propojených uzlů')}`
   },
   missing_maps: {
     mode: 'satellite_map',
@@ -231,10 +294,10 @@ export const ACTION_EFFECT_CATALOG = {
     mode: 'rice',
     asmr: 'rice',
     icon: '🍚',
-    target: 100,
+    target: FREERICE.grainsPerAnswer * FREERICE.answersPerRound,
     label: 'Zrnka rýže do misky OSN',
     colors: ['#f8fafc', '#fde68a', '#fbbf24', '#38bdf8'],
-    format: (v) => `🍚 +${v} zrnek rýže`
+    format: (v) => `🍚 +${v} ${pl(v, 'zrnko', 'zrnka', 'zrnek')} rýže`
   },
   zooniverse_veda: {
     mode: 'cosmos_science',
@@ -351,7 +414,7 @@ export const ACTION_EFFECT_CATALOG = {
     target: 6,
     label: 'Ovocný strom v mapě Na ovoce',
     colors: ['#fb7185', '#4ade80', '#fde047', '#fbbf24'],
-    format: (v) => `🍎 +${v} plodů na stromě`
+    format: (v) => `🍎 +${v} ${pl(v, 'plod', 'plody', 'plodů')} na stromě`
   },
   inaturalist_priroda: {
     mode: 'butterfly_lens',
@@ -360,7 +423,7 @@ export const ACTION_EFFECT_CATALOG = {
     target: 3,
     label: 'Záznam biodiverzity přírody',
     colors: ['#c084fc', '#f472b6', '#34d399', '#fbbf24'],
-    format: (v) => `🦋 +${v} určené druhy v ČR`
+    format: (v) => `🦋 +${v} ${pl(v, 'určený druh', 'určené druhy', 'určených druhů')} v ČR`
   },
   brontosaurus_vikend: {
     mode: 'campfire_group',
@@ -396,7 +459,7 @@ export const ACTION_EFFECT_CATALOG = {
     target: 25,
     label: 'Zachráněné porce v bance',
     colors: ['#fbbf24', '#f59e0b', '#34d399', '#fb7185'],
-    format: (v) => `🥫 +${v} porcí jídla`
+    format: (v) => `🥫 +${v} ${pl(v, 'porce', 'porce', 'porcí')} jídla`
   },
   nadeje_jidlo: {
     mode: 'soup_lantern',
@@ -405,7 +468,7 @@ export const ACTION_EFFECT_CATALOG = {
     target: 1,
     label: 'Teplá polévka a noc v teple',
     colors: ['#fb923c', '#fbbf24', '#fde68a', '#34d399'],
-    format: (v) => `🍞 +${v} noc v teple a polévka`
+    format: (v) => `🍞 Teplá polévka a noc v teple`
   },
   zachran_jidlo_recept: {
     mode: 'zero_waste_pot',
@@ -450,7 +513,7 @@ export const ACTION_EFFECT_CATALOG = {
     target: 100,
     label: 'Pohyb proměněný v body pomoci',
     colors: ['#34d399', '#6ee7b7', '#fbbf24', '#38bdf8'],
-    format: (v) => `👟 +${v} bodů pohybu`
+    format: (v) => `👟 +${v} ${pl(v, 'bod', 'body', 'bodů')} pohybu`
   },
   krabice_od_bot: {
     mode: 'shoebox_gift',
@@ -468,7 +531,8 @@ export const ACTION_EFFECT_CATALOG = {
     target: 100,
     label: 'Do posledního haléře rodinám',
     colors: ['#fde047', '#fbbf24', '#38bdf8', '#34d399'],
-    format: (v) => `👼 ${v} % přímo rodině`
+    format: (v) => `👼 ${v} % přímo rodině`,
+    staticMetric: true
   },
   charita_dar: {
     mode: 'charity_care',
@@ -477,7 +541,8 @@ export const ACTION_EFFECT_CATALOG = {
     target: 100,
     label: 'Podpora terénní a hospicové péče',
     colors: ['#34d399', '#10b981', '#fbbf24', '#f472b6'],
-    format: (v) => `💚 ${v} % pro terénní péči`
+    format: (v) => `💚 ${v} % pro terénní péči`,
+    staticMetric: true
   },
   znesnaze21_pribeh: {
     mode: 'solidarity_bridge',
@@ -486,13 +551,29 @@ export const ACTION_EFFECT_CATALOG = {
     target: 100,
     label: 'Přímá solidarita Znesnáze21',
     colors: ['#2dd4bf', '#34d399', '#fbbf24', '#fb7185'],
-    format: (v) => `🤝 ${v} % ověřenému člověku`
+    format: (v) => `🤝 ${v} % ověřenému člověku`,
+    staticMetric: true
   }
 };
 
 Object.values(ACTION_EFFECT_CATALOG).forEach((spec) => {
   spec.mollyTreat = resolveMollyTreat(spec);
 });
+
+/**
+ * Obecné dobrovolnictví u místní organizace. Sdílí scénu `solidarity_bridge`, ale není v katalogu,
+ * aby nepřepsalo vyhledávání podle režimu (MODE_LOOKUP).
+ */
+const VOLUNTEER_EFFECT_SPEC = {
+  mode: 'solidarity_bridge',
+  asmr: 'harp',
+  icon: '🤲',
+  target: 1,
+  label: 'Nabídnutá pomocná ruka',
+  colors: ['#2dd4bf', '#34d399', '#fbbf24', '#fb7185'],
+  format: () => '🤲 +1 nabídnutá pomocná ruka'
+};
+VOLUNTEER_EFFECT_SPEC.mollyTreat = resolveMollyTreat(VOLUNTEER_EFFECT_SPEC);
 
 const MODE_LOOKUP = Object.values(ACTION_EFFECT_CATALOG).reduce((acc, spec) => {
   acc[spec.mode] = spec;
@@ -532,13 +613,22 @@ export function resolveActionEffectSpec(action) {
   if (action?.element === 'knowledge') return ACTION_EFFECT_CATALOG.wikipedie_cz;
   if (action?.element === 'community') return ACTION_EFFECT_CATALOG.letters_seniors;
   if (/komunit|community|soused/.test(hay)) return ACTION_EFFECT_CATALOG.knihobudka_kniha;
+  // Místa z mapy (/near) a obecné dobrovolnictví: nabídnutá pomocná ruka, ne „% pro terénní péči“
+  if (/dobrovol|volunt/.test(hay) || action?.category === 'ngo') {
+    return VOLUNTEER_EFFECT_SPEC;
+  }
   return ACTION_EFFECT_CATALOG.charita_dar;
 }
 
 export function getActionEffectMeta(action, currentVal, opts = {}) {
   const spec = resolveActionEffectSpec(action);
   const val =
-    typeof currentVal === 'number' && currentVal > 0 ? currentVal : spec.target;
+    !spec.staticMetric &&
+    !opts.isReturnStrip &&
+    typeof currentVal === 'number' &&
+    currentVal > 0
+      ? Math.min(currentVal, spec.target)
+      : spec.target;
   const badge = spec.format(val);
   const isKibble = spec.mode === 'kibble' || spec.mode === 'shelter_care';
   const returnBadge = isKibble ? badge : `${badge} · ✨ Světelná stopa`;
@@ -1430,7 +1520,7 @@ const PENTATONIC = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66];
  * a bohatou světelnou scénou pro všech 45 aktivit.
  */
 export function mountImpactCanvas(cv, o = {}) {
-  const c = cv?.getContext?.('2d');
+  const c = optimizeCanvasContext(cv?.getContext?.('2d'));
   if (!c) return () => {};
 
   const spec = resolveActionEffectSpec(o.action || o.mode || 'kibble');
@@ -1466,7 +1556,7 @@ export function mountImpactCanvas(cv, o = {}) {
   // HiDPI / Retina scaling while keeping aspect-correct uniform 1:1 scene coordinates
   const syncCanvasDpr = () => {
     if (!win() || !cv) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    const dpr = Math.min(window.devicePixelRatio || 1, getCanvasDprCap());
     const rect = cv.getBoundingClientRect?.();
     const cw = rect?.width > 40 ? Math.round(rect.width) : 320;
     const ch = rect?.height > 30 ? Math.round(rect.height) : 112;
@@ -1562,9 +1652,13 @@ export function mountImpactCanvas(cv, o = {}) {
     launchTreatArc(cx, cy, false);
   }
 
+  // Ukazatel dopadu jen roste (dříve u misky kolísal podle poskakujících granulí a mohl zůstat
+  // viset třeba na „+10 g“, i když skutečný údaj je 25 g). Ťukání do plátna je hra — skutečné
+  // číslo dopadu nenafukuje, proto se `bonusUnits` do ukazatele nepočítají.
+  let peakRatio = 0;
   const emitProgress = (ratio) => {
-    const baseVal = Math.max(1, Math.min(target, Math.round(target * ratio)));
-    const totalVal = baseVal + bonusUnits;
+    peakRatio = spec.staticMetric ? 1 : Math.max(peakRatio, Math.min(1, ratio || 0));
+    const totalVal = Math.max(1, Math.min(target, Math.round(target * peakRatio)));
     if (totalVal !== lastReportedVal) {
       lastReportedVal = totalVal;
       o.onWeightUpdate?.(totalVal, spec.format(totalVal), spec);
@@ -1632,10 +1726,7 @@ export function mountImpactCanvas(cv, o = {}) {
       p.vy = isBowlMode ? -2.5 : -1.7;
     }
     if (popups.length < 4) {
-      const currentTotal = target + bonusUnits;
-      const badgeLabel = isSuper
-        ? `✨ ${spec.format(currentTotal)}`
-        : `${spec.icon || '✨'} +${stepIncrement}`;
+      const badgeLabel = isSuper ? `✨ ${spec.format(target)}` : `${spec.icon || '✨'} ♥`;
       popups.push({
         x: Math.max(24, Math.min(w - 24, tx)),
         y: Math.max(28, Math.min(h - 14, ty - 4)),
@@ -1753,14 +1844,24 @@ export function mountImpactCanvas(cv, o = {}) {
   cv.addEventListener('pointerleave', onUpOrLeave);
   cv.addEventListener('pointercancel', onUpOrLeave);
 
-  const fn = (forceSingleDraw = false) => {
+  let tAcc = 0;
+  let lastFrameTs = 0;
+
+  // POZOR: requestAnimationFrame předává časové razítko jako 1. argument. Dříve se interpretovalo
+  // jako `forceSingleDraw` (truthy) → smyčka probuzená klepnutím vykreslila jediný snímek a zamrzla.
+  // Jednorázové vykreslení se proto spouští výhradně explicitním `fn(true)`.
+  const fn = (arg) => {
+    const forceSingleDraw = arg === true;
     id = 0;
     frame++;
+    const nowTs = win() ? performance.now() : 0;
+    const k = lastFrameTs && !forceSingleDraw ? frameStep(nowTs - lastFrameTs) : 1;
+    lastFrameTs = forceSingleDraw ? 0 : nowTs;
     if (!hasPointer && sharedOrientationGx !== 0) {
       gx = sharedOrientationGx;
     }
     const charge = globalSparkCharge;
-    burstEnergy = Math.max(0, burstEnergy * 0.94);
+    burstEnergy = Math.max(0, burstEnergy * Math.pow(0.94, k));
     const isActiveMotion =
       burstEnergy > 0.03 ||
       treatArcs.length > 0 ||
@@ -1776,7 +1877,9 @@ export function mountImpactCanvas(cv, o = {}) {
     } else {
       idleFrames = 0;
     }
-    const t = frame * (0.048 + charge * 0.04 + burstEnergy * 0.02);
+    // Akumulovaný čas: zrychlení při nabití/výbuchu mění jen rychlost, ne fázi → žádné skoky animace.
+    tAcc += k * (0.048 + charge * 0.04 + burstEnergy * 0.02);
+    const t = tAcc;
 
     // Uniform 1:1 scaling so circles, stars, hearts, and scenes are NEVER squashed/stretched
     const scale = (cv.height || 92) / h;
@@ -1877,14 +1980,14 @@ export function mountImpactCanvas(cv, o = {}) {
       if (!red) {
         if (charge > 0.05) {
           // Při nabíjení přitahujeme částice ke středu
-          p.vx += (cx - p.x) * 0.012 * charge;
-          p.vy += (cy - p.y) * 0.012 * charge;
+          p.vx += (cx - p.x) * 0.012 * charge * k;
+          p.vy += (cy - p.y) * 0.012 * charge * k;
         }
         if (isBowlMode) {
-          p.vx = (p.vx + gx) * 0.92;
-          p.vy += 0.42;
-          p.x += p.vx;
-          p.y += p.vy;
+          p.vx = (p.vx + gx) * Math.pow(0.92, k);
+          p.vy += 0.42 * k;
+          p.x += p.vx * k;
+          p.y += p.vy * k;
           if (p.y > fl) {
             p.y = fl;
             p.vy *= -0.38;
@@ -1894,9 +1997,9 @@ export function mountImpactCanvas(cv, o = {}) {
             p.vx *= -0.5;
           }
         } else if (mode === 'water_spring' || mode === 'blood_drop') {
-          p.x += p.vx + gx * 1.4;
-          p.vy += 0.18;
-          p.y += p.vy;
+          p.x += (p.vx + gx * 1.4) * k;
+          p.vy += 0.18 * k;
+          p.y += p.vy * k;
           if (p.y > by - 4) {
             p.y = 14 + (i % 3) * 5;
             p.x = cx + ((i % 5) - 2) * 14;
@@ -1908,9 +2011,9 @@ export function mountImpactCanvas(cv, o = {}) {
           p.x = cx + Math.cos(ang) * rad * 1.5 + gx * 28;
           p.y = cy + Math.sin(ang) * (rad * 0.48);
         } else {
-          p.vx = (p.vx + gx * 0.6 + Math.sin(t + p.phase) * 0.045) * 0.94;
-          p.x += p.vx;
-          p.y += p.vy;
+          p.vx = (p.vx + gx * 0.6 + Math.sin(t + p.phase) * 0.045) * Math.pow(0.94, k);
+          p.x += p.vx * k;
+          p.y += p.vy * k;
           if (p.y < 6) {
             p.y = h - 8;
             p.x = 24 + ((i * 37 + frame) % (w - 48));
@@ -1957,7 +2060,8 @@ export function mountImpactCanvas(cv, o = {}) {
     c.translate(-cx, -cy);
 
     if (isBowlMode) {
-      emitProgress(settledCount / ps.length);
+      // Počet usazených granulí + časová pojistka: ukazatel vždy do ~1,5 s dojde ke skutečnému údaji
+      emitProgress(Math.max(settledCount / ps.length, red ? 1 : frame / 90));
       if (mode === 'shelter_care') {
         // Zlatá stříška útulku + zářící tlapky nad miskou
         c.strokeStyle = '#fde68a';
@@ -2898,8 +3002,8 @@ export function mountImpactCanvas(cv, o = {}) {
     // 6. Interaktivní rázové vlny, světelné jiskry a plovoucí odměny
     for (let i = shockwaves.length - 1; i >= 0; i--) {
       const sw = shockwaves[i];
-      sw.r += (sw.maxR - sw.r) * 0.12 + 1.4;
-      sw.alpha *= 0.91;
+      sw.r += ((sw.maxR - sw.r) * 0.12 + 1.4) * k;
+      sw.alpha *= Math.pow(0.91, k);
       if (sw.alpha < 0.03) {
         shockwaves.splice(i, 1);
         continue;
@@ -2917,10 +3021,10 @@ export function mountImpactCanvas(cv, o = {}) {
 
     for (let i = sparks.length - 1; i >= 0; i--) {
       const sp = sparks[i];
-      sp.x += sp.vx;
-      sp.y += sp.vy;
-      sp.vy += 0.08;
-      sp.alpha *= 0.92;
+      sp.x += sp.vx * k;
+      sp.y += sp.vy * k;
+      sp.vy += 0.08 * k;
+      sp.alpha *= Math.pow(0.92, k);
       if (sp.alpha < 0.04) {
         sparks.splice(i, 1);
         continue;
@@ -2943,8 +3047,8 @@ export function mountImpactCanvas(cv, o = {}) {
 
     for (let i = popups.length - 1; i >= 0; i--) {
       const pop = popups[i];
-      pop.y += pop.vy;
-      pop.alpha *= 0.965;
+      pop.y += pop.vy * k;
+      pop.alpha *= Math.pow(0.965, k);
       if (pop.alpha < 0.05) {
         popups.splice(i, 1);
         continue;
@@ -2962,14 +3066,14 @@ export function mountImpactCanvas(cv, o = {}) {
 
     // 7. Kvadratická Bézierova parabola pamlsku letícího k Mini-Molly a samotná želvovinová patronka
     if (mollyEatTimer > 0) {
-      mollyEatTimer = Math.max(0, mollyEatTimer - 0.022);
+      mollyEatTimer = Math.max(0, mollyEatTimer - 0.022 * k);
     }
     let activeTreatX = hasPointer ? pointerX : cx;
     let activeTreatY = hasPointer ? pointerY : cy;
 
     for (let i = treatArcs.length - 1; i >= 0; i--) {
       const arc = treatArcs[i];
-      arc.p = Math.min(1, arc.p + arc.speed);
+      arc.p = Math.min(1, arc.p + arc.speed * k);
       const u = 1 - arc.p;
       const ax = u * u * arc.x0 + 2 * u * arc.p * arc.cx + arc.p * arc.p * arc.x1;
       const ay = u * u * arc.y0 + 2 * u * arc.p * arc.cy + arc.p * arc.p * arc.y1;
@@ -3045,6 +3149,9 @@ export function mountImpactCanvas(cv, o = {}) {
       (isVisible || treatArcs.length > 0)
     ) {
       id = requestAnimationFrame(() => fn(false));
+    } else {
+      // Smyčka usíná → příští probuzení začne s čistým dt (žádný skok o 3 snímky)
+      lastFrameTs = 0;
     }
   };
 
@@ -3128,8 +3235,29 @@ export async function fetchAmbientPulse() {
     const r = await fetch('/api/pulse');
     if (r.ok) return await r.json();
   } catch {}
-  return {
-    message: 'Před chvílí někdo v Brně naplnil misku v útulku',
-    source: 'local'
-  };
+  // Bez odpovědi serveru nic nevymýšlíme (dříve se ukazovala smyšlená věta o Brně)
+  return null;
+}
+
+/**
+ * Text „pulzu komunity“ podle místa, kde se zobrazuje.
+ * - `inCard`: pod konkrétní kartou smí být bez označení jen skutečná událost ke STEJNÉMU skutku
+ *   (dříve se pod Freerice nebo NADĚJÍ ukazovala „miska v útulku“, jako by šlo o tenhle krok).
+ *   Jiná skutečná událost je zřetelně označená jako „Mezitím v komunitě“, tip na jiný skutek
+ *   pod kartu nepatří (konkuroval by hlavní volbě).
+ * - jinde: skutečná událost s označením „V komunitě:“, nebo tip na skutek.
+ * @param {any} pulse
+ * @param {{ actionId?: string | null, inCard?: boolean }} [opts]
+ */
+export function describeAmbientPulse(pulse, opts = {}) {
+  const neutral = 'Až skutek dokončíš, objeví se tu anonymně jako pulz komunity.';
+  const msg = String(pulse?.message || '').trim();
+  if (!msg) return neutral;
+  const isLive = Boolean(pulse?.isLive);
+  const lowered = `${msg.charAt(0).toLowerCase()}${msg.slice(1)}`;
+  if (opts.inCard) {
+    if (!isLive) return neutral;
+    return opts.actionId && pulse.actionId === opts.actionId ? msg : `Mezitím v komunitě: ${lowered}`;
+  }
+  return isLive ? `V komunitě: ${lowered}` : msg;
 }

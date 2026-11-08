@@ -1,5 +1,6 @@
 import { writable, derived, get } from 'svelte/store';
 import { getRandomEncouragement, MICRO_ACTIONS } from './data/czech-actions.js';
+import { CLICK_AND_FEED } from './data/impactFacts.js';
 import { trackEvent, trackFunnel, hasActionStarted } from './analytics.js';
 import { feedMollyFromAction, mollyState, MOLLY_STORAGE_KEY } from './mollyStore.js';
 import {
@@ -116,9 +117,9 @@ export const SANCTUARY_ELEMENTS = [
 export const HOPE_PROOFS = [
   {
     id: 'click_feed',
-    title: '1 068+ tun krmiva (37,2 mil. misek) ve 448 útulcích z kliknutí',
+    title: `Přes ${CLICK_AND_FEED.totalTonnesLabel} tun krmiva pro ${CLICK_AND_FEED.shelters} útulků vyklikaných zdarma`,
     realWorldProof:
-      'V českém projektu Click and Feed už lidé bezplatným kliknutím (1 klik = cca 25 g krmiva od sponzora Brit) naplnili přes 37,2 milionu misek ve 448 útulcích.',
+      `V českém projektu Click and Feed už lidé bezplatným kliknutím (1 klik = cca ${CLICK_AND_FEED.gramsPerClick} g krmiva od sponzora ${CLICK_AND_FEED.sponsor}) poslali přes ${CLICK_AND_FEED.totalTonnesLabel} tun krmiva do ${CLICK_AND_FEED.shelters} útulků.`,
     psychNote:
       'I patnáctivteřinová pomoc ti připomene, že na světě kolem sebe máš reálný podíl.',
     sourceLabel: 'Click and Feed (Brit)',
@@ -287,8 +288,14 @@ if (typeof window !== 'undefined') {
 export const totalCompletedCount = derived(completedSteps, ($steps) => $steps.length);
 
 export const todayCompletedCount = derived(completedSteps, ($steps) => {
-  const todayStr = new Date().toISOString().slice(0, 10);
-  return $steps.filter((s) => typeof s?.timestamp === 'string' && s.timestamp.startsWith(todayStr)).length;
+  // Lokální kalendářní den (ne UTC) — v Česku by jinak skutky po půlnoci padaly do včerejška
+  const now = new Date();
+  const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+  return $steps.filter((s) => {
+    if (typeof s?.timestamp !== 'string') return false;
+    const d = new Date(s.timestamp);
+    return !Number.isNaN(d.getTime()) && `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}` === todayKey;
+  }).length;
 });
 
 /**
@@ -541,7 +548,8 @@ export function createProgressBackupCode() {
     w: wishes,
     m: {
       treatsFedTotal: molly?.treatsFedTotal || 0,
-      petCount: molly?.petCount || 0
+      petCount: molly?.petCount || 0,
+      giftDeeds: molly?.giftDeeds || 0
     }
   });
 }
@@ -567,7 +575,13 @@ export function restoreProgressFromBackupCode(code) {
       const next = {
         ...prev,
         treatsFedTotal: Math.max(prev.treatsFedTotal || 0, Number(decoded.m.treatsFedTotal) || 0),
-        petCount: Math.max(prev.petCount || 0, Number(decoded.m.petCount) || 0)
+        petCount: Math.max(prev.petCount || 0, Number(decoded.m.petCount) || 0),
+        giftDeeds: Math.max(
+          prev.giftDeeds || 0,
+          Number(decoded.m.giftDeeds) || 0,
+          // Starší kódy dárky neznaly → aspoň počet obnovených skutků
+          (Array.isArray(decoded.s) ? decoded.s.length : 0) + (Array.isArray(decoded.w) ? decoded.w.length : 0)
+        )
       };
       safeSetItem(MOLLY_STORAGE_KEY, JSON.stringify(next), 'local');
       return next;

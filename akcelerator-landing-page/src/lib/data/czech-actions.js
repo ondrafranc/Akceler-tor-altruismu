@@ -5,6 +5,7 @@
  */
 
 import { sanitizeEmail } from '../security.js';
+import { CLICK_AND_FEED } from './impactFacts.js';
 
 export const VALUES = [
   {
@@ -129,17 +130,17 @@ export const MICRO_ACTIONS = [
     id: 'zvirata_utulek_online',
     title: '🐾 Naplnit misku v českém útulku jedním klikem',
     org: 'Click and Feed',
-    desc: 'Jedním bezplatným kliknutím pošleš přes sponzora Brit (~25 g krmiva na klik) skutečné granule psům a kočkám ve 448 českých útulcích.',
-    whyItMatters: 'Lidé už takto pomohli dodat přes 1 068 tun krmiva (37,2 milionu plných misek) do útulků po celé ČR.',
+    desc: `Jedním bezplatným kliknutím pošleš přes sponzora ${CLICK_AND_FEED.sponsor} (~${CLICK_AND_FEED.gramsPerClick} g krmiva na klik) skutečné granule psům a kočkám ve ${CLICK_AND_FEED.shelters} českých útulcích.`,
+    whyItMatters: `Lidé už takto pomohli dodat přes ${CLICK_AND_FEED.totalTonnesLabel} tun krmiva do ${CLICK_AND_FEED.shelters} útulků po celé ČR.`,
     steps: [
       'Otevři stránku Click and Feed.',
-      'Klikni na tlačítko „Klikni zdarma a naplň misku“ – sponzor Brit za tvůj klik pošle ~25 g krmiva do českých útulků.'
+      `Klikni na tlačítko „Klikni zdarma a naplň misku“ – sponzor ${CLICK_AND_FEED.sponsor} za tvůj klik pošle ~${CLICK_AND_FEED.gramsPerClick} g krmiva do českých útulků.`
     ],
     cta: 'Začít pomáhat',
     url: 'https://clickandfeed.cz/',
     reassurance: 'Zdarma a bez registrace — zabere to asi 15 vteřin.',
-    selfBenefit: 'Okamžitá radost, že jsi i v náročném dni někomu konkrétně pomohl/a',
-    concreteImpact: 'Podpora útulků (~25 g krmiva na 1 klik od sponzora Brit; celkem 1 068+ tun)',
+    selfBenefit: 'Okamžitá radost, že i v náročném dni konkrétně pomáháš',
+    concreteImpact: `Podpora útulků (~${CLICK_AND_FEED.gramsPerClick} g krmiva na 1 klik od sponzora ${CLICK_AND_FEED.sponsor}; přes ${CLICK_AND_FEED.totalTonnesLabel} tun krmiva vyklikaných zdarma)`,
     element: 'animals',
     values: ['animals'],
     timeMinutes: 2,
@@ -154,7 +155,7 @@ export const MICRO_ACTIONS = [
     id: 'aplikace_zachranka',
     title: '🚑 Nastavit si v mobilu českou aplikaci Záchranka',
     org: 'Aplikace Záchranka',
-    desc: 'Nainstaluj si nebo zkontroluj aplikaci Záchranka, abys v nouzi dokázal/a jedním stiskem přivolat pomoc člověku na ulici a našel/našla nejbližší defibrilátor.',
+    desc: 'Nainstaluj si nebo zkontroluj aplikaci Záchranka — v nouzi s ní jedním stiskem přivoláš pomoc člověku na ulici a najdeš nejbližší defibrilátor.',
     whyItMatters: 'Když někdo kolem zkolabuje, přesná GPS poloha a mapa defibrilátorů rozhodují o minutách.',
     steps: [
       'Stáhni si aplikaci Záchranka (nebo v ní zkontroluj základní nastavení).',
@@ -391,7 +392,7 @@ export const MICRO_ACTIONS = [
     ],
     cta: 'Prozkoumat iNaturalist',
     url: 'https://www.inaturalist.org/',
-    reassurance: 'Nemusíš druh sám poznat — aplikace i přírodovědci ti s určením pomohou.',
+    reassurance: 'Druh nemusíš umět určit — aplikace i přírodovědci ti s tím pomohou.',
     selfBenefit: 'Všímavá procházka přírodou, při které objevíš druhy rostoucí hned za domem',
     concreteImpact: '1 záznam biodiverzity pro vědce a ochránce přírody',
     element: 'nature',
@@ -631,7 +632,7 @@ export const MICRO_ACTIONS = [
   },
   {
     id: 'birdlife_ptaci_pasti',
-    title: '🐦 Nahlásit nebezpečnou skleněnou zastávku pro ptáky',
+    title: '🐦 Nahlásit prosklenou zastávku nebezpečnou pro ptáky',
     org: 'Česká společnost ornitologická – Ptačí pasti',
     desc: 'Místo scrollování na zastávce zadej do mobilního webu Ptačí pasti nebezpečnou prosklenou plochu nebo nález ptáka u skla – bez registrace.',
     whyItMatters: 'Díky hlášením od obyčejných lidí pak ornitologové prosazují u obcí polepy zastávek, které zachrání stovky ptáků.',
@@ -731,9 +732,9 @@ export const MICRO_ACTIONS = [
   },
   {
     id: 'freerice_ryze',
-    title: '🍚 Naklikat misku rýže odpovídáním na kvízová slovíčka',
+    title: '🍚 Darovat zrnka rýže správnými odpověďmi v kvízu',
     org: 'Freerice (Světový potravinový program OSN)',
-    desc: 'Odpověz z gauče na 10 anglických slovíček nebo zeměpisných otázek – bez registrace. Za každou správnou odpověď sponzoři pošlou 10 zrnek rýže lidem v nouzi.',
+    desc: 'Přelož z gauče 10 anglických slovíček nebo odpověz na zeměpisné otázky – bez registrace. Za každou správnou odpověď sponzoři pošlou 10 zrnek rýže lidem v nouzi.',
     whyItMatters: 'Okamžitá náhrada za bezmyšlenkovité scrollování: procvičíš si angličtinu a reálně naplníš misku jídla.',
     reassurance: 'Funguje okamžitě od 1. vteřiny bez účtu a bez e-mailu – klidně na 2 minuty v tramvaji.',
     steps: [
@@ -909,7 +910,7 @@ export const MICRO_ACTIONS = [
     title: '🧘 Zkusit 5minutový vědecký check-in duševní pohody',
     org: 'NÚDZ – Opatruj.se',
     desc: 'Projdi si anonymní 5minutové cvičení duševní hygieny nebo praktický návod od českých psychologů, jak mluvit s blízkým, kterému je těžko.',
-    whyItMatters: 'Nemůžeš dlouhodobě svítit druhým, když sám/sama vyhoříš. Péče o vlastní hlavu a umění naslouchat kamarádovi je skutečná pomoc.',
+    whyItMatters: 'Nemůžeš dlouhodobě svítit druhým, když přitom vyhoříš. Péče o vlastní hlavu a umění naslouchat kamarádovi je skutečná pomoc.',
     reassurance: '100% anonymně a bez registrace — nic se nikam neukládá ani neposílá.',
     selfBenefit: 'Okamžité zklidnění hlavy a jasnější slova pro podporu kamaráda v krizi',
     concreteImpact: '1 zvládnutý rozhovor a klidnější mysl',
@@ -1186,7 +1187,7 @@ export const MICRO_ACTIONS = [
     desc: 'Podpoř drobným příspěvkem českou rodinu, kterou zasáhla onkologická nebo jiná vážná nemoc, a podívej se na konkrétní příběh, kam pomoc doputovala.',
     whyItMatters: 'Garantováno do posledního haléře: 100 % každého daru odchází přímo rodinám ještě v daném měsíci.',
     reassurance: 'Provoz nadace hradí zakladatelé ze svého a podporu můžeš kdykoliv jedním klikem upravit nebo zastavit.',
-    selfBenefit: 'Naprostá důvěra — přesně vidíš konkrétní rodinu v ČR, které jsi ulevil/a',
+    selfBenefit: 'Naprostá důvěra — přesně vidíš konkrétní rodinu v ČR, které tvůj dar ulevil',
     concreteImpact: '100 % částky přímo rodině v těžké léčbě',
     element: 'care',
     steps: [
@@ -1408,6 +1409,9 @@ const PARTNER_REGISTRATION_IDS = new Set([
   'dobry_andel'
 ]);
 
+/** Kdy byly naposledy zkontrolovány všechny odkazy katalogu (všech 45 vracelo HTTP 200). */
+export const CATALOG_LINKS_CHECKED_AT = '11/2026';
+
 /** @type {Record<string, { sourceUrl?: string, lastVerifiedAt?: string, impactBasis?: 'doložený' | 'odhadovaný' | 'předpokládaný', impactChain?: { activity: string, immediateOutput: string, realImpact: string } }>} */
 const SPECIFIC_ACTION_META = {
   zvirata_utulek_online: {
@@ -1416,8 +1420,8 @@ const SPECIFIC_ACTION_META = {
     impactBasis: 'doložený',
     impactChain: {
       activity: 'Bezplatné kliknutí na webu Click and Feed',
-      immediateOutput: 'Započtení kliku do sponzorské kvóty (~25 g krmiva od Brit)',
-      realImpact: 'Skutečné financování a dodané krmivo do 448 českých útulků (1 068+ tun)'
+      immediateOutput: `Započtení kliku do sponzorské kvóty (~${CLICK_AND_FEED.gramsPerClick} g krmiva od ${CLICK_AND_FEED.sponsor})`,
+      realImpact: `Skutečné financování a dodané krmivo do ${CLICK_AND_FEED.shelters} českých útulků (přes ${CLICK_AND_FEED.totalTonnesLabel} tun vyklikaných zdarma)`
     }
   },
   birdlife_ptaci_pasti: {
@@ -1554,7 +1558,10 @@ for (const action of MICRO_ACTIONS) {
   action.registrationRequired = registrationRequired;
   action.sourceUrl = custom.sourceUrl || action.url;
   action.externalUrl = action.url;
-  action.lastVerifiedAt = custom.lastVerifiedAt || '11/2026';
+  // Ručně ověřené údaje o dopadu mají vlastní datum. U ostatních nic nepředstíráme —
+  // uvádíme jen to, co jsme opravdu zkontrolovali (funkční odkaz při revizi katalogu).
+  action.lastVerifiedAt = custom.lastVerifiedAt || null;
+  action.verifiedLabel = custom.lastVerifiedAt || `funkční odkaz ${CATALOG_LINKS_CHECKED_AT}`;
   action.isAvailable = true;
   action.impactEvidence = impactEvidence;
   action.impactEvidenceBadge = EVIDENCE_TIERS[impactEvidence].badge;
@@ -1567,7 +1574,7 @@ for (const action of MICRO_ACTIONS) {
 }
 
 export const ENCOURAGEMENT_MESSAGES = [
-  'Děkujeme. Právě jsi poslal/a kousek reálné pomoci dál.',
+  'Děkujeme. Právě putuje kousek reálné pomoci dál.',
   'Každý takový drobný skutek mění den někomu konkrétnímu.',
   'Tohle mělo smysl. Pomoc druhým nemusí být složitá, aby byla opravdová.',
   'Skvělé. I malá laskavost dělá místo kolem nás o poznání lepším.',
@@ -1968,7 +1975,7 @@ export const CURATED_FALLBACK_PLACES = [
     phone: '+420 222 333 555',
     email: 'info@zivot90.cz',
     description: 'Dobrovolnictví u seniorů, přátelské návštěvy, telefonická podpora a komunitní aktivity v centru Prahy.',
-    quickMission: 'Zapoj se na 1 hodinu týdně do přátelského povídání nebo doprovodu osamělého seniora.',
+    quickMission: 'Pomoz jednorázově na komunitní akci, nebo se zapoj pravidelně — třeba hodinou týdně přátelského povídání se seniorem.',
     helpWays: ['regular_volunteering', 'one_off_help'],
     visitMode: 'by_agreement'
   },
@@ -3126,7 +3133,7 @@ export const REAL_STORIES = [
     icon: '🗺️',
     quote: 'Nechtěl jsem s nikým mluvit ani nikam volat. Večer u čaje jsem na Missing Maps za 15 minut obkreslil 30 budov ze satelitu pro Lékaře bez hranic. Nulový stres a přitom reálná pomoc.',
     tag: 'Z gauče • 15 minut • 0 Kč',
-    ctaLabel: 'Zkusit online mikro-kroky →',
+    ctaLabel: 'Zkusit drobné skutky →',
     ctaHref: '/app/online?filter=writing'
   },
   {
@@ -3201,7 +3208,7 @@ export const HOPE_FACTS = [
     sourceLabel: 'Darujme.cz (Nadace VIA)',
     sourceUrl: 'https://www.darujme.cz/',
     verifiedAt: '11/2026',
-    actionLabel: 'Prohlédnout ověřené mikro-kroky →',
+    actionLabel: 'Prohlédnout ověřené drobné skutky →',
     actionHref: '/app/online'
   },
   {

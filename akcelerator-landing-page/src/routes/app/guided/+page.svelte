@@ -30,6 +30,7 @@
     getPendingPartnerReturnRemainingMs,
     triggerCanvasBurst,
     fetchAmbientPulse,
+    describeAmbientPulse,
   } from "../../../lib/sensoryEngine.js";
   import { notifyMollySpark } from "../../../lib/mollyStore.js";
   import { haversineKm } from "../../../lib/security.js";
@@ -114,7 +115,8 @@
   let awaitingGuidedAction = null;
   let guidedLeaveTimestamp = 0;
   let copiedDirectLink = false;
-  let ambientPulseText = "Před chvílí někdo v Brně naplnil misku v útulku";
+  /** @type {any} */
+  let ambientPulse = null;
 
   // Adaptivní parametry průvodce (sekce 4.2 + 5.2)
   let commitment = "any"; // 'any' | 'one_off' | 'long_term'
@@ -154,6 +156,8 @@
   });
 
   $: bestAction = recommendations[0] || null;
+  // Až pod bestAction — reaktivní pořadí jinak předběhne nastavení parametrů z URL / sessionu
+  $: ambientPulseText = describeAmbientPulse(ambientPulse, { inCard: true, actionId: bestAction?.id });
   $: if (bestAction?.id) {
     lastShownActionId = bestAction.id;
   }
@@ -393,7 +397,7 @@
 
     const pulseTimer = setTimeout(async () => {
       const pulse = await fetchAmbientPulse();
-      if (pulse?.message) ambientPulseText = pulse.message;
+      ambientPulse = pulse;
     }, 300);
 
     document.addEventListener("visibilitychange", onVis);
@@ -544,7 +548,7 @@
         {#if selectedTopics.length === 0 && recipientMacro === "any"}
           <div class="block-label">
             3. Komu chceš dnes nejvíc pomoct? <span class="opt-tag"
-              >(adaptivní volba)</span
+              >(nepovinné)</span
             >
           </div>
           <div class="topic-pills">
@@ -582,7 +586,7 @@
         {:else if activeSituationId === "couch" || activeSituationId === "focus"}
           <div class="block-label">
             3. Chceš zůstat úplně anonymní? <span class="opt-tag"
-              >(adaptivní volba)</span
+              >(nepovinné)</span
             >
           </div>
           <div class="topic-pills">
@@ -623,7 +627,7 @@
         {:else}
           <div class="block-label">
             3. Jednorázově, nebo dlouhodobě? <span class="opt-tag"
-              >(adaptivní volba)</span
+              >(nepovinné)</span
             >
           </div>
           <div class="topic-pills">
@@ -664,7 +668,7 @@
         {/if}
 
         <details class="adaptive-params-drawer">
-          <summary>Upřesnit všechny parametry (6 voleb + důkazy A/B/C)</summary>
+          <summary>Upřesnit další volby (čas, místo, kontakt, síla důkazů)</summary>
           <div class="adaptive-params-grid">
             <div class="ap-group">
               <span class="ap-label">Závazek:</span>
@@ -898,6 +902,23 @@
       </div>
     </section>
 
+    {#if bestAction}
+      <div class="mobile-guided-preview-bar" role="region" aria-label="Náhled doporučeného kroku">
+        <span class="mgp-title">🎯 Doporučení: {cleanTitle(bestAction.title)}</span>
+        <button
+          type="button"
+          class="mgp-btn"
+          on:click={() =>
+            document.getElementById("personal-plan")?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            })}
+        >
+          Zobrazit krok ↓
+        </button>
+      </div>
+    {/if}
+
     <!-- RIGHT: CLEAN FOCUSED RECOMMENDATION (STANDARDIZED 6-PART GOODACTION CARD) -->
     <section
       id="personal-plan"
@@ -1103,6 +1124,7 @@
           <div class="cta-row">
             <a
               class="btn-gold-action"
+              data-molly-guide="true"
               href={bestAction.url}
               target="_blank"
               rel="noopener noreferrer"
@@ -1137,7 +1159,7 @@
 
           <div class="rec-verify-footer">
             <span>
-              Ověřeno: <strong>{bestAction.lastVerifiedAt || "11/2026"}</strong>
+              Ověřeno: <strong>{bestAction.verifiedLabel}</strong>
               · Zdroj:
               <a
                 href={bestAction.sourceUrl || bestAction.url}
@@ -1167,7 +1189,7 @@
                     url: bestAction.url,
                   })}
               >
-                Nahlásit nefunkční odkaz
+                Nahlásit chybu
               </button>
             </div>
           </div>
@@ -1186,7 +1208,7 @@
               <article class="alt-card">
                 <div class="alt-meta">
                   {alt.quickTagsLabel || cleanMeta(alt.metaLabel)} · Důkazy {alt.impactEvidence ||
-                    "B"} · Ověřeno {alt.lastVerifiedAt || "11/2026"}
+                    "B"} · Ověřeno: {alt.verifiedLabel}
                 </div>
                 <h4>{cleanTitle(alt.title)}</h4>
                 <p>{alt.desc}</p>
@@ -1287,6 +1309,8 @@
           <label for="guided-city-select">Město:</label>
           <select
             id="guided-city-select"
+            name="city"
+            autocomplete="off"
             bind:value={cityId}
             on:change={persistPrefs}
             class="city-select"
@@ -1367,49 +1391,34 @@
       </div>
     </section>
   </details>
-
-  {#if bestAction}
-    <div class="mobile-guided-preview-bar" role="region" aria-label="Náhled doporučeného kroku">
-      <span class="mgp-title">🎯 Doporučení: {cleanTitle(bestAction.title)}</span>
-      <button
-        type="button"
-        class="mgp-btn"
-        on:click={() =>
-          document.getElementById("personal-plan")?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          })}
-      >
-        Zobrazit krok ↓
-      </button>
-    </div>
-  {/if}
 </div>
 
 <style>
   .page {
     max-width: 1140px;
     margin: 0 auto;
-    padding: 0.75rem 1.25rem 4rem;
+    padding: 0.45rem 1.25rem 5rem;
   }
 
-  .header {
+  .subpage-hero.header {
     text-align: center;
+    padding: 1.05rem 1.4rem !important;
+    margin-bottom: 0.65rem !important;
   }
 
   .hero-kicker {
-    font-size: 0.74rem;
+    font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.12em;
     color: #fde68a;
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.25rem;
   }
 
   .title {
     font-family: var(--font-sans);
     font-weight: 800;
     color: #ffffff;
-    font-size: clamp(1.95rem, 3.4vw, 2.65rem);
+    font-size: clamp(1.75rem, 3vw, 2.35rem);
     margin: 0;
     letter-spacing: -0.03em;
     line-height: 1.1;
@@ -1422,10 +1431,10 @@
 
   .subtitle {
     color: rgba(236, 248, 241, 0.9);
-    margin: 0.55rem auto 0;
+    margin: 0.35rem auto 0;
     max-width: 54ch;
-    font-size: 0.96rem;
-    line-height: 1.58;
+    font-size: 0.9rem;
+    line-height: 1.48;
   }
 
   .guided-workspace {
@@ -1439,16 +1448,16 @@
   .compass-shell {
     background: rgba(255, 255, 255, 0.95);
     border: 1px solid rgba(22, 82, 56, 0.1);
-    border-radius: 26px;
-    padding: 1.45rem 1.5rem;
+    border-radius: 24px;
+    padding: 1.15rem 1.25rem;
     box-shadow: var(--shadow-sm);
   }
 
   .block-label {
-    font-size: 0.84rem;
+    font-size: 0.82rem;
     font-weight: 800;
     color: var(--text-primary);
-    margin-bottom: 0.7rem;
+    margin-bottom: 0.5rem;
   }
 
   .opt-tag {
@@ -1459,16 +1468,16 @@
   .situation-grid {
     display: flex;
     flex-direction: column;
-    gap: 0.42rem;
+    gap: 0.36rem;
   }
 
   .situation-card {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.65rem;
     text-align: left;
-    padding: 0.68rem 0.9rem;
-    border-radius: 14px;
+    padding: 0.54rem 0.8rem;
+    border-radius: 13px;
     background: transparent;
     border: 1px solid rgba(22, 82, 56, 0.09);
     cursor: pointer;
@@ -1517,7 +1526,7 @@
   .divider {
     height: 1px;
     background: rgba(22, 82, 56, 0.08);
-    margin: 1.15rem 0;
+    margin: 0.8rem 0;
   }
 
   .topic-pills {
@@ -2216,7 +2225,7 @@
 
   @media (max-width: 980px) {
     .guided-workspace {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
     }
     .plan-section {
       position: static;
@@ -2261,12 +2270,18 @@
     }
 
     .guided-workspace {
-      gap: 0.75rem;
+      gap: 0.55rem;
+    }
+
+    .compass-shell,
+    .plan-section {
+      min-width: 0;
+      max-width: 100%;
     }
 
     .compass-shell,
     .highlight-card {
-      padding: 0.75rem 0.82rem;
+      padding: 0.68rem 0.78rem;
       border-radius: 18px;
     }
 
@@ -2318,12 +2333,10 @@
       align-items: center;
       justify-content: space-between;
       gap: 0.5rem;
-      position: fixed;
-      bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-      left: 10px;
-      right: 10px;
-      z-index: 940;
-      padding: 0.52rem 0.75rem;
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+      padding: 0.44rem 0.7rem;
       border-radius: 14px;
       background: rgba(15, 48, 34, 0.95);
       backdrop-filter: blur(12px);
@@ -2340,6 +2353,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
       flex: 1;
+      min-width: 0;
     }
 
     .mgp-btn {

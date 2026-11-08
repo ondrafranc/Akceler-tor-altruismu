@@ -1,4 +1,6 @@
 import { json } from '@sveltejs/kit';
+import { dev } from '$app/environment';
+import { env } from '$env/dynamic/private';
 import { getServerSupabase, withTimeout } from '$lib/server/supabase.js';
 import { CZECH_CITIES } from '$lib/data/czech-actions.js';
 import {
@@ -54,8 +56,8 @@ const PULSE_TEMPLATES = [
   },
   {
     actionId: 'freerice_ryze',
-    verb: 'daroval 50 zrn rýže v kvízu Freerice',
-    infinitive: 'darovat 50 zrn rýže v kvízu Freerice',
+    verb: 'daroval zrnka rýže v kvízu Freerice',
+    infinitive: 'darovat zrnka rýže v kvízu Freerice',
     icon: '🍚'
   },
   {
@@ -200,15 +202,22 @@ async function resolvePulsePayload(rawSlot) {
 
       if (!error && Array.isArray(data) && data.length > 0) {
         const latest = data[0];
-        const tpl =
-          PULSE_TEMPLATES.find((t) => t.actionId === latest.action_id) || PULSE_TEMPLATES[0];
-        const { cleanCityName, loc } = resolveCityLocative(latest.city || 'Praha');
+        // Neznámý skutek (např. místo z mapy) NESMÍ spadnout na „naplnil misku v útulku“
+        const tpl = PULSE_TEMPLATES.find((t) => t.actionId === latest.action_id) || {
+          actionId: latest.action_id,
+          verb: 'udělal drobný dobrý skutek',
+          icon: '🌱'
+        };
+        const { cleanCityName, loc } = latest.city
+          ? resolveCityLocative(latest.city)
+          : { cleanCityName: '', loc: '' };
+        const eventTs = Date.parse(latest.created_at) || now;
         const livePayload = {
-          message: `Před chvílí někdo ${loc} ${tpl.verb}`,
+          message: `${relativeTimeLabel(now - eventTs)} někdo ${loc ? `${loc} ` : ''}${tpl.verb}`,
           city: cleanCityName,
           actionId: tpl.actionId,
           icon: tpl.icon,
-          ts: Date.parse(latest.created_at) || now,
+          ts: eventTs,
           isLive: true,
           recentCount: data.length,
           source: 'supabase-live'
@@ -256,6 +265,35 @@ export async function GET({ url, request }) {
 }
 
 /**
+ * Pravdivé časové určení: „Před chvílí“ jen do 10 minut, jinak skutečné stáří události (max. 24 h).
+ * @param {number} ageMs
+ */
+function relativeTimeLabel(ageMs) {
+  const min = Math.max(0, Math.round(ageMs / 60000));
+  if (min < 10) return 'Před chvílí';
+  if (min < 60) return `Před ${min} min`;
+  const h = Math.round(min / 60);
+  if (h <= 1) return 'Před hodinou';
+  return `Před ${h} h`;
+}
+
+/**
+ * Lokální vývoj a automatické testy nesmí zapisovat do živé tabulky `pulse_events`
+ * (jinak se testovací skutek ukáže skutečným lidem jako „Před chvílí někdo…“).
+ * Výjimku lze zapnout proměnnou PULSE_ALLOW_DEV_WRITES=1.
+ * @param {Request} request
+ * @param {URL} url
+ */
+function isNonProductionTraffic(request, url) {
+  if (env.PULSE_ALLOW_DEV_WRITES === '1') return false;
+  if (dev) return true;
+  const host = (url.hostname || '').toLowerCase();
+  if (host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]') return true;
+  const ua = request.headers.get('user-agent') || '';
+  return /HeadlessChrome|Playwright/i.test(ua);
+}
+
+/**
  * Records a real anonymous completed/started action into Supabase `pulse_events` (H12).
  * @type {import('./$types').RequestHandler}
  */
@@ -279,8 +317,13 @@ export async function POST({ request, url, getClientAddress }) {
   if (!actionId) {
     return json({ success: false, error: 'Chybí action_id.' }, { status: 400 });
   }
-  const city = safeText(parsed.data.city).slice(0, 60) || 'Praha';
+  // Bez skutečného města nic nevymýšlíme (dříve se doplňovala „Praha“)
+  const city = safeText(parsed.data.city).slice(0, 60) || null;
   const kind = safeText(parsed.data.kind) === 'completed' ? 'completed' : 'click';
+
+  if (isNonProductionTraffic(request, url)) {
+    return json({ success: true, skipped: 'non-production' });
+  }
 
   const supabase = getServerSupabase();
   if (!supabase) {

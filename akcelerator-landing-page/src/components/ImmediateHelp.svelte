@@ -53,8 +53,8 @@
     <div class="crisis-panel" role="dialog" aria-label="Krizová podpora a linky důvěry">
       <div class="panel-head">
         <div>
-          <strong>🆘 Potřebuješ teď sám/sama oporu?</strong>
-          <div class="panel-sub">Nemusíš na to být sám/sama. Tyto služby jsou tu pro tebe zdarma a anonymně:</div>
+          <strong>🆘 Potřebuješ teď oporu ty?</strong>
+          <div class="panel-sub">Na to, co prožíváš, nemusíš zůstat bez podpory. Tyto služby jsou tu pro tebe zdarma a anonymně:</div>
         </div>
         <button type="button" class="close-btn" on:click={toggleHelp} aria-label="Skrýt krizové kontakty">
           ✕

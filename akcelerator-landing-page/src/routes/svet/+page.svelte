@@ -21,12 +21,17 @@
   import { trackEvent } from '../../lib/analytics.js';
   import {
     fetchAmbientPulse,
+    describeAmbientPulse,
     playMollyPurr,
     playMollyCrunch,
     playMollyMeow,
     playSanctuaryChime,
     isSoundMuted,
-    toggleSoundMuted
+    toggleSoundMuted,
+    isLowPowerDevice,
+    getCanvasDprCap,
+    optimizeCanvasContext,
+    frameStep
   } from '../../lib/sensoryEngine.js';
   import {
     mollyState,
@@ -36,7 +41,9 @@
   } from '../../lib/mollyStore.js';
   import { cleanTitle, isInAppBrowser } from '../../lib/utils.js';
 
-  let ambientPulseText = 'Před chvílí někdo v Brně naplnil misku v útulku';
+  /** @type {any} */
+  let ambientPulse = null;
+  $: ambientPulseText = describeAmbientPulse(ambientPulse, {});
 
   /** @type {Record<string, typeof SANCTUARY_ELEMENTS[0]>} */
   const ELEMENT_MAP = Object.fromEntries(SANCTUARY_ELEMENTS.map((e) => [e.key, e]));
@@ -106,12 +113,31 @@
   }
 
   /**
-   * Lush polyphonic pentatonic synthesis delegated to shared sensoryEngine
+   * Lush polyphonic pentatonic synthesis delegated to the shared sensoryEngine AudioContext
+   * (playSanctuaryChime(freq, dur, wave, delay)).
    * @param {'sky' | 'water' | 'breath_in' | 'breath_out' | 'hover'} type
    */
   function playChime(type) {
     if (!soundEnabled) return;
-    playSanctuaryChime(type, true);
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    if (type === 'hover') {
+      playSanctuaryChime(pick([880, 987.77, 1046.5, 1174.66, 1318.51]), 0.55, 'sine', 0);
+    } else if (type === 'sky') {
+      // Arpeggiated celesta / harp triad
+      const base = pick([523.25, 587.33, 659.25]);
+      [1, 1.25, 1.5, 2].forEach((mult, idx) => {
+        playSanctuaryChime(base * mult, 2.4, idx === 3 ? 'triangle' : 'sine', idx * 0.065);
+      });
+    } else if (type === 'water') {
+      // Warm singing bowl + water harmonic overtone
+      const base = pick([261.63, 293.66, 329.63, 392.0]);
+      [1, 1.5, 2.01].forEach((mult, idx) => {
+        playSanctuaryChime(base * mult, 2.8 - idx * 0.35, idx === 0 ? 'triangle' : 'sine', 0);
+      });
+    } else if (type === 'breath_in' || type === 'breath_out') {
+      const freqs = type === 'breath_in' ? [261.63, 392.0] : [220.0, 329.63];
+      freqs.forEach((f) => playSanctuaryChime(f, 3.1, 'sine', 0));
+    }
   }
 
   // =========================================================================
@@ -711,7 +737,7 @@
     playChime(light.zone === 'water' ? 'water' : 'sky');
     selectedLight = { ...light, isMine: true };
     showGentleToast(
-      `Dnes jsi udělal něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.`
+      `Dnes se ti povedlo něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.`
     );
   }
 
@@ -737,7 +763,7 @@
     triggerLightBloom(saved.x, saved.y, ELEMENT_MAP[deed.element]?.softColor || '#fde68a', isWater, true);
     playChime(isWater ? 'water' : 'sky');
     showGentleToast(
-      `Dnes jsi udělal něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.`
+      `Dnes se ti povedlo něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.`
     );
   }
 
@@ -859,7 +885,7 @@
       triggerLightBloom(nx, ny, elMeta.softColor, isWater, true);
       playChime(isWater ? 'water' : 'sky');
       showGentleToast(
-        'Dnes jsi udělal něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.'
+        'Dnes se ti povedlo něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.'
       );
       return;
     }
@@ -881,7 +907,7 @@
     triggerLightBloom(saved.x, saved.y, clickedWater ? '#fed7aa' : '#fde68a', clickedWater, true);
     playChime(clickedWater ? 'water' : 'sky');
     showGentleToast(
-      'Dnes jsi udělal něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.'
+      'Dnes se ti povedlo něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.'
     );
   }
 
@@ -904,7 +930,7 @@
     triggerLightBloom(saved.x, saved.y, semanticType === 'wave' ? '#6ee7b7' : isWater ? '#fed7aa' : '#fde68a', isWater, true);
     playChime(isWater ? 'water' : 'sky');
     showGentleToast(
-      'Dnes jsi udělal něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.'
+      'Dnes se ti povedlo něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.'
     );
   }
 
@@ -958,9 +984,9 @@
   }
 
   function handleRestoreBackupCode() {
-    const res = restoreProgressFromBackupCode(backupCodeInput);
-    if (res.ok) {
-      backupStatusMsg = `✓ Obnoveno (${res.restoredSteps} skutků).`;
+    const ok = restoreProgressFromBackupCode(backupCodeInput);
+    if (ok) {
+      backupStatusMsg = `✓ Zápisník obnoven (${($completedSteps || []).length} skutků).`;
       backupCodeInput = '';
     } else {
       backupStatusMsg = 'Kód se nepodařilo přečíst. Zkontroluj prosím celé znění.';
@@ -1017,7 +1043,8 @@
       window.matchMedia &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    const fireflies = Array.from({ length: 54 }, (_, i) => ({
+    const lowPower = isLowPowerDevice();
+    const fireflies = Array.from({ length: lowPower ? 30 : 54 }, (_, i) => ({
       x: Math.random(),
       y: 0.36 + Math.random() * 0.58,
       vx: (Math.random() - 0.5) * 0.00042,
@@ -1044,15 +1071,48 @@
     let height = 0;
     let dpr = 1;
     let nextMeteorAt = 2.5;
+    // Adaptivní kvalita: když průměrný snímek trvá déle než ~24 ms, snížíme rozlišení plátna
+    // (méně pixelů = plynulejší animace na slabších telefonech a v in-app prohlížečích)
+    let dprCap = getCanvasDprCap();
+    let slowFrameAvg = 16.7;
+    let renderWorkAvg = 0;
+    let qualityCheckAt = 0;
+    let lastRenderMs = 0;
+    /** @type {CanvasRenderingContext2D | null} */
+    let ctxCache = null;
+    let lastParallax = '';
+    let lastTreatsAttr = '';
+
+    // Předrenderované sprity světlušek: 1× gradient místo 54 nových gradientů v každém snímku
+    function makeGlowSprite(inner, mid) {
+      const size = 64;
+      const sprite = document.createElement('canvas');
+      sprite.width = size;
+      sprite.height = size;
+      const sctx = sprite.getContext('2d');
+      if (sctx) {
+        const g = sctx.createRadialGradient(size / 2, size / 2, 0.5, size / 2, size / 2, size / 2);
+        g.addColorStop(0, inner);
+        g.addColorStop(0.42, mid);
+        g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        sctx.fillStyle = g;
+        sctx.fillRect(0, 0, size, size);
+      }
+      return sprite;
+    }
+    const goldFireflySprite = makeGlowSprite('rgba(254, 243, 199, 1)', 'rgba(251, 191, 36, 0.45)');
+    const greenFireflySprite = makeGlowSprite('rgba(209, 250, 229, 1)', 'rgba(52, 211, 153, 0.45)');
 
     function resize() {
       if (!canvasEl || !stageWrapEl) return;
       const rect = stageWrapEl.getBoundingClientRect();
       width = Math.max(320, rect.width);
       height = Math.max(320, rect.height);
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = Math.min(window.devicePixelRatio || 1, dprCap);
       canvasEl.width = Math.round(width * dpr);
       canvasEl.height = Math.round(height * dpr);
+      // Změna rozměru resetuje stav kontextu; instanci si ponecháme (shadowBlur override drží na objektu)
+      ctxCache = ctxCache || optimizeCanvasContext(canvasEl.getContext('2d'));
     }
 
     resize();
@@ -1093,21 +1153,47 @@
     }
 
     function render(nowMs) {
+      const workStart = performance.now();
       const t = nowMs * 0.001;
+      const rawDt = lastRenderMs ? nowMs - lastRenderMs : 16.7;
+      lastRenderMs = nowMs;
+      // k = 1 při 60 fps; fyzika (mlha, částice, vlny, Molly) tak běží stejně rychle na 60/120 Hz i při poklesu FPS
+      const k = frameStep(rawDt);
+
+      // Adaptivní kvalita (jen směrem dolů, max. 1× za 2 s, ignoruje návrat ze skryté záložky).
+      // Snižujeme jen když jsou snímky pomalé A zároveň je drahé samotné kreslení — úsporné režimy
+      // (iOS Low Power Mode, Android spořič baterie) omezují rAF na 30 fps i u lehké scény, a tam by
+      // snížení rozlišení jen zbytečně rozmazalo obraz.
+      if (rawDt < 250) {
+        slowFrameAvg = slowFrameAvg * 0.94 + rawDt * 0.06;
+        if (nowMs > qualityCheckAt && slowFrameAvg > 24 && renderWorkAvg > 9 && dprCap > 1) {
+          qualityCheckAt = nowMs + 2000;
+          const prevDpr = Math.min(window.devicePixelRatio || 1, dprCap);
+          dprCap = Math.max(1, dprCap - 0.5);
+          slowFrameAvg = 16.7;
+          // Přealokace plátna jen pokud se efektivní rozlišení opravdu změní (DPR 1 monitor nic nezíská)
+          if (Math.min(window.devicePixelRatio || 1, dprCap) !== prevDpr) resize();
+        }
+      }
 
       // Smooth pointer parallax for painted backdrop layers
       const targetPX = pointer.active ? pointer.x : 0.5 + Math.sin(t * 0.25) * 0.08;
       const targetPY = pointer.active ? pointer.y : 0.5 + Math.cos(t * 0.2) * 0.06;
-      pointer.smoothX += (targetPX - pointer.smoothX) * 0.06;
-      pointer.smoothY += (targetPY - pointer.smoothY) * 0.06;
+      const ease = 1 - Math.pow(0.94, k);
+      pointer.smoothX += (targetPX - pointer.smoothX) * ease;
+      pointer.smoothY += (targetPY - pointer.smoothY) * ease;
       if (!reducedMotion && parallaxEl) {
-        const tx = ((0.5 - pointer.smoothX) * 12).toFixed(2);
-        const ty = ((0.5 - pointer.smoothY) * 8).toFixed(2);
-        parallaxEl.style.transform = `scale(1.032) translate3d(${tx}px, ${ty}px, 0)`;
+        const tx = ((0.5 - pointer.smoothX) * 12).toFixed(1);
+        const ty = ((0.5 - pointer.smoothY) * 8).toFixed(1);
+        const tf = `scale(1.032) translate3d(${tx}px, ${ty}px, 0)`;
+        if (tf !== lastParallax) {
+          lastParallax = tf;
+          parallaxEl.style.transform = tf;
+        }
       }
 
       if (canvasEl && width > 0 && height > 0) {
-        const ctx = canvasEl.getContext('2d');
+        const ctx = ctxCache || (ctxCache = optimizeCanvasContext(canvasEl.getContext('2d')));
         if (ctx) {
           ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
           ctx.clearRect(0, 0, width, height);
@@ -1197,9 +1283,9 @@
 
           for (let m = meteors.length - 1; m >= 0; m--) {
             const mt = meteors[m];
-            mt.life += 1;
-            mt.x += mt.vx;
-            mt.y += mt.vy;
+            mt.life += k;
+            mt.x += mt.vx * k;
+            mt.y += mt.vy * k;
             const p = mt.life / mt.maxLife;
             if (p >= 1) {
               meteors.splice(m, 1);
@@ -1239,7 +1325,7 @@
           ctx.globalCompositeOperation = 'screen';
           for (const mc of mistClouds) {
             if (!reducedMotion) {
-              mc.x += mc.speed;
+              mc.x += mc.speed * k;
               if (mc.x > 1.25) mc.x = -0.25;
               if (mc.x < -0.25) mc.x = 1.25;
             }
@@ -1304,7 +1390,7 @@
 
           for (let c = constellationPulses.length - 1; c >= 0; c--) {
             const cp = constellationPulses[c];
-            cp.progress += 0.024;
+            cp.progress += 0.024 * k;
             if (cp.progress >= 1.25) {
               constellationPulses.splice(c, 1);
               continue;
@@ -1329,7 +1415,7 @@
           // 7. Ascending Launch Comets
           for (let c = activeComets.length - 1; c >= 0; c--) {
             const cm = activeComets[c];
-            cm.progress += cm.speed;
+            cm.progress += cm.speed * k;
             const p = Math.min(1, cm.progress);
             const inv = 1 - p;
             const cx = (inv * inv * cm.sx + 2 * inv * p * cm.cx + p * p * cm.tx) * width;
@@ -1437,7 +1523,7 @@
           // 9. Concentric Bioluminescent Water Ripples
           for (let i = waterRipples.length - 1; i >= 0; i--) {
             const rp = waterRipples[i];
-            rp.rx += rp.speed;
+            rp.rx += rp.speed * k;
             const lifeFrac = rp.rx / rp.maxRx;
             if (lifeFrac >= 1 || rp.alpha < 0.015) {
               waterRipples.splice(i, 1);
@@ -1633,7 +1719,7 @@
           ctx.globalCompositeOperation = 'screen';
           for (let s = shockwaves.length - 1; s >= 0; s--) {
             const sw = shockwaves[s];
-            sw.r += (sw.maxR - sw.r) * 0.065 + 1.4;
+            sw.r += ((sw.maxR - sw.r) * 0.065 + 1.4) * k;
             const p = sw.r / sw.maxR;
             if (p >= 0.98) {
               shockwaves.splice(s, 1);
@@ -1661,14 +1747,15 @@
                 const dy = pointer.y - ff.y;
                 const dist = Math.hypot(dx, dy);
                 if (dist > 0.02 && dist < 0.24) {
-                  ff.vx += (dx / dist) * 0.000018;
-                  ff.vy += (dy / dist) * 0.000018;
+                  ff.vx += (dx / dist) * 0.000018 * k;
+                  ff.vy += (dy / dist) * 0.000018 * k;
                 }
               }
-              ff.vx *= 0.992;
-              ff.vy *= 0.992;
-              ff.x += ff.vx + Math.sin(t * 0.7 + ff.phase) * 0.00022;
-              ff.y += ff.vy + Math.cos(t * 0.85 + ff.phase) * 0.00016;
+              const damp = Math.pow(0.992, k);
+              ff.vx *= damp;
+              ff.vy *= damp;
+              ff.x += (ff.vx + Math.sin(t * 0.7 + ff.phase) * 0.00022) * k;
+              ff.y += (ff.vy + Math.cos(t * 0.85 + ff.phase) * 0.00016) * k;
               if (ff.x < 0.02) ff.x = 0.98;
               if (ff.x > 0.98) ff.x = 0.02;
               if (ff.y < 0.3) ff.vy = Math.abs(ff.vy) + 0.0001;
@@ -1679,24 +1766,15 @@
             const glowPulse = (0.3 + 0.7 * Math.max(0, Math.sin(t * 2.0 + ff.phase))) * breathSync;
             const fx = ff.x * width;
             const fy = ff.y * height;
-            const fg = ctx.createRadialGradient(fx, fy, 0.5, fx, fy, ff.size * 5.6);
-            if (ff.gold) {
-              fg.addColorStop(0, `rgba(254, 243, 199, ${Math.min(1, glowPulse).toFixed(3)})`);
-              fg.addColorStop(0.42, `rgba(251, 191, 36, ${(glowPulse * 0.45).toFixed(3)})`);
-            } else {
-              fg.addColorStop(0, `rgba(209, 250, 229, ${Math.min(1, glowPulse).toFixed(3)})`);
-              fg.addColorStop(0.42, `rgba(52, 211, 153, ${(glowPulse * 0.45).toFixed(3)})`);
-            }
-            fg.addColorStop(1, 'rgba(0, 0, 0, 0)');
-            ctx.fillStyle = fg;
-            ctx.beginPath();
-            ctx.arc(fx, fy, ff.size * 5.6, 0, Math.PI * 2);
-            ctx.fill();
+            const fr = ff.size * 5.6;
+            ctx.globalAlpha = Math.max(0, Math.min(1, glowPulse));
+            ctx.drawImage(ff.gold ? goldFireflySprite : greenFireflySprite, fx - fr, fy - fr, fr * 2, fr * 2);
           }
+          ctx.globalAlpha = 1;
 
           // 12B. Sanctuary Molly — Želvovinová patronka u jezera (nx = 0.24, ny = 0.72) + odraz na hladině + mistička hojnosti (nx = 0.19, ny = 0.73) + letící pamlsky
           if (mollyJoyTimer > 0) {
-            mollyJoyTimer = Math.max(0, mollyJoyTimer - 0.02);
+            mollyJoyTimer = Math.max(0, mollyJoyTimer - 0.02 * k);
           }
 
           const mx = MOLLY_SANCTUARY_POS.x * width;
@@ -1708,7 +1786,7 @@
           // Letící pamlskové oblouky (Treat Firefly Arcs) ke břehu k Molly
           for (let a = mollyTreatArcs.length - 1; a >= 0; a--) {
             const arc = mollyTreatArcs[a];
-            arc.progress = Math.min(1, arc.progress + (reducedMotion ? 0.25 : 0.032));
+            arc.progress = Math.min(1, arc.progress + (reducedMotion ? 0.25 : 0.032) * k);
             const p = arc.progress;
             const u = 1 - p;
             const ax = (u * u * arc.sx + 2 * u * p * arc.cx + p * p * arc.tx) * width;
@@ -1963,13 +2041,15 @@
             });
           } else {
             [-4.1, 4.1].forEach((ex) => {
+              // Levná průsvitná záře místo shadowBlur (ten se počítá na CPU v každém snímku)
+              ctx.fillStyle = 'rgba(190, 242, 100, 0.3)';
+              ctx.beginPath();
+              ctx.ellipse(mhx + ex, mhy - 0.6, 3.9, 3.7, 0, 0, Math.PI * 2);
+              ctx.fill();
               ctx.fillStyle = '#84cc16';
-              ctx.shadowColor = '#bef264';
-              ctx.shadowBlur = 6;
               ctx.beginPath();
               ctx.ellipse(mhx + ex, mhy - 0.6, 2.8, 2.6, 0, 0, Math.PI * 2);
               ctx.fill();
-              ctx.shadowBlur = 0;
 
               ctx.fillStyle = '#090d08';
               ctx.beginPath();
@@ -2021,9 +2101,9 @@
           // Srdíčka radosti nad Molly u jezera
           for (let hi = mollyLakeHearts.length - 1; hi >= 0; hi--) {
             const lh = mollyLakeHearts[hi];
-            lh.x += lh.vx;
-            lh.y += lh.vy;
-            lh.alpha *= 0.96;
+            lh.x += lh.vx * k;
+            lh.y += lh.vy * k;
+            lh.alpha *= Math.pow(0.96, k);
             if (lh.alpha < 0.04) {
               mollyLakeHearts.splice(hi, 1);
               continue;
@@ -2044,9 +2124,11 @@
           }
           ctx.restore();
 
-          if (canvasEl) {
+          // DOM atributy jen při změně — zápis v každém snímku vynucoval přepočet stylů
+          if (canvasEl && lastTreatsAttr !== String(treatsTotal)) {
+            lastTreatsAttr = String(treatsTotal);
             canvasEl.dataset.sanctuaryMolly = 'ready';
-            canvasEl.dataset.mollyTreats = String(treatsTotal);
+            canvasEl.dataset.mollyTreats = lastTreatsAttr;
           }
 
           // 13. Cascading Stardust, Lantern Embers & Cursor Wake Particles
@@ -2054,12 +2136,12 @@
           ctx.globalCompositeOperation = 'screen';
           for (let i = burstParticles.length - 1; i >= 0; i--) {
             const bp = burstParticles[i];
-            bp.life += 1;
-            bp.vy += bp.gravity;
-            bp.x += bp.vx;
-            bp.y += bp.vy;
-            bp.vx *= 0.984;
-            bp.vy *= 0.986;
+            bp.life += k;
+            bp.vy += bp.gravity * k;
+            bp.x += bp.vx * k;
+            bp.y += bp.vy * k;
+            bp.vx *= Math.pow(0.984, k);
+            bp.vy *= Math.pow(0.986, k);
             const fade = Math.max(0, 1 - bp.life / bp.maxLife);
             if (fade <= 0.01) {
               burstParticles.splice(i, 1);
@@ -2102,6 +2184,8 @@
           }
         }
       }
+      // Skutečná cena vykreslení snímku (bez čekání na vsync) — pro adaptivní kvalitu
+      renderWorkAvg = renderWorkAvg * 0.9 + (performance.now() - workStart) * 0.1;
       if (!isOffscreen) {
         rafId = requestAnimationFrame(render);
       }
@@ -2118,6 +2202,7 @@
             isOffscreen = true;
             cancelAnimationFrame(rafId);
             rafId = 0;
+            lastRenderMs = 0;
           } else if (isOffscreen) {
             isOffscreen = false;
             if (!rafId) rafId = requestAnimationFrame(render);
@@ -2130,7 +2215,7 @@
 
     const pulseTimer = setTimeout(async () => {
       const pulse = await fetchAmbientPulse();
-      if (pulse?.message) ambientPulseText = pulse.message;
+      ambientPulse = pulse;
     }, 300);
 
     rafId = requestAnimationFrame(render);
@@ -2380,7 +2465,7 @@
             class:active={ritualMode === 'water'}
             on:click={() => (ritualMode = 'water')}
           >
-            🏮 Lucerna · Osobní skutek
+            🏮 Lucerna <span class="rp-sub">· Osobní skutek</span>
           </button>
           <button
             type="button"
@@ -2388,7 +2473,7 @@
             class:active={ritualMode === 'sky'}
             on:click={() => (ritualMode = 'sky')}
           >
-            ✦ Hvězda · Inspirace
+            ✦ Hvězda <span class="rp-sub">· Inspirace</span>
           </button>
           <button
             type="button"
@@ -2396,15 +2481,18 @@
             class:active={ritualMode === 'wave'}
             on:click={() => (ritualMode = 'wave')}
           >
-            〰️ Vlna · Pomoc druhému
+            〰️ Vlna <span class="rp-sub">· Pomoc druhému</span>
           </button>
         </div>
 
         <input
           type="text"
+          id="ritual-deed-input"
+          name="deed"
+          autocomplete="off"
           bind:value={ritualInput}
           maxlength="110"
-          placeholder="Napiš drobný skutek ze dneška (uloží se jen u tebe)…"
+          placeholder="Tvůj dnešní skutek…"
           aria-label="Popis tvého dobrého skutku"
         />
 
@@ -2417,6 +2505,8 @@
         </button>
       </div>
 
+      <!-- Když čeká dokončený skutek na rozsvícení, necháme jen jednu jasnou cestu (banner výše) -->
+      {#if !nextSeedToPlant}
       <div class="ritual-whisper-row" aria-label="Rychlé příklady dnešních dobrých skutků">
         <span class="rw-lbl">Rychle rozsvítit:</span>
         {#each QUICK_OFFLINE_DEEDS as qd}
@@ -2434,6 +2524,7 @@
           </button>
         {/if}
       </div>
+      {/if}
     </form>
   </section>
 
@@ -2445,7 +2536,7 @@
       <span class="sec-kicker">CHVÍLE KLIDU · NÁVRAT K SOBĚ</span>
       <h2>Dechové zastavení, když <span class="serif-accent">potřebuješ nabrat sílu</span></h2>
       <p class="breath-lead">
-        Pomáhat druhým jde snáz, když máš sám/sama z čeho brát. Vyber si rytmus a nech dech na minutu zklidnit.
+        Pomáhat druhým jde snáz, když máš i ty z čeho brát. Vyber si rytmus a nech dech na minutu zklidnit.
       </p>
 
       <div class="pattern-pills" role="radiogroup" aria-label="Zvolit dechový rytmus">
@@ -2585,7 +2676,7 @@
           <span>Všimni si, o kolik volněji teď dýcháš.</span>
         {:else}
           <strong>Dopřej si minutu klidného dechu</strong>
-          <span>Hladina tůně výše dýchá v rytmu spolu s tebou.</span>
+          <span>Hladina tůně dýchá v klidném rytmu s tebou.</span>
         {/if}
       </div>
 
@@ -2594,7 +2685,7 @@
           Zastavit cvičení
         </button>
       {:else}
-        <button type="button" class="breath-cta start" on:click={startBreathing}>
+        <button type="button" class="breath-cta start" data-molly-guide="true" on:click={startBreathing}>
           🌊 Spustit klidný dech ({breathingDurationSec === 60 ? '1 min' : '2 min'})
         </button>
       {/if}
@@ -2678,7 +2769,7 @@
       </summary>
       <div class="drawer-inner">
         <p class="drawer-note">
-          Uloženo pouze u tebe v prohlížeči — jako připomenutí chvil, kdy jsi někomu nebo něčemu pomohl/a.
+          Uloženo pouze u tebe v prohlížeči — jako připomenutí chvil, kdy tvoje pomoc někomu nebo něčemu udělala dobře.
         </p>
         {#if ($completedSteps || []).length === 0}
           <p class="empty-journal">
@@ -2697,6 +2788,8 @@
                   <div class="ji-edit">
                     <input
                       type="text"
+                      name="journal_note"
+                      autocomplete="off"
                       bind:value={draftNote}
                       placeholder="Krátká poznámka pro sebe…"
                       maxlength="220"
@@ -2728,8 +2821,12 @@
             <div class="ji-edit">
               <input
                 type="text"
+                id="backup-code-input"
+                name="backup-code"
+                autocomplete="off"
+                aria-label="Záložní kód pro obnovu zápisníku"
                 bind:value={backupCodeInput}
-                placeholder="Vložit záložní kód (AA1:…) pro obnovu na jiném zařízení"
+                placeholder="Vložit záložní kód (AA1-…) pro obnovu na jiném zařízení"
               />
               <button type="button" on:click={handleRestoreBackupCode}>Obnovit</button>
             </div>
@@ -2918,13 +3015,14 @@
     display: block;
   }
 
+  /* Překryvy nad animovaným plátnem záměrně BEZ backdrop-filter: rozmazání by se muselo přepočítat
+     v každém snímku plátna (60×/s) a na mobilech způsobovalo sekání. Vyšší krytí pozadí to vyváží. */
   .light-hover-pill {
     position: absolute;
     transform: translate(-50%, -100%);
     padding: 0.36rem 0.75rem;
     border-radius: 999px;
-    background: rgba(6, 24, 16, 0.88);
-    backdrop-filter: blur(10px);
+    background: rgba(6, 24, 16, 0.94);
     border: 1px solid rgba(253, 230, 138, 0.48);
     color: #fef3c7;
     font-size: 0.76rem;
@@ -2960,8 +3058,7 @@
     margin: 0 auto;
     padding: 0.72rem 1rem;
     border-radius: 18px;
-    background: rgba(8, 30, 21, 0.9);
-    backdrop-filter: blur(12px);
+    background: rgba(8, 30, 21, 0.95);
     border: 1px solid rgba(253, 230, 138, 0.48);
     display: flex;
     align-items: center;
@@ -3025,8 +3122,7 @@
     transform: translateX(-50%);
     padding: 0.52rem 1.1rem;
     border-radius: 999px;
-    background: rgba(8, 30, 21, 0.92);
-    backdrop-filter: blur(10px);
+    background: rgba(8, 30, 21, 0.96);
     border: 1px solid rgba(253, 230, 138, 0.48);
     color: #fef3c7;
     font-size: 0.84rem;
@@ -3044,8 +3140,7 @@
     width: min(340px, calc(100% - 2rem));
     padding: 1.05rem 1.15rem;
     border-radius: 20px;
-    background: rgba(7, 26, 18, 0.94);
-    backdrop-filter: blur(16px);
+    background: rgba(7, 26, 18, 0.97);
     border: 1px solid rgba(253, 230, 138, 0.4);
     color: #f8faf8;
     z-index: 6;
@@ -3794,7 +3889,7 @@
     }
 
     .sanctuary-stage {
-      padding: 0.75rem 0.75rem 0.85rem;
+      padding: 0.7rem 0.75rem 0.8rem;
       border-radius: 20px;
     }
 
@@ -3848,9 +3943,9 @@
     }
 
     .sanctuary-viewport {
-      min-height: 250px;
-      height: 44dvh;
-      max-height: 360px;
+      min-height: 205px;
+      height: 31dvh;
+      max-height: 245px;
       aspect-ratio: auto;
       border-radius: 16px;
     }
@@ -3887,16 +3982,25 @@
       justify-content: center;
     }
 
+    /* Na mobilu všechny tři druhy světla vedle sebe bez skrytého vodorovného posunu
+       (dřív se volby posouvaly do strany a nebylo poznat, že existuje i třetí) */
     .ritual-modes {
       width: 100%;
-      overflow-x: auto;
-      scrollbar-width: none;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      overflow: visible;
     }
 
     .ritual-pill {
-      padding: 0.34rem 0.55rem;
-      font-size: 0.72rem;
+      padding: 0.4rem 0.3rem;
+      font-size: 0.74rem;
       white-space: nowrap;
+      text-align: center;
+      justify-content: center;
+    }
+
+    .ritual-pill .rp-sub {
+      display: none;
     }
   }
 

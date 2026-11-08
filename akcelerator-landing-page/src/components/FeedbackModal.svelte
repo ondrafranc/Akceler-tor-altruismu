@@ -53,7 +53,7 @@
     2: 'Trochu pomohlo',
     3: 'Pomohlo',
     4: 'Hodně pomohlo',
-    5: 'Skvělé, přesně to jsem potřeboval/a'
+    5: 'Skvělé, přesně tohle se mi hodilo'
   };
 
   function openModal() {
@@ -162,6 +162,8 @@
         <label class="field-label" for="fb-textarea">Tvůj vzkaz</label>
         <textarea
           id="fb-textarea"
+          name="feedback_message"
+          autocomplete="off"
           bind:value={feedback}
           rows="4"
           maxlength="1000"
@@ -207,20 +209,21 @@
 <style>
   .feedback-pill {
     position: fixed;
-    bottom: 14px;
-    left: 14px;
+    bottom: 52px;
+    right: 12px;
+    left: auto;
     z-index: 90;
     display: inline-flex;
     align-items: center;
-    gap: 0.45rem;
-    padding: 0.5rem 0.85rem;
+    gap: 0.38rem;
+    padding: 0.38rem 0.72rem;
     border-radius: 999px;
     border: 1px solid rgba(22, 82, 56, 0.16);
     background: rgba(253, 255, 253, 0.94);
     color: #143324;
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     cursor: pointer;
     box-shadow: 0 10px 24px -8px rgba(12, 38, 26, 0.18);
     backdrop-filter: blur(14px);

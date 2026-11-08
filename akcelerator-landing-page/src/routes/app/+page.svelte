@@ -9,7 +9,7 @@
 <div class="app-page">
   <div class="subpage-hero header">
     <div class="hero-kicker">AKCELERÁTOR ALTRUISMU · POMÁHÁME LIDEM POMÁHAT</div>
-    <h1 class="title">Kudy se ti dnes <span class="serif-accent">chce pomoci?</span></h1>
+    <h1 class="title">Kudy se ti dnes <span class="serif-accent">chce pomoct?</span></h1>
     <p class="subtitle">
       Ať máš 2 minuty u telefonu, nebo volné odpoledne venku — vyber si přímou cestu ke skutečnému dobrému skutku.
     </p>
@@ -25,7 +25,7 @@
       <div class="card-cta">Vstoupit do Krajiny dobra →</div>
     </a>
 
-    <a class="card" href="/app/guided" on:click={() => trackEvent('aa_app_choice', { choice: 'guided' })}>
+    <a class="card" href="/app/guided" data-molly-guide="true" on:click={() => trackEvent('aa_app_choice', { choice: 'guided' })}>
       <span class="card-overline">🧭 VÝBĚR NA MÍRU</span>
       <div class="card-title">Průvodce podle tvé situace</div>
       <div class="card-desc">
@@ -45,7 +45,7 @@
 
     <a class="card" href="/app/online" on:click={() => trackEvent('aa_app_choice', { choice: 'online' })}>
       <span class="card-overline">⚡ Z DOMOVA I CESTOU VEN</span>
-      <div class="card-title">Online mikro-kroky</div>
+      <div class="card-title">Drobné skutky na pár minut</div>
       <div class="card-desc">
         Ověřené české projekty přehledně na jednom místě — od naplnění misky v útulku jedním klikem až po mapování studánek.
       </div>
@@ -58,7 +58,7 @@
   .app-page {
     max-width: 1100px;
     margin: 0 auto;
-    padding: 0.75rem 1.25rem 3.8rem;
+    padding: 0.75rem 1.25rem 4rem;
   }
 
   .header {
@@ -160,6 +160,63 @@
   @media (max-width: 760px) {
     .grid {
       grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 680px) {
+    .app-page {
+      padding: 0.35rem 0.75rem 5.5rem;
+    }
+
+    .subpage-hero.header {
+      padding: 0.75rem 0.9rem !important;
+      margin-bottom: 0.45rem !important;
+      border-radius: 18px;
+    }
+
+    .hero-kicker,
+    .subtitle {
+      display: none;
+    }
+
+    .title {
+      font-size: 1.28rem;
+      line-height: 1.18;
+    }
+
+    .grid {
+      gap: 0.48rem;
+      margin-top: 0.45rem;
+    }
+
+    .card {
+      padding: 0.68rem 0.88rem;
+      border-radius: 16px;
+      gap: 0.18rem;
+    }
+
+    .card-overline {
+      font-size: 0.63rem;
+    }
+
+    .card-title {
+      font-size: 0.98rem;
+      line-height: 1.2;
+    }
+
+    .card-desc {
+      font-size: 0.76rem;
+      line-height: 1.3;
+      display: -webkit-box;
+      line-clamp: 2;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-cta {
+      font-size: 0.78rem;
+      margin-top: 0.12rem;
     }
   }
 </style>

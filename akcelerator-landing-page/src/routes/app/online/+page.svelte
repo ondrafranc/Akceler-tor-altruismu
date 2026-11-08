@@ -25,7 +25,8 @@
     consumePendingPartnerReturn,
     getPendingPartnerReturnRemainingMs,
     triggerCanvasBurst,
-    fetchAmbientPulse
+    fetchAmbientPulse,
+    describeAmbientPulse
   } from '../../../lib/sensoryEngine.js';
   import { notifyMollySpark } from '../../../lib/mollyStore.js';
   import { cleanTitle, cleanMeta, safeGetItem } from '../../../lib/utils.js';
@@ -45,7 +46,9 @@
   let returnMetric = 0;
   let awaitingReturnAction = null;
   let leaveTimestamp = 0;
-  let ambientPulseText = 'Před chvílí někdo v Brně naplnil misku v útulku';
+  /** @type {any} */
+  let ambientPulse = null;
+  $: ambientPulseText = describeAmbientPulse(ambientPulse, {});
 
   const FILTERS = [
     { id: 'all', label: '✨ Doporučené' },
@@ -122,7 +125,7 @@
 
     const pulseTimer = setTimeout(async () => {
       const pulse = await fetchAmbientPulse();
-      if (pulse?.message) ambientPulseText = pulse.message;
+      ambientPulse = pulse;
     }, 300);
 
     document.addEventListener('visibilitychange', onVis);
@@ -252,7 +255,7 @@
 </script>
 
 <svelte:head>
-  <title>Online mikro-kroky a drobná pomoc — Akcelerátor altruismu</title>
+  <title>Drobné skutky na pár minut — Akcelerátor altruismu</title>
 </svelte:head>
 
 <div class="page">
@@ -267,9 +270,12 @@
       <div class="search-wrap">
         <input
           type="search"
+          id="online-search"
+          name="q"
+          autocomplete="off"
           bind:value={searchQuery}
-          placeholder="Hledat: útulek, mapování, ptáci, senioři, studánky…"
-          aria-label="Hledat v mikro-krocích"
+          placeholder="Hledat (útulek, ptáci…)"
+          aria-label="Hledat v drobných skutcích (např. útulek, mapování, ptáci, senioři, studánky)"
         />
       </div>
       <button type="button" class="btn-random-spark" on:click={pickRandomSpark}>
@@ -333,7 +339,7 @@
     </div>
   {/if}
 
-  <div class="filters-bar filter-toolbar" role="group" aria-label="Filtrovat mikro-kroky">
+  <div class="filters-bar filter-toolbar" role="group" aria-label="Filtrovat drobné skutky">
     {#each FILTERS as f}
       <button
         type="button"
@@ -368,7 +374,7 @@
     </div>
   {:else}
     <div class="grid">
-      {#each visibleActions as o (o.id)}
+      {#each visibleActions as o, oi (o.id)}
         <article
           id={`online-card-${o.id}`}
           class="card"
@@ -383,10 +389,10 @@
               class="card-evidence-badge tier-{o.impactEvidence || 'B'}"
               title={EVIDENCE_TIERS[o.impactEvidence || 'B']?.desc}
             >
-              Důkazy {o.impactEvidence || 'B'}
+              Důkazy {o.impactEvidence || 'B'} · {EVIDENCE_TIERS[o.impactEvidence || 'B']?.shortLabel}
             </span>
             {#if isCompleted(o.id)}
-              <span class="done-dot">· ✓ Splněno</span>
+              <span class="done-dot">✓ Splněno</span>
             {/if}
           </div>
 
@@ -429,6 +435,7 @@
           <div class="actions-row">
             <a
               class="cta primary"
+              data-molly-guide={oi === 0 ? 'true' : undefined}
               href={o.url}
               target="_blank"
               rel="noopener noreferrer"
@@ -502,7 +509,7 @@
           <!-- 5. Patička ověření + Sdílení + Nahlásit nefunkční odkaz -->
           <div class="card-verify-footer">
             <span>
-              Ověřeno: <strong>{o.lastVerifiedAt || '11/2026'}</strong> · Zdroj:
+              Ověřeno: <strong>{o.verifiedLabel}</strong> · Zdroj:
               <a
                 href={o.sourceUrl || o.url}
                 target="_blank"
@@ -590,26 +597,28 @@
   .page {
     max-width: 1140px;
     margin: 0 auto;
-    padding: 0.75rem 1.25rem 4rem;
+    padding: 0.45rem 1.25rem 5rem;
   }
 
-  .header {
+  .subpage-hero.header {
     text-align: center;
+    padding: 0.85rem 1.4rem !important;
+    margin-bottom: 0.45rem !important;
   }
 
   .hero-kicker {
-    font-size: 0.74rem;
+    font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.12em;
     color: #fde68a;
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.25rem;
   }
 
   .title {
     font-family: var(--font-sans);
     font-weight: 800;
     color: #ffffff;
-    font-size: clamp(2rem, 3.5vw, 2.75rem);
+    font-size: clamp(1.65rem, 2.8vw, 2.2rem);
     margin: 0;
     letter-spacing: -0.03em;
     line-height: 1.12;
@@ -622,14 +631,14 @@
 
   .subtitle {
     color: rgba(236, 248, 241, 0.9);
-    margin: 0.55rem auto 0;
+    margin: 0.28rem auto 0;
     max-width: 52ch;
-    font-size: 0.96rem;
-    line-height: 1.58;
+    font-size: 0.88rem;
+    line-height: 1.44;
   }
 
   .hero-tools-row {
-    margin: 1.2rem auto 0;
+    margin: 0.55rem auto 0;
     max-width: 640px;
     display: flex;
     gap: 0.55rem;
@@ -677,15 +686,15 @@
   .online-pulse-wrap {
     display: flex;
     justify-content: center;
-    margin-top: 1.15rem;
+    margin-top: 0.9rem;
   }
 
   .filters-bar {
     display: flex;
-    gap: 0.45rem;
+    gap: 0.4rem;
     justify-content: center;
     flex-wrap: wrap;
-    margin: 1.15rem 0 1.5rem;
+    margin: 0.45rem 0 0.65rem;
   }
 
   .filter-chip {
@@ -729,12 +738,16 @@
   .card {
     background: rgba(255, 255, 255, 0.96);
     border: 1px solid rgba(22, 66, 48, 0.09);
-    border-radius: 24px;
+    border-radius: 22px;
     box-shadow: var(--shadow-sm);
-    padding: 1.65rem;
+    padding: 0.88rem 1.08rem;
     display: flex;
     flex-direction: column;
     transition: transform 0.24s var(--ease-gentle), box-shadow 0.24s var(--ease-gentle);
+  }
+
+  .card-effect-stage :global(.impact-payoff-canvas) {
+    height: 76px;
   }
 
   .card:hover {
@@ -784,14 +797,14 @@
   }
 
   .card-impact-box {
-    margin: 0 0 0.75rem;
-    padding-top: 0.5rem;
+    margin: 0 0 0.45rem;
+    padding-top: 0.35rem;
     border-top: 1px solid rgba(22, 66, 48, 0.08);
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
-    font-size: 0.8rem;
-    line-height: 1.45;
+    gap: 0.16rem;
+    font-size: 0.76rem;
+    line-height: 1.38;
   }
 
   .card-benefit-line strong {
@@ -856,7 +869,7 @@
   }
 
   .online-methodology-drawer {
-    margin-top: 2rem;
+    margin-top: 1.25rem;
   }
 
   .om-body {
@@ -898,6 +911,10 @@
   .done-dot {
     color: #047857;
     font-weight: 700;
+    white-space: nowrap;
+    padding: 0.05rem 0.45rem;
+    border-radius: 999px;
+    background: rgba(16, 185, 129, 0.1);
   }
 
   .card-title {
@@ -910,24 +927,29 @@
   }
 
   .org-name {
-    font-size: 0.82rem;
+    font-size: 0.78rem;
     font-weight: 700;
     color: var(--emerald-600);
-    margin-bottom: 0.55rem;
+    margin-bottom: 0.32rem;
   }
 
   .card-desc {
-    margin: 0 0 0.85rem;
+    margin: 0 0 0.48rem;
     color: var(--text-secondary);
-    line-height: 1.58;
+    line-height: 1.44;
     flex: 1;
-    font-size: 0.9rem;
+    font-size: 0.84rem;
+    display: -webkit-box;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .steps-inline {
-    font-size: 0.82rem;
+    font-size: 0.78rem;
     color: var(--text-secondary);
-    margin-bottom: 0.9rem;
+    margin-bottom: 0.5rem;
   }
 
   .steps-inline summary {
@@ -1029,6 +1051,15 @@
     }
   }
 
+  @media (min-width: 681px) and (max-width: 980px) {
+    .grid > .card:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+      width: 100%;
+      max-width: calc(50% - 0.6rem);
+      justify-self: center;
+    }
+  }
+
   @media (max-width: 640px) {
     .grid {
       grid-template-columns: 1fr;
@@ -1041,8 +1072,8 @@
     }
 
     .subpage-hero.header {
-      padding: 0.7rem 0.75rem 0.65rem;
-      margin-bottom: 0.45rem;
+      padding: 0.82rem 0.8rem 0.75rem;
+      margin-bottom: 0.55rem;
       border-radius: 18px;
     }
 
@@ -1109,17 +1140,21 @@
 
     .grid {
       grid-template-columns: 1fr;
-      gap: 0.65rem;
+      gap: 0.85rem;
     }
 
     .card {
-      padding: 0.78rem 0.85rem;
+      padding: 0.88rem 0.88rem;
       border-radius: 16px;
+    }
+
+    .card-effect-stage :global(.impact-payoff-canvas) {
+      height: 66px;
     }
 
     .card-meta-top {
       font-size: 0.71rem;
-      margin-bottom: 0.25rem;
+      margin-bottom: 0.28rem;
     }
 
     .card-title {
@@ -1131,7 +1166,7 @@
     .card-desc {
       font-size: 0.82rem;
       line-height: 1.38;
-      margin: 0 0 0.45rem;
+      margin: 0 0 0.58rem;
       display: -webkit-box;
       line-clamp: 2;
       -webkit-line-clamp: 2;
@@ -1140,14 +1175,14 @@
     }
 
     .card-impact-box {
-      padding: 0.38rem 0.55rem;
-      margin-bottom: 0.45rem;
+      padding: 0.48rem 0.6rem;
+      margin-bottom: 0.55rem;
       font-size: 0.78rem;
       gap: 0.16rem;
     }
 
     .steps-inline {
-      margin-bottom: 0.45rem;
+      margin-bottom: 0.55rem;
       font-size: 0.76rem;
     }
 
@@ -1162,9 +1197,13 @@
     }
 
     .card-verify-footer {
-      margin-top: 0.45rem;
-      padding-top: 0.35rem;
+      margin-top: 0.55rem;
+      padding-top: 0.44rem;
       font-size: 0.68rem;
+    }
+
+    .online-methodology-drawer {
+      max-width: 100%;
     }
   }
 </style>

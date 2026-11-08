@@ -94,7 +94,7 @@
       </a>
 
       <nav class="nav-links" aria-label="Hlavní navigace">
-        <a href="/" class="nav-pill" class:active={pathname === '/' || pathname === '/app'}>
+        <a href="/" class="nav-pill" class:active={pathname === '/'}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           <span>Rychlý start</span>
         </a>
@@ -104,7 +104,7 @@
         </a>
         <a href="/app/online" class="nav-pill" class:active={pathname.startsWith('/app/online')}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-          <span>Mikro-kroky</span>
+          <span>Drobné skutky</span>
         </a>
         <a href="/near" class="nav-pill" class:active={pathname.startsWith('/near')}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -140,7 +140,7 @@
         <div class="footer-trust">
           <span>Zdarma a bez účtu</span>
           <span>•</span>
-          <span>Ověřené zdroje a transparentní dopad (A/B/C)</span>
+          <span>Ověřené zdroje a poctivě popsaný dopad</span>
           <span>•</span>
           <span>V okolí i z domova</span>
         </div>
@@ -152,7 +152,7 @@
           <a href="/">Rychlý start</a>
           <a href="/svet">Krajina dobra a dechové zastavení</a>
           <a href="/app/guided">Průvodce podle situace</a>
-          <a href="/app/online">Online mikro-kroky</a>
+          <a href="/app/online">Drobné skutky na pár minut</a>
           <a href="/near">Mapa pomoci v okolí</a>
           <a href="/submit">Přidat místní organizaci nebo akci</a>
         </div>
@@ -182,13 +182,13 @@
   </footer>
 
   <nav class="mobile-bottom-nav" aria-label="Mobilní navigace">
-    <a href="/" class="mb-tab" class:active={pathname === '/' || pathname === '/app'}>
+    <a href="/" class="mb-tab" class:active={pathname === '/'}>
       <span class="mb-icon" aria-hidden="true">⚡</span>
       <span class="mb-label">Dnes</span>
     </a>
     <a href="/app/online" class="mb-tab" class:active={pathname.startsWith('/app/online')}>
       <span class="mb-icon" aria-hidden="true">⏱️</span>
-      <span class="mb-label">2–15 min</span>
+      <span class="mb-label">Skutky</span>
     </a>
     <a href="/near" class="mb-tab" class:active={pathname.startsWith('/near')}>
       <span class="mb-icon" aria-hidden="true">📍</span>
@@ -666,6 +666,16 @@
     .site-footer {
       padding: 2rem 1rem 2.5rem 1rem;
       margin-top: 2rem;
+    }
+  }
+
+  /* Dotykové tablety: rozmazání pod lepivou hlavičkou se při každém scrollu přepočítává
+     a na slabších GPU trhá posun stránky. Téměř neprůhledné pozadí vypadá stejně a je zdarma. */
+  @media (pointer: coarse) {
+    .nav-capsule {
+      background: rgba(252, 254, 251, 0.97);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
     }
   }
 </style>

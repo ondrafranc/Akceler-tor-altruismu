@@ -29,7 +29,8 @@
     consumePendingPartnerReturn,
     getPendingPartnerReturnRemainingMs,
     triggerCanvasBurst,
-    fetchAmbientPulse
+    fetchAmbientPulse,
+    describeAmbientPulse
   } from '../../lib/sensoryEngine.js';
   import { notifyMollySpark } from '../../lib/mollyStore.js';
   import { normSearchStr, safeGetItem } from '../../lib/utils.js';
@@ -121,7 +122,7 @@
   function formatDist(km) {
     if (!Number.isFinite(km)) return '';
     if (km < 1) return `${Math.max(100, Math.round(km * 10) * 100)} m`;
-    return `${km < 10 ? km.toFixed(1) : Math.round(km)} km`;
+    return `${km < 10 ? km.toFixed(1).replace('.', ',') : Math.round(km)} km`;
   }
 
   function isSelfServicePoint(p) {
@@ -330,7 +331,9 @@
   let nearReturnMetric = 0;
   let awaitingNearPlace = null;
   let nearLeaveTimestamp = 0;
-  let ambientPulseText = 'Před chvílí někdo v Brně naplnil misku v útulku';
+  /** @type {any} */
+  let ambientPulse = null;
+  $: ambientPulseText = describeAmbientPulse(ambientPulse, {});
 
   function sanitizePulseText(msg) {
     return String(msg || '')
@@ -1121,7 +1124,7 @@
 
     const pulseTimer = setTimeout(async () => {
       const pulse = await fetchAmbientPulse();
-      if (pulse?.message) ambientPulseText = sanitizePulseText(pulse.message);
+      ambientPulse = pulse;
     }, 300);
 
     document.addEventListener('visibilitychange', onVis);
@@ -1296,8 +1299,11 @@
       <div class="search-box">
         <input
           type="text"
+          id="near-location-query"
+          name="location"
+          autocomplete="address-level2"
           bind:value={locationQuery}
-          placeholder="Obec, město nebo PSČ (např. Tábor, Kladno, 779 00)…"
+          placeholder="Obec nebo PSČ (např. Tábor)"
           aria-label="Hledat obec nebo PSČ"
           on:keydown={(e) => e.key === 'Enter' && searchLocation()}
         />
@@ -1307,6 +1313,9 @@
       </div>
 
       <select
+        id="near-city-jump"
+        name="city"
+        autocomplete="off"
         class="city-jump-select"
         aria-label="Rychlý skok do krajského města"
         on:change={(e) => {
@@ -1530,12 +1539,16 @@
           {#if places.length > 3 || query.trim().length > 0}
             <input
               type="search"
+              id="near-list-filter"
+              name="q"
+              autocomplete="off"
+              aria-label="Hledat v seznamu míst"
               class="filter-input"
-              placeholder="Hledat v seznamu…"
+              placeholder="Hledat…"
               bind:value={query}
             />
           {/if}
-          <select bind:value={sortBy} class="sort-select" aria-label="Řazení míst">
+          <select bind:value={sortBy} id="near-sort" name="sort" autocomplete="off" class="sort-select" aria-label="Řazení míst">
             <option value="easy">Nejjednodušší start</option>
             <option value="distance">Podle vzdálenosti</option>
             <option value="name">Abecedně A–Z</option>
@@ -1625,6 +1638,7 @@
           <article
             id={`place-card-${String(p.id).replace(/[^a-zA-Z0-9_-]/g, '-')}`}
             class="place-card"
+            data-molly-guide={idx === 0 ? 'true' : undefined}
             class:active={activePlaceId === p.id}
             class:top-pick={idx === 0 && sortBy === 'easy'}
             on:mouseenter={() => setHoveredPlace(p.id)}
@@ -2319,7 +2333,7 @@
 
   .leaflet-canvas {
     width: 100%;
-    height: 580px;
+    height: 390px;
     background: #e7ece8;
     z-index: 1;
   }
@@ -3264,16 +3278,85 @@
       font-size: 0.68rem;
     }
 
+    .places-stack {
+      gap: 0.75rem;
+    }
+
     .place-card {
-      padding: 0.72rem 0.8rem;
+      padding: 0.68rem 0.78rem;
       border-radius: 15px;
       max-width: 100%;
       box-sizing: border-box;
     }
 
+    .pc-meta-top {
+      font-size: 0.68rem;
+      margin-bottom: 0.18rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-wrap: nowrap;
+    }
+
+    .pc-title {
+      font-size: 0.95rem;
+      margin: 0 0 0.14rem;
+    }
+
+    .pc-addr {
+      font-size: 0.71rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .pc-desc {
+      display: -webkit-box;
+      line-clamp: 2;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      font-size: 0.75rem;
+      line-height: 1.32;
+      margin-bottom: 0.3rem;
+    }
+
     .pc-decision-box {
-      padding: 0.42rem 0.58rem;
-      margin-bottom: 0.5rem;
+      padding: 0.32rem 0.48rem;
+      margin-bottom: 0.3rem;
+    }
+
+    .pcd-chips {
+      gap: 0.2rem;
+      margin-bottom: 0.16rem;
+    }
+
+    .pcd-mission {
+      font-size: 0.73rem;
+      line-height: 1.28;
+      display: -webkit-box;
+      line-clamp: 2;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .pc-btn {
+      padding: 0.34rem 0.62rem;
+      font-size: 0.74rem;
+    }
+
+    .card-effect-stage {
+      margin-top: 0.28rem;
+      padding: 0.3rem 0.46rem;
+    }
+
+    .place-card :global(.impact-payoff-canvas) {
+      height: 48px;
+    }
+
+    .pc-verify-footer {
+      margin-top: 0.26rem;
+      padding-top: 0.22rem;
+      font-size: 0.65rem;
     }
   }
 </style>

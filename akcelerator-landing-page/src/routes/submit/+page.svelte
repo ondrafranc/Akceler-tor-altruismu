@@ -12,7 +12,7 @@
   const QUICK_CATEGORIES = [
     '🐾 Zvířata a útulky',
     '🥫 Potraviny a šatníky',
-    '📚 Knihobudka / ReUse',
+    '📚 Knihobudka / druhá šance věcí',
     '🤝 Komunita a sousedé',
     '👴 Senioři',
     '🌱 Příroda a úklid'
@@ -289,28 +289,33 @@
       <form class="form" on:submit|preventDefault={submit}>
         <div class="hp" aria-hidden="true">
           <label for="hp_company">Company</label>
-          <input id="hp_company" type="text" bind:value={hp} tabindex="-1" autocomplete="off" />
+          <input id="hp_company" name="hp_company" type="text" bind:value={hp} tabindex="-1" autocomplete="off" />
         </div>
 
         <div class="field wide">
           <label for="name">Název místa nebo akce *</label>
           <input
             id="name"
+            name="place_name"
+            autocomplete="off"
+            data-molly-guide="true"
             type="text"
             bind:value={name}
-            placeholder="Např. Knihobudka v parku / Útulek Tlapka / Swap oblečení"
+            placeholder="Např. Knihobudka v parku"
             maxlength="120"
           />
         </div>
 
-        <div class="field">
-          <label for="loc">Kde to v ČR je? *</label>
+        <div class="field loc-field">
+          <label for="loc">Kde to je? *</label>
           <div class="loc-search">
             <input
               id="loc"
+              name="location_query"
+              autocomplete="off"
               type="text"
               bind:value={locationQuery}
-              placeholder="Napiš město, obec nebo ulici (např. Litomyšl, Znojmo, Písek)…"
+              placeholder="Město, obec nebo ulice"
               on:input={() => {
                 geoResults = [];
                 geoMessage = '';
@@ -364,6 +369,8 @@
           <label for="desc">Jak se tam dá zapojit? (1–2 věty)</label>
           <textarea
             id="desc"
+            name="description"
+            autocomplete="off"
             bind:value={description}
             rows="3"
             maxlength="600"
@@ -375,15 +382,15 @@
           <div class="grid">
             <div class="field wide">
               <label for="event_url">Odkaz na událost / detail *</label>
-              <input id="event_url" type="text" bind:value={eventUrl} placeholder="https://…" maxlength="220" />
+              <input id="event_url" name="event_url" autocomplete="url" type="text" bind:value={eventUrl} placeholder="https://…" maxlength="220" />
             </div>
             <div class="field">
               <label for="event_start">Začátek (volitelné)</label>
-              <input id="event_start" type="datetime-local" bind:value={eventStartLocal} />
+              <input id="event_start" name="event_start" autocomplete="off" type="datetime-local" bind:value={eventStartLocal} />
             </div>
             <div class="field">
               <label for="event_end">Konec (volitelné)</label>
-              <input id="event_end" type="datetime-local" bind:value={eventEndLocal} />
+              <input id="event_end" name="event_end" autocomplete="off" type="datetime-local" bind:value={eventEndLocal} />
             </div>
           </div>
         {/if}
@@ -392,8 +399,8 @@
           <summary>Doplnit štítek, web nebo kontakt (volitelné)</summary>
           <div class="grid opt-grid">
             <div class="field wide">
-              <label for="category">Oblast pomoci</label>
-              <div class="quick-pills">
+              <span class="label" id="category-label">Oblast pomoci</span>
+              <div class="quick-pills" role="group" aria-labelledby="category-label">
                 {#each QUICK_CATEGORIES as qc}
                   <button
                     type="button"
@@ -409,12 +416,12 @@
 
             <div class="field">
               <label for="website">Web nebo sociální síť</label>
-              <input id="website" type="text" bind:value={website} placeholder="https://…" maxlength="220" />
+              <input id="website" name="website" autocomplete="url" type="text" bind:value={website} placeholder="https://…" maxlength="220" />
             </div>
 
             <div class="field">
               <label for="email">Kontaktní e-mail</label>
-              <input id="email" type="email" bind:value={email} placeholder="info@…" maxlength="120" />
+              <input id="email" name="email" autocomplete="email" type="email" bind:value={email} placeholder="info@…" maxlength="120" />
             </div>
           </div>
         </details>
@@ -442,9 +449,9 @@
       <h3>Co sem lidé nejčastěji přidávají?</h3>
       <ul class="idea-list">
         <li><strong>Menší útulky a depozita</strong>, kde uvítají deky nebo vyvenčení psa.</li>
-        <li><strong>Veřejné knihobudky a ReUse poličky</strong> na nádražích a v parcích.</li>
+        <li><strong>Veřejné knihobudky a poličky pro druhou šanci věcí</strong> na nádražích a v parcích.</li>
         <li><strong>Komunitní šatníky a potravinové skříňky</strong> pro rodiny v nouzi.</li>
-        <li><strong>Sousedské úklidy, výsadby stromů</strong> nebo lokální swapy.</li>
+        <li><strong>Sousedské úklidy, výsadby stromů</strong> nebo sousedské výměny oblečení a věcí.</li>
       </ul>
     </aside>
   </div>
@@ -559,7 +566,8 @@
     grid-column: 1 / -1;
   }
 
-  label {
+  label,
+  .label {
     font-size: 0.86rem;
     font-weight: 700;
     color: var(--text-primary);
@@ -765,12 +773,88 @@
     color: var(--text-primary);
   }
 
+  @media (min-width: 681px) {
+    .page {
+      padding: 0.45rem 1.25rem 5rem;
+    }
+
+    .subpage-hero.header {
+      padding: 1rem 1.4rem !important;
+      margin-bottom: 0.6rem !important;
+    }
+
+    .title {
+      font-size: clamp(1.75rem, 3vw, 2.3rem);
+    }
+
+    .subtitle {
+      margin-top: 0.35rem;
+      font-size: 0.9rem;
+    }
+
+    .card {
+      padding: 1.2rem 1.45rem;
+    }
+
+    .tabs {
+      margin-bottom: 0.8rem;
+    }
+
+    .form {
+      gap: 0.72rem;
+    }
+
+    input,
+    textarea {
+      padding: 0.52rem 0.78rem;
+    }
+  }
+
   @media (max-width: 920px) {
     .submit-layout {
       grid-template-columns: 1fr;
     }
     .grid {
       grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 680px) {
+    .page {
+      padding: 0.3rem 0.65rem 5rem;
+    }
+
+    .subpage-hero.header {
+      padding: 0.55rem 0.75rem !important;
+      margin-bottom: 0.45rem !important;
+      border-radius: 16px;
+    }
+
+    .hero-kicker,
+    .subtitle {
+      display: none !important;
+    }
+
+    .title {
+      font-size: 1.15rem;
+      line-height: 1.18;
+    }
+
+    .submit-layout {
+      gap: 1.15rem;
+    }
+
+    .card {
+      padding: 0.9rem 0.95rem;
+      border-radius: 18px;
+    }
+
+    .tabs {
+      margin-bottom: 0.65rem;
+    }
+
+    .form {
+      gap: 0.68rem;
     }
   }
 </style>

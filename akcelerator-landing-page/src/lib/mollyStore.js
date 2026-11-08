@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 import { safeGetItem, safeSetItem } from './utils.js';
-import { resolveMollyTreat } from './mollyTypes.js';
+import { resolveMollyTreat, getUnlockedMilestone } from './mollyTypes.js';
 import {
   getActionEffectMeta,
   playMollyPurr,
@@ -19,8 +19,29 @@ const DEFAULT_MOLLY_STATE = {
   lastFedIso: null,
   lastTreat: null, // { icon, name, shortLabel, color, foodType, actionId, ts }
   petCount: 0,
+  // Počet SKUTEČNÝCH skutků (dokončený krok / zapsaný skutek v Krajině dobra), za které Molly dostala pamlsek.
+  // Jen z nich se odemykají dárky — klepání do plátna a ✨ Impuls dávají pamlsky, ale ne dárky,
+  // jinak by šlo „naklikat“ hvězdičku za půl minuty a věta „Díky tvé pomoci…“ by nebyla pravdivá.
+  giftDeeds: 0,
   whisper: null // { text, icon, ts }
 };
+
+/** Zdroje krmení, které odpovídají skutečnému skutku (viz progress.js). */
+const DEED_FEED_SOURCES = new Set(['win', 'sanctuary']);
+
+/**
+ * Pro uživatele z doby před dárky: dopočítá skutky z uloženého zápisníku (kroky + skutky v Krajině dobra).
+ */
+function countStoredDeeds() {
+  let n = 0;
+  for (const key of ['aa_completed_steps_v2', 'aa_sanctuary_wishes_v1']) {
+    try {
+      const arr = JSON.parse(safeGetItem(key, 'local') || '[]');
+      if (Array.isArray(arr)) n += arr.length;
+    } catch {}
+  }
+  return n;
+}
 
 export const MOLLY_PET_WHISPERS = [
   'Mrrr… každá drobná laskavost krásně hřeje.',
@@ -31,17 +52,44 @@ export const MOLLY_PET_WHISPERS = [
   'Mrrr ~ protahuji tlapky a posílám ti klid do dnešního dne.'
 ];
 
+function localDayKey(d) {
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+/**
+ * Porovnává podle LOKÁLNÍHO kalendářního dne. Dříve se srovnával UTC prefix ISO řetězce,
+ * takže v Česku se mezi půlnocí a 1–2 h ráno „dnešní“ pamlsky počítaly do včerejška.
+ * @param {string | null | undefined} isoStr
+ */
 function isSameDayIso(isoStr) {
   if (!isoStr || typeof isoStr !== 'string') return false;
-  const todayPrefix = new Date().toISOString().slice(0, 10);
-  return isoStr.startsWith(todayPrefix);
+  const d = new Date(isoStr);
+  if (Number.isNaN(d.getTime())) return false;
+  return localDayKey(d) === localDayKey(new Date());
+}
+
+/**
+ * Pokud přírůstek pamlsku odemkl nový dárek, vrátí oslavnou šeptandu místo běžné.
+ * @param {number} prevTotal
+ * @param {number} nextTotal
+ * @param {{ icon: string, text: string, ts: number }} fallback
+ */
+function milestoneWhisperOr(prevTotal, nextTotal, fallback) {
+  const m = getUnlockedMilestone(prevTotal, nextTotal);
+  if (!m) return fallback;
+  return {
+    icon: m.icon,
+    text: `Mňau! Díky tvé pomoci mám nový dárek: ${m.name}.`,
+    ts: fallback.ts,
+    milestone: m.key
+  };
 }
 
 function loadMollyState() {
   if (typeof window === 'undefined') return { ...DEFAULT_MOLLY_STATE };
   try {
     const raw = safeGetItem(MOLLY_STORAGE_KEY, 'local');
-    if (!raw) return { ...DEFAULT_MOLLY_STATE };
+    if (!raw) return { ...DEFAULT_MOLLY_STATE, giftDeeds: countStoredDeeds() };
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
       return { ...DEFAULT_MOLLY_STATE };
@@ -68,6 +116,9 @@ function loadMollyState() {
       lastFedIso,
       lastTreat,
       petCount: Math.max(0, Number(parsed.petCount) || 0),
+      giftDeeds: Number.isFinite(Number(parsed.giftDeeds))
+        ? Math.max(0, Number(parsed.giftDeeds))
+        : countStoredDeeds(),
       whisper: null
     };
   } catch {
@@ -85,7 +136,8 @@ function saveMollyState(state) {
       treatsFedToday: state.treatsFedToday,
       lastFedIso: state.lastFedIso,
       lastTreat: state.lastTreat,
-      petCount: state.petCount
+      petCount: state.petCount,
+      giftDeeds: Math.max(0, Number(state.giftDeeds) || 0)
     };
     safeSetItem(MOLLY_STORAGE_KEY, JSON.stringify(toPersist), 'local');
   } catch {}
@@ -121,7 +173,7 @@ export function feedMollyFromAction(action, opts = {}) {
   const meta = getActionEffectMeta(action);
   const treat = meta?.mollyTreat || {
     icon: '🐟',
-    name: 'lososová granulka pro Molly',
+    name: 'lososová granulka',
     shortLabel: '+1 rybka pro Molly',
     color: '#f59e0b',
     foodType: 'salmon'
@@ -143,16 +195,22 @@ export function feedMollyFromAction(action, opts = {}) {
     ts
   };
 
+  const isDeed = DEED_FEED_SOURCES.has(opts?.source || '');
+
   mollyState.update((prev) => {
     const sameDay = isSameDayIso(prev.lastFedIso);
+    const prevTotal = Number(prev.treatsFedTotal) || 0;
+    const prevDeeds = Math.max(0, Number(prev.giftDeeds) || 0);
+    const nextDeeds = isDeed ? prevDeeds + 1 : prevDeeds;
     const next = {
       ...prev,
       mood: 'eating',
-      treatsFedTotal: (Number(prev.treatsFedTotal) || 0) + 1,
+      treatsFedTotal: prevTotal + 1,
       treatsFedToday: (sameDay ? Number(prev.treatsFedToday) || 0 : 0) + 1,
       lastFedIso: nowIso,
       lastTreat: treatRecord,
-      whisper
+      giftDeeds: nextDeeds,
+      whisper: milestoneWhisperOr(prevDeeds, nextDeeds, whisper)
     };
     saveMollyState(next);
     return next;
@@ -193,7 +251,7 @@ export function notifyMollySpark(action, opts = {}) {
   const meta = getActionEffectMeta(action);
   const treat = meta?.mollyTreat || {
     icon: '🐟',
-    name: 'lososová granulka pro Molly',
+    name: 'lososová granulka',
     shortLabel: '+1 rybka pro Molly',
     color: '#f59e0b',
     foodType: 'salmon'
@@ -217,13 +275,15 @@ export function notifyMollySpark(action, opts = {}) {
 
   mollyState.update((prev) => {
     const sameDay = isSameDayIso(prev.lastFedIso);
+    const prevTotal = Number(prev.treatsFedTotal) || 0;
     const next = {
       ...prev,
       mood: 'eating',
-      treatsFedTotal: (Number(prev.treatsFedTotal) || 0) + 1,
+      treatsFedTotal: prevTotal + 1,
       treatsFedToday: (sameDay ? Number(prev.treatsFedToday) || 0 : 0) + 1,
       lastFedIso: nowIso,
       lastTreat: treatRecord,
+      // Jiskra z plátna / Impuls není skutek → žádný dárek (viz giftDeeds)
       whisper
     };
     saveMollyState(next);
@@ -249,8 +309,9 @@ export function notifyMollySpark(action, opts = {}) {
 /**
  * Pohladí Molly — spustí předení, srdíčka a vlídnou českou zprávu.
  * @param {string} [customWhisper]
+ * @param {{ suffix?: string, fromDock?: boolean, icon?: string }} [opts] — např. postup k dalšímu dárku (pohlazení v pelíšku na mobilu)
  */
-export function petMolly(customWhisper) {
+export function petMolly(customWhisper, opts = {}) {
   const ts = Date.now();
   let chosenText = customWhisper;
 
@@ -260,14 +321,16 @@ export function petMolly(customWhisper) {
       chosenText =
         MOLLY_PET_WHISPERS[(nextPetCount - 1) % MOLLY_PET_WHISPERS.length];
     }
+    if (opts?.suffix) chosenText = `${chosenText} ${opts.suffix}`;
     const next = {
       ...prev,
       mood: 'purring',
       petCount: nextPetCount,
       whisper: {
-        icon: '🐾',
+        icon: opts?.icon || '🐾',
         text: chosenText,
-        ts
+        ts,
+        fromDock: Boolean(opts?.fromDock)
       }
     };
     saveMollyState(next);
@@ -333,6 +396,26 @@ export function setMollyMood(mood) {
   mollyState.update((prev) => ({
     ...prev,
     mood: mood === 'curious' && prev.mode === 'docked' ? 'sleeping' : mood
+  }));
+}
+
+/**
+ * Molly něco tiše pošeptá (průvodcovská nápověda) — nemění náladu, počty ani úložiště.
+ * @param {string} text
+ * @param {string} [icon]
+ * @param {{ guide?: boolean, routePath?: string }} [opts]
+ */
+export function mollyWhisper(text, icon = '🐾', opts = {}) {
+  if (!text) return;
+  mollyState.update((prev) => ({
+    ...prev,
+    whisper: {
+      icon,
+      text,
+      ts: Date.now(),
+      guide: !!opts?.guide,
+      routePath: opts?.routePath || null
+    }
   }));
 }
 
