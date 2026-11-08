@@ -30,6 +30,7 @@
     triggerCanvasBurst,
     fetchAmbientPulse
   } from '../../lib/sensoryEngine.js';
+  import { notifyMollySpark } from '../../lib/mollyStore.js';
 
   const CATEGORY_PRESETS = [
     { id: 'all', label: '✨ Vše smysluplné v okolí', kinds: ['ngo', 'community', 'food', 'animals'], onlyWeb: false },
@@ -346,6 +347,7 @@
   function togglePlaceEffect(p, event) {
     activeEffectPlaceId = p.id;
     const act = toPlaceAction(p);
+    notifyMollySpark(act, { surface: 'near' });
     const stage = event?.currentTarget?.closest?.('.card-effect-stage');
     const canvas = stage?.querySelector?.('canvas.impact-payoff-canvas');
     if (canvas) {

@@ -1,3 +1,5 @@
+import { notifyMollySpark } from './mollyStore.js';
+
 const MK = 'aa_sound_muted';
 const RK = 'aa_pending_return_v1';
 const win = () => typeof window !== 'undefined';
@@ -451,6 +453,118 @@ export const ACTION_EFFECT_CATALOG = {
   }
 };
 
+const MOLLY_TREAT_BY_FOOD = {
+  salmon: {
+    icon: '🐟',
+    name: 'lososová granulka pro Molly',
+    shortLabel: '+1 rybka pro Molly',
+    color: '#f59e0b',
+    foodType: 'salmon'
+  },
+  milk: {
+    icon: '🥛',
+    name: 'teplé kočičí mlíčko v misce',
+    shortLabel: '+1 mlíčko pro Molly',
+    color: '#fde68a',
+    foodType: 'milk'
+  },
+  tuna: {
+    icon: '🍣',
+    name: 'rýžový polštářek s tuňákem',
+    shortLabel: '+1 sousto pro Molly',
+    color: '#fbbf24',
+    foodType: 'tuna'
+  },
+  catnip: {
+    icon: '🌿',
+    name: 'čerstvý lístek šanty kočičí',
+    shortLabel: '+1 šanta pro Molly',
+    color: '#4ade80',
+    foodType: 'catnip'
+  },
+  cream: {
+    icon: '🧶',
+    name: 'smetanový pamlsek a klubíčko',
+    shortLabel: '+1 pamlsek pro Molly',
+    color: '#f472b6',
+    foodType: 'cream'
+  },
+  star_treat: {
+    icon: '✨',
+    name: 'křupavá hvězdička pro Molly',
+    shortLabel: '+1 hvězdička pro Molly',
+    color: '#a78bfa',
+    foodType: 'star_treat'
+  }
+};
+
+const MODE_TO_MOLLY_FOOD = {
+  // Animals
+  kibble: 'salmon',
+  shelter_care: 'salmon',
+  // Birds & wildlife
+  birds_glass: 'milk',
+  birds_song: 'milk',
+  wildlife_rescue: 'milk',
+  // Food & solidarity
+  rice: 'tuna',
+  food_bank: 'tuna',
+  soup_lantern: 'tuna',
+  zero_waste_pot: 'tuna',
+  bakery_save: 'tuna',
+  shoebox_gift: 'tuna',
+  // Nature & ecology
+  forest_bloom: 'catnip',
+  fruit_tree: 'catnip',
+  water_spring: 'catnip',
+  eco_cleanup: 'catnip',
+  compost_sprout: 'catnip',
+  butterfly_lens: 'catnip',
+  campfire_group: 'catnip',
+  globe_bridge: 'catnip',
+  // Care, seniors, health
+  blood_drop: 'cream',
+  dna_helix: 'cream',
+  ecg_rescue: 'cream',
+  hair_silk: 'cream',
+  breath_lotus: 'cream',
+  mind_wave: 'cream',
+  prism_support: 'cream',
+  senior_letter: 'cream',
+  owl_shield: 'cream',
+  angel_wings: 'cream',
+  charity_care: 'cream',
+  solidarity_bridge: 'cream',
+  // Knowledge, science & civic
+  satellite_map: 'star_treat',
+  cosmos_science: 'star_treat',
+  wiki_ink: 'star_treat',
+  code_nodes: 'star_treat',
+  dove_appeal: 'star_treat',
+  book_booth: 'star_treat',
+  parcel_share: 'star_treat',
+  phone_recycle: 'star_treat',
+  tutoring_spark: 'star_treat',
+  school_pencil: 'star_treat',
+  memory_wave: 'star_treat',
+  wheels_motion: 'star_treat',
+  safe_crosswalk: 'star_treat',
+  kinetic_steps: 'star_treat'
+};
+
+export function resolveMollyTreat(specOrMode) {
+  const mode =
+    typeof specOrMode === 'string'
+      ? specOrMode
+      : specOrMode?.mode || 'kibble';
+  const foodKey = MODE_TO_MOLLY_FOOD[mode] || 'salmon';
+  return MOLLY_TREAT_BY_FOOD[foodKey] || MOLLY_TREAT_BY_FOOD.salmon;
+}
+
+Object.values(ACTION_EFFECT_CATALOG).forEach((spec) => {
+  spec.mollyTreat = resolveMollyTreat(spec);
+});
+
 const MODE_LOOKUP = Object.values(ACTION_EFFECT_CATALOG).reduce((acc, spec) => {
   acc[spec.mode] = spec;
   return acc;
@@ -484,6 +598,10 @@ export function resolveActionEffectSpec(action) {
   if (/strom|les|sáz|přírod|environment|nature/.test(hay)) return ACTION_EFFECT_CATALOG.sazime_budoucnost;
   if (/krev|dřeň|záchran|nemoc|health/.test(hay)) return ACTION_EFFECT_CATALOG.darovani_krve;
   if (/douč|vzděl|škol|education|knowledge/.test(hay)) return ACTION_EFFECT_CATALOG.ucime_online;
+  if (action?.element === 'animals') return ACTION_EFFECT_CATALOG.zvirata_utulek_online;
+  if (action?.element === 'nature') return ACTION_EFFECT_CATALOG.sazime_budoucnost;
+  if (action?.element === 'knowledge') return ACTION_EFFECT_CATALOG.wikipedie_cz;
+  if (action?.element === 'community') return ACTION_EFFECT_CATALOG.letters_seniors;
   if (/komunit|community|soused/.test(hay)) return ACTION_EFFECT_CATALOG.knihobudka_kniha;
   return ACTION_EFFECT_CATALOG.charita_dar;
 }
@@ -495,12 +613,14 @@ export function getActionEffectMeta(action, currentVal, opts = {}) {
   const badge = spec.format(val);
   const isKibble = spec.mode === 'kibble' || spec.mode === 'shelter_care';
   const returnBadge = isKibble ? badge : `${badge} · ✨ Světelná stopa`;
+  const mollyTreat = spec.mollyTreat || resolveMollyTreat(spec);
   return {
     ...spec,
     scene: spec.mode,
     value: val,
     badge: opts.isReturnStrip ? returnBadge : badge,
-    returnBadge
+    returnBadge,
+    mollyTreat
   };
 }
 
@@ -576,8 +696,115 @@ function noiseBurst(dur = 0.03, freq = 1100, q = 5.5, delay = 0, gainPeak = 0.04
     g.gain.linearRampToValueAtTime(0.0005, t + dur);
     src.connect(flt);
     flt.connect(g);
-    flt.connect(c.destination);
+    g.connect(c.destination);
     src.start(t);
+  } catch {}
+}
+
+/**
+ * Hřejivé procedurální předení želvovinové kočky Molly (27 Hz -> 31 Hz AM modulace 4.2 Hz + nízkopropustný filtr 145 Hz)
+ */
+export function playMollyPurr(dur = 1.1, intensity = 0.8) {
+  if (isSoundMuted()) return;
+  const c = ctx();
+  if (!c) return;
+  try {
+    const t = c.currentTime;
+    const osc1 = c.createOscillator();
+    const osc2 = c.createOscillator();
+    const lfo = c.createOscillator();
+    const lfoGain = c.createGain();
+    const flt = c.createBiquadFilter();
+    const env = c.createGain();
+
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(27.2, t);
+    osc1.frequency.linearRampToValueAtTime(30.8, t + dur * 0.55);
+    osc1.frequency.linearRampToValueAtTime(26.5, t + dur);
+
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(54.4, t);
+    osc2.frequency.linearRampToValueAtTime(61.2, t + dur * 0.55);
+
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(4.2, t);
+    lfoGain.gain.setValueAtTime(0.018 * intensity, t);
+
+    flt.type = 'lowpass';
+    flt.frequency.setValueAtTime(145, t);
+    flt.Q.setValueAtTime(1.6, t);
+
+    const pk = Math.max(0.008, Math.min(0.045, 0.028 * intensity));
+    env.gain.setValueAtTime(0.0005, t);
+    env.gain.linearRampToValueAtTime(pk, t + 0.14);
+    env.gain.setValueAtTime(pk * 0.92, Math.max(t + 0.15, t + dur - 0.18));
+    env.gain.linearRampToValueAtTime(0.0001, t + dur);
+
+    lfo.connect(lfoGain);
+    lfoGain.connect(env.gain);
+    osc1.connect(flt);
+    osc2.connect(flt);
+    flt.connect(env);
+    env.connect(c.destination);
+
+    osc1.start(t);
+    osc2.start(t);
+    lfo.start(t);
+    osc1.stop(t + dur + 0.04);
+    osc2.stop(t + dur + 0.04);
+    lfo.stop(t + dur + 0.04);
+
+    // Jemný dechový třpyt
+    tone(528, Math.min(0.45, dur * 0.4), 'sine', 0.05, 0.012 * intensity, 660);
+  } catch {}
+}
+
+/**
+ * Křupnutí pamlsku pro Molly (3 křupavé mikro-impulsy + spokojené vrknutí)
+ */
+export function playMollyCrunch() {
+  if (isSoundMuted()) return;
+  try {
+    [0, 0.075, 0.155].forEach((d, i) => {
+      noiseBurst(0.022, 1280 + i * 240, 6.2, d, 0.042);
+      tone(380 + i * 90, 0.06, 'triangle', d, 0.02);
+    });
+    tone(587.33, 0.18, 'sine', 0.21, 0.024, 783.99);
+  } catch {}
+}
+
+/**
+ * Melodické mňouknutí Molly (formantová kontura 440 Hz -> 690 Hz -> 590 Hz)
+ */
+export function playMollyMeow() {
+  if (isSoundMuted()) return;
+  const c = ctx();
+  if (!c) return;
+  try {
+    const t = c.currentTime;
+    const dur = 0.36;
+    const osc = c.createOscillator();
+    const flt = c.createBiquadFilter();
+    const g = c.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(440, t);
+    osc.frequency.exponentialRampToValueAtTime(690, t + 0.13);
+    osc.frequency.exponentialRampToValueAtTime(590, t + dur);
+
+    flt.type = 'bandpass';
+    flt.frequency.setValueAtTime(1150, t);
+    flt.Q.setValueAtTime(2.4, t);
+
+    g.gain.setValueAtTime(0.001, t);
+    g.gain.linearRampToValueAtTime(0.032, t + 0.05);
+    g.gain.linearRampToValueAtTime(0.0001, t + dur);
+
+    osc.connect(flt);
+    flt.connect(g);
+    g.connect(c.destination);
+    osc.start(t);
+    osc.stop(t + dur + 0.03);
   } catch {}
 }
 
@@ -992,6 +1219,248 @@ function drawPaw(c, x, y, s, color) {
   c.restore();
 }
 
+/**
+ * Vykreslí želvovinovou kočičku Mini-Molly na pravé straně interaktivního plátna vedle její zlaté mističky.
+ */
+function drawCanvasMiniMolly(c, mx, my, bx, byBowl, opts) {
+  const {
+    t = 0,
+    lookX = 150,
+    lookY = 46,
+    eatTimer = 0,
+    treatColor = '#f59e0b',
+    treatsCount = 1
+  } = opts || {};
+
+  c.save();
+
+  // 1. Zlatem lemovaná mistička pro Molly (bx = w - 48, byBowl = h - 10)
+  drawGlow(c, bx, byBowl - 2, 16, treatColor, 0.26 + (eatTimer > 0 ? 0.25 : 0));
+  c.fillStyle = '#29211c';
+  c.strokeStyle = '#fbbf24';
+  c.lineWidth = 1.4;
+  c.beginPath();
+  c.moveTo(bx - 10, byBowl - 4);
+  c.lineTo(bx + 10, byBowl - 4);
+  c.lineTo(bx + 7.5, byBowl + 2.5);
+  c.lineTo(bx - 7.5, byBowl + 2.5);
+  c.closePath();
+  c.fill();
+  c.stroke();
+
+  // Dobroty v mističce
+  const pileCount = Math.min(5, Math.max(2, treatsCount));
+  for (let i = 0; i < pileCount; i++) {
+    const gx = bx - 5 + i * 2.5;
+    const gy = byBowl - 4.8 - (i % 2) * 1.4;
+    c.fillStyle = i % 2 === 0 ? treatColor : '#fde68a';
+    c.beginPath();
+    c.arc(gx, gy, 1.9, 0, Math.PI * 2);
+    c.fill();
+  }
+
+  // 2. Vícebodový Bézierův ocas (želvovinový s medovou špičkou)
+  const tailWag = Math.sin(t * (eatTimer > 0 ? 6.5 : 2.6)) * (eatTimer > 0 ? 6 : 3.5);
+  c.save();
+  c.lineCap = 'round';
+  c.strokeStyle = '#1f1916';
+  c.lineWidth = 4.2;
+  c.beginPath();
+  c.moveTo(mx + 7, my + 4);
+  c.bezierCurveTo(
+    mx + 16,
+    my + 1 + tailWag * 0.4,
+    mx + 19,
+    my - 10 + tailWag,
+    mx + 13 + tailWag * 0.6,
+    my - 17
+  );
+  c.stroke();
+
+  // Zrzavý a medový flíček na ocase
+  c.strokeStyle = '#f59e0b';
+  c.lineWidth = 2.8;
+  c.beginPath();
+  c.moveTo(mx + 14, my - 5 + tailWag * 0.5);
+  c.quadraticCurveTo(
+    mx + 17,
+    my - 11 + tailWag * 0.8,
+    mx + 13 + tailWag * 0.6,
+    my - 17
+  );
+  c.stroke();
+  c.restore();
+
+  // 3. Tělíčko Molly (obsidián #1f1916 s želvovinovými flíčky #f59e0b, #c2410c, #fde68a)
+  const bounceY = eatTimer > 0 ? Math.abs(Math.sin(t * 11)) * -2.2 : Math.sin(t * 1.8) * 0.5;
+  const cyBody = my + bounceY;
+
+  c.fillStyle = '#1f1916';
+  c.strokeStyle = 'rgba(253, 230, 138, 0.35)';
+  c.lineWidth = 0.9;
+  c.beginPath();
+  c.ellipse(mx, cyBody + 1.5, 9.2, 10.8, -0.08, 0, Math.PI * 2);
+  c.fill();
+  c.stroke();
+
+  // Želvovinové skvrny na zádech a boku
+  c.save();
+  c.beginPath();
+  c.ellipse(mx, cyBody + 1.5, 9.0, 10.5, -0.08, 0, Math.PI * 2);
+  c.clip();
+
+  c.fillStyle = '#c2410c';
+  c.beginPath();
+  c.ellipse(mx + 3.5, cyBody - 1, 5.2, 4.2, 0.3, 0, Math.PI * 2);
+  c.fill();
+
+  c.fillStyle = '#f59e0b';
+  c.beginPath();
+  c.ellipse(mx - 3.2, cyBody + 3.2, 4.4, 3.5, -0.25, 0, Math.PI * 2);
+  c.fill();
+
+  c.fillStyle = '#fde68a';
+  c.beginPath();
+  c.ellipse(mx - 1.5, cyBody + 0.5, 2.6, 3.2, 0.1, 0, Math.PI * 2);
+  c.fill();
+  c.restore();
+
+  // Tlapky vpředu (jedna zrzavá, druhá tmavá s medovou špičkou)
+  c.fillStyle = '#f59e0b';
+  c.beginPath();
+  c.ellipse(mx - 4.5, my + 10.5, 2.8, 2.0, 0, 0, Math.PI * 2);
+  c.fill();
+  c.fillStyle = '#1f1916';
+  c.beginPath();
+  c.ellipse(mx + 1.5, my + 10.8, 2.8, 2.0, 0, 0, Math.PI * 2);
+  c.fill();
+
+  // 4. Hlava Molly s komínovou (chimney-blaze) kresbou
+  const hx = mx - 1.2;
+  const hy = cyBody - 10.2;
+
+  // Oušká (levé tmavé, pravé zrzavo-terakotové se záškubem)
+  const earTwitch = Math.sin(t * 3.7) > 0.88 ? Math.sin(t * 18) * 1.3 : 0;
+  c.fillStyle = '#1f1916';
+  c.beginPath();
+  c.moveTo(hx - 7.2, hy - 2.5);
+  c.lineTo(hx - 8.8, hy - 11.5);
+  c.lineTo(hx - 1.8, hy - 6.8);
+  c.closePath();
+  c.fill();
+
+  c.fillStyle = '#c2410c';
+  c.beginPath();
+  c.moveTo(hx + 1.8, hy - 6.8);
+  c.lineTo(hx + 8.6 + earTwitch, hy - 11.5 + earTwitch * 0.5);
+  c.lineTo(hx + 7.2, hy - 2.5);
+  c.closePath();
+  c.fill();
+
+  // Vnitřek oušek
+  c.fillStyle = '#fda4af';
+  c.beginPath();
+  c.moveTo(hx - 6.2, hy - 3.6);
+  c.lineTo(hx - 7.3, hy - 9.2);
+  c.lineTo(hx - 2.9, hy - 6.0);
+  c.closePath();
+  c.fill();
+
+  // Hlava — základ + komínové rozdělení
+  c.fillStyle = '#1f1916';
+  c.beginPath();
+  c.arc(hx, hy, 7.8, 0, Math.PI * 2);
+  c.fill();
+
+  c.save();
+  c.beginPath();
+  c.arc(hx, hy, 7.8, 0, Math.PI * 2);
+  c.clip();
+  // Pravá polovina obličeje jantarovo-zrzavá (typický chimérický blaze želvovinových koček)
+  c.fillStyle = '#f59e0b';
+  c.beginPath();
+  c.moveTo(hx - 0.5, hy - 9);
+  c.lineTo(hx + 9, hy - 9);
+  c.lineTo(hx + 9, hy + 9);
+  c.lineTo(hx + 0.5, hy + 9);
+  c.closePath();
+  c.fill();
+
+  c.fillStyle = '#fde68a';
+  c.beginPath();
+  c.ellipse(hx + 2.8, hy + 2.2, 3.2, 2.4, 0.2, 0, Math.PI * 2);
+  c.fill();
+  c.restore();
+
+  // 5. Zářivé smaragdově-limetkové oči (#84cc16 / #bef264) sledující dění nebo blažené ^ ^ při chroupání
+  const dx = Math.max(-1.4, Math.min(1.4, (lookX - hx) * 0.015));
+  const dy = Math.max(-1.0, Math.min(1.0, (lookY - hy) * 0.015));
+
+  if (eatTimer > 0) {
+    c.strokeStyle = '#bef264';
+    c.lineWidth = 1.6;
+    c.lineCap = 'round';
+    [-3.1, 3.1].forEach((ex) => {
+      c.beginPath();
+      c.arc(hx + ex, hy - 0.2, 2.1, Math.PI * 1.15, Math.PI * 1.85);
+      c.stroke();
+    });
+  } else {
+    [-3.1, 3.1].forEach((ex) => {
+      c.fillStyle = '#84cc16';
+      c.shadowColor = '#bef264';
+      c.shadowBlur = 4;
+      c.beginPath();
+      c.ellipse(hx + ex, hy - 0.5, 2.15, 2.0, 0, 0, Math.PI * 2);
+      c.fill();
+      c.shadowBlur = 0;
+
+      // Zornička
+      c.fillStyle = '#090d08';
+      c.beginPath();
+      c.ellipse(hx + ex + dx * 0.55, hy - 0.5 + dy * 0.55, 0.85, 1.45, 0, 0, Math.PI * 2);
+      c.fill();
+
+      // Jiskra v oku
+      c.fillStyle = '#ffffff';
+      c.beginPath();
+      c.arc(hx + ex - 0.6, hy - 1.1, 0.55, 0, Math.PI * 2);
+      c.fill();
+    });
+  }
+
+  // Růžovo-terakotový čumáček a tlamička
+  c.fillStyle = '#fb7185';
+  c.beginPath();
+  c.moveTo(hx - 1.3, hy + 1.8);
+  c.lineTo(hx + 1.3, hy + 1.8);
+  c.lineTo(hx, hy + 3.1);
+  c.closePath();
+  c.fill();
+
+  if (eatTimer > 0) {
+    // Otevřená tlamička při chroupání dobroty
+    c.fillStyle = '#f43f5e';
+    c.beginPath();
+    c.arc(hx, hy + 3.9, 1.4 + Math.sin(t * 24) * 0.5, 0, Math.PI);
+    c.fill();
+  }
+
+  // 6. Vousky (3 na každé straně)
+  c.strokeStyle = 'rgba(254, 243, 199, 0.75)';
+  c.lineWidth = 0.7;
+  [-1, 1].forEach((dir) => {
+    [-1, 0, 1].forEach((row) => {
+      c.beginPath();
+      c.moveTo(hx + dir * 3.8, hy + 2.2 + row * 1.1);
+      c.lineTo(hx + dir * 10.5, hy + 1.5 + row * 1.7 + Math.sin(t * 4 + row) * 0.4);
+      c.stroke();
+    });
+  });
+
+  c.restore();
+}
+
 const PENTATONIC = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66];
 
 /**
@@ -1079,12 +1548,56 @@ export function mountImpactCanvas(cv, o = {}) {
     c: cs[i % cs.length]
   }));
 
-  // Interactive shockwave rings & floating reward popups
+  // Interactive shockwave rings, treat arcs to Mini-Molly & floating reward popups
   const shockwaves = [
     { x: cx, y: cy, r: 6, maxR: 88, alpha: 0.75, col: cs[0] || '#34d399' }
   ];
   const popups = [];
   const sparks = [];
+  const treatArcs = [];
+  const mollyTreat = spec.mollyTreat || resolveMollyTreat(spec);
+  const mollyX = w - 26;
+  const mollyY = h - 16;
+  const mollyBowlX = w - 48;
+  const mollyBowlY = h - 10;
+  let mollyEatTimer = o.climax ? 0.85 : 0;
+  let mollyTreatsCount = 1;
+  let totalTreatArcsLaunched = 0;
+
+  if (cv) {
+    cv.dataset.mollyMini = 'ready';
+    cv.dataset.mollyTreat = mollyTreat.foodType;
+    cv.dataset.mollyArcs = '0';
+  }
+
+  const launchTreatArc = (fromX = cx, fromY = cy, addBonus = false) => {
+    totalTreatArcsLaunched++;
+    if (cv) {
+      cv.dataset.mollyArcs = String(totalTreatArcsLaunched);
+    }
+    const targetX = w - 32;
+    const targetY = h - 20;
+    const ctrlX = (fromX + targetX) * 0.5;
+    const ctrlY = Math.min(10, Math.min(fromY, targetY) - 28);
+    treatArcs.push({
+      x0: fromX,
+      y0: fromY,
+      cx: ctrlX,
+      cy: ctrlY,
+      x1: targetX,
+      y1: targetY,
+      p: 0,
+      speed: red ? 0.25 : 0.042,
+      color: mollyTreat.color || '#f59e0b',
+      icon: mollyTreat.icon || '🐟',
+      addBonus,
+      notified: false
+    });
+  };
+
+  if (o.climax) {
+    launchTreatArc(cx, cy, false);
+  }
 
   const emitProgress = (ratio) => {
     const baseVal = Math.max(1, Math.min(target, Math.round(target * ratio)));
@@ -1099,6 +1612,18 @@ export function mountImpactCanvas(cv, o = {}) {
     if (addBonus) {
       bonusUnits += isSuper ? stepIncrement * 2 : stepIncrement;
       emitProgress(1);
+    }
+    launchTreatArc(tx, ty, addBonus);
+    if (addBonus) {
+      mollyEatTimer = Math.max(mollyEatTimer, 0.7);
+      mollyTreatsCount = Math.min(6, mollyTreatsCount + 1);
+      notifyMollySpark(o.action || spec.mode, {
+        surface: 'canvas',
+        fromCanvas: true
+      });
+    }
+    if (!id && isVisible) {
+      id = requestAnimationFrame(fn);
     }
     burstEnergy = Math.min(1.6, burstEnergy + (isSuper ? 1.15 : 0.72));
     shockwaves.push({
@@ -2444,9 +2969,86 @@ export function mountImpactCanvas(cv, o = {}) {
       c.restore();
     }
 
+    // 7. Kvadratická Bézierova parabola pamlsku letícího k Mini-Molly a samotná želvovinová patronka
+    if (mollyEatTimer > 0) {
+      mollyEatTimer = Math.max(0, mollyEatTimer - 0.022);
+    }
+    let activeTreatX = hasPointer ? pointerX : cx;
+    let activeTreatY = hasPointer ? pointerY : cy;
+
+    for (let i = treatArcs.length - 1; i >= 0; i--) {
+      const arc = treatArcs[i];
+      arc.p = Math.min(1, arc.p + arc.speed);
+      const u = 1 - arc.p;
+      const ax = u * u * arc.x0 + 2 * u * arc.p * arc.cx + arc.p * arc.p * arc.x1;
+      const ay = u * u * arc.y0 + 2 * u * arc.p * arc.cy + arc.p * arc.p * arc.y1;
+      activeTreatX = ax;
+      activeTreatY = ay;
+
+      // Světelná stopa za letícím pamlskem
+      c.save();
+      c.strokeStyle = arc.color;
+      c.globalAlpha = 0.45 * (1 - arc.p * 0.4);
+      c.lineWidth = 1.6;
+      c.setLineDash([2.5, 2.5]);
+      c.beginPath();
+      c.moveTo(arc.x0, arc.y0);
+      c.quadraticCurveTo(arc.cx, arc.cy, ax, ay);
+      c.stroke();
+      c.restore();
+
+      // Zářící pamlsek v letu
+      drawGlow(c, ax, ay, 11, arc.color, 0.55);
+      c.save();
+      c.fillStyle = arc.color;
+      c.strokeStyle = '#fef3c7';
+      c.lineWidth = 1.1;
+      c.beginPath();
+      c.arc(ax, ay, 3.6, 0, Math.PI * 2);
+      c.fill();
+      c.stroke();
+      c.restore();
+
+      if (arc.p >= 1) {
+        mollyEatTimer = 0.7;
+        mollyTreatsCount = Math.min(6, mollyTreatsCount + 1);
+        playMollyCrunch();
+        drawHeart(c, mollyX - 4, mollyY - 22, 4.5, '#fbbf24');
+        if (popups.length < 6) {
+          popups.push({
+            x: mollyX - 10,
+            y: mollyY - 22,
+            vy: -0.58,
+            alpha: 1,
+            text: `${mollyTreat.icon} Mňam!`
+          });
+        }
+        treatArcs.splice(i, 1);
+      }
+    }
+
+    drawCanvasMiniMolly(c, mollyX, mollyY, mollyBowlX, mollyBowlY, {
+      t,
+      lookX: activeTreatX,
+      lookY: activeTreatY,
+      eatTimer: mollyEatTimer,
+      treatColor: mollyTreat.color || '#f59e0b',
+      treatsCount: mollyTreatsCount
+    });
+
+    if (mollyEatTimer > 0.15) {
+      drawHeart(
+        c,
+        mollyX - 6 + Math.sin(t * 5) * 3,
+        mollyY - 23 - (0.7 - mollyEatTimer) * 10,
+        3.6,
+        '#fde047'
+      );
+    }
+
     c.restore();
 
-    if (!red && isVisible) {
+    if ((!red || treatArcs.length > 0) && isVisible) {
       id = requestAnimationFrame(fn);
     }
   };

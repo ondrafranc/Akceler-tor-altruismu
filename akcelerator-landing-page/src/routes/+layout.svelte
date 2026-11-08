@@ -6,6 +6,7 @@
   import ImmediateHelp from '../components/ImmediateHelp.svelte';
   import SmallWinCelebration from '../components/SmallWinCelebration.svelte';
   import FeedbackModal from '../components/FeedbackModal.svelte';
+  import MollyCompanion from '../components/MollyCompanion.svelte';
   import '../styles/czech-theme.css';
 
   const siteMeta = {
@@ -196,6 +197,7 @@
 <ImmediateHelp />
 <SmallWinCelebration />
 <FeedbackModal />
+<MollyCompanion />
 
 <style>
   .app-shell {

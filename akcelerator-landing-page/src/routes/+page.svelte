@@ -31,6 +31,7 @@
     triggerCanvasBurst,
     fetchAmbientPulse,
   } from "../lib/sensoryEngine.js";
+  import { notifyMollySpark } from "../lib/mollyStore.js";
 
   const HOME_MODES = {
     couch: {
@@ -445,6 +446,7 @@
   function triggerHomeEffectSpark() {
     showEffectPreview = true;
     sparkBoosted = true;
+    notifyMollySpark(currentQuickAction, { surface: "home" });
     if (cardCanvasNode) {
       triggerCanvasBurst(cardCanvasNode, true);
     } else {
@@ -873,6 +875,12 @@
                   use:impactCanvas={{ action: currentQuickAction, climax: true }}
                   aria-label="Fyzikální vizualizace dopadu dobrého skutku"
                 ></canvas>
+                <div class="molly-celebration-note">
+                  🐾 Molly si právě pochutnala na odměně: <strong
+                    >{getActionEffectMeta(currentQuickAction, kibbleGrams)
+                      .mollyTreat?.name || "lososová granulka pro Molly"}</strong
+                  >
+                </div>
                 <div class="return-dopamine-actions">
                   <a
                     href={`/svet?just_lit=1&ritual=lantern&seed=${encodeURIComponent(currentQuickAction.id)}&title=${encodeURIComponent(cleanTitle(currentQuickAction.title))}`}
@@ -913,6 +921,12 @@
                   use:impactCanvas={{ action: currentQuickAction, climax: true }}
                   aria-label="Fyzikální vizualizace dopadu dobrého skutku"
                 ></canvas>
+                <div class="molly-celebration-note">
+                  🐾 Molly si právě pochutnala na odměně: <strong
+                    >{getActionEffectMeta(currentQuickAction, kibbleGrams)
+                      .mollyTreat?.name || "lososová granulka pro Molly"}</strong
+                  >
+                </div>
                 <div class="return-dopamine-actions">
                   <button
                     type="button"
@@ -2915,5 +2929,16 @@
     .portals-grid {
       grid-template-columns: 1fr;
     }
+  }
+
+  .molly-celebration-note {
+    font-size: 0.78rem;
+    color: #fef3c7;
+    background: rgba(245, 158, 11, 0.14);
+    border: 1px solid rgba(251, 191, 36, 0.32);
+    border-radius: 10px;
+    padding: 0.34rem 0.65rem;
+    margin: 0.35rem 0;
+    line-height: 1.35;
   }
 </style>

@@ -26,6 +26,7 @@
     triggerCanvasBurst,
     fetchAmbientPulse
   } from '../../../lib/sensoryEngine.js';
+  import { notifyMollySpark } from '../../../lib/mollyStore.js';
 
   let activeFilter = 'all';
   let searchQuery = '';
@@ -127,6 +128,7 @@
 
   function toggleCardEffect(action, event) {
     activeEffectCardId = action.id;
+    notifyMollySpark(action, { surface: 'online' });
     const stage = event?.currentTarget?.closest?.('.card-effect-stage');
     const canvas = stage?.querySelector?.('canvas.impact-payoff-canvas');
     if (canvas) {

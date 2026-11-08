@@ -130,6 +130,16 @@
             }}
           ></canvas>
         </div>
+        {#if effectMeta?.mollyTreat}
+          <div class="molly-celebration-note">
+            <span>{effectMeta.mollyTreat.icon}</span>
+            <span>
+              Patronka <strong>Molly</strong> si pochutnala na dobrotě (<strong
+                >{effectMeta.mollyTreat.name}</strong
+              >) a čeká na tebe u jezera v Krajině dobra.
+            </span>
+          </div>
+        {/if}
         <p class="win-rest-reassurance">
           Dnes jsi udělal něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.
         </p>
@@ -240,6 +250,22 @@
 
   .win-sensory-stage .impact-payoff-canvas {
     height: 124px;
+  }
+
+  .molly-celebration-note {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    margin: 0 0 0.7rem 0;
+    padding: 0.48rem 0.75rem;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(254, 243, 199, 0.75), rgba(209, 250, 229, 0.55));
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    color: #0b2419;
+    font-size: 0.81rem;
+    line-height: 1.4;
+    text-align: left;
   }
 
   .win-rest-reassurance {

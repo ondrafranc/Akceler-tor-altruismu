@@ -30,6 +30,7 @@
     triggerCanvasBurst,
     fetchAmbientPulse,
   } from "../../../lib/sensoryEngine.js";
+  import { notifyMollySpark } from "../../../lib/mollyStore.js";
 
   const SITUATIONS = [
     {
@@ -415,6 +416,23 @@
   function handleToggleSound() {
     soundMuted = toggleSoundMuted();
     trackEvent("aa_sound_toggle", { surface: "guided", muted: soundMuted });
+  }
+
+  function triggerGuidedEffectSpark() {
+    if (!bestAction) return;
+    showGuidedEffect = true;
+    guidedSparkBoosted = true;
+    notifyMollySpark(bestAction, { surface: "guided" });
+    if (guidedCanvasNode) {
+      triggerCanvasBurst(guidedCanvasNode, true);
+    } else {
+      playPayoffAsmr(bestAction);
+    }
+    trackEvent("aa_effect_preview_toggle", {
+      surface: "guided",
+      id: bestAction.id,
+      open: true,
+    });
   }
 
   function handleStartGuidedAction(action, surfaceLabel = "guided_best") {
@@ -1052,20 +1070,7 @@
                     class="effect-spark-btn"
                     class:active={guidedSparkBoosted}
                     aria-pressed={guidedSparkBoosted}
-                    on:click={() => {
-                      showGuidedEffect = true;
-                      guidedSparkBoosted = true;
-                      if (guidedCanvasNode) {
-                        triggerCanvasBurst(guidedCanvasNode, true);
-                      } else {
-                        playPayoffAsmr(bestAction);
-                      }
-                      trackEvent("aa_effect_preview_toggle", {
-                        surface: "guided",
-                        id: bestAction.id,
-                        open: true,
-                      });
-                    }}
+                    on:click={triggerGuidedEffectSpark}
                     title="Spustit vlnu dopadu na plátně"
                   >
                     ✨ Impuls

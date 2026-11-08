@@ -869,3 +869,128 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
     await expect(strip).toBeHidden();
   }
 });
+
+test('Molly tortoiseshell cat companion, action-driven feeding, in-canvas Mini-Molly, and Krajina dobra lakeside guardian work across viewports', async ({
+  page
+}) => {
+  const viewports = [
+    { name: 'Desktop', width: 1280, height: 900 },
+    { name: 'Tablet', width: 820, height: 960 },
+    { name: 'Mobile', width: 360, height: 800 }
+  ];
+
+  for (const vp of viewports) {
+    await page.setViewportSize({ width: vp.width, height: vp.height });
+    await page.goto('/');
+    await expect(page.locator('.molly-companion-layer')).toBeAttached();
+    await expect(page.locator('.molly-pelisek-dock')).toBeVisible();
+    await expect(page.locator('.molly-roaming-actor canvas.molly-cat-canvas')).toBeAttached();
+
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+    );
+    expect(overflow, `No horizontal overflow with Molly on ${vp.name}`).toBe(false);
+  }
+
+  // Desktop interactive verification of feeding, Mini-Molly treat arc, and Klidový pelíšek toggle
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/?action=zvirata_utulek_online');
+  // Edge case: corrupted or array localStorage JSON recovery
+  await page.evaluate(() => localStorage.setItem('aa_molly_companion_v1', '{bad-json'));
+  await page.reload();
+  await expect(page.locator('.molly-companion-layer')).toHaveAttribute('data-molly-mode', 'roaming');
+  await page.evaluate(() => localStorage.setItem('aa_molly_companion_v1', '[]'));
+  await page.reload();
+  await expect(page.locator('.molly-companion-layer')).toHaveAttribute('data-molly-mode', 'roaming');
+  await page.evaluate(() => localStorage.removeItem('aa_molly_companion_v1'));
+  await page.reload();
+
+  const homeCanvas = page.locator('.instant-card canvas.impact-payoff-canvas');
+  await expect(homeCanvas).toHaveAttribute('data-molly-mini', 'ready');
+  await expect(homeCanvas).toHaveAttribute('data-molly-treat', 'salmon');
+
+  const treatsBefore = Number(
+    (await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0'
+  );
+  await page.locator('.instant-card .effect-spark-btn').click();
+  const treatsAfterSpark = Number(
+    (await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0'
+  );
+  expect(treatsAfterSpark).toBe(treatsBefore + 1);
+
+  const arcsCount = Number((await homeCanvas.getAttribute('data-molly-arcs')) || '0');
+  expect(arcsCount).toBeGreaterThan(0);
+
+  // Petting Molly via dock pet button triggers purring mood & Czech whisper bubble
+  await page.locator('.molly-pelisek-dock .molly-dock-pet-btn').click();
+  await expect(page.locator('.molly-companion-layer')).toHaveAttribute('data-molly-mood', 'purring');
+  await expect(page.locator('.molly-whisper-bubble')).toBeVisible();
+
+  // Completing an action feeds Molly and displays her celebration note
+  await page.locator('.instant-card .btn-studio-done').click();
+  await expect(page.locator('.instant-card .molly-celebration-note')).toBeVisible();
+  await expect(page.locator('.instant-card .molly-celebration-note')).toContainText('Molly');
+
+  // Toggle Klidový pelíšek dock mode
+  await expect(page.locator('.molly-companion-layer')).toHaveAttribute('data-molly-mode', 'roaming');
+  await page.locator('.molly-pelisek-dock .molly-dock-toggle-btn').click();
+  await expect(page.locator('.molly-companion-layer')).toHaveAttribute('data-molly-mode', 'docked');
+  await page.locator('.molly-pelisek-dock .molly-dock-toggle-btn').click();
+  await expect(page.locator('.molly-companion-layer')).toHaveAttribute('data-molly-mode', 'roaming');
+
+  // Dynamic resize from Desktop (1280x900) to Mobile (360x800) clamps Molly inside mobile viewport
+  // and allows mobile pointer tap on .molly-dock-toggle-btn when no interactive page element is underneath
+  await page.setViewportSize({ width: 360, height: 800 });
+  const mobileActorBox = await page.locator('.molly-roaming-actor').boundingBox();
+  expect(mobileActorBox).not.toBeNull();
+  expect(mobileActorBox!.x).toBeGreaterThanOrEqual(-5);
+  expect(mobileActorBox!.x + mobileActorBox!.width).toBeLessThanOrEqual(365);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const toggleBox = await page.locator('.molly-pelisek-dock .molly-dock-toggle-btn').boundingBox();
+  expect(toggleBox).not.toBeNull();
+  await page.mouse.click(
+    Math.round(toggleBox!.x + toggleBox!.width * 0.5),
+    Math.round(toggleBox!.y + toggleBox!.height * 0.5)
+  );
+  await expect(page.locator('.molly-companion-layer')).toHaveAttribute('data-molly-mode', 'docked');
+  await page.mouse.click(
+    Math.round(toggleBox!.x + toggleBox!.width * 0.5),
+    Math.round(toggleBox!.y + toggleBox!.height * 0.5)
+  );
+  await expect(page.locator('.molly-companion-layer')).toHaveAttribute('data-molly-mode', 'roaming');
+  await page.setViewportSize({ width: 1280, height: 900 });
+
+  // Verify Krajina dobra (/svet) Sanctuary Molly on canvas, direct lakeshore click, HUD pill, and breathing co-regulation guardian
+  await page.goto('/svet');
+  const sanctuaryPill = page.locator('.molly-sanctuary-pill');
+  await expect(sanctuaryPill).toBeVisible();
+  const sanctuaryCanvas = page.locator('canvas.sanctuary-canvas');
+  await expect(sanctuaryCanvas).toHaveAttribute('data-sanctuary-molly', 'ready');
+
+  const treatsBeforeSanctuary = Number(
+    (await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0'
+  );
+  await sanctuaryPill.click();
+  const treatsAfterSanctuary = Number(
+    (await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0'
+  );
+  expect(treatsAfterSanctuary).toBeGreaterThan(treatsBeforeSanctuary);
+
+  // Direct click on Sanctuary Molly on the lakeshore (0.24 * w, 0.72 * h) feeds/pets her
+  const vpBox = await page.locator('.sanctuary-viewport').boundingBox();
+  expect(vpBox).not.toBeNull();
+  await page.locator('.sanctuary-viewport').click({
+    position: { x: Math.round(vpBox!.width * 0.24), y: Math.round(vpBox!.height * 0.72) }
+  });
+  const treatsAfterDirectClick = Number(
+    (await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0'
+  );
+  expect(treatsAfterDirectClick).toBeGreaterThan(treatsAfterSanctuary);
+
+  await expect(page.locator('#dech .lotus-stage .molly-lotus-guardian')).toBeVisible();
+  await page.locator('#dech .breath-cta.start').click();
+  await expect(page.locator('.molly-companion-layer')).toHaveAttribute('data-molly-mood', 'breathing');
+  // Navigating away while breathing is active cleanly resets mood from 'breathing' back to 'curious'
+  await page.locator('header a[href="/"]').first().click();
+  await expect(page.locator('.molly-companion-layer')).toHaveAttribute('data-molly-mood', 'curious');
+});

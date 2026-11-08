@@ -1,6 +1,7 @@
 import { writable, derived } from 'svelte/store';
 import { getRandomEncouragement, MICRO_ACTIONS } from './data/czech-actions.js';
 import { trackEvent, trackFunnel, hasActionStarted } from './analytics.js';
+import { feedMollyFromAction } from './mollyStore.js';
 
 const STORAGE_KEY = 'aa_completed_steps_v2';
 const WISHES_STORAGE_KEY = 'aa_sanctuary_wishes_v1';
@@ -325,7 +326,7 @@ export const activeCelebration = writable(null);
  * Zaznamená dokončený malý krok a otevře klidné, nenátlakové poděkování.
  * @param {{ id?: string, title: string, surface?: string, category?: string, element?: string, concreteImpact?: string, lightType?: 'lantern' | 'star' | 'wave', silent?: boolean }} step
  */
-export function recordSmallWin(step) {
+export function recordSmallWin(step, options = {}) {
   const catalogMatch = Array.isArray(MICRO_ACTIONS)
     ? MICRO_ACTIONS.find((a) => a.id === step?.id)
     : null;
@@ -361,6 +362,12 @@ export function recordSmallWin(step) {
     return next;
   });
 
+  const isSilent = Boolean(step?.silent || options?.silent);
+  feedMollyFromAction(catalogMatch || step || entry, {
+    silent: isSilent,
+    source: 'win'
+  });
+
   trackEvent('aa_small_win', {
     surface: entry.surface,
     id: entry.id,
@@ -388,7 +395,7 @@ export function recordSmallWin(step) {
     });
   }
 
-  if (!step?.silent) {
+  if (!isSilent) {
     activeCelebration.set({
       open: true,
       id: entry.id,
@@ -476,6 +483,11 @@ export function addSanctuaryWish(item) {
     saveWishes(next);
     return next;
   });
+
+  feedMollyFromAction(
+    { id: 'sanctuary_wish', element: entry.element, title: entry.title },
+    { source: 'sanctuary' }
+  );
 
   return entry;
 }

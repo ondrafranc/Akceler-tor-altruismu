@@ -213,6 +213,136 @@ export async function renderStoryCardPng(opts = {}) {
     ctx.fill();
   }
 
+  // 4B. Patronka Molly — Tortoiseshell Silhouette with Glowing Emerald Eyes & Golden Firefly on Lakeshore
+  ctx.save();
+  const mx = 260;
+  const my = 1490;
+
+  // Golden water reflection & aura under Molly
+  const mRefl = ctx.createRadialGradient(mx, my + 42, 4, mx, my + 42, 74);
+  mRefl.addColorStop(0, 'rgba(253, 230, 138, 0.42)');
+  mRefl.addColorStop(0.5, 'rgba(245, 158, 11, 0.18)');
+  mRefl.addColorStop(1, 'rgba(245, 158, 11, 0)');
+  ctx.fillStyle = mRefl;
+  ctx.beginPath();
+  ctx.ellipse(mx, my + 42, 74, 22, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Mossy shore stone
+  ctx.fillStyle = 'rgba(18, 40, 29, 0.94)';
+  ctx.strokeStyle = 'rgba(110, 231, 183, 0.38)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(mx - 8, my + 12, 62, 16, -0.04, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Tail with honey-amber tip
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#1e1714';
+  ctx.lineWidth = 11;
+  ctx.beginPath();
+  ctx.moveTo(mx + 22, my + 2);
+  ctx.bezierCurveTo(mx + 50, my - 6, mx + 56, my - 38, mx + 38, my - 56);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#f59e0b';
+  ctx.lineWidth = 7.5;
+  ctx.beginPath();
+  ctx.moveTo(mx + 44, my - 22);
+  ctx.quadraticCurveTo(mx + 52, my - 38, mx + 38, my - 56);
+  ctx.stroke();
+
+  // Tortoiseshell body
+  ctx.fillStyle = '#1e1714';
+  ctx.strokeStyle = 'rgba(253, 230, 138, 0.48)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(mx, my - 10, 28, 33, -0.08, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(mx, my - 10, 27, 32, -0.08, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.fillStyle = '#ea580c';
+  ctx.beginPath();
+  ctx.ellipse(mx + 12, my - 18, 15, 12, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#f59e0b';
+  ctx.beginPath();
+  ctx.ellipse(mx - 10, my - 2, 14, 11, -0.25, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#fde68a';
+  ctx.beginPath();
+  ctx.ellipse(mx - 4, my - 14, 8.5, 10, 0.1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Head & ears
+  const mhx = mx - 4;
+  const mhy = my - 44;
+  ctx.fillStyle = '#1e1714';
+  ctx.beginPath();
+  ctx.moveTo(mhx - 20, mhy - 6);
+  ctx.lineTo(mhx - 24, mhy - 34);
+  ctx.lineTo(mhx - 5, mhy - 18);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#ea580c';
+  ctx.beginPath();
+  ctx.moveTo(mhx + 5, mhy - 18);
+  ctx.lineTo(mhx + 24, mhy - 34);
+  ctx.lineTo(mhx + 20, mhy - 6);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#1e1714';
+  ctx.beginPath();
+  ctx.arc(mhx, mhy, 22, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(mhx, mhy, 22, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.fillStyle = '#f59e0b';
+  ctx.fillRect(mhx, mhy - 24, 24, 48);
+  ctx.fillStyle = '#fde68a';
+  ctx.beginPath();
+  ctx.ellipse(mhx + 8, mhy + 6, 9, 7, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Glowing emerald eyes (#84cc16 / #bef264)
+  [-9, 9].forEach((ex) => {
+    ctx.fillStyle = '#bef264';
+    ctx.shadowColor = '#84cc16';
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.ellipse(mhx + ex, mhy - 1, 5.8, 5.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = '#090d08';
+    ctx.beginPath();
+    ctx.ellipse(mhx + ex, mhy - 1, 2.3, 4.0, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Golden firefly right in front of Molly's nose
+  const mff = ctx.createRadialGradient(mhx - 34, mhy - 18, 2, mhx - 34, mhy - 18, 26);
+  mff.addColorStop(0, '#ffffff');
+  mff.addColorStop(0.35, 'rgba(253, 230, 138, 0.95)');
+  mff.addColorStop(1, 'rgba(251, 191, 36, 0)');
+  ctx.fillStyle = mff;
+  ctx.beginPath();
+  ctx.arc(mhx - 34, mhy - 18, 26, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
   // 5. Top Editorial Pill
   roundRectPath(ctx, 140, 88, 800, 64, 32);
   ctx.fillStyle = 'rgba(6, 22, 18, 0.76)';
