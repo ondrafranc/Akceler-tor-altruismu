@@ -44,7 +44,7 @@ function getLocalCommunityNearby(lat, lon, radiusM) {
   }
   allWithDist.sort((a, b) => a.distanceKm - b.distanceKm);
   const within = allWithDist.filter((item) => item.distanceKm <= maxKm);
-  return within.length > 0 ? within : allWithDist.slice(0, 3);
+  return within.length >= 2 ? within : allWithDist.slice(0, 3);
 }
 
 /** @type {import('./$types').RequestHandler} */
@@ -57,7 +57,7 @@ export async function GET({ url }) {
     return json({ error: 'Invalid or missing lat/lon' }, { status: 400, headers: { 'cache-control': 'no-store' } });
   }
 
-  const cacheKey = `comm:v2:${lat.toFixed(2)}:${lon.toFixed(2)}:${radiusM}`;
+  const cacheKey = `comm:v3:${lat.toFixed(4)}:${lon.toFixed(4)}:${radiusM}`;
   const cached = CACHE.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return json(cached.data, {

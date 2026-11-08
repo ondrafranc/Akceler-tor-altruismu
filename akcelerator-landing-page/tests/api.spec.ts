@@ -108,6 +108,9 @@ test('pulse API (JSON + SSE), edge Cache-Control headers, and unverified submiss
   const pulseJson = await pulseJsonRes.json();
   expect(typeof pulseJson.message).toBe('string');
   expect(pulseJson.message.length).toBeGreaterThan(10);
+  expect(pulseJson.message).not.toContain('(');
+  expect(pulseJson.message).not.toContain('v Kladno');
+  expect(pulseJson.message).not.toContain('v Karlovy Vary');
 
   // 2. /api/pulse SSE
   const pulseSseRes = await request.get(baseURL! + '/api/pulse', {
@@ -146,4 +149,31 @@ test('pulse API (JSON + SSE), edge Cache-Control headers, and unverified submiss
   const commRes = await request.get(baseURL! + '/api/community-nearby?lat=50.08&lon=14.43&radius_m=15000');
   const commBody = await commRes.json();
   expect(commBody.items.some((i: any) => i.name === 'Nepotvrzený spolek Test 123')).toBe(false);
+
+  // 5. District towns (Tábor, Kladno) return local curated & community places within radius
+  const taborRes = await request.get(
+    baseURL! + '/api/nearby?lat=49.4144&lon=14.6578&radius_m=8000&kinds=ngo,community,food,animals'
+  );
+  expect(taborRes.status()).toBe(200);
+  const taborBody = await taborRes.json();
+  expect(taborBody.places.some((p: any) => p.name.includes('Tábor'))).toBe(true);
+
+  const kladnoRes = await request.get(
+    baseURL! + '/api/nearby?lat=50.1473&lon=14.1028&radius_m=8000&kinds=ngo,community,food,animals'
+  );
+  expect(kladnoRes.status()).toBe(200);
+  const kladnoBody = await kladnoRes.json();
+  expect(kladnoBody.places.some((p: any) => p.name.includes('Kladno'))).toBe(true);
+
+  // 6. Curated places with shared prefix ("Veřejná knihobudka...") are not dropped as false duplicates and stay sorted nearest-first
+  const prahaCommRes = await request.get(
+    baseURL! + '/api/nearby?lat=50.0755&lon=14.4378&radius_m=8000&kinds=community'
+  );
+  expect(prahaCommRes.status()).toBe(200);
+  const prahaCommBody = await prahaCommRes.json();
+  const curatedIds = prahaCommBody.places.filter((p: any) => p.curated).map((p: any) => p.id);
+  expect(curatedIds).toContain('curated:praha-knihobudka-jzp');
+  expect(curatedIds).toContain('curated:praha-knihobudka-dejvice');
+  const curatedDists = prahaCommBody.places.filter((p: any) => p.curated).map((p: any) => p.distanceKm);
+  expect(curatedDists[0]).toBeLessThanOrEqual(curatedDists[1]);
 });

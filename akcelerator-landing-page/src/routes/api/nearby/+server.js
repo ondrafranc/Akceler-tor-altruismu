@@ -57,9 +57,15 @@ function deriveSubcategory(tags) {
   const amenity = tags.amenity;
   const office = tags.office;
   const sf = tags.social_facility;
+  const shop = tags.shop;
+  const leisure = tags.leisure;
 
   if (amenity === 'animal_shelter') return 'Útulek pro zvířata';
   if (amenity === 'public_bookcase') return 'Veřejná knihobudka';
+  if (amenity === 'give_box') return 'ReUse skříňka / freeshop';
+  if (amenity === 'food_sharing') return 'Sdílená lednice / potravinová skříňka';
+  if (shop === 'charity') return 'Charitativní obchod';
+  if (leisure === 'garden' && tags['garden:type'] === 'community') return 'Komunitní zahrada';
 
   if (amenity === 'food_bank' || sf === 'food_bank') return 'Potravinová banka';
   if (amenity === 'soup_kitchen' || sf === 'soup_kitchen') return 'Výdej jídla';
@@ -95,11 +101,15 @@ function makeOverpassQuery(lat, lon, radiusM, kinds, includeAssociations) {
     if (k === 'community') {
       tagSet.add('["amenity"="community_centre"]');
       tagSet.add('["amenity"="public_bookcase"]');
+      tagSet.add('["amenity"="give_box"]');
+      tagSet.add('["leisure"="garden"]["garden:type"="community"]');
       tagSet.add('["amenity"="social_facility"]');
     }
     if (k === 'food') {
       tagSet.add('["amenity"="food_bank"]');
       tagSet.add('["amenity"="soup_kitchen"]');
+      tagSet.add('["amenity"="food_sharing"]');
+      tagSet.add('["shop"="charity"]');
       tagSet.add('["amenity"="social_facility"]["social_facility"="food_bank"]');
       tagSet.add('["amenity"="social_facility"]["social_facility"="clothing_bank"]');
     }
@@ -112,6 +122,10 @@ function makeOverpassQuery(lat, lon, radiusM, kinds, includeAssociations) {
     tagSet.add('["office"="ngo"]');
     tagSet.add('["amenity"="community_centre"]');
     tagSet.add('["amenity"="public_bookcase"]');
+    tagSet.add('["amenity"="give_box"]');
+    tagSet.add('["amenity"="food_sharing"]');
+    tagSet.add('["shop"="charity"]');
+    tagSet.add('["leisure"="garden"]["garden:type"="community"]');
     tagSet.add('["amenity"="animal_shelter"]');
   }
 
@@ -124,7 +138,7 @@ function makeOverpassQuery(lat, lon, radiusM, kinds, includeAssociations) {
 
   const parts = Array.from(tagSet).map((tq) => `nw${tq};`);
 
-  return `[out:json][timeout:3][bbox:${minLat},${minLon},${maxLat},${maxLon}];(${parts.join('')});out center tags 120;`;
+  return `[out:json][timeout:3][bbox:${minLat},${minLon},${maxLat},${maxLon}];(${parts.join('')});out center tags 140;`;
 }
 
 async function fetchOneOverpass(url, query, timeoutMs = 2200) {
@@ -164,6 +178,7 @@ function getFallbackPlaces(lat, lon, radiusM, kinds) {
     .map((p) => ({
       ...p,
       curated: true,
+      sourceType: 'verified_org',
       distanceKm: Math.round(haversineKm(lat, lon, p.lat, p.lon) * 10) / 10
     }))
     .sort((a, b) => a.distanceKm - b.distanceKm);
@@ -200,7 +215,7 @@ export async function GET({ url, request, getClientAddress }) {
   const radiusM = clamp(radius, 250, 25_000);
   const kinds = [...new Set(kindsRaw.filter((k) => ['ngo', 'community', 'food', 'animals'].includes(k)))].sort();
 
-  const cacheKey = `v27:${lat.toFixed(2)}:${lon.toFixed(2)}:${radiusM}:${includeAssociations ? 'a1' : 'a0'}:${kinds.join(',')}`;
+  const cacheKey = `v28:${lat.toFixed(4)}:${lon.toFixed(4)}:${radiusM}:${includeAssociations ? 'a1' : 'a0'}:${kinds.join(',')}`;
   const cached = CACHE.get(cacheKey);
   const now = Date.now();
   if (cached && cached.expiresAt > now) {
@@ -217,10 +232,18 @@ export async function GET({ url, request, getClientAddress }) {
     for (const el of data?.elements || []) {
       const ll = extractLatLon(el);
       if (!ll) continue;
+
+      const rawDistKm = haversineKm(lat, lon, ll[0], ll[1]);
+      if (rawDistKm * 1000 > radiusM * 1.05) continue;
+
       const tags = el.tags || {};
       let name = firstText(160, tags.name, tags['name:cs'], tags.operator, tags.brand);
       if (!name && tags.amenity === 'public_bookcase') {
         name = 'Veřejná knihobudka';
+      } else if (!name && tags.amenity === 'give_box') {
+        name = 'ReUse skříňka (dej a vezmi)';
+      } else if (!name && tags.amenity === 'food_sharing') {
+        name = 'Sdílená potravinová skříňka';
       }
       if (!name) continue;
 
@@ -233,23 +256,47 @@ export async function GET({ url, request, getClientAddress }) {
       const opening_hours = firstText(180, tags.opening_hours);
       const description = firstText(500, tags['description:cs'], tags.description);
       const address = buildAddress(tags);
+
+      // Filter out low-signal administrative social_facility noise unless it has actionable tags or contact info
+      const actionableSf = ['food_bank', 'soup_kitchen', 'clothing_bank', 'shelter', 'outreach', 'day_care'];
+      if (
+        tags.amenity === 'social_facility' &&
+        !actionableSf.includes(tags.social_facility || '') &&
+        !website &&
+        !email &&
+        !description
+      ) {
+        continue;
+      }
+
       const kind =
         tags.amenity === 'animal_shelter'
           ? 'animals'
           : tags.amenity === 'food_bank' ||
               tags.amenity === 'soup_kitchen' ||
+              tags.amenity === 'food_sharing' ||
+              tags.shop === 'charity' ||
               tags.social_facility === 'food_bank' ||
               tags.social_facility === 'soup_kitchen' ||
               tags.social_facility === 'clothing_bank'
             ? 'food'
             : tags.amenity === 'community_centre' ||
                 tags.amenity === 'public_bookcase' ||
+                tags.amenity === 'give_box' ||
+                (tags.leisure === 'garden' && tags['garden:type'] === 'community') ||
                 tags.amenity === 'social_facility'
               ? 'community'
               : tags.office === 'ngo' || tags.office === 'association'
                 ? 'ngo'
                 : 'other';
+
+      if (kinds.length > 0 && !kinds.includes(kind)) continue;
+
       const subcategory = deriveSubcategory(tags);
+      const isSelfService =
+        tags.amenity === 'public_bookcase' ||
+        tags.amenity === 'give_box' ||
+        tags.amenity === 'food_sharing';
 
       places.push({
         id: `${el.type}:${el.id}`,
@@ -259,6 +306,7 @@ export async function GET({ url, request, getClientAddress }) {
         name,
         lat: ll[0],
         lon: ll[1],
+        distanceKm: Math.round(rawDistKm * 10) / 10,
         kind,
         subcategory,
         website,
@@ -266,24 +314,54 @@ export async function GET({ url, request, getClientAddress }) {
         phone,
         email,
         opening_hours,
-        description
+        description,
+        sourceType: 'osm',
+        visitMode: isSelfService ? 'drop_in' : opening_hours ? 'opening_hours' : 'by_agreement',
+        helpWays:
+          tags.amenity === 'public_bookcase' || tags.amenity === 'give_box' || tags.shop === 'charity'
+            ? ['material_dropoff']
+            : tags.amenity === 'food_sharing'
+              ? ['food_donation']
+              : kind === 'food'
+                ? ['food_donation', 'material_dropoff']
+                : kind === 'animals'
+                  ? ['material_dropoff', 'one_off_help']
+                  : ['one_off_help', 'regular_volunteering']
       });
     }
 
+    places.sort((a, b) => {
+      const scoreA = (a.distanceKm ?? 50) * 0.15 - (a.website ? 0.35 : 0) - (a.description ? 0.2 : 0);
+      const scoreB = (b.distanceKm ?? 50) * 0.15 - (b.website ? 0.35 : 0) - (b.description ? 0.2 : 0);
+      return scoreA - scoreB;
+    });
+
     const curatedNearby = getFallbackPlaces(lat, lon, radiusM, kinds);
+    const isDuplicatePlace = (a, b) => {
+      if (!a || !b) return false;
+      if (a.id && b.id && a.id === b.id) return true;
+      const nA = String(a.name || '').trim().toLowerCase();
+      const nB = String(b.name || '').trim().toLowerCase();
+      if (nA && nB && nA === nB) return true;
+      if (haversineKm(a.lat, a.lon, b.lat, b.lon) < 0.15 && a.kind === b.kind) return true;
+      return false;
+    };
+
+    const localCuratedToPrepend = [];
     for (const cp of curatedNearby) {
       if (haversineKm(lat, lon, cp.lat, cp.lon) * 1000 <= radiusM) {
-        if (!places.some((p) => p.name && cp.name && p.name.toLowerCase().includes(cp.name.slice(0, 12).toLowerCase()))) {
-          places.unshift(cp);
+        if (!places.some((p) => isDuplicatePlace(p, cp)) && !localCuratedToPrepend.some((p) => isDuplicatePlace(p, cp))) {
+          localCuratedToPrepend.push(cp);
         }
       }
     }
+    places.unshift(...localCuratedToPrepend);
 
     let expandedToNearest = false;
     if (places.length < 2) {
       expandedToNearest = true;
       for (const cp of curatedNearby) {
-        if (!places.some((p) => p.id === cp.id || (p.name && cp.name && p.name.toLowerCase().includes(cp.name.slice(0, 12).toLowerCase())))) {
+        if (!places.some((p) => isDuplicatePlace(p, cp))) {
           places.push(cp);
         }
       }
@@ -297,7 +375,9 @@ export async function GET({ url, request, getClientAddress }) {
     });
   } catch {
     const fallbackPlaces = getFallbackPlaces(lat, lon, radiusM, kinds);
-    const payload = { places: fallbackPlaces, radius_m: radiusM, lat, lon, fallback: true };
+    const withinStrictRadius = fallbackPlaces.filter((p) => (p.distanceKm ?? 0) * 1000 <= radiusM);
+    const expandedToNearest = withinStrictRadius.length < 2 && fallbackPlaces.some((p) => (p.distanceKm ?? 0) * 1000 > radiusM);
+    const payload = { places: fallbackPlaces, radius_m: radiusM, lat, lon, fallback: true, expandedToNearest };
     setBoundedCache(CACHE, cacheKey, payload, 2 * 60 * 1000, 250);
     return json(payload, {
       status: 200,

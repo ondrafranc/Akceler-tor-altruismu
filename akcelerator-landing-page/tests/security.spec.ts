@@ -134,12 +134,23 @@ test('home mood tabs start with shelter bowl, rotate 4 distinct actions, and con
 });
 
 test('near map renders OpenStreetMap tiles, displays curated pins, and limits initial list to 3 cards', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/near');
   await expect(page.locator('.leaflet-container')).toBeVisible({ timeout: 10000 });
   await expect(page.locator('.aa-map-pin').first()).toBeVisible({ timeout: 10000 });
 
+  // Verify compact Desktop header keeps .split-layout high above the fold (y < 245)
+  const splitBox = await page.locator('.split-layout').boundingBox();
+  expect(splitBox).not.toBeNull();
+  expect(splitBox!.y).toBeLessThan(245);
+
   // Progressive disclosure: 3 place cards shown initially until user asks for more
   await expect(page.locator('.places-stack .place-card')).toHaveCount(3);
+
+  // Hovering a place card highlights the corresponding .aa-map-pin on the map
+  await page.locator('.places-stack .place-card').first().hover();
+  await expect(page.locator('.aa-map-pin.is-active').first()).toBeVisible();
+
   await page.locator('.near-more-wrap .calm-more-btn').click();
   const expandedCount = await page.locator('.places-stack .place-card').count();
   expect(expandedCount).toBeGreaterThan(3);
@@ -151,6 +162,54 @@ test('near map renders OpenStreetMap tiles, displays curated pins, and limits in
     expect(src).not.toContain('cartocdn');
     expect(src).toContain('openstreetmap');
   }
+
+  // Verify CSS cartographic tile style switcher keeps OpenStreetMap tiles (never CARTO watermark)
+  const mapCanvas = page.locator('.leaflet-canvas.map-canvas');
+  await expect(mapCanvas).toHaveClass(/is-calm-tiles/);
+  await page.locator('.tile-switch-btn').click();
+  await expect(mapCanvas).toHaveClass(/is-crisp-tiles/);
+  const switchedTileUrls = await page.locator('.leaflet-tile-pane img').evaluateAll((imgs) =>
+    imgs.map((el) => (el as HTMLImageElement).src)
+  );
+  for (const src of switchedTileUrls) {
+    expect(src).not.toContain('cartocdn');
+    expect(src).toContain('openstreetmap');
+  }
+
+  // Verify structured decision context ("Jak tu můžeš pomoct") and 3-tier source filter on /near
+  await expect(page.locator('.place-card').first().locator('.pc-decision-box')).toBeVisible();
+  await expect(page.locator('.place-card').first().locator('.pcd-visit-badge')).toBeVisible();
+  await expect(page.locator('.source-tier-bar .source-chip')).toHaveCount(4);
+
+  // Verify "📚 Knihobudky a sousedé" preset surfaces self-service bookcase with Mapy.cz navigation CTA
+  await page.locator('.preset-pill', { hasText: 'Knihobudky a sousedé' }).click();
+  const bookcaseCard = page.locator('.place-card', { hasText: 'Knihobudka' }).first();
+  await expect(bookcaseCard).toBeVisible();
+  await expect(bookcaseCard.locator('.pc-actions .pc-btn.primary')).toContainText('Mapy.cz');
+
+  // Verify "🥫 Jídlo a šatníky" preset never matches "Veřejná knihobudka"
+  await page.locator('.preset-pill', { hasText: 'Jídlo a šatníky' }).click();
+  await expect(page.locator('.place-card', { hasText: 'Veřejná knihobudka' })).toHaveCount(0);
+
+  // Verify "🐾 Útulky a zvířata" preset in Prague has >= 3 local animal places within 8 km without fallback banner
+  await page.locator('.preset-pill', { hasText: 'Útulky a zvířata' }).click();
+  await expect(page.locator('.places-stack .place-card')).toHaveCount(3);
+  await expect(page.locator('.smart-nearest-banner')).toHaveCount(0);
+
+  // Verify searching for district town "Tábor" immediately loads verified Tábor places
+  await page.locator('.preset-pill', { hasText: 'Vše smysluplné v okolí' }).click();
+  await page.locator('.search-box input').fill('Tábor');
+  await page.locator('.btn-find').click();
+  await expect(page.locator('.place-card', { hasText: 'Tábor' }).first()).toBeVisible();
+
+  // Verify Tablet (820x960) & Mobile (360x800) [📋 Seznam] / [🗺️ Mapa] switcher and floating active sheet
+  await page.setViewportSize({ width: 820, height: 960 });
+  await expect(page.locator('.mobile-tabs')).toBeVisible();
+  await page.locator('.place-card').first().locator('button', { hasText: 'Na mapě' }).click();
+  await expect(page.locator('.map-column')).toBeVisible();
+  await expect(page.locator('.map-active-sheet')).toBeVisible();
+  await page.locator('.map-active-sheet button', { hasText: 'Detail v seznamu' }).click();
+  await expect(page.locator('.list-column')).toBeVisible();
 });
 
 test('guided live compass rotates recommendations, auto-opens local places when outdoor, and /app/online reveals cards progressively', async ({ page }) => {

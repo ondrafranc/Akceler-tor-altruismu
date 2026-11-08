@@ -29,17 +29,27 @@ const CITY_LOCATIVES = {
   usti: 'v Ústí nad Labem',
   zlin: 've Zlíně',
   jihlava: 'v Jihlavě',
-  vary: 'v Karlových Varech'
+  karlovyvary: 'v Karlových Varech',
+  vary: 'v Karlových Varech',
+  kladno: 'v Kladně',
+  tabor: 'v Táboře',
+  most: 'v Mostě',
+  opava: 'v Opavě',
+  znojmo: 've Znojmě',
+  pisek: 'v Písku',
+  kolin: 'v Kolíně',
+  mladaboleslav: 'v Mladé Boleslavi'
 };
 
 function buildPulsePayload(slot = Math.floor(Date.now() / 15000)) {
   const cities = CZECH_CITIES.length ? CZECH_CITIES : [{ id: 'brno', name: 'Brno' }];
   const city = cities[slot % cities.length];
   const tpl = PULSE_TEMPLATES[(slot * 3 + 1) % PULSE_TEMPLATES.length];
-  const loc = CITY_LOCATIVES[city.id] || `v ${city.name}`;
+  const cleanCityName = String(city.name || 'Brno').replace(/\s*\([^)]*\)/g, '').trim();
+  const loc = CITY_LOCATIVES[city.id] || `v ${cleanCityName}`;
   return {
     message: `Před chvílí někdo ${loc} ${tpl.verb}`,
-    city: city.name,
+    city: cleanCityName,
     actionId: tpl.actionId,
     icon: tpl.icon,
     ts: Date.now(),
