@@ -1658,6 +1658,13 @@ export function recommendActions(prefs = {}) {
       } else if (seedStr === 'home:couch:1' && action.id === 'birdlife_ptaci_pasti') {
         score += 25;
       }
+      if (seedStr.startsWith('home:couch:')) {
+        if (Number(action.timeMinutes) <= 2) {
+          score += 45;
+        } else {
+          score -= 25;
+        }
+      }
     }
 
     // 2. Časová náročnost (striktní oddělení 5 min vs 15 min vs 45+ min!)
@@ -1872,7 +1879,7 @@ export function buildFirstContactTemplate(place) {
 
   const safeMail = sanitizeEmail(place?.email);
   const mailtoUrl = safeMail
-    ? `mailto:${encodeURIComponent(safeMail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+    ? `mailto:${safeMail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
     : null;
 
   return {

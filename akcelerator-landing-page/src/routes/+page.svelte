@@ -27,11 +27,13 @@
     playPayoffAsmr,
     savePendingPartnerReturn,
     consumePendingPartnerReturn,
-    mountImpactCanvas,
+    getPendingPartnerReturnRemainingMs,
+    impactCanvas,
     triggerCanvasBurst,
     fetchAmbientPulse,
   } from "../lib/sensoryEngine.js";
   import { notifyMollySpark } from "../lib/mollyStore.js";
+  import { cleanTitle, stripLeadingEmoji, safeGetItem } from "../lib/utils.js";
 
   const HOME_MODES = {
     couch: {
@@ -124,7 +126,7 @@
     if (!action) return "couch";
     if (action.commitment === "long_term") return "people";
     if (action.mode === "local") return "walk";
-    if (Number(action.timeMinutes) > 5) return "focus";
+    if (Number(action.timeMinutes) > 2) return "focus";
     return "couch";
   }
 
@@ -178,7 +180,7 @@
 
   onMount(() => {
     try {
-      const raw = localStorage.getItem("aa_values");
+      const raw = safeGetItem("aa_values", "local");
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -190,10 +192,15 @@
     applyUrlDeepLink();
     soundMuted = isSoundMuted();
 
+    let returnDelayTimer = null;
     const handleHashChange = () => applyUrlDeepLink(undefined, true);
 
     const triggerPartnerReturnIfReady = () => {
       if (partnerReturnPromptVisible || justCompleted) return;
+      if (returnDelayTimer) {
+        clearTimeout(returnDelayTimer);
+        returnDelayTimer = null;
+      }
       const elapsedMem = awaitingPartnerReturn
         ? Date.now() - partnerLeaveTimestamp
         : 0;
@@ -222,6 +229,16 @@
           id: persisted?.id || currentQuickAction?.id || lastQuickActionId,
           elapsedMs: elapsed,
         });
+      } else {
+        const remPersisted = getPendingPartnerReturnRemainingMs(3000);
+        const remMem =
+          awaitingPartnerReturn && elapsedMem > 0
+            ? Math.max(0, 3000 - elapsedMem)
+            : 0;
+        const rem = Math.max(remPersisted, remMem);
+        if (rem > 0) {
+          returnDelayTimer = setTimeout(triggerPartnerReturnIfReady, rem + 30);
+        }
       }
     };
 
@@ -254,6 +271,7 @@
       window.removeEventListener("focus", handleWindowFocus);
       window.removeEventListener("pageshow", handleWindowFocus);
       clearTimeout(pulseTimer);
+      if (returnDelayTimer) clearTimeout(returnDelayTimer);
       if (copyLinkTimer) clearTimeout(copyLinkTimer);
     };
   });
@@ -401,47 +419,9 @@
     }
   }
 
-  function impactCanvas(node, params) {
-    const resolve = (p) =>
-      p && typeof p === "object" && "action" in p
-        ? p
-        : { action: p, climax: false };
-    let cfg = resolve(params);
-    let currentId = cfg.action?.id || "";
-    let currentClimax = Boolean(cfg.climax);
-    kibbleGrams = 0;
-    if (currentClimax) playPayoffAsmr(cfg.action);
-    let destroy = mountImpactCanvas(node, {
-      action: cfg.action,
-      climax: currentClimax,
-      onWeightUpdate: (g) => {
-        kibbleGrams = g;
-      },
-    });
-    return {
-      update(nextParams) {
-        const nextCfg = resolve(nextParams);
-        const nextId = nextCfg.action?.id || "";
-        const nextClimax = Boolean(nextCfg.climax);
-        if (nextId === currentId && nextClimax === currentClimax) return;
-        currentId = nextId;
-        currentClimax = nextClimax;
-        destroy?.();
-        kibbleGrams = 0;
-        if (currentClimax) playPayoffAsmr(nextCfg.action);
-        destroy = mountImpactCanvas(node, {
-          action: nextCfg.action,
-          climax: currentClimax,
-          onWeightUpdate: (g) => {
-            kibbleGrams = g;
-          },
-        });
-      },
-      destroy() {
-        destroy?.();
-      },
-    };
-  }
+  const handleWeightUpdate = (g) => {
+    kibbleGrams = g;
+  };
 
   function triggerHomeEffectSpark() {
     showEffectPreview = true;
@@ -515,27 +495,9 @@
     trackEvent("aa_share_direct_action", { id: action.id });
   }
 
-  function cleanTitle(str) {
-    return (
-      String(str || "")
-        .replace(
-          /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u,
-          "",
-        )
-        .trim() || str
-    );
-  }
-
   function getSavedValueLabels(ids) {
     return VALUES.filter((v) => ids.includes(v.key || v.id))
-      .map((v) =>
-        v.label
-          .replace(
-            /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u,
-            "",
-          )
-          .trim(),
-      )
+      .map((v) => stripLeadingEmoji(v.label))
       .slice(0, 2)
       .join(", ");
   }
@@ -872,7 +834,7 @@
                   class="impact-payoff-canvas"
                   width="320"
                   height="118"
-                  use:impactCanvas={{ action: currentQuickAction, climax: true }}
+                  use:impactCanvas={{ action: currentQuickAction, climax: true, onWeightUpdate: handleWeightUpdate }}
                   aria-label="Fyzikální vizualizace dopadu dobrého skutku"
                 ></canvas>
                 <div class="molly-celebration-note">
@@ -918,7 +880,7 @@
                   class="impact-payoff-canvas"
                   width="320"
                   height="118"
-                  use:impactCanvas={{ action: currentQuickAction, climax: true }}
+                  use:impactCanvas={{ action: currentQuickAction, climax: true, onWeightUpdate: handleWeightUpdate }}
                   aria-label="Fyzikální vizualizace dopadu dobrého skutku"
                 ></canvas>
                 <div class="molly-celebration-note">
@@ -1033,7 +995,7 @@
                     class="impact-payoff-canvas"
                     width="320"
                     height="118"
-                    use:impactCanvas={{ action: currentQuickAction, climax: false }}
+                    use:impactCanvas={{ action: currentQuickAction, climax: false, onWeightUpdate: handleWeightUpdate }}
                     aria-label="Fyzikální vizualizace dopadu dobrého skutku"
                   ></canvas>
                 </div>
@@ -2836,6 +2798,7 @@
       line-height: 1.38;
       margin: 0 0 0.38rem 0;
       display: -webkit-box;
+      line-clamp: 2;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;

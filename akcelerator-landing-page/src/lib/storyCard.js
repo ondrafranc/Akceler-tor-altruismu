@@ -4,6 +4,8 @@
  * zero server uploads, using our painted Bohemian Sanctuary artwork + personal constellation!
  */
 
+import { cleanTitle } from './utils.js';
+
 function wrapCanvasText(ctx, text, maxWidth) {
   const words = String(text || '').split(/\s+/).filter(Boolean);
   const lines = [];
@@ -63,9 +65,7 @@ export async function renderStoryCardPng(opts = {}) {
   const mode = opts.mode === 'quiet' ? 'quiet' : 'tip';
   const stepsCount = Math.max(1, Number(opts.stepsCount) || 1);
   const healPercent = Math.max(32, Math.min(100, Number(opts.healPercent) || 32));
-  const cleanAction = String(opts.actionTitle || '1 malý krok pro druhé v Česku')
-    .replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u, '')
-    .trim();
+  const cleanAction = cleanTitle(opts.actionTitle || '1 malý krok pro druhé v Česku');
 
   const W = 1080;
   const H = 1920;
@@ -85,12 +85,13 @@ export async function renderStoryCardPng(opts = {}) {
   ctx.fillRect(0, 0, W, H);
 
   // 2. Always draw the full radiant Golden Dawn Bohemian Sanctuary artwork (zero level gating!)
-  const [dawnImg, twilightImg] = await Promise.all([
-    loadImageSafe('/art/sanctuary-dawn.jpg'),
-    loadImageSafe('/art/sanctuary-twilight.jpg')
-  ]);
-
-  const artImg = dawnImg || twilightImg;
+  let artImg = await loadImageSafe('/art/sanctuary-dawn.webp');
+  if (!artImg) {
+    artImg = await loadImageSafe('/art/sanctuary-dawn.jpg');
+  }
+  if (!artImg) {
+    artImg = await loadImageSafe('/art/sanctuary-twilight.webp');
+  }
   if (artImg) {
     const targetY = 760;
     const targetH = 1160;
@@ -443,7 +444,10 @@ export async function renderStoryCardPng(opts = {}) {
   ctx.font = '600 22px "Plus Jakarta Sans", system-ui, sans-serif';
   ctx.fillText('45 ověřených tipů z domova • Živá mapa pomoci ve všech 14 krajích ČR', 540, 1794);
 
-  const dataUrl = canvas.toDataURL('image/png');
   const blob = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'));
-  return { dataUrl, blob };
+  const objectUrl =
+    blob && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function'
+      ? URL.createObjectURL(blob)
+      : '';
+  return { dataUrl: objectUrl, objectUrl, blob };
 }

@@ -6,8 +6,13 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { feedbackReportRequest } from '../lib/analytics.js';
+  import {
+    isFeedbackOpen,
+    feedbackPrefill,
+    openFeedbackModal,
+    closeFeedbackModal
+  } from '../lib/utils.js';
 
-  let isOpen = false;
   let modalTitle = '💬 Zpětná vazba';
   let feedback = '';
   let rating = 0;
@@ -16,12 +21,28 @@
   let statusType = '';
   let closeTimer = null;
 
-  $: if ($feedbackReportRequest?.open) {
-    isOpen = true;
-    modalTitle = $feedbackReportRequest.title || '💬 Nahlásit nefunkční údaj';
-    feedback = $feedbackReportRequest.prefill || '';
+  $: isOpen = $isFeedbackOpen;
+
+  $: if ($feedbackPrefill) {
+    if (typeof $feedbackPrefill === 'string') {
+      modalTitle = '💬 Nahlásit nefunkční údaj';
+      feedback = $feedbackPrefill;
+    } else if (typeof $feedbackPrefill === 'object') {
+      modalTitle = /** @type {any} */ ($feedbackPrefill).title || '💬 Zpětná vazba';
+      if (/** @type {any} */ ($feedbackPrefill).prefill) {
+        feedback = /** @type {any} */ ($feedbackPrefill).prefill;
+      }
+    }
     statusMessage = '';
     statusType = '';
+    feedbackPrefill.set('');
+  }
+
+  $: if ($feedbackReportRequest?.open) {
+    openFeedbackModal({
+      title: $feedbackReportRequest.title || '💬 Nahlásit nefunkční údaj',
+      prefill: $feedbackReportRequest.prefill || ''
+    });
     feedbackReportRequest.set(null);
   }
 
@@ -36,14 +57,11 @@
   };
 
   function openModal() {
-    isOpen = true;
-    modalTitle = '💬 Zpětná vazba';
-    statusMessage = '';
-    statusType = '';
+    openFeedbackModal({ title: '💬 Zpětná vazba' });
   }
 
   function closeModal() {
-    isOpen = false;
+    closeFeedbackModal();
     statusMessage = '';
     statusType = '';
   }
@@ -60,12 +78,13 @@
     statusMessage = '';
 
     try {
-      const resp = await fetch('/api/test-supabase', {
+      const resp = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           feedback_text: feedback.trim(),
-          rating: rating || undefined
+          rating: rating || undefined,
+          page_url: typeof window !== 'undefined' ? window.location.pathname : '/'
         })
       });
       const data = await resp.json().catch(() => ({}));
@@ -365,6 +384,17 @@
 
     .modal-backdrop {
       z-index: 990;
+      align-items: flex-end;
+      padding: 0;
+    }
+
+    .modal-card {
+      max-width: 100%;
+      max-height: 85dvh;
+      overflow-y: auto;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+      padding: 1.15rem 1.15rem max(1.25rem, env(safe-area-inset-bottom, 0px)) 1.15rem;
     }
   }
 </style>

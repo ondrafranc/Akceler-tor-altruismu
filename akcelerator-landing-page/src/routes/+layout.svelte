@@ -7,6 +7,7 @@
   import SmallWinCelebration from '../components/SmallWinCelebration.svelte';
   import FeedbackModal from '../components/FeedbackModal.svelte';
   import MollyCompanion from '../components/MollyCompanion.svelte';
+  import { openFeedbackModal, toggleCrisisModal } from '$lib/utils.js';
   import '../styles/czech-theme.css';
 
   const siteMeta = {
@@ -17,6 +18,9 @@
   };
 
   $: pathname = $page.url.pathname;
+  $: originUrl = $page.url.origin || 'https://akcelerator-altruismu.cz';
+  $: canonicalUrl = `${originUrl}${pathname}`;
+  $: ogImageUrl = `${originUrl}/og-image-czech.jpg`;
   let hydrated = false;
 
   onMount(() => {
@@ -38,19 +42,26 @@
   <meta name="author" content="Akcelerátor altruismu" />
 
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://akcelerator-altruismu.cz" />
+  <meta property="og:url" content={canonicalUrl} />
   <meta property="og:title" content={siteMeta.title} />
   <meta property="og:description" content={siteMeta.description} />
-  <meta property="og:image" content="/og-image-czech.jpg" />
+  <meta property="og:image" content={ogImageUrl} />
   <meta property="og:locale" content="cs_CZ" />
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
   <link
-    href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-    rel="stylesheet"
+    rel="preload"
+    href="/fonts/plus-jakarta-sans-var-latin-ext.woff2"
+    as="font"
+    type="font/woff2"
+    crossorigin="anonymous"
+  />
+  <link
+    rel="preload"
+    href="/fonts/plus-jakarta-sans-var-latin.woff2"
+    as="font"
+    type="font/woff2"
+    crossorigin="anonymous"
   />
 </svelte:head>
 
@@ -152,7 +163,7 @@
           <button
             type="button"
             class="fc-btn fc-crisis"
-            on:click={() => window.dispatchEvent(new CustomEvent('akcelerator:toggle-crisis'))}
+            on:click={() => toggleCrisisModal()}
             aria-label="Krizové kontakty a okamžitá opora"
           >
             🛡️ Tichá opora 24/7
@@ -160,7 +171,7 @@
           <button
             type="button"
             class="fc-btn fc-feedback"
-            on:click={() => window.dispatchEvent(new CustomEvent('akcelerator:open-feedback'))}
+            on:click={() => openFeedbackModal()}
             aria-label="Poslat zpětnou vazbu"
           >
             💬 Napsat názor
@@ -211,7 +222,10 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    padding: 0.75rem 1rem 0.35rem 1rem;
+    padding: max(0.75rem, env(safe-area-inset-top, 0px))
+      max(1rem, env(safe-area-inset-right, 0px))
+      0.35rem
+      max(1rem, env(safe-area-inset-left, 0px));
     pointer-events: none;
   }
 
@@ -545,7 +559,10 @@
     }
 
     .top-nav {
-      padding: 0.3rem 0.65rem 0.2rem;
+      padding: max(0.3rem, env(safe-area-inset-top, 0px))
+        max(0.65rem, env(safe-area-inset-right, 0px))
+        0.2rem
+        max(0.65rem, env(safe-area-inset-left, 0px));
     }
 
     .nav-capsule {
@@ -557,6 +574,9 @@
       max-width: 100%;
       box-sizing: border-box;
       overflow: hidden;
+      background: rgba(252, 254, 251, 0.98);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
     }
 
     .brand {
@@ -604,9 +624,9 @@
       z-index: 950;
       height: calc(58px + env(safe-area-inset-bottom, 0px));
       padding-bottom: env(safe-area-inset-bottom, 0px);
-      background: rgba(252, 250, 245, 0.96);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      background: rgba(252, 250, 245, 0.98);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
       border-top: 1px solid rgba(20, 62, 48, 0.12);
       box-shadow: 0 -4px 20px rgba(15, 42, 32, 0.06);
     }

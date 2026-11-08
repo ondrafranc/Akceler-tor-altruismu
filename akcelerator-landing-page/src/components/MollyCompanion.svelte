@@ -701,11 +701,11 @@
     if (typeof window === 'undefined') return;
     const vw = window.innerWidth || 1280;
     const vh = window.innerHeight || 800;
-    const baseBottomY = vw <= 680 ? vh - 78 : vh - 26;
+    const baseBottomY = vh <= 620 ? vh - 14 : vw <= 680 ? vh - 78 : vh - 26;
     const minX = 55;
     const maxX = Math.max(minX, vw - 55);
 
-    if (vw < 1024 && perchedOnLedge) {
+    if ((vw < 1024 || vh <= 700) && perchedOnLedge) {
       perchedOnLedge = false;
       posY = baseBottomY;
       targetY = baseBottomY;
@@ -714,7 +714,7 @@
     posX = Math.max(minX, Math.min(maxX, posX));
     targetX = Math.max(minX, Math.min(maxX, targetX));
     if (!perchedOnLedge) {
-      posY = Math.max(96, Math.min(vh - 18, baseBottomY));
+      posY = Math.max(96, Math.min(vh - 14, baseBottomY));
       targetY = posY;
     } else {
       posY = Math.max(96, Math.min(vh - 22, posY));
@@ -740,6 +740,7 @@
           behavior = 'WALK_ROAM';
           behaviorTimer = 2.4;
           pickSafeTarget(true);
+          ensureLoopRunning();
         }
       }
     }
@@ -748,7 +749,7 @@
   function handleWindowPointerDown(e) {
     const el = e.target;
     if (el && typeof el.closest === 'function') {
-      // Native clicks inside .molly-pelisek-dock are handled by button on:click when pointer-events: auto
+      // Native clicks inside .molly-pelisek-dock are handled directly by its buttons
       if (el.closest('.molly-pelisek-dock')) {
         return;
       }
@@ -762,19 +763,6 @@
       }
     }
 
-    // On mobile (<= 680px) or short viewports (max-height: 700px), .molly-pelisek-dock has pointer-events: none
-    // so it never blocks page CTAs; delegate taps on open space to the dock buttons when hit.
-    if (typeof window !== 'undefined' && (window.innerWidth <= 680 || window.innerHeight <= 700)) {
-      if (toggleBtnEl && pointInRect(e.clientX, e.clientY, toggleBtnEl.getBoundingClientRect())) {
-        toggleMollyPelisek();
-        return;
-      }
-      if (petBtnEl && pointInRect(e.clientX, e.clientY, petBtnEl.getBoundingClientRect())) {
-        triggerPetInteraction();
-        return;
-      }
-    }
-
     if (currentState.mode !== 'roaming') return;
     const dist = Math.hypot(e.clientX - posX, e.clientY - (posY - 26));
     if (dist < 44) {
@@ -782,12 +770,15 @@
     }
   }
 
+  let ensureLoopRunning = () => {};
+
   function triggerPetInteraction() {
     petBlissTimer = 2.6;
     behavior = 'PET_BLISS';
     behaviorTimer = 2.8;
     spawnHeartBurst(8);
     petMolly();
+    ensureLoopRunning();
   }
 
   let handleVisibilityChange = null;
@@ -798,44 +789,28 @@
     const vw = window.innerWidth || 1280;
     const vh = window.innerHeight || 800;
     posX = vw <= 680 ? Math.min(Math.max(55, vw - 88), 220) : 340;
-    posY = vw <= 680 ? vh - 78 : vh - 26;
+    posY = vh <= 620 ? vh - 14 : vw <= 680 ? vh - 78 : vh - 26;
     targetX = posX;
     targetY = posY;
 
-    unsubState = mollyState.subscribe((val) => {
-      currentState = val;
-      if (val.whisper && val.whisper.ts !== activeWhisper?.ts) {
-        showWhisperBubble(val.whisper, 4200);
-      }
-    });
-
-    unsubEvents = mollyEvents.subscribe((ev) => {
-      if (!ev) return;
-      if (ev.type === 'feed' || ev.type === 'spark') {
-        launchViewportTreatToMolly(ev.treat);
-      } else if (ev.type === 'pet') {
-        petBlissTimer = 2.6;
-        spawnHeartBurst(7);
-      } else if (ev.type === 'wake') {
-        behavior = 'WALK_ROAM';
-        behaviorTimer = 3.2;
-        pickSafeTarget(false);
-        spawnHeartBurst(5);
-      }
-    });
-
-    window.addEventListener('pointermove', handleWindowPointerMove, {
-      passive: true
-    });
-    window.addEventListener('pointerdown', handleWindowPointerDown, {
-      passive: true
-    });
-    window.addEventListener('resize', handleWindowResize, {
-      passive: true
-    });
-
     let lastTime = performance.now();
     const reduced = prefersReducedMotion();
+
+    const renderCatFrame = (nowSec) => {
+      if (!catCanvas) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const targetW = Math.round(LOGICAL_W * dpr);
+      const targetH = Math.round(LOGICAL_H * dpr);
+      if (catCanvas.width !== targetW || catCanvas.height !== targetH) {
+        catCanvas.width = targetW;
+        catCanvas.height = targetH;
+      }
+      const ctx = catCanvas.getContext('2d');
+      if (ctx) {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        drawMollyCat(ctx, LOGICAL_W, LOGICAL_H, nowSec);
+      }
+    };
 
     const tick = (now) => {
       if (typeof document !== 'undefined' && document.hidden) {
@@ -914,23 +889,61 @@
         }
       }
 
-      if (catCanvas) {
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const targetW = Math.round(LOGICAL_W * dpr);
-        const targetH = Math.round(LOGICAL_H * dpr);
-        if (catCanvas.width !== targetW || catCanvas.height !== targetH) {
-          catCanvas.width = targetW;
-          catCanvas.height = targetH;
-        }
-        const ctx = catCanvas.getContext('2d');
-        if (ctx) {
-          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-          drawMollyCat(ctx, LOGICAL_W, LOGICAL_H, nowSec);
-        }
+      renderCatFrame(nowSec);
+
+      const hasActiveTransient =
+        Boolean(flyingTreat) || eatTimer > 0 || petBlissTimer > 0 || hearts.length > 0;
+
+      // H4: Pause RAF loop when docked or under reduced-motion with no active transient animation
+      if ((currentState.mode === 'docked' || reduced) && !hasActiveTransient) {
+        rafId = 0;
+        return;
       }
 
       rafId = requestAnimationFrame(tick);
     };
+
+    ensureLoopRunning = () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      if (!rafId) {
+        lastTime = performance.now();
+        rafId = requestAnimationFrame(tick);
+      }
+    };
+
+    unsubState = mollyState.subscribe((val) => {
+      currentState = val;
+      if (val.whisper && val.whisper.ts !== activeWhisper?.ts) {
+        showWhisperBubble(val.whisper, 4200);
+      }
+      ensureLoopRunning();
+    });
+
+    unsubEvents = mollyEvents.subscribe((ev) => {
+      if (!ev) return;
+      if (ev.type === 'feed' || ev.type === 'spark') {
+        launchViewportTreatToMolly(ev.treat);
+      } else if (ev.type === 'pet') {
+        petBlissTimer = 2.6;
+        spawnHeartBurst(7);
+      } else if (ev.type === 'wake') {
+        behavior = 'WALK_ROAM';
+        behaviorTimer = 3.2;
+        pickSafeTarget(false);
+        spawnHeartBurst(5);
+      }
+      ensureLoopRunning();
+    });
+
+    window.addEventListener('pointermove', handleWindowPointerMove, {
+      passive: true
+    });
+    window.addEventListener('pointerdown', handleWindowPointerDown, {
+      passive: true
+    });
+    window.addEventListener('resize', handleWindowResize, {
+      passive: true
+    });
 
     handleVisibilityChange = () => {
       if (document.hidden) {
@@ -938,14 +951,14 @@
           cancelAnimationFrame(rafId);
           rafId = 0;
         }
-      } else if (!rafId) {
-        lastTime = performance.now();
-        rafId = requestAnimationFrame(tick);
+      } else {
+        ensureLoopRunning();
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    rafId = requestAnimationFrame(tick);
+    renderCatFrame(performance.now() * 0.001);
+    ensureLoopRunning();
   });
 
   onDestroy(() => {
@@ -990,8 +1003,10 @@
   data-molly-mode={$mollyState.mode}
   data-molly-mood={$mollyState.mood}
   data-molly-treats={$mollyState.treatsFedTotal}
-  aria-live="polite"
 >
+  <div class="sr-only" aria-live="polite" aria-atomic="true">
+    {activeWhisper ? activeWhisper.text : ''}
+  </div>
   <!-- Letící dobrota přes obrazovku přímo k Molly -->
   {#if flyingTreatPos}
     <div
@@ -1043,7 +1058,8 @@
       bind:this={petBtnEl}
       type="button"
       class="molly-dock-pet-btn"
-      on:click={triggerPetInteraction}
+      on:pointerdown|stopPropagation
+      on:click|stopPropagation={triggerPetInteraction}
       title="Pohladit želvovinovou kočku Molly (spustí předení)"
     >
       <span class="molly-avatar-badge" aria-hidden="true">
@@ -1066,7 +1082,8 @@
       bind:this={toggleBtnEl}
       type="button"
       class="molly-dock-toggle-btn"
-      on:click={toggleMollyPelisek}
+      on:pointerdown|stopPropagation
+      on:click|stopPropagation={toggleMollyPelisek}
       aria-pressed={$mollyState.mode === 'docked'}
       title={$mollyState.mode === 'docked'
         ? 'Vypustit Molly z pelíšku na procházku po stránce'
@@ -1341,12 +1358,13 @@
   @media (max-width: 680px) {
     .molly-pelisek-dock {
       left: auto;
-      right: 10px;
-      bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-      transform: scale(0.86);
+      right: 8px;
+      bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+      transform: scale(0.84);
       transform-origin: bottom right;
-      pointer-events: none;
-      opacity: 0.9;
+      pointer-events: auto;
+      opacity: 0.94;
+      backdrop-filter: none;
     }
 
     .molly-roaming-actor {
@@ -1357,13 +1375,22 @@
 
   @media (max-height: 700px) {
     .molly-pelisek-dock {
-      pointer-events: none;
-      opacity: 0.85;
+      bottom: 6px;
+      transform: scale(0.78);
+      transform-origin: bottom right;
+      pointer-events: auto;
+      opacity: 0.92;
     }
 
     .molly-roaming-actor {
       pointer-events: none;
       opacity: 0.88;
+    }
+  }
+
+  @media (max-width: 680px) and (max-height: 700px) {
+    .molly-pelisek-dock {
+      bottom: calc(60px + env(safe-area-inset-bottom, 0px));
     }
   }
 </style>

@@ -1,11 +1,10 @@
 <script>
   import { onMount } from 'svelte';
-
-  let isExpanded = false;
+  import { isCrisisOpen, toggleCrisisModal } from '../lib/utils.js';
 
   onMount(() => {
     const handleToggle = () => {
-      isExpanded = !isExpanded;
+      toggleCrisisModal();
     };
     window.addEventListener('akcelerator:toggle-crisis', handleToggle);
     return () => {
@@ -45,12 +44,12 @@
   ];
 
   function toggleHelp() {
-    isExpanded = !isExpanded;
+    toggleCrisisModal();
   }
 </script>
 
-<div class="crisis-widget" class:expanded={isExpanded}>
-  {#if isExpanded}
+<div class="crisis-widget" class:expanded={$isCrisisOpen}>
+  {#if $isCrisisOpen}
     <div class="crisis-panel" role="dialog" aria-label="Krizová podpora a linky důvěry">
       <div class="panel-head">
         <div>
@@ -91,10 +90,22 @@
     type="button"
     class="crisis-pill crisis-trigger"
     on:click={toggleHelp}
-    aria-expanded={isExpanded}
+    aria-expanded={$isCrisisOpen}
   >
     <span class="pill-dot" aria-hidden="true"></span>
     <span class="pill-label">Potřebuješ oporu? (116 111 / 116 123)</span>
+  </button>
+
+  <button
+    type="button"
+    class="crisis-mobile-fab"
+    on:click={toggleHelp}
+    aria-expanded={$isCrisisOpen}
+    aria-label="Krizová opora 24/7 (116 111 / 116 123)"
+    title="Potřebuješ oporu? Linky důvěry 116 111 / 116 123"
+  >
+    <span class="pill-dot" aria-hidden="true"></span>
+    <span>Opora 24/7</span>
   </button>
 </div>
 
@@ -249,6 +260,10 @@
     color: var(--text-secondary);
   }
 
+  .crisis-mobile-fab {
+    display: none;
+  }
+
   @media (max-width: 680px) {
     .crisis-pill,
     .crisis-trigger {
@@ -256,17 +271,37 @@
     }
 
     .crisis-widget {
-      z-index: 980;
+      left: 8px;
+      right: auto;
+      bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+      align-items: flex-start;
+      z-index: 942;
+    }
+
+    .crisis-mobile-fab {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.32rem 0.65rem;
+      border-radius: 999px;
+      border: 1px solid rgba(217, 119, 6, 0.32);
+      background: rgba(254, 255, 253, 0.96);
+      color: #143324;
+      font-family: var(--font-sans);
+      font-weight: 700;
+      font-size: 0.72rem;
+      cursor: pointer;
+      box-shadow: 0 6px 16px rgba(12, 38, 26, 0.16);
     }
 
     .crisis-panel {
       position: fixed;
-      bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+      bottom: calc(102px + env(safe-area-inset-bottom, 0px));
       left: 12px;
       right: 12px;
       width: auto;
       z-index: 980;
-      max-height: calc(100dvh - 130px);
+      max-height: calc(100dvh - 150px);
       overflow-y: auto;
     }
   }

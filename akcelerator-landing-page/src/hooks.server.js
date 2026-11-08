@@ -1,5 +1,7 @@
 /**
  * Global security headers for all SSR and API responses.
+ * HTML responses with per-request CSP nonces are marked private/no-store so shared CDNs
+ * never serve a static reusable nonce across visitors (H1).
  */
 export async function handle({ event, resolve }) {
   const response = await resolve(event, {
@@ -28,7 +30,7 @@ export async function handle({ event, resolve }) {
     !headers.has('cache-control') &&
     (headers.get('content-type') || '').includes('text/html')
   ) {
-    headers.set('Cache-Control', 'public, max-age=0, s-maxage=300, stale-while-revalidate=86400');
+    headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
   }
 
   return new Response(response.body, {

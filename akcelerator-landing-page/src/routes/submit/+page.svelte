@@ -1,7 +1,13 @@
 <script>
+  import { onMount } from 'svelte';
   import { CZECH_CITIES } from '../../lib/data/czech-actions.js';
   import { recordSmallWin } from '../../lib/progress.js';
   import { trackEvent } from '../../lib/analytics.js';
+  import { safeText } from '../../lib/security.js';
+  import { firstText, safeGetItem, safeSetItem, safeRemoveItem } from '../../lib/utils.js';
+
+  const DRAFT_KEY = 'aa_submit_draft_v1';
+  const MY_PENDING_KEY = 'aa_my_pending_submissions_v1';
 
   const QUICK_CATEGORIES = [
     '🐾 Zvířata a útulky',
@@ -36,23 +42,58 @@
   let lon = null;
   let addressLabel = '';
 
-  // Spam protection (honeypot + time)
+  // Spam protection (honeypot + monotonic elapsed time)
   let hp = '';
   const startedAt = Date.now();
+  const mountPerfNow = typeof performance !== 'undefined' ? performance.now() : 0;
+  let draftReady = false;
 
   let isSubmitting = false;
   let submitStatus = null; // null | success | error
   let submitMessage = '';
   let submittedMapUrl = '/near';
 
-  function safeText(v) {
-    return typeof v === 'string' ? v.trim() : '';
-  }
+  onMount(() => {
+    try {
+      const rawDraft = safeGetItem(DRAFT_KEY, 'session');
+      if (rawDraft) {
+        const d = JSON.parse(rawDraft);
+        if (d && typeof d === 'object') {
+          if (d.kind === 'org' || d.kind === 'event') kind = d.kind;
+          if (typeof d.name === 'string') name = d.name;
+          if (typeof d.category === 'string') category = d.category;
+          if (typeof d.website === 'string') website = d.website;
+          if (typeof d.email === 'string') email = d.email;
+          if (typeof d.description === 'string') description = d.description;
+          if (typeof d.locationQuery === 'string') locationQuery = d.locationQuery;
+          if (typeof d.lat === 'number') lat = d.lat;
+          if (typeof d.lon === 'number') lon = d.lon;
+          if (typeof d.addressLabel === 'string') addressLabel = d.addressLabel;
+          if (typeof d.eventUrl === 'string') eventUrl = d.eventUrl;
+        }
+      }
+    } catch {}
+    draftReady = true;
+  });
 
-  function firstText(v) {
-    const s = safeText(v);
-    if (!s) return '';
-    return s.split(',')[0] || s;
+  $: if (draftReady && submitStatus !== 'success') {
+    safeSetItem(
+      DRAFT_KEY,
+      JSON.stringify({
+        kind,
+        name,
+        category,
+        website,
+        email,
+        description,
+        locationQuery,
+        lat,
+        lon,
+        addressLabel,
+        eventUrl
+      }),
+      'session'
+    );
   }
 
   function pickQuickCity(city) {
@@ -125,6 +166,23 @@
     }
 
     if (lat == null || lon == null) {
+      const q = safeText(locationQuery);
+      if (q.length >= 2) {
+        const matchedCity = CZECH_CITIES.find(
+          (c) => c.name.toLowerCase().startsWith(q.toLowerCase())
+        );
+        if (matchedCity) {
+          pickQuickCity(matchedCity);
+        } else {
+          await searchLocation();
+          if (geoResults.length > 0) {
+            pickLocation(geoResults[0]);
+          }
+        }
+      }
+    }
+
+    if (lat == null || lon == null) {
       submitStatus = 'error';
       submitMessage = 'Vyhledej obec nebo klikni na nejbližší město.';
       return;
@@ -138,9 +196,14 @@
 
     isSubmitting = true;
     try {
+      const elapsedMs = Math.max(
+        0,
+        Math.round((typeof performance !== 'undefined' ? performance.now() : 0) - mountPerfNow)
+      );
       const payload = {
         hp,
         started_at: startedAt,
+        elapsed_ms: elapsedMs,
         kind,
         name: n,
         category: safeText(category) || null,
@@ -171,9 +234,22 @@
         return;
       }
 
+      if (data?.item) {
+        try {
+          const existingRaw = safeGetItem(MY_PENDING_KEY, 'local');
+          const existing = existingRaw ? JSON.parse(existingRaw) : [];
+          const list = Array.isArray(existing) ? existing : [];
+          list.unshift({ ...data.item, pendingModeration: true });
+          safeSetItem(MY_PENDING_KEY, JSON.stringify(list.slice(0, 20)), 'local');
+        } catch {}
+      }
+      safeRemoveItem(DRAFT_KEY, 'session');
+
       submittedMapUrl = `/near?lat=${lat}&lon=${lon}`;
       submitStatus = 'success';
-      submitMessage = 'Díky! Tip jsme uložili a hned pomáhá dalším lidem v okolí.';
+      submitMessage =
+        data?.moderationNotice ||
+        'Díky! Tip jsme přijali ke kontrole a u tebe na mapě už teď svítí se štítkem „Čeká na schválení“.';
       trackEvent('aa_submission_sent', { kind });
       recordSmallWin({ id: `submit_${Date.now()}`, title: `Přidán sousedský tip: ${n}`, surface: 'submit' });
     } catch {

@@ -1,6 +1,7 @@
 /**
  * Shared input sanitization, URL/contact validation, bounded caching,
- * rate limiting, and geodesic helpers used across API endpoints and UI.
+ * rate limiting, CSRF/Origin validation, bounded stream body parsing,
+ * and geodesic helpers used across API endpoints and UI.
  */
 
 const CONTROL_CHARS_RE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
@@ -61,6 +62,18 @@ export function isValidLatLon(lat, lon) {
     lon >= -180 &&
     lon <= 180
   );
+}
+
+/**
+ * Checks whether coordinates lie within Czechia (+ small border buffer).
+ * Prevents global proxy abuse of Czech-only endpoints (H3).
+ * @param {number | null} lat
+ * @param {number | null} lon
+ * @returns {boolean}
+ */
+export function isCzLatLon(lat, lon) {
+  if (!isValidLatLon(lat, lon)) return false;
+  return lat >= 47.5 && lat <= 51.5 && lon >= 11.5 && lon <= 19.5;
 }
 
 /**
@@ -172,6 +185,7 @@ export function setBoundedCache(cache, key, data, ttlMs, maxEntries = 250) {
 
 /**
  * Bounded in-memory fixed-window rate limiter per route bucket & client identifier.
+ * Protects high-hit blocked buckets from being evicted by single-hit random keys (H8).
  * @param {string} bucket
  * @param {string} clientId
  * @param {number} maxRequests
@@ -182,6 +196,16 @@ export function checkRateLimit(bucket, clientId, maxRequests, windowMs) {
   const now = Date.now();
   const key = `${bucket}:${clientId || 'anon'}`;
 
+  const existing = RATE_LIMIT_BUCKETS.get(key);
+  if (existing && existing.resetAt > now) {
+    if (existing.count >= maxRequests) {
+      const retryAfterSec = Math.max(1, Math.ceil((existing.resetAt - now) / 1000));
+      return { allowed: false, retryAfterSec };
+    }
+    existing.count += 1;
+    return { allowed: true, retryAfterSec: 0 };
+  }
+
   if (RATE_LIMIT_BUCKETS.size >= MAX_RATE_BUCKETS) {
     let singleHitKey;
     for (const [k, v] of RATE_LIMIT_BUCKETS) {
@@ -191,54 +215,47 @@ export function checkRateLimit(bucket, clientId, maxRequests, windowMs) {
         singleHitKey = k;
       }
     }
-    if (RATE_LIMIT_BUCKETS.size >= MAX_RATE_BUCKETS) {
-      const victim = singleHitKey ?? RATE_LIMIT_BUCKETS.keys().next().value;
-      if (victim !== undefined) RATE_LIMIT_BUCKETS.delete(victim);
+    if (RATE_LIMIT_BUCKETS.size >= MAX_RATE_BUCKETS && singleHitKey !== undefined) {
+      RATE_LIMIT_BUCKETS.delete(singleHitKey);
     }
   }
 
-  const existing = RATE_LIMIT_BUCKETS.get(key);
-  if (!existing || existing.resetAt <= now) {
-    RATE_LIMIT_BUCKETS.set(key, { count: 1, resetAt: now + windowMs });
-    return { allowed: true, retryAfterSec: 0 };
-  }
-
-  if (existing.count >= maxRequests) {
-    const retryAfterSec = Math.max(1, Math.ceil((existing.resetAt - now) / 1000));
-    return { allowed: false, retryAfterSec };
-  }
-
-  existing.count += 1;
+  RATE_LIMIT_BUCKETS.set(key, { count: 1, resetAt: now + windowMs });
   return { allowed: true, retryAfterSec: 0 };
 }
 
 /**
- * Resolves a best-effort client IP string from SvelteKit request headers.
+ * Resolves a client IP string prioritizing SvelteKit's platform-verified getClientAddress()
+ * over spoofable X-Forwarded-For headers (H8 / AUDIT #9).
  * @param {Request} request
  * @param {() => string} [getClientAddress]
  * @returns {string}
  */
 export function resolveClientKey(request, getClientAddress) {
+  try {
+    if (typeof getClientAddress === 'function') {
+      const addr = getClientAddress();
+      if (addr && addr !== '127.0.0.1' && addr !== '::1') {
+        return String(addr).slice(0, 64);
+      }
+    }
+  } catch {
+    // Fallback when getClientAddress is unavailable in adapter context
+  }
+  const cfIp = request.headers.get('cf-connecting-ip');
+  if (cfIp?.trim()) return cfIp.trim().slice(0, 64);
   const vercelIp = request.headers.get('x-vercel-forwarded-for');
   if (vercelIp) {
-    const parts = vercelIp.split(',').map((s) => s.trim()).filter(Boolean);
-    const last = parts[parts.length - 1];
-    if (last) return last.slice(0, 64);
-  }
-  const cfIp = request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip');
-  if (cfIp?.trim()) return cfIp.trim().slice(0, 64);
-  const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) {
-    const parts = forwarded.split(',').map((s) => s.trim()).filter(Boolean);
-    const last = parts[parts.length - 1];
-    if (last) return last.slice(0, 64);
+    const first = vercelIp.split(',')[0]?.trim();
+    if (first) return first.slice(0, 64);
   }
   try {
     if (typeof getClientAddress === 'function') {
-      return String(getClientAddress() || 'local').slice(0, 64);
+      const addr = getClientAddress();
+      if (addr) return String(addr).slice(0, 64);
     }
   } catch {
-    // Ignore when clientAddress is unavailable in adapter context
+    // Ignore
   }
   return 'local';
 }
@@ -254,3 +271,127 @@ export function hasExcessiveBodySize(request, maxBytes = 32_768) {
   return Number.isFinite(len) && len > maxBytes;
 }
 
+/**
+ * Reads and parses a JSON request body using a bounded stream reader so chunked
+ * transfer-encoding payloads cannot bypass Content-Length and cause OOM (M3 / AUDIT #25).
+ * @param {Request} request
+ * @param {number} [maxBytes=32768]
+ * @returns {Promise<{ ok: true, data: any } | { ok: false, status: number, error: string }>}
+ */
+export async function readJsonBodyBounded(request, maxBytes = 32_768) {
+  if (hasExcessiveBodySize(request, maxBytes)) {
+    return { ok: false, status: 413, error: 'Odeslaná data jsou příliš velká.' };
+  }
+
+  if (!request.body) {
+    return { ok: false, status: 400, error: 'Prázdné tělo požadavku.' };
+  }
+
+  const reader = request.body.getReader();
+  const chunks = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) {
+        totalBytes += value.byteLength;
+        if (totalBytes > maxBytes) {
+          try {
+            await reader.cancel();
+          } catch {}
+          return { ok: false, status: 413, error: 'Odeslaná data jsou příliš velká.' };
+        }
+        chunks.push(value);
+      }
+    }
+  } catch {
+    return { ok: false, status: 400, error: 'Chyba při čtení požadavku.' };
+  }
+
+  const merged = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  try {
+    const text = new TextDecoder('utf-8', { fatal: false }).decode(merged);
+    const data = JSON.parse(text);
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      return { ok: false, status: 400, error: 'Neplatný formát dat.' };
+    }
+    return { ok: true, data };
+  } catch {
+    return { ok: false, status: 400, error: 'Neplatný formát dat.' };
+  }
+}
+
+/**
+ * Validates that a mutating POST/PUT/DELETE request originates from the same site
+ * and rejects cross-site spam distribution (M5 / AUDIT #16).
+ * @param {Request} request
+ * @param {URL} url
+ * @returns {boolean}
+ */
+export function validateMutationOrigin(request, url) {
+  const secFetchSite = request.headers.get('sec-fetch-site');
+  if (secFetchSite && secFetchSite !== 'same-origin' && secFetchSite !== 'same-site' && secFetchSite !== 'none') {
+    return false;
+  }
+  const origin = request.headers.get('origin');
+  if (origin) {
+    try {
+      const originUrl = new URL(origin);
+      if (originUrl.host !== url.host) {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+  }
+  const ct = (request.headers.get('content-type') || '').toLowerCase();
+  if (ct && !ct.includes('application/json')) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Clock-skew-safe form timing check (H7 / AUDIT #4).
+ * Uses monotonic client elapsed_ms when provided; if only wall-clock started_at is sent,
+ * only rejects when delta is strictly between 0ms and 800ms (never when delta < 0 due to mobile clock skew).
+ * @param {Record<string, any>} body
+ * @returns {boolean} true if submission is suspiciously instantaneous (< 800ms)
+ */
+export function isSubmissionTooFast(body) {
+  const elapsedMs = toFiniteNumber(body?.elapsed_ms);
+  if (elapsedMs !== null) {
+    return elapsedMs >= 0 && elapsedMs < 800;
+  }
+  const startedAt = toFiniteNumber(body?.started_at);
+  if (startedAt !== null && startedAt > 0) {
+    const delta = Date.now() - startedAt;
+    // Negative delta means client clock is ahead of server NTP clock -> do NOT reject!
+    if (delta >= 0 && delta < 800) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Checks whether a request carries a valid non-production test bypass secret (H9 / AUDIT #10).
+ * @param {Request} request
+ * @returns {boolean}
+ */
+export function isAuthorizedTestBypass(request) {
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production' && process.env?.VERCEL_ENV === 'production') {
+    return false;
+  }
+  const headerSecret = request.headers.get('x-test-bypass-secret');
+  const expected = (typeof process !== 'undefined' && process.env?.TEST_BYPASS_SECRET) || 'akcelerator-dev-test';
+  return Boolean(headerSecret && headerSecret === expected);
+}

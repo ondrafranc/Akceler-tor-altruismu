@@ -1,9 +1,12 @@
 import { writable } from 'svelte/store';
+import { safeGetItem, safeSetItem } from './utils.js';
+import { resolveMollyTreat } from './mollyTypes.js';
 import {
   getActionEffectMeta,
   playMollyPurr,
   playMollyCrunch,
-  playMollyMeow
+  playMollyMeow,
+  registerMollyNotifier
 } from './sensoryEngine.js';
 
 export const MOLLY_STORAGE_KEY = 'aa_molly_companion_v1';
@@ -37,7 +40,7 @@ function isSameDayIso(isoStr) {
 function loadMollyState() {
   if (typeof window === 'undefined') return { ...DEFAULT_MOLLY_STATE };
   try {
-    const raw = localStorage.getItem(MOLLY_STORAGE_KEY);
+    const raw = safeGetItem(MOLLY_STORAGE_KEY, 'local');
     if (!raw) return { ...DEFAULT_MOLLY_STATE };
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
@@ -84,7 +87,7 @@ function saveMollyState(state) {
       lastTreat: state.lastTreat,
       petCount: state.petCount
     };
-    localStorage.setItem(MOLLY_STORAGE_KEY, JSON.stringify(toPersist));
+    safeSetItem(MOLLY_STORAGE_KEY, JSON.stringify(toPersist), 'local');
   } catch {}
 }
 
@@ -332,3 +335,5 @@ export function setMollyMood(mood) {
     mood: mood === 'curious' && prev.mode === 'docked' ? 'sleeping' : mood
   }));
 }
+
+registerMollyNotifier(notifyMollySpark);

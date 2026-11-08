@@ -27,10 +27,18 @@
     playPayoffAsmr,
     savePendingPartnerReturn,
     consumePendingPartnerReturn,
+    getPendingPartnerReturnRemainingMs,
     triggerCanvasBurst,
     fetchAmbientPulse,
   } from "../../../lib/sensoryEngine.js";
   import { notifyMollySpark } from "../../../lib/mollyStore.js";
+  import { haversineKm } from "../../../lib/security.js";
+  import {
+    cleanTitle,
+    cleanMeta,
+    safeGetItem,
+    safeSetItem,
+  } from "../../../lib/utils.js";
 
   const SITUATIONS = [
     {
@@ -169,18 +177,6 @@
     return s.size ? Array.from(s) : ["animals", "food", "community", "ngo"];
   })();
 
-  function haversineKm(lat1, lon1, lat2, lon2) {
-    const R = 6371;
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) ** 2;
-    return 2 * R * Math.asin(Math.sqrt(a));
-  }
-
   $: localMatches = (() => {
     const withDist = CURATED_FALLBACK_PLACES.map((p) => ({
       ...p,
@@ -203,24 +199,6 @@
   })();
 
   $: nearUrl = `/near?lat=${activeCity.lat}&lon=${activeCity.lon}&r=10&kinds=${encodeURIComponent(targetMapKinds.join(","))}`;
-
-  function cleanTitle(str) {
-    return (
-      String(str || "")
-        .replace(
-          /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u,
-          "",
-        )
-        .trim() || str
-    );
-  }
-
-  function cleanMeta(str) {
-    return String(str || "")
-      .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642]/gu, "")
-      .replace(/\s{2,}/g, " ")
-      .trim();
-  }
 
   function selectSituation(id) {
     if (activeSituationId === id) {
@@ -305,14 +283,16 @@
 
   function persistPrefs() {
     try {
-      localStorage.setItem("aa_values", JSON.stringify(selectedTopics));
-      localStorage.setItem(
+      safeSetItem("aa_values", JSON.stringify(selectedTopics), "local");
+      safeSetItem(
         "aa_guided_values_v2",
         JSON.stringify(selectedTopics),
+        "local",
       );
-      localStorage.setItem(
+      safeSetItem(
         "aa_prefs_near",
         JSON.stringify({ situation: activeSituationId, cityId }),
+        "local",
       );
     } catch {}
   }
@@ -333,17 +313,18 @@
   }
 
   onMount(() => {
+    let guidedReturnTimer = null;
     soundMuted = isSoundMuted();
     try {
       const sp = new URLSearchParams(window.location.search);
       const topicParam = sp.get("topic");
       if (topicParam && VALUES.some((v) => v.key === topicParam)) {
         selectedTopics = [topicParam];
-        localStorage.setItem("aa_values", JSON.stringify(selectedTopics));
+        safeSetItem("aa_values", JSON.stringify(selectedTopics), "local");
       } else {
         const s = JSON.parse(
-          localStorage.getItem("aa_values") ||
-            localStorage.getItem("aa_guided_values_v2") ||
+          safeGetItem("aa_values", "local") ||
+            safeGetItem("aa_guided_values_v2", "local") ||
             "[]",
         );
         if (Array.isArray(s) && s.length) {
@@ -353,7 +334,7 @@
         }
       }
       const nearSaved = JSON.parse(
-        localStorage.getItem("aa_prefs_near") || "{}",
+        safeGetItem("aa_prefs_near", "local") || "{}",
       );
       if (
         nearSaved?.cityId &&
@@ -365,6 +346,10 @@
 
     const checkGuidedReturn = () => {
       if (guidedReturnAction) return;
+      if (guidedReturnTimer) {
+        clearTimeout(guidedReturnTimer);
+        guidedReturnTimer = null;
+      }
       const elapsedMem = awaitingGuidedAction
         ? Date.now() - guidedLeaveTimestamp
         : 0;
@@ -388,6 +373,16 @@
             id: matched.id,
           });
         }
+      } else {
+        const remPersisted = getPendingPartnerReturnRemainingMs(3000);
+        const remMem =
+          awaitingGuidedAction && elapsedMem > 0
+            ? Math.max(0, 3000 - elapsedMem)
+            : 0;
+        const rem = Math.max(remPersisted, remMem);
+        if (rem > 0) {
+          guidedReturnTimer = setTimeout(checkGuidedReturn, rem + 30);
+        }
       }
     };
 
@@ -407,6 +402,7 @@
 
     return () => {
       clearTimeout(pulseTimer);
+      if (guidedReturnTimer) clearTimeout(guidedReturnTimer);
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("focus", checkGuidedReturn);
       window.removeEventListener("pageshow", checkGuidedReturn);

@@ -23,10 +23,12 @@
     playPayoffAsmr,
     savePendingPartnerReturn,
     consumePendingPartnerReturn,
+    getPendingPartnerReturnRemainingMs,
     triggerCanvasBurst,
     fetchAmbientPulse
   } from '../../../lib/sensoryEngine.js';
   import { notifyMollySpark } from '../../../lib/mollyStore.js';
+  import { cleanTitle, cleanMeta, safeGetItem } from '../../../lib/utils.js';
 
   let activeFilter = 'all';
   let searchQuery = '';
@@ -57,6 +59,7 @@
   ];
 
   onMount(() => {
+    let onlineReturnTimer = null;
     soundMuted = isSoundMuted();
     try {
       const sp = new URLSearchParams(window.location.search);
@@ -75,12 +78,18 @@
           visibleLimit = MICRO_ACTIONS.length;
         }
       }
-      const s = JSON.parse(localStorage.getItem('aa_values') || localStorage.getItem('aa_guided_values_v2') || '[]');
+      const s = JSON.parse(
+        safeGetItem('aa_values', 'local') || safeGetItem('aa_guided_values_v2', 'local') || '[]'
+      );
       if (Array.isArray(s)) savedValues = s;
     } catch {}
 
     const checkPartnerReturn = () => {
       if (returnPromptAction) return;
+      if (onlineReturnTimer) {
+        clearTimeout(onlineReturnTimer);
+        onlineReturnTimer = null;
+      }
       const elapsedMem = awaitingReturnAction ? Date.now() - leaveTimestamp : 0;
       const persisted = consumePendingPartnerReturn(3000);
       if (elapsedMem >= 3000 || persisted) {
@@ -95,6 +104,13 @@
           awaitingReturnAction = null;
           playPayoffAsmr(matched);
           trackEvent('aa_partner_return_prompt', { surface: 'online', id: matched.id });
+        }
+      } else {
+        const remPersisted = getPendingPartnerReturnRemainingMs(3000);
+        const remMem = awaitingReturnAction && elapsedMem > 0 ? Math.max(0, 3000 - elapsedMem) : 0;
+        const rem = Math.max(remPersisted, remMem);
+        if (rem > 0) {
+          onlineReturnTimer = setTimeout(checkPartnerReturn, rem + 30);
         }
       }
     };
@@ -115,6 +131,7 @@
 
     return () => {
       clearTimeout(pulseTimer);
+      if (onlineReturnTimer) clearTimeout(onlineReturnTimer);
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('focus', checkPartnerReturn);
       window.removeEventListener('pageshow', checkPartnerReturn);
@@ -146,17 +163,6 @@
     savePendingPartnerReturn(action, 'online');
     markActionStarted(action.id, 'online');
     trackEvent('aa_clickout', { surface: 'online', id: action.id });
-  }
-
-  function cleanTitle(str) {
-    return String(str || '').replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u, '').trim() || str;
-  }
-
-  function cleanMeta(str) {
-    return String(str || '')
-      .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642]/gu, '')
-      .replace(/\s{2,}/g, ' ')
-      .trim();
   }
 
   async function shareAction(action) {
@@ -1127,6 +1133,7 @@
       line-height: 1.38;
       margin: 0 0 0.45rem;
       display: -webkit-box;
+      line-clamp: 2;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;

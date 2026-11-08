@@ -91,15 +91,20 @@ function searchLocalTowns(q, limit = 5) {
   return [...exactOrPrefix, ...substring].slice(0, limit);
 }
 
-async function throttleUpstream(minIntervalMs = 1100) {
+let lastScheduleTime = 0;
+
+async function scheduleNominatimRequest(minIntervalMs = 1100) {
   const now = Date.now();
-  const wait = LAST_UPSTREAM_TS + minIntervalMs - now;
-  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-  LAST_UPSTREAM_TS = Date.now();
+  const targetTime = Math.max(now, lastScheduleTime + minIntervalMs);
+  lastScheduleTime = targetTime;
+  const delay = targetTime - now;
+  if (delay > 0) {
+    await new Promise((resolve) => setTimeout(resolve, delay));
+  }
 }
 
 async function fetchNominatim(q, limit) {
-  await throttleUpstream();
+  await scheduleNominatimRequest();
 
   const url = new URL('https://nominatim.openstreetmap.org/search');
   url.searchParams.set('format', 'jsonv2');
@@ -114,7 +119,8 @@ async function fetchNominatim(q, limit) {
     const res = await fetch(url.toString(), {
       signal: controller.signal,
       headers: {
-        'user-agent': 'AkceleratorAltruismu/2.5 (SvelteKit; Czech-only)',
+        'user-agent':
+          'AkceleratorAltruismu/2.5 (https://akcelerator-altruismu.vercel.app; kontakt@akcelerator-altruismu.cz)',
         'accept-language': 'cs,en;q=0.3'
       }
     });

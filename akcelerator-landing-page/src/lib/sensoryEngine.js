@@ -1,4 +1,11 @@
-import { notifyMollySpark } from './mollyStore.js';
+import { safeGetItem, safeSetItem } from './utils.js';
+import {
+  MOLLY_TREAT_BY_FOOD,
+  MODE_TO_MOLLY_FOOD,
+  resolveMollyTreat
+} from './mollyTypes.js';
+
+export { MOLLY_TREAT_BY_FOOD, MODE_TO_MOLLY_FOOD, resolveMollyTreat };
 
 const MK = 'aa_sound_muted';
 const RK = 'aa_pending_return_v1';
@@ -15,17 +22,47 @@ let lastAsmrTs = 0;
 let globalSparkCharge = 0;
 const activeControllers = new Set();
 
-const sto = (s, k, v) => {
-  try {
-    return v === undefined ? s.getItem(k) : s.setItem(k, v);
-  } catch {}
-};
+/** @type {((action: any, opts?: any) => any) | null} */
+let mollySparkNotifier = null;
 
-export const isSoundMuted = () => win() && sto(localStorage, MK) === '1';
+/**
+ * Registers the Molly spark callback without creating a circular top-level import (M13 / AUDIT #3).
+ * @param {(action: any, opts?: any) => any} fn
+ */
+export function registerMollyNotifier(fn) {
+  mollySparkNotifier = typeof fn === 'function' ? fn : null;
+}
+
+/**
+ * Shared singleton DeviceOrientation state across all canvases (H4 / AUDIT #5).
+ */
+let sharedOrientationGx = 0;
+let sharedOrientationListening = false;
+
+function ensureSharedOrientation() {
+  if (sharedOrientationListening || !win()) return;
+  try {
+    window.addEventListener(
+      'deviceorientation',
+      (e) => {
+        if (typeof e?.gamma === 'number') {
+          sharedOrientationGx = Math.max(-0.42, Math.min(0.42, e.gamma * 0.01));
+        }
+      },
+      { passive: true }
+    );
+    sharedOrientationListening = true;
+  } catch {}
+}
+
+/**
+ * Safe storage wrapper that never evaluates bare `localStorage` outside try/catch (H2).
+ */
+export const isSoundMuted = () => win() && safeGetItem(MK, 'local') === '1';
 
 export const toggleSoundMuted = () => {
   const n = !isSoundMuted();
-  sto(localStorage, MK, n ? '1' : '0');
+  safeSetItem(MK, n ? '1' : '0', 'local');
   if (!n) {
     tone(523.25, 0.22, 'sine', 0, 0.03);
     tone(659.25, 0.28, 'triangle', 0.06, 0.028);
@@ -453,114 +490,6 @@ export const ACTION_EFFECT_CATALOG = {
   }
 };
 
-const MOLLY_TREAT_BY_FOOD = {
-  salmon: {
-    icon: '🐟',
-    name: 'lososová granulka pro Molly',
-    shortLabel: '+1 rybka pro Molly',
-    color: '#f59e0b',
-    foodType: 'salmon'
-  },
-  milk: {
-    icon: '🥛',
-    name: 'teplé kočičí mlíčko v misce',
-    shortLabel: '+1 mlíčko pro Molly',
-    color: '#fde68a',
-    foodType: 'milk'
-  },
-  tuna: {
-    icon: '🍣',
-    name: 'rýžový polštářek s tuňákem',
-    shortLabel: '+1 sousto pro Molly',
-    color: '#fbbf24',
-    foodType: 'tuna'
-  },
-  catnip: {
-    icon: '🌿',
-    name: 'čerstvý lístek šanty kočičí',
-    shortLabel: '+1 šanta pro Molly',
-    color: '#4ade80',
-    foodType: 'catnip'
-  },
-  cream: {
-    icon: '🧶',
-    name: 'smetanový pamlsek a klubíčko',
-    shortLabel: '+1 pamlsek pro Molly',
-    color: '#f472b6',
-    foodType: 'cream'
-  },
-  star_treat: {
-    icon: '✨',
-    name: 'křupavá hvězdička pro Molly',
-    shortLabel: '+1 hvězdička pro Molly',
-    color: '#a78bfa',
-    foodType: 'star_treat'
-  }
-};
-
-const MODE_TO_MOLLY_FOOD = {
-  // Animals
-  kibble: 'salmon',
-  shelter_care: 'salmon',
-  // Birds & wildlife
-  birds_glass: 'milk',
-  birds_song: 'milk',
-  wildlife_rescue: 'milk',
-  // Food & solidarity
-  rice: 'tuna',
-  food_bank: 'tuna',
-  soup_lantern: 'tuna',
-  zero_waste_pot: 'tuna',
-  bakery_save: 'tuna',
-  shoebox_gift: 'tuna',
-  // Nature & ecology
-  forest_bloom: 'catnip',
-  fruit_tree: 'catnip',
-  water_spring: 'catnip',
-  eco_cleanup: 'catnip',
-  compost_sprout: 'catnip',
-  butterfly_lens: 'catnip',
-  campfire_group: 'catnip',
-  globe_bridge: 'catnip',
-  // Care, seniors, health
-  blood_drop: 'cream',
-  dna_helix: 'cream',
-  ecg_rescue: 'cream',
-  hair_silk: 'cream',
-  breath_lotus: 'cream',
-  mind_wave: 'cream',
-  prism_support: 'cream',
-  senior_letter: 'cream',
-  owl_shield: 'cream',
-  angel_wings: 'cream',
-  charity_care: 'cream',
-  solidarity_bridge: 'cream',
-  // Knowledge, science & civic
-  satellite_map: 'star_treat',
-  cosmos_science: 'star_treat',
-  wiki_ink: 'star_treat',
-  code_nodes: 'star_treat',
-  dove_appeal: 'star_treat',
-  book_booth: 'star_treat',
-  parcel_share: 'star_treat',
-  phone_recycle: 'star_treat',
-  tutoring_spark: 'star_treat',
-  school_pencil: 'star_treat',
-  memory_wave: 'star_treat',
-  wheels_motion: 'star_treat',
-  safe_crosswalk: 'star_treat',
-  kinetic_steps: 'star_treat'
-};
-
-export function resolveMollyTreat(specOrMode) {
-  const mode =
-    typeof specOrMode === 'string'
-      ? specOrMode
-      : specOrMode?.mode || 'kibble';
-  const foodKey = MODE_TO_MOLLY_FOOD[mode] || 'salmon';
-  return MOLLY_TREAT_BY_FOOD[foodKey] || MOLLY_TREAT_BY_FOOD.salmon;
-}
-
 Object.values(ACTION_EFFECT_CATALOG).forEach((spec) => {
   spec.mollyTreat = resolveMollyTreat(spec);
 });
@@ -671,6 +600,18 @@ function tone(f, dur = 0.28, tp = 'sine', d = 0, pk = 0.038, ef = 0) {
   } catch {
     return null;
   }
+}
+
+/**
+ * Shared chime generator for /svet so the entire app shares a single AudioContext
+ * and honors the global mute setting `isSoundMuted()` (M19 / AUDIT #28).
+ * @param {number} [freq=528]
+ * @param {number} [dur=1.4]
+ * @param {OscillatorType} [wave='sine']
+ * @param {number} [delay=0]
+ */
+export function playSanctuaryChime(freq = 528, dur = 1.4, wave = 'sine', delay = 0) {
+  return tone(freq, dur, wave, delay, 0.045);
 }
 
 function noiseBurst(dur = 0.03, freq = 1100, q = 5.5, delay = 0, gainPeak = 0.04) {
@@ -1104,8 +1045,8 @@ const sync = (r) => {
   mem = r;
   const s = JSON.stringify(r);
   if (win()) {
-    sto(sessionStorage, RK, s);
-    sto(localStorage, RK, s);
+    safeSetItem(RK, s, 'session');
+    safeSetItem(RK, s, 'local');
   }
 };
 
@@ -1120,16 +1061,36 @@ export const savePendingPartnerReturn = (a, surface = 'home') =>
     ts: Date.now()
   });
 
-export function consumePendingPartnerReturn(m = 3e3) {
+function readPendingPartnerRecord() {
   let stored = null;
   if (win()) {
     try {
       stored = JSON.parse(
-        sto(sessionStorage, RK) || sto(localStorage, RK) || 'null'
+        safeGetItem(RK, 'session') || safeGetItem(RK, 'local') || 'null'
       );
     } catch {}
   }
-  const r = mem || stored;
+  return mem || stored;
+}
+
+/**
+ * If a pending partner return exists and is younger than `minDelayMs`,
+ * returns the remaining milliseconds to wait so the caller can schedule a timer (M25 / AUDIT #35).
+ * @param {number} [minDelayMs=3000]
+ * @returns {number} 0 if none or already eligible/expired
+ */
+export function getPendingPartnerReturnRemainingMs(minDelayMs = 3e3) {
+  const r = readPendingPartnerRecord();
+  if (!r || r.consumed || !r.ts) return 0;
+  const dt = Date.now() - r.ts;
+  if (dt >= 0 && dt < minDelayMs) {
+    return Math.max(50, minDelayMs - dt + 30);
+  }
+  return 0;
+}
+
+export function consumePendingPartnerReturn(m = 3e3) {
+  const r = readPendingPartnerRecord();
   const dt = r ? Date.now() - (r.ts || 0) : 0;
   if (!r || r.consumed || dt < m || dt > 18e5) return null;
   sync({ ...r, consumed: 1 });
@@ -1489,9 +1450,10 @@ export function mountImpactCanvas(cv, o = {}) {
   let py = 0.5;
   let id = 0;
   let frame = 0;
+  let idleFrames = 0;
   let lastReportedVal = -1;
   let burstEnergy = o.climax ? 1.0 : 0.45;
-  let isVisible = true;
+  let isVisible = false;
   let tapCount = 0;
   let bonusUnits = 0;
   let isDragging = false;
@@ -1499,6 +1461,7 @@ export function mountImpactCanvas(cv, o = {}) {
   let pointerX = cx;
   let pointerY = cy;
   const stepIncrement = Math.max(1, Math.round(target / 5));
+  ensureSharedOrientation();
 
   // HiDPI / Retina scaling while keeping aspect-correct uniform 1:1 scene coordinates
   const syncCanvasDpr = () => {
@@ -1617,12 +1580,15 @@ export function mountImpactCanvas(cv, o = {}) {
     if (addBonus) {
       mollyEatTimer = Math.max(mollyEatTimer, 0.7);
       mollyTreatsCount = Math.min(6, mollyTreatsCount + 1);
-      notifyMollySpark(o.action || spec.mode, {
-        surface: 'canvas',
-        fromCanvas: true
-      });
+      if (mollySparkNotifier) {
+        mollySparkNotifier(o.action || spec.mode, {
+          surface: 'canvas',
+          fromCanvas: true
+        });
+      }
     }
-    if (!id && isVisible) {
+    idleFrames = 0;
+    if (!id) {
       id = requestAnimationFrame(fn);
     }
     burstEnergy = Math.min(1.6, burstEnergy + (isSuper ? 1.15 : 0.72));
@@ -1711,11 +1677,13 @@ export function mountImpactCanvas(cv, o = {}) {
     return { tx, ty };
   };
 
-  const onO = (e) => {
-    if (typeof e?.gamma === 'number') {
-      gx = Math.max(-0.42, Math.min(0.42, e.gamma * 0.01));
+  const wakeUpLoop = () => {
+    idleFrames = 0;
+    if (!id && isVisible && !red) {
+      id = requestAnimationFrame(fn);
     }
   };
+
   const onP = (e) => {
     const b = cv.getBoundingClientRect();
     if (b.width) {
@@ -1725,6 +1693,7 @@ export function mountImpactCanvas(cv, o = {}) {
       hasPointer = true;
       pointerX = tx;
       pointerY = ty;
+      wakeUpLoop();
       if (isDragging && frame % 3 === 0) {
         sparks.push({
           x: tx,
@@ -1760,9 +1729,12 @@ export function mountImpactCanvas(cv, o = {}) {
       (entries) => {
         for (const entry of entries) {
           const nowVis = entry.isIntersecting;
-          if (nowVis && !isVisible && !red && !id) {
+          if (nowVis && !isVisible) {
             isVisible = true;
-            id = requestAnimationFrame(fn);
+            idleFrames = 0;
+            if (!red && !id) {
+              id = requestAnimationFrame(fn);
+            }
           } else {
             isVisible = nowVis;
           }
@@ -1771,20 +1743,39 @@ export function mountImpactCanvas(cv, o = {}) {
       { threshold: 0.02 }
     );
     io.observe(cv);
+  } else {
+    isVisible = true;
   }
 
-  addEventListener('deviceorientation', onO);
   cv.addEventListener('pointermove', onP);
   cv.addEventListener('pointerdown', onDown);
   cv.addEventListener('pointerup', onUpOrLeave);
   cv.addEventListener('pointerleave', onUpOrLeave);
   cv.addEventListener('pointercancel', onUpOrLeave);
 
-  const fn = () => {
+  const fn = (forceSingleDraw = false) => {
     id = 0;
     frame++;
+    if (!hasPointer && sharedOrientationGx !== 0) {
+      gx = sharedOrientationGx;
+    }
     const charge = globalSparkCharge;
     burstEnergy = Math.max(0, burstEnergy * 0.94);
+    const isActiveMotion =
+      burstEnergy > 0.03 ||
+      treatArcs.length > 0 ||
+      shockwaves.length > 0 ||
+      sparks.length > 0 ||
+      popups.length > 0 ||
+      mollyEatTimer > 0.05 ||
+      charge > 0 ||
+      isDragging ||
+      frame <= 42;
+    if (!isActiveMotion) {
+      idleFrames++;
+    } else {
+      idleFrames = 0;
+    }
     const t = frame * (0.048 + charge * 0.04 + burstEnergy * 0.02);
 
     // Uniform 1:1 scaling so circles, stars, hearts, and scenes are NEVER squashed/stretched
@@ -3048,12 +3039,17 @@ export function mountImpactCanvas(cv, o = {}) {
 
     c.restore();
 
-    if ((!red || treatArcs.length > 0) && isVisible) {
-      id = requestAnimationFrame(fn);
+    if (
+      !forceSingleDraw &&
+      ((!red && idleFrames < 120) || treatArcs.length > 0 || burstEnergy > 0.03) &&
+      (isVisible || treatArcs.length > 0)
+    ) {
+      id = requestAnimationFrame(() => fn(false));
     }
   };
 
-  fn();
+  // Paint one initial resting frame synchronously so the canvas is never blank before IntersectionObserver fires
+  fn(true);
 
   return () => {
     cancelAnimationFrame(id);
@@ -3061,7 +3057,6 @@ export function mountImpactCanvas(cv, o = {}) {
     ro?.disconnect();
     activeControllers.delete(controller);
     delete cv.__triggerBurst;
-    removeEventListener('deviceorientation', onO);
     cv.removeEventListener('pointermove', onP);
     cv.removeEventListener('pointerdown', onDown);
     cv.removeEventListener('pointerup', onUpOrLeave);

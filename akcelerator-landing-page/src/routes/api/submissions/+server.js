@@ -1,29 +1,20 @@
 import { json } from '@sveltejs/kit';
-import { createClient } from '@supabase/supabase-js';
-import { env } from '$env/dynamic/public';
-import { LOCAL_COMMUNITY_ITEMS } from '$lib/data/czech-actions.js';
+import { env as privateEnv } from '$env/dynamic/private';
+import { getServerSupabase, withTimeout, hashClientKey } from '$lib/server/supabase.js';
 import {
   safeText,
   toFiniteNumber,
+  isCzLatLon,
   sanitizeHttpUrl,
   sanitizeEmail,
   sanitizePhone,
   checkRateLimit,
   resolveClientKey,
-  hasExcessiveBodySize
+  readJsonBodyBounded,
+  validateMutationOrigin,
+  isSubmissionTooFast,
+  isAuthorizedTestBypass
 } from '$lib/security.js';
-
-const MAX_LOCAL_COMMUNITY_ITEMS = 100;
-
-function createServerSupabaseClient() {
-  if (!env.PUBLIC_SUPABASE_URL || !env.PUBLIC_SUPABASE_ANON_KEY) return null;
-  return createClient(env.PUBLIC_SUPABASE_URL, env.PUBLIC_SUPABASE_ANON_KEY);
-}
-
-function isCzLatLon(lat, lon) {
-  // Rough Czechia bounds (+ a small border buffer)
-  return lat >= 47.5 && lat <= 51.5 && lon >= 11.5 && lon <= 19.5;
-}
 
 function sanitizeOptionalIsoDate(raw) {
   const s = safeText(raw);
@@ -35,21 +26,19 @@ function sanitizeOptionalIsoDate(raw) {
 }
 
 /** @type {import('./$types').RequestHandler} */
-export async function POST({ request, getClientAddress }) {
-  if (hasExcessiveBodySize(request, 24_576)) {
-    return json({ success: false, error: 'Odeslaná data jsou příliš velká.' }, { status: 413 });
+export async function POST({ request, url, getClientAddress }) {
+  if (!validateMutationOrigin(request, url)) {
+    return json(
+      { success: false, error: 'Nepovolený původ požadavku.' },
+      { status: 403 }
+    );
   }
 
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return json({ success: false, error: 'Neplatný formát dat.' }, { status: 400 });
+  const parsedBody = await readJsonBodyBounded(request, 24_576);
+  if (!parsedBody.ok) {
+    return json({ success: false, error: parsedBody.error }, { status: parsedBody.status });
   }
-
-  if (!body || typeof body !== 'object' || Array.isArray(body)) {
-    return json({ success: false, error: 'Neplatný formát dat.' }, { status: 400 });
-  }
+  const body = parsedBody.data;
 
   // Honeypot (bots)
   const hp = safeText(body.hp);
@@ -57,11 +46,10 @@ export async function POST({ request, getClientAddress }) {
     return json({ success: true }, { status: 200 });
   }
 
-  const name = safeText(body.name);
-  const isAutomatedTestProbe = name === 'Testovací komunitní zahrada Praha';
+  const clientKey = resolveClientKey(request, getClientAddress);
+  const isTestBypass = isAuthorizedTestBypass(request);
 
-  if (!isAutomatedTestProbe) {
-    const clientKey = resolveClientKey(request, getClientAddress);
+  if (!isTestBypass) {
     const rl = checkRateLimit('submissions', clientKey, 15, 10 * 60 * 1000);
     if (!rl.allowed) {
       return json(
@@ -71,16 +59,16 @@ export async function POST({ request, getClientAddress }) {
     }
   }
 
-  const startedAt = toFiniteNumber(body.started_at);
-  if (startedAt && Date.now() - startedAt < 1000) {
+  if (isSubmissionTooFast(body)) {
     return json({ success: false, error: 'Formulář byl odeslán příliš rychle.' }, { status: 400 });
   }
 
-  const kind = safeText(body.kind);
+  const kind = safeText(body.kind) || 'org';
   if (!['org', 'event'].includes(kind)) {
     return json({ success: false, error: 'Neplatný typ položky.' }, { status: 400 });
   }
 
+  const name = safeText(body.name);
   if (!name || name.length < 2 || name.length > 120) {
     return json({ success: false, error: 'Vyplň prosím název (2–120 znaků).' }, { status: 400 });
   }
@@ -89,15 +77,14 @@ export async function POST({ request, getClientAddress }) {
   if (rawCategory.length > 80) {
     return json({ success: false, error: 'Kategorie může mít nejvýše 80 znaků.' }, { status: 400 });
   }
-  const category = rawCategory || null;
+  const category = rawCategory || 'other';
 
   const rawDescription = safeText(body.description);
   if (rawDescription.length > 600) {
     return json({ success: false, error: 'Popis může mít nejvýše 600 znaků.' }, { status: 400 });
   }
-  const description = rawDescription || null;
 
-  const rawWebsite = safeText(body.website);
+  const rawWebsite = safeText(body.website ?? body.url);
   const website = rawWebsite ? sanitizeHttpUrl(rawWebsite) : null;
   if (rawWebsite && !website) {
     return json({ success: false, error: 'Zadej prosím platný webový odkaz (https://…).' }, { status: 400 });
@@ -115,7 +102,7 @@ export async function POST({ request, getClientAddress }) {
     return json({ success: false, error: 'Zadej prosím platné telefonní číslo.' }, { status: 400 });
   }
 
-  const address_label = safeText(body.address_label).slice(0, 200) || null;
+  const address_label = safeText(body.address_label ?? body.address).slice(0, 200) || null;
   const city = safeText(body.city).slice(0, 80) || null;
   const postcode = safeText(body.postcode).slice(0, 20) || null;
 
@@ -135,7 +122,7 @@ export async function POST({ request, getClientAddress }) {
     return json({ success: false, error: 'Zadej prosím platný odkaz na akci (https://…).' }, { status: 400 });
   }
 
-  if (kind === 'event' && !event_url) {
+  if (kind === 'event' && !event_url && !website) {
     return json({ success: false, error: 'U akce prosím doplň odkaz na detail nebo přihlášení.' }, { status: 400 });
   }
 
@@ -145,56 +132,143 @@ export async function POST({ request, getClientAddress }) {
     return json({ success: false, error: 'Neplatný formát data nebo času akce.' }, { status: 400 });
   }
 
-  const row = {
-    status: 'pending',
-    kind,
+  const fullAddress = [address_label, postcode].filter(Boolean).join(', ') || city || null;
+  const contactStr = [email, phone, safeText(body.contact).slice(0, 120)].filter(Boolean).join(' · ') || null;
+  const effectiveUrl = event_url || website || null;
+  const description =
+    rawDescription ||
+    `${name}${city || address_label ? ` (${city || address_label})` : ''}`;
+
+  const dbRow = {
     name,
     category,
     description,
-    website,
-    email,
-    phone,
-    address_label,
-    city,
-    postcode,
+    city: city || address_label || null,
+    address: fullAddress,
     lat,
     lon,
-    event_url,
-    event_start: startRes.value,
-    event_end: endRes.value,
-    created_at: new Date().toISOString()
+    url: effectiveUrl,
+    contact: contactStr,
+    status: 'pending',
+    ip_hash: hashClientKey(clientKey)
   };
 
-  const localId = `comm-local-${Date.now()}`;
-  if (isAutomatedTestProbe) {
-    return json({ success: true, id: localId, fallback: true, testProbe: true });
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    return json(
+      {
+        success: false,
+        error: 'Databázová služba není nakonfigurována. Zkus to prosím později.'
+      },
+      { status: 503 }
+    );
   }
 
-  // Add to bounded in-memory community items so it shows up immediately in the current session
-  LOCAL_COMMUNITY_ITEMS.unshift({
-    id: localId,
-    ...row
-  });
-  if (LOCAL_COMMUNITY_ITEMS.length > MAX_LOCAL_COMMUNITY_ITEMS) {
-    LOCAL_COMMUNITY_ITEMS.length = MAX_LOCAL_COMMUNITY_ITEMS;
-  }
-
-  const supabase = createServerSupabaseClient();
-  if (supabase) {
-    try {
-      const { data, error } = await supabase
+  try {
+    const { data, error } = await withTimeout(
+      supabase
         .from('community_submissions')
-        .insert([row])
-        .select('id')
-        .single();
+        .insert([dbRow])
+        .select('id, created_at, status')
+        .single(),
+      2800,
+      'Supabase submission insert timeout'
+    );
 
-      if (!error) {
-        return json({ success: true, id: data?.id || localId, fallback: false });
-      }
-    } catch {
-      // Fall through to local fallback success
+    if (error || !data) {
+      return json(
+        {
+          success: false,
+          error: 'Tip se nepodařilo uložit do databáze. Zkus to prosím za chvíli.'
+        },
+        { status: 503 }
+      );
     }
+
+    return json({
+      success: true,
+      id: data.id,
+      status: data.status || 'pending',
+      fallback: false,
+      moderationNotice:
+        'Tvůj tip byl odeslán ke kontrole. Jakmile ověříme kontaktní údaje, zobrazí se na mapě všem. Na tomto zařízení už své místo vidíš s označením „Čeká na schválení“.',
+      item: {
+        id: data.id,
+        kind,
+        name,
+        category,
+        description,
+        city: dbRow.city,
+        address_label: fullAddress,
+        website: website || effectiveUrl,
+        event_url,
+        email,
+        phone,
+        lat,
+        lon,
+        status: 'pending',
+        created_at: data.created_at
+      }
+    });
+  } catch {
+    return json(
+      {
+        success: false,
+        error: 'Databázová služba momentálně neodpovídá. Zkus to prosím za chvíli.'
+      },
+      { status: 503 }
+    );
+  }
+}
+
+/**
+ * Moderator endpoint to approve or reject pending community submissions (H11 / AUDIT #17).
+ * Requires header `x-moderator-secret` matching MODERATOR_SECRET or SUPABASE_SERVICE_ROLE_KEY.
+ * @type {import('./$types').RequestHandler}
+ */
+export async function PATCH({ request }) {
+  const modSecret = (request.headers.get('x-moderator-secret') || '').trim();
+  const expectedSecret = (
+    privateEnv.MODERATOR_SECRET ||
+    privateEnv.SUPABASE_SERVICE_ROLE_KEY ||
+    privateEnv.SUPABASE_SECRET_KEY ||
+    ''
+  ).trim();
+
+  if (!modSecret || !expectedSecret || modSecret !== expectedSecret) {
+    return json({ success: false, error: 'Neautorizovaný přístup.' }, { status: 401 });
   }
 
-  return json({ success: true, id: localId, fallback: true });
+  const parsed = await readJsonBodyBounded(request, 8192);
+  if (!parsed.ok) {
+    return json({ success: false, error: parsed.error }, { status: parsed.status });
+  }
+
+  const id = safeText(parsed.data.id);
+  const status = safeText(parsed.data.status);
+  if (!id || !['approved', 'rejected', 'pending'].includes(status)) {
+    return json({ success: false, error: 'Chybí platné ID nebo cílový status.' }, { status: 400 });
+  }
+
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    return json({ success: false, error: 'Databáze není nakonfigurována.' }, { status: 503 });
+  }
+
+  const { data, error } = await withTimeout(
+    supabase
+      .from('community_submissions')
+      .update({ status })
+      .eq('id', id)
+      .select('id, name, status')
+      .single(),
+    2800,
+    'Supabase moderation update timeout'
+  );
+
+  if (error || !data) {
+    return json({ success: false, error: 'Nepodařilo se změnit stav záznamu.' }, { status: 500 });
+  }
+
+  return json({ success: true, item: data });
 }

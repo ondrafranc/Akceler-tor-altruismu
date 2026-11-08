@@ -1,5 +1,11 @@
 import { browser, dev } from '$app/environment';
 import { writable, get } from 'svelte/store';
+import {
+  safeGetItem,
+  safeSetItem,
+  cleanTitle as canonicalCleanTitle,
+  openFeedbackModal
+} from './utils.js';
 
 let _track = null;
 /** @type {Promise<null | ((name: string, data?: Record<string, any>) => void)> | null} */
@@ -58,7 +64,8 @@ const FUNNEL_STORAGE_KEY = 'aa_funnel_counts_v1';
 function loadStartedIds() {
   if (!browser) return [];
   try {
-    const raw = sessionStorage.getItem(STARTED_STORAGE_KEY) || localStorage.getItem(STARTED_STORAGE_KEY);
+    const raw =
+      safeGetItem(STARTED_STORAGE_KEY, 'session') || safeGetItem(STARTED_STORAGE_KEY, 'local');
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string') : [];
   } catch {
@@ -70,8 +77,8 @@ function saveStartedIds(ids) {
   if (!browser) return;
   try {
     const serialized = JSON.stringify(ids.slice(-100));
-    sessionStorage.setItem(STARTED_STORAGE_KEY, serialized);
-    localStorage.setItem(STARTED_STORAGE_KEY, serialized);
+    safeSetItem(STARTED_STORAGE_KEY, serialized, 'session');
+    safeSetItem(STARTED_STORAGE_KEY, serialized, 'local');
   } catch {}
 }
 
@@ -97,7 +104,7 @@ export const funnelCounts = writable({
 
 if (browser) {
   try {
-    const raw = localStorage.getItem(FUNNEL_STORAGE_KEY);
+    const raw = safeGetItem(FUNNEL_STORAGE_KEY, 'local');
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
@@ -117,7 +124,7 @@ export function trackFunnel(stage, data = {}) {
     const next = { ...curr, [stage]: (curr[stage] || 0) + 1 };
     if (browser) {
       try {
-        localStorage.setItem(FUNNEL_STORAGE_KEY, JSON.stringify(next));
+        safeSetItem(FUNNEL_STORAGE_KEY, JSON.stringify(next), 'local');
       } catch {}
     }
     return next;
@@ -171,14 +178,14 @@ export const feedbackReportRequest = writable(null);
  * @param {{ id?: string, title?: string, url?: string, org?: string }} item
  */
 export function openBrokenLinkReport(item = {}) {
-  const cleanTitle = String(item?.title || item?.org || 'aktivita')
-    .replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u, '')
-    .trim();
+  const cleaned = canonicalCleanTitle(item?.title || item?.org || 'aktivita') || 'aktivita';
   const urlPart = item?.url ? ` (${item.url})` : '';
+  const prefill = `Hlášení k aktivitě „${cleaned}“${urlPart}: odkaz nefunguje nebo jsou informace zastaralé. `;
   feedbackReportRequest.set({
     open: true,
     title: 'Nahlásit nefunkční nebo zastaralý údaj',
-    prefill: `Hlášení k aktivitě „${cleanTitle}“${urlPart}: odkaz nefunguje nebo jsou informace zastaralé. `
+    prefill
   });
-  trackEvent('aa_report_broken_link', { id: item?.id || cleanTitle });
+  openFeedbackModal(prefill);
+  trackEvent('aa_report_broken_link', { id: item?.id || cleaned });
 }

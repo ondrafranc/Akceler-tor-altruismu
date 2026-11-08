@@ -12,7 +12,9 @@
     plantStepLight,
     addSanctuaryWish,
     clearSanctuaryWishes,
-    saveStepReflection
+    saveStepReflection,
+    createProgressBackupCode,
+    restoreProgressFromBackupCode
   } from '../../lib/progress.js';
   import { MICRO_ACTIONS } from '../../lib/data/czech-actions.js';
   import { renderStoryCardPng } from '../../lib/storyCard.js';
@@ -21,7 +23,10 @@
     fetchAmbientPulse,
     playMollyPurr,
     playMollyCrunch,
-    playMollyMeow
+    playMollyMeow,
+    playSanctuaryChime,
+    isSoundMuted,
+    toggleSoundMuted
   } from '../../lib/sensoryEngine.js';
   import {
     mollyState,
@@ -29,6 +34,7 @@
     petMolly,
     setMollyMood
   } from '../../lib/mollyStore.js';
+  import { cleanTitle, isInAppBrowser } from '../../lib/utils.js';
 
   let ambientPulseText = 'Před chvílí někdo v Brně naplnil misku v útulku';
 
@@ -77,10 +83,6 @@
     return '🏮 Lucerna · Osobní skutek';
   }
 
-  function cleanTitle(str) {
-    return String(str || '').replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u, '').trim() || str;
-  }
-
   function showGentleToast(msg) {
     gentleToast = msg;
     if (toastTimer) clearTimeout(toastTimer);
@@ -90,116 +92,26 @@
   }
 
   // =========================================================================
-  // POLYPHONIC HARMONIC SOUNDSCAPE (HARP / CELESTA / SINGING BOWL)
+  // POLYPHONIC HARMONIC SOUNDSCAPE (SHARED AUDIO ENGINE)
   // =========================================================================
   let soundEnabled = false;
-  /** @type {AudioContext | null} */
-  let audioCtx = null;
   let lastHoverChimeAt = 0;
 
-  function ensureAudio() {
-    if (typeof window === 'undefined') return null;
-    if (!audioCtx) {
-      const Ctx = window.AudioContext || /** @type {any} */ (window).webkitAudioContext;
-      if (Ctx) audioCtx = new Ctx();
-    }
-    if (audioCtx && audioCtx.state === 'suspended') {
-      audioCtx.resume().catch(() => {});
-    }
-    return audioCtx;
-  }
-
   function toggleSound() {
-    soundEnabled = !soundEnabled;
+    const muted = toggleSoundMuted();
+    soundEnabled = !muted;
     if (soundEnabled) {
-      const ctx = ensureAudio();
-      if (ctx) playChime('water');
+      playChime('water');
     }
   }
 
   /**
-   * Lush polyphonic pentatonic synthesis
+   * Lush polyphonic pentatonic synthesis delegated to shared sensoryEngine
    * @param {'sky' | 'water' | 'breath_in' | 'breath_out' | 'hover'} type
    */
   function playChime(type) {
     if (!soundEnabled) return;
-    const ctx = ensureAudio();
-    if (!ctx) return;
-    try {
-      const now = ctx.currentTime;
-
-      if (type === 'hover') {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        const hoverNotes = [880, 987.77, 1046.5, 1174.66, 1318.51];
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(hoverNotes[Math.floor(Math.random() * hoverNotes.length)], now);
-        gain.gain.setValueAtTime(0.0005, now);
-        gain.gain.exponentialRampToValueAtTime(0.014, now + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.58);
-        return;
-      }
-
-      if (type === 'sky') {
-        // Arpeggiated celesta / harp triad
-        const roots = [523.25, 587.33, 659.25];
-        const base = roots[Math.floor(Math.random() * roots.length)];
-        const chord = [base, base * 1.25, base * 1.5, base * 2];
-        chord.forEach((freq, idx) => {
-          const t0 = now + idx * 0.065;
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = idx === 3 ? 'triangle' : 'sine';
-          osc.frequency.setValueAtTime(freq, t0);
-          gain.gain.setValueAtTime(0.0008, t0);
-          gain.gain.exponentialRampToValueAtTime(0.038 / (1 + idx * 0.3), t0 + 0.035);
-          gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.4);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start(t0);
-          osc.stop(t0 + 2.45);
-        });
-      } else if (type === 'water') {
-        // Warm singing bowl + water harmonic overtone
-        const roots = [261.63, 293.66, 329.63, 392.0];
-        const base = roots[Math.floor(Math.random() * roots.length)];
-        [1, 1.5, 2.01].forEach((mult, idx) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = idx === 0 ? 'triangle' : 'sine';
-          osc.frequency.setValueAtTime(base * mult, now);
-          if (idx === 0) {
-            osc.frequency.exponentialRampToValueAtTime(base * 1.008, now + 0.5);
-          }
-          gain.gain.setValueAtTime(0.0008, now);
-          gain.gain.exponentialRampToValueAtTime(0.042 / (idx + 1), now + 0.05 + idx * 0.03);
-          gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.8 - idx * 0.35);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start(now);
-          osc.stop(now + 2.85);
-        });
-      } else if (type === 'breath_in' || type === 'breath_out') {
-        const freqs = type === 'breath_in' ? [261.63, 392.0] : [220.0, 329.63];
-        freqs.forEach((f, idx) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(f, now);
-          gain.gain.setValueAtTime(0.0006, now);
-          gain.gain.exponentialRampToValueAtTime(idx === 0 ? 0.024 : 0.014, now + 0.75);
-          gain.gain.exponentialRampToValueAtTime(0.0001, now + 3.1);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start(now);
-          osc.stop(now + 3.2);
-        });
-      }
-    } catch {}
+    playSanctuaryChime(type, true);
   }
 
   // =========================================================================
@@ -525,10 +437,14 @@
   let canvasEl = null;
   /** @type {HTMLDivElement | null} */
   let stageWrapEl = null;
+  /** @type {HTMLDivElement | null} */
+  let parallaxEl = null;
   let pointer = { x: 0.5, y: 0.62, active: false, smoothX: 0.5, smoothY: 0.62 };
-  let parallaxStyle = '';
   let lastRippleAt = 0;
   let lastTrailAt = 0;
+  let inAppBrowserDetected = false;
+  let backupCodeInput = '';
+  let backupStatusMsg = '';
 
   /** @type {Array<{ x: number, y: number, vx: number, vy: number, r: number, alpha: number, color: string, life: number, maxLife: number, gravity: number, twinkle: number }>} */
   let burstParticles = [];
@@ -1012,10 +928,42 @@
         healPercent: 100,
         stars: skyStars
       });
+      if (
+        storyDataUrl &&
+        storyDataUrl.startsWith('blob:') &&
+        typeof URL !== 'undefined' &&
+        typeof URL.revokeObjectURL === 'function'
+      ) {
+        URL.revokeObjectURL(storyDataUrl);
+      }
       storyDataUrl = res.dataUrl;
       storyBlob = res.blob;
     } finally {
       storyBusy = false;
+    }
+  }
+
+  async function handleCopyBackupCode() {
+    const code = createProgressBackupCode();
+    if (!code) return;
+    backupCodeInput = code;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code);
+        backupStatusMsg = '✓ Záložní kód zkopírován do schránky.';
+        return;
+      }
+    } catch {}
+    backupStatusMsg = 'Záložní kód vygenerován v poli níže — zkopíruj si ho.';
+  }
+
+  function handleRestoreBackupCode() {
+    const res = restoreProgressFromBackupCode(backupCodeInput);
+    if (res.ok) {
+      backupStatusMsg = `✓ Obnoveno (${res.restoredSteps} skutků).`;
+      backupCodeInput = '';
+    } else {
+      backupStatusMsg = 'Kód se nepodařilo přečíst. Zkontroluj prosím celé znění.';
     }
   }
 
@@ -1062,6 +1010,8 @@
 
   onMount(() => {
     let rafId = 0;
+    inAppBrowserDetected = isInAppBrowser();
+    soundEnabled = !isSoundMuted();
     const reducedMotion =
       typeof window !== 'undefined' &&
       window.matchMedia &&
@@ -1150,10 +1100,10 @@
       const targetPY = pointer.active ? pointer.y : 0.5 + Math.cos(t * 0.2) * 0.06;
       pointer.smoothX += (targetPX - pointer.smoothX) * 0.06;
       pointer.smoothY += (targetPY - pointer.smoothY) * 0.06;
-      if (!reducedMotion) {
+      if (!reducedMotion && parallaxEl) {
         const tx = ((0.5 - pointer.smoothX) * 12).toFixed(2);
         const ty = ((0.5 - pointer.smoothY) * 8).toFixed(2);
-        parallaxStyle = `transform: scale(1.032) translate3d(${tx}px, ${ty}px, 0);`;
+        parallaxEl.style.transform = `scale(1.032) translate3d(${tx}px, ${ty}px, 0)`;
       }
 
       if (canvasEl && width > 0 && height > 0) {
@@ -2196,9 +2146,13 @@
         clearInterval(breathInterval);
       }
       if (toastTimer) clearTimeout(toastTimer);
-      if (audioCtx && typeof audioCtx.close === 'function') {
-        audioCtx.close().catch(() => {});
-        audioCtx = null;
+      if (
+        storyDataUrl &&
+        storyDataUrl.startsWith('blob:') &&
+        typeof URL !== 'undefined' &&
+        typeof URL.revokeObjectURL === 'function'
+      ) {
+        URL.revokeObjectURL(storyDataUrl);
       }
     };
   });
@@ -2277,22 +2231,39 @@
         role="application"
         aria-label="Krajina dobra: kliknutím na světlo zobrazíš konkrétní dobrý skutek, kliknutím na hladinu nebo oblohu rozsvítíš vlastní skutek"
       >
-        <div class="art-parallax-wrap" style={parallaxStyle}>
-          <img
-            src="/art/sanctuary-twilight.jpg"
-            alt="Šumavské údolí s lesní tůní a světly dobrých skutků"
-            class="art-layer twilight"
-            draggable="false"
-          />
+        <div class="art-parallax-wrap" bind:this={parallaxEl}>
+          <picture>
+            <source
+              type="image/webp"
+              srcset="/art/sanctuary-twilight-800.webp 800w, /art/sanctuary-twilight.webp 1400w"
+              sizes="100vw"
+            />
+            <img
+              src="/art/sanctuary-twilight.jpg"
+              alt="Šumavské údolí s lesní tůní a světly dobrých skutků"
+              class="art-layer twilight"
+              decoding="async"
+              draggable="false"
+            />
+          </picture>
 
-          <img
-            src="/art/sanctuary-dawn.jpg"
-            alt=""
-            aria-hidden="true"
-            class="art-layer dawn"
-            style={`opacity: ${dawnLayerOpacity.toFixed(2)};`}
-            draggable="false"
-          />
+          <picture>
+            <source
+              type="image/webp"
+              srcset="/art/sanctuary-dawn-800.webp 800w, /art/sanctuary-dawn.webp 1400w"
+              sizes="100vw"
+            />
+            <img
+              src="/art/sanctuary-dawn.jpg"
+              alt=""
+              aria-hidden="true"
+              class="art-layer dawn"
+              fetchpriority="high"
+              decoding="async"
+              style={`opacity: ${dawnLayerOpacity.toFixed(2)};`}
+              draggable="false"
+            />
+          </picture>
         </div>
 
         <canvas bind:this={canvasEl} class="sanctuary-canvas world-canvas"></canvas>
@@ -2743,6 +2714,30 @@
             {/each}
           </ul>
         {/if}
+
+        <div class="backup-box">
+          {#if inAppBrowserDetected}
+            <p class="inapp-warning">
+              ⚠️ Prohlížíš web uvnitř aplikace (Instagram/FB/TikTok), která po zavření maže paměť. Zkopíruj si záložní kód nebo stránku otevři v Safari/Chrome.
+            </p>
+          {/if}
+          <div class="backup-actions">
+            <button type="button" class="ji-add-note" on:click={handleCopyBackupCode}>
+              🔑 Vygenerovat záložní kód zápisníku
+            </button>
+            <div class="ji-edit">
+              <input
+                type="text"
+                bind:value={backupCodeInput}
+                placeholder="Vložit záložní kód (AA1:…) pro obnovu na jiném zařízení"
+              />
+              <button type="button" on:click={handleRestoreBackupCode}>Obnovit</button>
+            </div>
+            {#if backupStatusMsg}
+              <p class="story-msg">{backupStatusMsg}</p>
+            {/if}
+          </div>
+        </div>
       </div>
     </details>
   </div>

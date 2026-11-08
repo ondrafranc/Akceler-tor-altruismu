@@ -48,15 +48,28 @@ const config = {
 			directives: {
 				'default-src': ['self'],
 				'script-src': ['self', 'https://va.vercel-scripts.com'],
-				'style-src': ['self', 'unsafe-inline', 'https:'],
-				'img-src': ['self', 'data:', 'blob:', 'https:'],
-				'font-src': ['self', 'https:', 'data:'],
-				'connect-src': ['self', 'https:'],
-				'frame-src': ['https:'],
+				'style-src': ['self', 'unsafe-inline'],
+				'img-src': [
+					'self',
+					'data:',
+					'blob:',
+					'https://*.tile.openstreetmap.org',
+					'https://tile.openstreetmap.org',
+					'https://*.basemaps.cartocdn.com'
+				],
+				'font-src': ['self', 'data:'],
+				'connect-src': [
+					'self',
+					'https://*.supabase.co',
+					'https://va.vercel-scripts.com',
+					'https://*.tile.openstreetmap.org',
+					'https://tile.openstreetmap.org'
+				],
 				'frame-ancestors': ['none'],
 				'base-uri': ['self'],
 				'form-action': ['self'],
-				'object-src': ['none']
+				'object-src': ['none'],
+				'upgrade-insecure-requests': true
 			}
 		}
 	}

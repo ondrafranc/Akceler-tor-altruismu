@@ -27,10 +27,12 @@
     playPayoffAsmr,
     savePendingPartnerReturn,
     consumePendingPartnerReturn,
+    getPendingPartnerReturnRemainingMs,
     triggerCanvasBurst,
     fetchAmbientPulse
   } from '../../lib/sensoryEngine.js';
   import { notifyMollySpark } from '../../lib/mollyStore.js';
+  import { normSearchStr, safeGetItem } from '../../lib/utils.js';
 
   const CATEGORY_PRESETS = [
     { id: 'all', label: '✨ Vše smysluplné v okolí', kinds: ['ngo', 'community', 'food', 'animals'], onlyWeb: false },
@@ -103,14 +105,6 @@
     { label: 'Česká Lípa, Liberecký kraj', lat: 50.6855, lon: 14.5376 },
     { label: 'Chrudim, Pardubický kraj', lat: 49.9511, lon: 15.7956 }
   ];
-
-  function normSearchStr(s) {
-    return String(s || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
-  }
 
   let activePresetId = 'all';
   let sourceFilter = 'all'; // 'all' | 'verified_org' | 'community' | 'osm'
@@ -214,9 +208,21 @@
       visitMode: ci.visitMode || null,
       curated: false,
       sourceType: 'community',
+      pendingModeration: ci.status === 'pending' || Boolean(ci.pendingModeration),
       verifiedAt: null,
       distanceKm: Math.round(d * 10) / 10
     };
+  }
+
+  function getMyPendingCommunityItems() {
+    try {
+      const raw = safeGetItem('aa_my_pending_submissions_v1', 'local');
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   }
 
   function getInstantCurated(lat, lon, activeKinds = ALL_KINDS) {
@@ -233,9 +239,10 @@
       };
     });
 
-    const localComm = LOCAL_COMMUNITY_ITEMS.map((ci) => normalizeCommunityItemToPlace(ci, lat, lon)).filter(
-      (item) => item && kList.includes(item.kind)
-    );
+    const myPending = getMyPendingCommunityItems();
+    const localComm = [...myPending, ...LOCAL_COMMUNITY_ITEMS]
+      .map((ci) => normalizeCommunityItemToPlace(ci, lat, lon))
+      .filter((item) => item && kList.includes(item.kind));
 
     const combined = [...allCurated];
     const seenNames = new Set(combined.map((p) => normSearchStr(p.name)));
@@ -278,6 +285,9 @@
   let leaflet = null;
   let tileLayer = null;
   let tileStyle = 'calm'; // 'calm' | 'crisp'
+  let tileFallbackUsed = false;
+  let touchGestureHint = false;
+  let touchHintTimer = null;
   let markersLayer = null;
   let userMarker = null;
   let radiusCircle = null;
@@ -486,6 +496,16 @@
       updateWhenZooming: false,
       updateWhenIdle: false,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> přispěvatelé'
+    });
+    let tileErrCount = 0;
+    tileLayer.on('tileerror', () => {
+      tileErrCount += 1;
+      if (tileErrCount >= 4 && !tileFallbackUsed && tileLayer) {
+        tileFallbackUsed = true;
+        try {
+          tileLayer.setUrl('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png');
+        } catch {}
+      }
     });
     tileLayer.addTo(map);
   }
@@ -1054,10 +1074,15 @@
   onMount(() => {
     let destroyed = false;
     let resizeTimer = null;
+    let nearReturnTimer = null;
     soundMuted = isSoundMuted();
 
     const checkNearReturn = () => {
       if (nearReturnPlace) return;
+      if (nearReturnTimer) {
+        clearTimeout(nearReturnTimer);
+        nearReturnTimer = null;
+      }
       const elapsedMem = awaitingNearPlace ? Date.now() - nearLeaveTimestamp : 0;
       const persisted = consumePendingPartnerReturn(3000);
       if (elapsedMem >= 3000 || persisted) {
@@ -1078,6 +1103,13 @@
           awaitingNearPlace = null;
           playPayoffAsmr(resolved);
           trackEvent('aa_partner_return_prompt', { surface: 'near', id: resolved.id });
+        }
+      } else {
+        const remPersisted = getPendingPartnerReturnRemainingMs(3000);
+        const remMem = awaitingNearPlace && elapsedMem > 0 ? Math.max(0, 3000 - elapsedMem) : 0;
+        const rem = Math.max(remPersisted, remMem);
+        if (rem > 0) {
+          nearReturnTimer = setTimeout(checkNearReturn, rem + 30);
         }
       }
     };
@@ -1154,9 +1186,31 @@
 
         map = leaflet.map(mapEl, {
           zoomControl: true,
-          scrollWheelZoom: true,
+          scrollWheelZoom: false,
           preferCanvas: true
         });
+        map.on('focus', () => map?.scrollWheelZoom?.enable());
+        map.on('blur', () => map?.scrollWheelZoom?.disable());
+
+        const onMapTouchStart = (e) => {
+          if (!map || mobileView === 'map') return;
+          if (e.touches && e.touches.length === 1) {
+            map.dragging?.disable();
+            touchGestureHint = true;
+            if (touchHintTimer) clearTimeout(touchHintTimer);
+            touchHintTimer = setTimeout(() => {
+              touchGestureHint = false;
+            }, 1800);
+          } else if (e.touches && e.touches.length >= 2) {
+            map.dragging?.enable();
+            touchGestureHint = false;
+          }
+        };
+        const onMapTouchEnd = () => {
+          map?.dragging?.enable();
+        };
+        mapEl.addEventListener('touchstart', onMapTouchStart, { passive: true });
+        mapEl.addEventListener('touchend', onMapTouchEnd, { passive: true });
 
         ensureOsmTileLayer();
         moveMapCenter(centerLat, centerLon, 13);
@@ -1206,6 +1260,8 @@
       window.removeEventListener('focus', checkNearReturn);
       window.removeEventListener('pageshow', checkNearReturn);
       if (resizeTimer) clearTimeout(resizeTimer);
+      if (nearReturnTimer) clearTimeout(nearReturnTimer);
+      if (touchHintTimer) clearTimeout(touchHintTimer);
       if (nearbyAbortController) nearbyAbortController.abort();
       if (map) {
         map.remove();
@@ -1402,6 +1458,12 @@
           <div class="map-error-box">{mapBootError}</div>
         {/if}
 
+        {#if touchGestureHint}
+          <div class="map-gesture-hint" role="status">
+            Posuň mapu dvěma prsty ✌️
+          </div>
+        {/if}
+
         <div
           bind:this={mapEl}
           class="leaflet-canvas map-canvas"
@@ -1581,6 +1643,12 @@
                 <span class="pc-community-badge" title="Sousedský komunitní tip">
                   🌱 Komunitní tip
                 </span>
+                {#if p.pendingModeration}
+                  <span>·</span>
+                  <span class="pc-pending-badge" title="Tvůj tip čeká na schválení moderátorem">
+                    ⏳ Čeká na schválení
+                  </span>
+                {/if}
               {:else}
                 <span class="pc-osm-badge" title="Orientační bod z veřejné mapy OpenStreetMap">
                   🗺️ Orientační bod OSM
@@ -2540,6 +2608,29 @@
   .pc-community-badge {
     font-weight: 700;
     color: #0f766e;
+  }
+
+  .pc-pending-badge {
+    font-weight: 700;
+    color: #b45309;
+    background: #fef3c7;
+    padding: 0.08rem 0.42rem;
+    border-radius: 999px;
+  }
+
+  .map-gesture-hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 650;
+    background: rgba(13, 33, 24, 0.86);
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.45rem 0.85rem;
+    border-radius: 999px;
+    pointer-events: none;
   }
 
   .pc-osm-badge {

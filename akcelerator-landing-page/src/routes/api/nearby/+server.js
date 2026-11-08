@@ -7,6 +7,7 @@ import {
   clamp,
   toFiniteNumber,
   isValidLatLon,
+  isCzLatLon,
   haversineKm,
   safeText,
   sanitizeHttpUrl,
@@ -138,21 +139,25 @@ function makeOverpassQuery(lat, lon, radiusM, kinds, includeAssociations) {
 
   const parts = Array.from(tagSet).map((tq) => `nw${tq};`);
 
-  return `[out:json][timeout:3][bbox:${minLat},${minLon},${maxLat},${maxLon}];(${parts.join('')});out center tags 140;`;
+  return `[out:json][timeout:4][bbox:${minLat},${minLon},${maxLat},${maxLon}];(${parts.join('')});out center tags 140;`;
 }
 
-async function fetchOneOverpass(url, query, timeoutMs = 2200) {
+async function fetchOneOverpass(url, query, timeoutMs = 3000, sharedSignal = undefined) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const combinedSignal = sharedSignal
+    ? AbortSignal.any([sharedSignal, controller.signal])
+    : controller.signal;
   try {
     const res = await fetch(url, {
       method: 'POST',
       headers: {
         'content-type': 'application/x-www-form-urlencoded; charset=utf-8',
-        'user-agent': 'AkceleratorAltruismu/2.5 (SvelteKit; Czech-only)'
+        'user-agent':
+          'AkceleratorAltruismu/2.5 (https://akcelerator-altruismu.vercel.app; kontakt@akcelerator-altruismu.cz)'
       },
-      body: query,
-      signal: controller.signal
+      body: 'data=' + encodeURIComponent(query),
+      signal: combinedSignal
     });
     if (!res.ok) throw new Error(`Overpass ${res.status}`);
     return await res.json();
@@ -162,7 +167,16 @@ async function fetchOneOverpass(url, query, timeoutMs = 2200) {
 }
 
 async function postOverpass(query) {
-  return await Promise.any(OVERPASS_ENDPOINTS.map((url) => fetchOneOverpass(url, query, 1600)));
+  const sharedController = new AbortController();
+  try {
+    return await Promise.any(
+      OVERPASS_ENDPOINTS.map((url) =>
+        fetchOneOverpass(url, query, 3000, sharedController.signal)
+      )
+    );
+  } finally {
+    sharedController.abort();
+  }
 }
 
 function extractLatLon(el) {
@@ -215,7 +229,16 @@ export async function GET({ url, request, getClientAddress }) {
   const radiusM = clamp(radius, 250, 25_000);
   const kinds = [...new Set(kindsRaw.filter((k) => ['ngo', 'community', 'food', 'animals'].includes(k)))].sort();
 
-  const cacheKey = `v28:${lat.toFixed(4)}:${lon.toFixed(4)}:${radiusM}:${includeAssociations ? 'a1' : 'a0'}:${kinds.join(',')}`;
+  // Do not proxy out-of-Czechia coordinates to Overpass mirrors (H3)
+  if (!isCzLatLon(lat, lon)) {
+    const fallbackPlaces = getFallbackPlaces(lat, lon, radiusM, kinds);
+    return json(
+      { places: fallbackPlaces, radius_m: radiusM, lat, lon, fallback: true, expandedToNearest: true },
+      { status: 200, headers: { 'cache-control': 'public, max-age=0, s-maxage=300' } }
+    );
+  }
+
+  const cacheKey = `v29:${lat.toFixed(4)}:${lon.toFixed(4)}:${radiusM}:${includeAssociations ? 'a1' : 'a0'}:${kinds.join(',')}`;
   const cached = CACHE.get(cacheKey);
   const now = Date.now();
   if (cached && cached.expiresAt > now) {

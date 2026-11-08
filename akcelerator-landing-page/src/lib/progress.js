@@ -1,7 +1,14 @@
-import { writable, derived } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
 import { getRandomEncouragement, MICRO_ACTIONS } from './data/czech-actions.js';
 import { trackEvent, trackFunnel, hasActionStarted } from './analytics.js';
-import { feedMollyFromAction } from './mollyStore.js';
+import { feedMollyFromAction, mollyState, MOLLY_STORAGE_KEY } from './mollyStore.js';
+import {
+  safeGetItem,
+  safeSetItem,
+  stripLeadingEmoji as canonicalStripLeadingEmoji,
+  exportProgressPasscode,
+  importProgressPasscode
+} from './utils.js';
 
 const STORAGE_KEY = 'aa_completed_steps_v2';
 const WISHES_STORAGE_KEY = 'aa_sanctuary_wishes_v1';
@@ -210,21 +217,19 @@ export function inferStepElement(step) {
   return 'care';
 }
 
-const LEADING_EMOJI_RE = /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u;
-
 /**
- * Odstraní úvodní emoji (včetně složených ZWJ sekvencí jako 🧑‍🏫 nebo 💇‍♀️) z názvu skutku.
+ * Odstraní úvodní emoji (včetně složených ZWJ sekvencí jako 🧑‍🏫 nebo 💇‍♀️) z názvu skutku (M22).
  * @param {string} str
  */
 export function stripLeadingEmoji(str) {
-  const cleaned = String(str || '').replace(LEADING_EMOJI_RE, '').trim();
+  const cleaned = canonicalStripLeadingEmoji(str);
   return cleaned || String(str || '').trim();
 }
 
 function loadSteps() {
   if (typeof window === 'undefined') return [];
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = safeGetItem(STORAGE_KEY, 'local');
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -244,14 +249,14 @@ function loadSteps() {
 function saveSteps(steps) {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(steps.slice(-150)));
+    safeSetItem(STORAGE_KEY, JSON.stringify(steps.slice(-150)), 'local');
   } catch {}
 }
 
 function loadWishes() {
   if (typeof window === 'undefined') return [];
   try {
-    const raw = localStorage.getItem(WISHES_STORAGE_KEY);
+    const raw = safeGetItem(WISHES_STORAGE_KEY, 'local');
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -267,7 +272,7 @@ function loadWishes() {
 function saveWishes(list) {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(WISHES_STORAGE_KEY, JSON.stringify(list.slice(-80)));
+    safeSetItem(WISHES_STORAGE_KEY, JSON.stringify(list.slice(-80)), 'local');
   } catch {}
 }
 
@@ -367,6 +372,14 @@ export function recordSmallWin(step, options = {}) {
     silent: isSilent,
     source: 'win'
   });
+
+  if (typeof window !== 'undefined' && typeof fetch === 'function') {
+    fetch('/api/pulse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action_id: entry.id, kind: 'completed' })
+    }).catch(() => {});
+  }
 
   trackEvent('aa_small_win', {
     surface: entry.surface,
@@ -513,4 +526,52 @@ export function saveStepReflection(uid, note) {
 
 export function closeCelebration() {
   activeCelebration.set(null);
+}
+
+/**
+ * Vytvoří anonymní přenosný kód pro zálohu postupu mimo In-App prohlížeč (M18 / AUDIT #26).
+ * @returns {string}
+ */
+export function createProgressBackupCode() {
+  const steps = get(completedSteps).slice(-40);
+  const wishes = get(sanctuaryWishes).slice(-30);
+  const molly = get(mollyState);
+  return exportProgressPasscode({
+    s: steps,
+    w: wishes,
+    m: {
+      treatsFedTotal: molly?.treatsFedTotal || 0,
+      petCount: molly?.petCount || 0
+    }
+  });
+}
+
+/**
+ * Obnoví postup z anonymního záložního kódu (M18 / AUDIT #26).
+ * @param {string} code
+ * @returns {boolean}
+ */
+export function restoreProgressFromBackupCode(code) {
+  const decoded = importProgressPasscode(code);
+  if (!decoded) return false;
+  if (Array.isArray(decoded.s)) {
+    completedSteps.set(decoded.s);
+    saveSteps(decoded.s);
+  }
+  if (Array.isArray(decoded.w)) {
+    sanctuaryWishes.set(decoded.w);
+    saveWishes(decoded.w);
+  }
+  if (decoded.m && typeof decoded.m === 'object') {
+    mollyState.update((prev) => {
+      const next = {
+        ...prev,
+        treatsFedTotal: Math.max(prev.treatsFedTotal || 0, Number(decoded.m.treatsFedTotal) || 0),
+        petCount: Math.max(prev.petCount || 0, Number(decoded.m.petCount) || 0)
+      };
+      safeSetItem(MOLLY_STORAGE_KEY, JSON.stringify(next), 'local');
+      return next;
+    });
+  }
+  return true;
 }

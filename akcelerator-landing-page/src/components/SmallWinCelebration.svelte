@@ -10,6 +10,7 @@
     getActionEffectMeta,
     playPayoffAsmr
   } from '../lib/sensoryEngine.js';
+  import { cleanTitle } from '../lib/utils.js';
 
   let restingMode = false;
   let sharedCopied = false;
@@ -50,14 +51,6 @@
   function handleGoToWorld() {
     trackEvent('aa_after_done_choice', { choice: 'enter_world' });
     closeCelebration();
-  }
-
-  function cleanTitle(str) {
-    return (
-      String(str || '')
-        .replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642\s]+/u, '')
-        .trim() || str
-    );
   }
 
   async function handleShareWithFriend() {

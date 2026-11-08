@@ -1,6 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { createClient } from '@supabase/supabase-js';
-import { env } from '$env/dynamic/public';
+import { getServerSupabase, withTimeout } from '$lib/server/supabase.js';
 import { LOCAL_COMMUNITY_ITEMS } from '$lib/data/czech-actions.js';
 import {
   clamp,
@@ -16,18 +15,42 @@ import {
 const CACHE = new Map();
 const CACHE_TTL_MS = 1000 * 60 * 10;
 
-function createServerSupabaseClient() {
-  if (!env.PUBLIC_SUPABASE_URL || !env.PUBLIC_SUPABASE_ANON_KEY) return null;
-  return createClient(env.PUBLIC_SUPABASE_URL, env.PUBLIC_SUPABASE_ANON_KEY);
+function extractContactParts(contactRaw, emailRaw, phoneRaw) {
+  let email = emailRaw ? sanitizeEmail(emailRaw) : null;
+  let phone = phoneRaw ? sanitizePhone(phoneRaw) : null;
+  if (typeof contactRaw === 'string' && contactRaw.trim()) {
+    for (const part of contactRaw.split(/[·,;]/)) {
+      const p = part.trim();
+      if (!email && p.includes('@')) email = sanitizeEmail(p);
+      else if (!phone && /\d{3}/.test(p)) phone = sanitizePhone(p);
+    }
+  }
+  return { email, phone };
 }
 
 function sanitizeCommunityRecord(r, dKm) {
+  const rawWebsite = r.website || r.url || null;
+  const website = rawWebsite ? sanitizeHttpUrl(rawWebsite) : null;
+  const event_url = r.event_url ? sanitizeHttpUrl(r.event_url) : null;
+  const { email, phone } = extractContactParts(r.contact, r.email, r.phone);
+
   return {
-    ...r,
-    website: r.website ? sanitizeHttpUrl(r.website) : null,
-    event_url: r.event_url ? sanitizeHttpUrl(r.event_url) : null,
-    email: r.email ? sanitizeEmail(r.email) : null,
-    phone: r.phone ? sanitizePhone(r.phone) : null,
+    id: r.id,
+    kind: r.kind || 'org',
+    name: r.name,
+    category: r.category || 'other',
+    description: r.description || null,
+    city: r.city || null,
+    address_label: r.address_label || r.address || r.city || null,
+    address: r.address || r.address_label || r.city || null,
+    lat: r.lat,
+    lon: r.lon,
+    website,
+    url: website,
+    event_url,
+    email,
+    phone,
+    status: r.status || 'approved',
     distanceKm: Math.round(dKm * 10) / 10
   };
 }
@@ -36,7 +59,6 @@ function getLocalCommunityNearby(lat, lon, radiusM) {
   const maxKm = Math.max(radiusM / 1000, 15);
   const allWithDist = [];
   for (const r of LOCAL_COMMUNITY_ITEMS) {
-    if (r?.name === 'Testovací komunitní zahrada Praha') continue;
     if (r?.status === 'pending' || String(r?.id || '').startsWith('comm-local-')) continue;
     if (!isValidLatLon(r?.lat, r?.lon)) continue;
     const dKm = haversineKm(lat, lon, r.lat, r.lon);
@@ -57,7 +79,7 @@ export async function GET({ url }) {
     return json({ error: 'Invalid or missing lat/lon' }, { status: 400, headers: { 'cache-control': 'no-store' } });
   }
 
-  const cacheKey = `comm:v3:${lat.toFixed(4)}:${lon.toFixed(4)}:${radiusM}`;
+  const cacheKey = `comm:v4:${lat.toFixed(4)}:${lon.toFixed(4)}:${radiusM}`;
   const cached = CACHE.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return json(cached.data, {
@@ -67,7 +89,7 @@ export async function GET({ url }) {
     });
   }
 
-  const supabase = createServerSupabaseClient();
+  const supabase = getServerSupabase();
   if (supabase) {
     try {
       const deltaLat = radiusM / 111_320;
@@ -80,9 +102,7 @@ export async function GET({ url }) {
 
       const queryPromise = supabase
         .from('community_submissions')
-        .select(
-          'id, kind, name, category, description, website, email, phone, address_label, city, postcode, lat, lon, event_url, event_start, event_end'
-        )
+        .select('id, created_at, name, category, description, city, address, lat, lon, url, contact, status')
         .eq('status', 'approved')
         .gte('lat', minLat)
         .lte('lat', maxLat)
@@ -90,16 +110,11 @@ export async function GET({ url }) {
         .lte('lon', maxLon)
         .limit(150);
 
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Supabase timeout')), 1800)
-      );
-
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+      const { data, error } = await withTimeout(queryPromise, 2200, 'Supabase community query timeout');
 
       if (!error && Array.isArray(data)) {
         const items = [];
         for (const r of data) {
-          if (r?.name === 'Testovací komunitní zahrada Praha') continue;
           if (!isValidLatLon(r?.lat, r?.lon)) continue;
           const dKm = haversineKm(lat, lon, r.lat, r.lon);
           if (dKm * 1000 > radiusM) continue;
