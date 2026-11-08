@@ -484,8 +484,8 @@
   </header>
 
   <div class="guided-workspace">
-    <!-- LEFT: 2 CALM CHOICES -->
-    <section class="compass-shell" aria-label="Nastavení průvodce">
+    <!-- LEFT: 2 CALM FOUNDATIONAL CHOICES -->
+    <section class="compass-shell compass-foundations" aria-label="Nastavení průvodce">
       <div class="step-block">
         <div class="block-label">1. Kolik máš zrovna času?</div>
 
@@ -539,366 +539,6 @@
             </button>
           {/each}
         </div>
-      </div>
-
-      <div class="divider"></div>
-
-      <!-- 3. ADAPTIVNÍ OTÁZKA PODLE KONTEXTU + ROZBALOVACÍ PARAMETRY (4.2) -->
-      <div class="step-block adaptive-step-block">
-        {#if selectedTopics.length === 0 && recipientMacro === "any"}
-          <div class="block-label">
-            3. Komu chceš dnes nejvíc pomoct? <span class="opt-tag"
-              >(nepovinné)</span
-            >
-          </div>
-          <div class="topic-pills">
-            <button
-              type="button"
-              class="topic-pill"
-              class:selected={recipientMacro === "people"}
-              on:click={() =>
-                applyAdaptiveFilter(() => (recipientMacro = "people"), "recipient")}
-            >
-              👥 Lidem
-            </button>
-            <button
-              type="button"
-              class="topic-pill"
-              class:selected={recipientMacro === "animals"}
-              on:click={() =>
-                applyAdaptiveFilter(
-                  () => (recipientMacro = "animals"),
-                  "recipient",
-                )}
-            >
-              🐾 Zvířatům
-            </button>
-            <button
-              type="button"
-              class="topic-pill"
-              class:selected={recipientMacro === "nature"}
-              on:click={() =>
-                applyAdaptiveFilter(() => (recipientMacro = "nature"), "recipient")}
-            >
-              🌿 Přírodě
-            </button>
-          </div>
-        {:else if activeSituationId === "couch" || activeSituationId === "focus"}
-          <div class="block-label">
-            3. Chceš zůstat úplně anonymní? <span class="opt-tag"
-              >(nepovinné)</span
-            >
-          </div>
-          <div class="topic-pills">
-            <button
-              type="button"
-              class="topic-pill"
-              class:selected={contactLevel === "any"}
-              on:click={() =>
-                applyAdaptiveFilter(() => (contactLevel = "any"), "contact")}
-            >
-              Nezáleží
-            </button>
-            <button
-              type="button"
-              class="topic-pill"
-              class:selected={contactLevel === "anonymous"}
-              on:click={() =>
-                applyAdaptiveFilter(
-                  () => (contactLevel = "anonymous"),
-                  "contact",
-                )}
-            >
-              🔒 Zcela anonymně
-            </button>
-            <button
-              type="button"
-              class="topic-pill"
-              class:selected={contactLevel === "contact_ok"}
-              on:click={() =>
-                applyAdaptiveFilter(
-                  () => (contactLevel = "contact_ok"),
-                  "contact",
-                )}
-            >
-              👋 Nevadí mi kontakt
-            </button>
-          </div>
-        {:else}
-          <div class="block-label">
-            3. Jednorázově, nebo dlouhodobě? <span class="opt-tag"
-              >(nepovinné)</span
-            >
-          </div>
-          <div class="topic-pills">
-            <button
-              type="button"
-              class="topic-pill"
-              class:selected={commitment === "any"}
-              on:click={() =>
-                applyAdaptiveFilter(() => (commitment = "any"), "commitment")}
-            >
-              Nezáleží
-            </button>
-            <button
-              type="button"
-              class="topic-pill"
-              class:selected={commitment === "one_off"}
-              on:click={() =>
-                applyAdaptiveFilter(
-                  () => (commitment = "one_off"),
-                  "commitment",
-                )}
-            >
-              ⚡ Jednorázově
-            </button>
-            <button
-              type="button"
-              class="topic-pill"
-              class:selected={commitment === "long_term"}
-              on:click={() =>
-                applyAdaptiveFilter(
-                  () => (commitment = "long_term"),
-                  "commitment",
-                )}
-            >
-              🌱 Dlouhodobě
-            </button>
-          </div>
-        {/if}
-
-        <details class="adaptive-params-drawer">
-          <summary>Upřesnit další volby (čas, místo, kontakt, síla důkazů)</summary>
-          <div class="adaptive-params-grid">
-            <div class="ap-group">
-              <span class="ap-label">Závazek:</span>
-              <div class="ap-pills">
-                <button
-                  type="button"
-                  class:active={commitment === "any"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (commitment = "any"), "commitment")}
-                  >Vše</button
-                >
-                <button
-                  type="button"
-                  class:active={commitment === "one_off"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (commitment = "one_off"),
-                      "commitment",
-                    )}>Jednorázově</button
-                >
-                <button
-                  type="button"
-                  class:active={commitment === "long_term"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (commitment = "long_term"),
-                      "commitment",
-                    )}>Dlouhodobě</button
-                >
-              </div>
-            </div>
-
-            <div class="ap-group">
-              <span class="ap-label">Anonymita:</span>
-              <div class="ap-pills">
-                <button
-                  type="button"
-                  class:active={contactLevel === "any"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (contactLevel = "any"), "contact")}
-                  >Vše</button
-                >
-                <button
-                  type="button"
-                  class:active={contactLevel === "anonymous"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (contactLevel = "anonymous"),
-                      "contact",
-                    )}>Anonymně</button
-                >
-                <button
-                  type="button"
-                  class:active={contactLevel === "contact_ok"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (contactLevel = "contact_ok"),
-                      "contact",
-                    )}
-                  >Nevadí kontakt</button
-                >
-              </div>
-            </div>
-
-            <div class="ap-group">
-              <span class="ap-label">Komu pomoci:</span>
-              <div class="ap-pills">
-                <button
-                  type="button"
-                  class:active={recipientMacro === "any"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (recipientMacro = "any"),
-                      "recipient",
-                    )}>Všem</button
-                >
-                <button
-                  type="button"
-                  class:active={recipientMacro === "people"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (recipientMacro = "people"),
-                      "recipient",
-                    )}>Lidem</button
-                >
-                <button
-                  type="button"
-                  class:active={recipientMacro === "animals"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (recipientMacro = "animals"),
-                      "recipient",
-                    )}>Zvířatům</button
-                >
-                <button
-                  type="button"
-                  class:active={recipientMacro === "nature"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (recipientMacro = "nature"),
-                      "recipient",
-                    )}>Přírodě</button
-                >
-              </div>
-            </div>
-
-            <div class="ap-group">
-              <span class="ap-label">Sám / s lidmi:</span>
-              <div class="ap-pills">
-                <button
-                  type="button"
-                  class:active={socialOverride === "any"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (socialOverride = "any"), "social")}
-                  >Podle situace</button
-                >
-                <button
-                  type="button"
-                  class:active={socialOverride === "solo"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (socialOverride = "solo"), "social")}
-                  >Sám</button
-                >
-                <button
-                  type="button"
-                  class:active={socialOverride === "group"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (socialOverride = "group"),
-                      "social",
-                    )}
-                  >S ostatními</button
-                >
-              </div>
-            </div>
-
-            <div class="ap-group">
-              <span class="ap-label">Prostředí:</span>
-              <div class="ap-pills">
-                <button
-                  type="button"
-                  class:active={modeOverride === "any"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (modeOverride = "any"), "mode")}
-                  >Podle situace</button
-                >
-                <button
-                  type="button"
-                  class:active={modeOverride === "online"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (modeOverride = "online"), "mode")}
-                  >Z domova</button
-                >
-                <button
-                  type="button"
-                  class:active={modeOverride === "local"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (modeOverride = "local"), "mode")}
-                  >Venku</button
-                >
-              </div>
-            </div>
-
-            <div class="ap-group">
-              <span class="ap-label">Finanční náročnost:</span>
-              <div class="ap-pills">
-                <button
-                  type="button"
-                  class:active={costOverride === "any"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (costOverride = "any"), "cost")}
-                  >Podle situace</button
-                >
-                <button
-                  type="button"
-                  class:active={costOverride === "free"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (costOverride = "free"), "cost")}
-                  >Bez peněz (0 Kč)</button
-                >
-                <button
-                  type="button"
-                  class:active={costOverride === "donation"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (costOverride = "donation"),
-                      "cost",
-                    )}
-                  >Mohu darovat</button
-                >
-              </div>
-            </div>
-
-            <div class="ap-group">
-              <span class="ap-label">Třída důkazů účinnosti:</span>
-              <div class="ap-pills">
-                <button
-                  type="button"
-                  class:active={evidenceTier === "any"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (evidenceTier = "any"),
-                      "evidence",
-                    )}>Vše (A–C)</button
-                >
-                <button
-                  type="button"
-                  class:active={evidenceTier === "A"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (evidenceTier = "A"), "evidence")}
-                  >A · Silné důkazy</button
-                >
-                <button
-                  type="button"
-                  class:active={evidenceTier === "B"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (evidenceTier = "B"), "evidence")}
-                  >B · Doložený přínos</button
-                >
-                <button
-                  type="button"
-                  class:active={evidenceTier === "C"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (evidenceTier = "C"), "evidence")}
-                  >C · Komunitní smysl</button
-                >
-              </div>
-            </div>
-          </div>
-        </details>
       </div>
     </section>
 
@@ -1293,6 +933,364 @@
         </div>
       </details>
     </section>
+
+    <!-- LEFT ROW 2 (Desktop) / REFINEMENT (Mobile): STEP 3 & CONSOLIDATED PARAMETERS DRAWER -->
+    <section class="compass-shell adaptive-step-block" aria-label="Upřesňující volby">
+      {#if selectedTopics.length === 0 && recipientMacro === "any"}
+        <div class="block-label">
+          3. Komu chceš dnes nejvíc pomoct? <span class="opt-tag"
+            >(nepovinné)</span
+          >
+        </div>
+        <div class="topic-pills">
+          <button
+            type="button"
+            class="topic-pill"
+            class:selected={recipientMacro === "people"}
+            on:click={() =>
+              applyAdaptiveFilter(() => (recipientMacro = "people"), "recipient")}
+          >
+            👥 Lidem
+          </button>
+          <button
+            type="button"
+            class="topic-pill"
+            class:selected={recipientMacro === "animals"}
+            on:click={() =>
+              applyAdaptiveFilter(
+                () => (recipientMacro = "animals"),
+                "recipient",
+              )}
+          >
+            🐾 Zvířatům
+          </button>
+          <button
+            type="button"
+            class="topic-pill"
+            class:selected={recipientMacro === "nature"}
+            on:click={() =>
+              applyAdaptiveFilter(() => (recipientMacro = "nature"), "recipient")}
+          >
+            🌿 Přírodě
+          </button>
+        </div>
+      {:else if activeSituationId === "couch" || activeSituationId === "focus"}
+        <div class="block-label">
+          3. Chceš zůstat úplně anonymní? <span class="opt-tag"
+            >(nepovinné)</span
+          >
+        </div>
+        <div class="topic-pills">
+          <button
+            type="button"
+            class="topic-pill"
+            class:selected={contactLevel === "any"}
+            on:click={() =>
+              applyAdaptiveFilter(() => (contactLevel = "any"), "contact")}
+          >
+            Nezáleží
+          </button>
+          <button
+            type="button"
+            class="topic-pill"
+            class:selected={contactLevel === "anonymous"}
+            on:click={() =>
+              applyAdaptiveFilter(
+                () => (contactLevel = "anonymous"),
+                "contact",
+              )}
+          >
+            🔒 Zcela anonymně
+          </button>
+          <button
+            type="button"
+            class="topic-pill"
+            class:selected={contactLevel === "contact_ok"}
+            on:click={() =>
+              applyAdaptiveFilter(
+                () => (contactLevel = "contact_ok"),
+                "contact",
+              )}
+          >
+            👋 Nevadí mi kontakt
+          </button>
+        </div>
+      {:else}
+        <div class="block-label">
+          3. Jednorázově, nebo dlouhodobě? <span class="opt-tag"
+            >(nepovinné)</span
+          >
+        </div>
+        <div class="topic-pills">
+          <button
+            type="button"
+            class="topic-pill"
+            class:selected={commitment === "any"}
+            on:click={() =>
+              applyAdaptiveFilter(() => (commitment = "any"), "commitment")}
+          >
+            Nezáleží
+          </button>
+          <button
+            type="button"
+            class="topic-pill"
+            class:selected={commitment === "one_off"}
+            on:click={() =>
+              applyAdaptiveFilter(
+                () => (commitment = "one_off"),
+                "commitment",
+              )}
+          >
+            ⚡ Jednorázově
+          </button>
+          <button
+            type="button"
+            class="topic-pill"
+            class:selected={commitment === "long_term"}
+            on:click={() =>
+              applyAdaptiveFilter(
+                () => (commitment = "long_term"),
+                "commitment",
+              )}
+          >
+            🌱 Dlouhodobě
+          </button>
+        </div>
+      {/if}
+
+      <details class="adaptive-params-drawer">
+        <summary>⚙️ Upřesnit další volby (anonymita, čas, důkazy)</summary>
+        <div class="adaptive-params-grid">
+          <div class="ap-group">
+            <span class="ap-label">Závazek:</span>
+            <div class="ap-pills">
+              <button
+                type="button"
+                class:active={commitment === "any"}
+                on:click={() =>
+                  applyAdaptiveFilter(() => (commitment = "any"), "commitment")}
+                >Vše</button
+              >
+              <button
+                type="button"
+                class:active={commitment === "one_off"}
+                on:click={() =>
+                  applyAdaptiveFilter(
+                    () => (commitment = "one_off"),
+                    "commitment",
+                  )}>Jednorázově</button
+              >
+              <button
+                type="button"
+                class:active={commitment === "long_term"}
+                on:click={() =>
+                  applyAdaptiveFilter(
+                    () => (commitment = "long_term"),
+                    "commitment",
+                  )}>Dlouhodobě</button
+              >
+            </div>
+          </div>
+
+          <div class="ap-group">
+            <span class="ap-label">Anonymita:</span>
+            <div class="ap-pills">
+              <button
+                type="button"
+                class:active={contactLevel === "any"}
+                on:click={() =>
+                  applyAdaptiveFilter(() => (contactLevel = "any"), "contact")}
+                >Vše</button
+              >
+              <button
+                type="button"
+                class:active={contactLevel === "anonymous"}
+                on:click={() =>
+                  applyAdaptiveFilter(
+                    () => (contactLevel = "anonymous"),
+                    "contact",
+                  )}>Anonymně</button
+              >
+              <button
+                type="button"
+                class:active={contactLevel === "contact_ok"}
+                on:click={() =>
+                  applyAdaptiveFilter(
+                    () => (contactLevel = "contact_ok"),
+                    "contact",
+                  )}
+                >Nevadí kontakt</button
+              >
+            </div>
+          </div>
+
+          <div class="ap-group">
+            <span class="ap-label">Komu pomoci:</span>
+            <div class="ap-pills">
+              <button
+                type="button"
+                class:active={recipientMacro === "any"}
+                on:click={() =>
+                  applyAdaptiveFilter(
+                    () => (recipientMacro = "any"),
+                    "recipient",
+                  )}>Všem</button
+              >
+              <button
+                type="button"
+                class:active={recipientMacro === "people"}
+                on:click={() =>
+                  applyAdaptiveFilter(
+                    () => (recipientMacro = "people"),
+                    "recipient",
+                  )}>Lidem</button
+              >
+              <button
+                type="button"
+                class:active={recipientMacro === "animals"}
+                on:click={() =>
+                  applyAdaptiveFilter(
+                    () => (recipientMacro = "animals"),
+                    "recipient",
+                  )}>Zvířatům</button
+              >
+              <button
+                type="button"
+                class:active={recipientMacro === "nature"}
+                on:click={() =>
+                  applyAdaptiveFilter(
+                    () => (recipientMacro = "nature"),
+                    "recipient",
+                  )}>Přírodě</button
+              >
+            </div>
+          </div>
+
+          <div class="ap-group">
+            <span class="ap-label">Sám / s lidmi:</span>
+            <div class="ap-pills">
+              <button
+                type="button"
+                class:active={socialOverride === "any"}
+                on:click={() =>
+                  applyAdaptiveFilter(() => (socialOverride = "any"), "social")}
+                >Podle situace</button
+              >
+              <button
+                type="button"
+                class:active={socialOverride === "solo"}
+                on:click={() =>
+                  applyAdaptiveFilter(() => (socialOverride = "solo"), "social")}
+                >Sám</button
+              >
+              <button
+                type="button"
+                class:active={socialOverride === "group"}
+                on:click={() =>
+                  applyAdaptiveFilter(
+                    () => (socialOverride = "group"),
+                    "social",
+                  )}
+                >S ostatními</button
+              >
+            </div>
+          </div>
+
+          <div class="ap-group">
+            <span class="ap-label">Prostředí:</span>
+            <div class="ap-pills">
+              <button
+                type="button"
+                class:active={modeOverride === "any"}
+                on:click={() =>
+                  applyAdaptiveFilter(() => (modeOverride = "any"), "mode")}
+                >Podle situace</button
+              >
+              <button
+                type="button"
+                class:active={modeOverride === "online"}
+                on:click={() =>
+                  applyAdaptiveFilter(() => (modeOverride = "online"), "mode")}
+                >Z domova</button
+              >
+              <button
+                type="button"
+                class:active={modeOverride === "local"}
+                on:click={() =>
+                  applyAdaptiveFilter(() => (modeOverride = "local"), "mode")}
+                >Venku</button
+              >
+            </div>
+          </div>
+
+          <div class="ap-group">
+            <span class="ap-label">Finanční náročnost:</span>
+            <div class="ap-pills">
+              <button
+                type="button"
+                class:active={costOverride === "any"}
+                on:click={() =>
+                  applyAdaptiveFilter(() => (costOverride = "any"), "cost")}
+                >Podle situace</button
+              >
+              <button
+                type="button"
+                class:active={costOverride === "free"}
+                on:click={() =>
+                  applyAdaptiveFilter(() => (costOverride = "free"), "cost")}
+                >Bez peněz (0 Kč)</button
+              >
+              <button
+                type="button"
+                class:active={costOverride === "donation"}
+                on:click={() =>
+                  applyAdaptiveFilter(
+                    () => (costOverride = "donation"),
+                    "cost",
+                  )}
+                >Mohu darovat</button
+              >
+            </div>
+          </div>
+
+          <div class="ap-group">
+            <span class="ap-label">Třída důkazů účinnosti:</span>
+            <div class="ap-pills">
+              <button
+                type="button"
+                class:active={evidenceTier === "any"}
+                on:click={() =>
+                  applyAdaptiveFilter(
+                    () => (evidenceTier = "any"),
+                    "evidence",
+                  )}>Vše (A–C)</button
+              >
+              <button
+                type="button"
+                class:active={evidenceTier === "A"}
+                on:click={() =>
+                  applyAdaptiveFilter(() => (evidenceTier = "A"), "evidence")}
+                >A · Silné důkazy</button
+              >
+              <button
+                type="button"
+                class:active={evidenceTier === "B"}
+                on:click={() =>
+                  applyAdaptiveFilter(() => (evidenceTier = "B"), "evidence")}
+                >B · Doložený přínos</button
+              >
+              <button
+                type="button"
+                class:active={evidenceTier === "C"}
+                on:click={() =>
+                  applyAdaptiveFilter(() => (evidenceTier = "C"), "evidence")}
+                >C · Komunitní smysl</button
+              >
+            </div>
+          </div>
+        </div>
+      </details>
+    </section>
   </div>
 
   <!-- LOCAL PLACES IN YOUR CITY — AUTO-OPENED ONLY FOR WALK / PEOPLE -->
@@ -1453,6 +1451,16 @@
     box-shadow: var(--shadow-sm);
   }
 
+  .compass-shell.compass-foundations {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .compass-shell.adaptive-step-block {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
   .block-label {
     font-size: 0.82rem;
     font-weight: 800;
@@ -1569,10 +1577,34 @@
     font-weight: 700;
     color: var(--emerald-600);
     list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.4rem 0.65rem;
+    border-radius: 12px;
+    background: rgba(22, 82, 56, 0.05);
+    border: 1px solid rgba(22, 82, 56, 0.1);
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .adaptive-params-drawer summary:hover {
+    background: rgba(22, 82, 56, 0.09);
+    border-color: rgba(22, 82, 56, 0.2);
   }
 
   .adaptive-params-drawer summary::-webkit-details-marker {
     display: none;
+  }
+
+  .adaptive-params-drawer summary::after {
+    content: "▾";
+    font-size: 0.85rem;
+    color: var(--forest-600);
+    transition: transform 0.2s ease;
+  }
+
+  .adaptive-params-drawer[open] summary::after {
+    transform: rotate(180deg);
   }
 
   .adaptive-params-grid {
@@ -1768,10 +1800,16 @@
 
   .meth-table-wrap {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+    margin: 0.75rem 0;
+    border-radius: 12px;
+    border: 1px solid rgba(22, 82, 56, 0.08);
   }
 
   .meth-table {
     width: 100%;
+    min-width: 460px;
     border-collapse: collapse;
     font-size: 0.8rem;
   }
@@ -1808,8 +1846,13 @@
 
   /* CLEAN PERSONAL RECOMMENDATION CARD */
   .plan-section {
+    grid-column: 2;
+    grid-row: 1 / span 2;
     position: sticky;
-    top: 5.2rem;
+    top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
   }
 
   .plan-section.flash .highlight-card {
@@ -2225,10 +2268,22 @@
 
   @media (max-width: 980px) {
     .guided-workspace {
-      grid-template-columns: minmax(0, 1fr);
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+    .compass-shell.compass-foundations {
+      order: 1;
+    }
+    .mobile-guided-preview-bar {
+      order: 2;
     }
     .plan-section {
+      order: 3;
       position: static;
+    }
+    .compass-shell.adaptive-step-block {
+      order: 4;
     }
     .alts-drawer .alts-grid,
     .local-grid {
@@ -2293,17 +2348,22 @@
     .situation-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 0.38rem;
+      gap: 0.34rem;
     }
 
     .situation-card {
-      padding: 0.46rem 0.55rem;
+      padding: 0.4rem 0.5rem;
       border-radius: 12px;
-      gap: 0.38rem;
+      gap: 0.35rem;
+    }
+
+    .situation-card:last-child {
+      grid-column: 1 / -1;
+      justify-content: center;
     }
 
     .sit-emoji {
-      font-size: 1rem;
+      font-size: 0.95rem;
     }
 
     .sit-sub {
@@ -2311,21 +2371,89 @@
     }
 
     .sit-title {
-      font-size: 0.75rem;
-      line-height: 1.18;
+      font-size: 0.74rem;
+      line-height: 1.15;
     }
 
     .divider {
-      margin: 0.6rem 0;
+      margin: 0.42rem 0;
+    }
+
+    .compass-foundations .topic-pills {
+      display: flex;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      gap: 0.28rem;
+      padding: 0.05rem 1.1rem 0.15rem 0.02rem;
+      mask-image: linear-gradient(to right, black 0%, black calc(100% - 24px), transparent 100%);
+      -webkit-mask-image: linear-gradient(to right, black 0%, black calc(100% - 24px), transparent 100%);
+    }
+
+    .compass-foundations .topic-pills::-webkit-scrollbar {
+      display: none;
     }
 
     .topic-pills {
-      gap: 0.3rem;
+      gap: 0.28rem;
     }
 
     .topic-pill {
-      padding: 0.32rem 0.62rem;
-      font-size: 0.74rem;
+      flex: 0 0 auto;
+      white-space: nowrap;
+      padding: 0.28rem 0.56rem;
+      font-size: 0.72rem;
+    }
+
+    .rec-title {
+      font-size: 1.08rem;
+      margin-bottom: 0.28rem;
+    }
+
+    .rec-desc {
+      font-size: 0.8rem;
+      line-height: 1.38;
+      margin-bottom: 0.45rem;
+      display: -webkit-box;
+      line-clamp: 2;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .rec-impact-block {
+      margin-bottom: 0.45rem;
+    }
+
+    .rec-impact-line {
+      font-size: 0.76rem;
+      line-height: 1.35;
+      margin-bottom: 0.18rem;
+    }
+
+    .rec-partner-line {
+      font-size: 0.7rem;
+    }
+
+    .how-toggle {
+      margin-bottom: 0.5rem;
+      font-size: 0.76rem;
+    }
+
+    .card-effect-stage {
+      padding: 0.36rem 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .highlight-card :global(.impact-payoff-canvas) {
+      height: 54px;
+    }
+
+    .btn-gold-action,
+    .btn-done-action {
+      padding: 0.62rem 0.9rem;
+      font-size: 0.84rem;
     }
 
     .mobile-guided-preview-bar {

@@ -46,8 +46,11 @@ function countStoredDeeds() {
 export const MOLLY_PET_WHISPERS = [
   'Mrrr… každá drobná laskavost krásně hřeje.',
   'Předu radostí! Děkuji, že tu dnes jsi.',
+  'Mrrr… tvá laskavost zahřeje víc než odpolední slunce.',
   'Mňau ~ u jezera v Krajině dobra už svítí tvoje světýlka.',
+  'Tichounce předu s tebou. Každý malý čin se počítá.',
   'Mrrr… klidně si na chvilku vydechni, hlídám to tu s tebou.',
+  'Mňau ~ děláš svět o kousek vlídnějším místem.',
   'Tvoje pomoc má smysl. I malý krok mění den k lepšímu.',
   'Mrrr ~ protahuji tlapky a posílám ti klid do dnešního dne.'
 ];
@@ -79,7 +82,7 @@ function milestoneWhisperOr(prevTotal, nextTotal, fallback) {
   if (!m) return fallback;
   return {
     icon: m.icon,
-    text: `Mňau! Díky tvé pomoci mám nový dárek: ${m.name}.`,
+    text: `Mňau, podívej! Díky tvému dobrému skutku mám ${m.name}. Mám z něj velikou radost!`,
     ts: fallback.ts,
     milestone: m.key
   };
@@ -174,7 +177,7 @@ export function feedMollyFromAction(action, opts = {}) {
   const treat = meta?.mollyTreat || {
     icon: '🐟',
     name: 'lososová granulka',
-    shortLabel: '+1 rybka pro Molly',
+    shortLabel: 'Rybka pro Molly',
     color: '#f59e0b',
     foodType: 'salmon'
   };
@@ -191,7 +194,7 @@ export function feedMollyFromAction(action, opts = {}) {
 
   const whisper = {
     icon: treat.icon,
-    text: `Mňam! ${treat.shortLabel} (${treat.name})`,
+    text: `Mňam! Děkuji za ${treat.name}, moc mi chutná.`,
     ts
   };
 
@@ -252,7 +255,7 @@ export function notifyMollySpark(action, opts = {}) {
   const treat = meta?.mollyTreat || {
     icon: '🐟',
     name: 'lososová granulka',
-    shortLabel: '+1 rybka pro Molly',
+    shortLabel: 'Rybka pro Molly',
     color: '#f59e0b',
     foodType: 'salmon'
   };
@@ -269,7 +272,7 @@ export function notifyMollySpark(action, opts = {}) {
 
   const whisper = {
     icon: treat.icon,
-    text: `${treat.shortLabel} · Molly chroupe dobrotu!`,
+    text: `Cítím tvoji jiskru! Děkuji za voňavou dobrůtku.`,
     ts
   };
 
@@ -370,8 +373,8 @@ export function toggleMollyPelisek() {
         icon: nextMode === 'docked' ? '🧺' : '🐾',
         text:
           nextMode === 'docked'
-            ? 'Molly se schoulila do klidového pelíšku.'
-            : 'Molly vyskočila z pelíšku a jde tě doprovázet!',
+            ? 'Zachumlám se do pelíšku a budu tiše odpočívat.'
+            : 'Už jsem vzhůru a jdu tě s radostí doprovázet!',
         ts
       }
     };

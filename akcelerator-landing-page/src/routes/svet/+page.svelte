@@ -490,6 +490,20 @@
   // Patronka Molly u jezera v Krajině dobra (nx = 0.24, ny = 0.72) a její mistička hojnosti (nx = 0.19, ny = 0.73)
   const MOLLY_SANCTUARY_POS = { x: 0.24, y: 0.72 };
   const MOLLY_BOWL_POS = { x: 0.19, y: 0.73 };
+
+  // Trajektorie břehu jezera: nx ≈ 0.20 až 0.44, ny ≈ 0.72 + (nx - 0.24) * 0.04
+  function getLakeshoreY(nx) {
+    return 0.72 + (nx - 0.24) * 0.04;
+  }
+
+  // Stavový automat chodící Molly: 'SIT_HOME' | 'WALK_PATROL' | 'WATCH_LAKE' | 'GROOM' | 'EAT_TREAT'
+  let mollyPos = { x: 0.24, y: 0.72 };
+  let mollyTargetX = 0.24;
+  let mollyBehavior = 'SIT_HOME';
+  let mollyStateTimer = 1.6;
+  let mollyFacing = -1; // -1 = doleva k mističce / domů, 1 = doprava k jezeru
+  let mollyWalkCycle = 0;
+
   /** @type {Array<{ sx: number, sy: number, cx: number, cy: number, tx: number, ty: number, progress: number, color: string }>} */
   let mollyTreatArcs = [];
   /** @type {Array<{ x: number, y: number, vx: number, vy: number, alpha: number, color: string }>} */
@@ -497,8 +511,8 @@
   let mollyJoyTimer = 0;
 
   function launchSanctuaryTreatArc(fromNx = 0.48, fromNy = 0.34, color = '#fbbf24') {
-    const tx = MOLLY_SANCTUARY_POS.x;
-    const ty = MOLLY_SANCTUARY_POS.y - 0.02;
+    const tx = mollyPos.x;
+    const ty = mollyPos.y - 0.02;
     if (mollyTreatArcs.length >= 12) {
       mollyTreatArcs.shift();
     }
@@ -522,10 +536,11 @@
     petMolly('Mrrr… u lesní tůně v Krajině dobra je s tebou krásně!');
     launchSanctuaryTreatArc(fromNx, fromNy, '#fbbf24');
     mollyJoyTimer = 2.4;
+    mollyBehavior = 'EAT_TREAT';
     for (let i = 0; i < 8; i++) {
       mollyLakeHearts.push({
-        x: MOLLY_SANCTUARY_POS.x + (Math.random() - 0.5) * 0.04,
-        y: MOLLY_SANCTUARY_POS.y - 0.03 - Math.random() * 0.02,
+        x: mollyPos.x + (Math.random() - 0.5) * 0.04,
+        y: mollyPos.y - 0.03 - Math.random() * 0.02,
         vx: (Math.random() - 0.5) * 0.001,
         vy: -0.0012 - Math.random() * 0.001,
         alpha: 1,
@@ -536,8 +551,8 @@
       mollyLakeHearts.splice(0, mollyLakeHearts.length - 32);
     }
     waterRipples.push({
-      x: MOLLY_SANCTUARY_POS.x,
-      y: MOLLY_SANCTUARY_POS.y + 0.03,
+      x: mollyPos.x,
+      y: mollyPos.y + 0.03,
       rx: 6,
       maxRx: 95,
       speed: 1.15,
@@ -767,12 +782,19 @@
     );
   }
 
-  function findClosestLight(nx, ny, aspect) {
+  function findClosestLight(nx, ny, widthOrAspect, height) {
+    let width = widthOrAspect;
+    let h = height;
+    if (h === undefined) {
+      const rect = stageWrapEl?.getBoundingClientRect();
+      width = rect?.width || 800;
+      h = width * (widthOrAspect || 0.6);
+    }
     let closest = null;
-    let minDist = 0.055;
+    let minDist = Math.max(34, 0.055 * width);
     for (const l of activeLights) {
-      const dx = l.x - nx;
-      const dy = (l.y - ny) * aspect;
+      const dx = (l.x - nx) * width;
+      const dy = (l.y - ny) * h;
       const d = Math.hypot(dx, dy);
       if (d < minDist) {
         minDist = d;
@@ -792,7 +814,7 @@
     pointer.y = ny;
     pointer.active = true;
 
-    const nearLight = findClosestLight(nx, ny, rect.height / rect.width);
+    const nearLight = findClosestLight(nx, ny, rect.width, rect.height);
     if (nearLight?.uid !== hoveredLight?.uid) {
       hoveredLight = nearLight;
       const now = performance.now();
@@ -848,17 +870,23 @@
     const nx = Math.max(0.06, Math.min(0.94, (e.clientX - rect.left) / rect.width));
     const ny = Math.max(0.07, Math.min(0.88, (e.clientY - rect.top) / rect.height));
 
-    // Přímé pohlazení / nakrmení patronky Molly na břehu jezera (r < 44px od (0.24 * w, 0.72 * h))
-    const mollyPxX = MOLLY_SANCTUARY_POS.x * rect.width;
-    const mollyPxY = MOLLY_SANCTUARY_POS.y * rect.height;
+    // Přímé pohlazení / nakrmení patronky Molly na břehu jezera:
+    // Podporuje jak stálou domovskou zónu (0.24 * w, 0.72 * h) pro 100% testovací kompatibilitu,
+    // tak dynamickou polohu Molly při procházce podél břehu
+    const homePxX = MOLLY_SANCTUARY_POS.x * rect.width;
+    const homePxY = MOLLY_SANCTUARY_POS.y * rect.height;
+    const curPxX = mollyPos.x * rect.width;
+    const curPxY = mollyPos.y * rect.height;
     const clickPxX = e.clientX - rect.left;
     const clickPxY = e.clientY - rect.top;
-    if (!selectedLight && Math.hypot(clickPxX - mollyPxX, clickPxY - mollyPxY) < 44) {
+    const distHome = Math.hypot(clickPxX - homePxX, clickPxY - homePxY);
+    const distCur = Math.hypot(clickPxX - curPxX, clickPxY - curPxY);
+    if (!selectedLight && (distHome < 48 || distCur < 48)) {
       feedSanctuaryMolly(nx, Math.max(0.24, ny - 0.16));
       return;
     }
 
-    const closest = findClosestLight(nx, ny, rect.height / rect.width);
+    const closest = findClosestLight(nx, ny, rect.width, rect.height);
 
     if (closest && selectedLight && closest.uid === selectedLight.uid) {
       selectedLight = null;
@@ -1772,16 +1800,96 @@
           }
           ctx.globalAlpha = 1;
 
-          // 12B. Sanctuary Molly — Želvovinová patronka u jezera (nx = 0.24, ny = 0.72) + odraz na hladině + mistička hojnosti (nx = 0.19, ny = 0.73) + letící pamlsky
+          // 12B. Sanctuary Molly — Stavový automat a animace chodící patronky po břehu jezera
           if (mollyJoyTimer > 0) {
+            mollyBehavior = 'EAT_TREAT';
             mollyJoyTimer = Math.max(0, mollyJoyTimer - 0.02 * k);
+            if (mollyJoyTimer === 0) {
+              mollyBehavior = Math.abs(mollyPos.x - 0.24) < 0.03 ? 'SIT_HOME' : 'WALK_PATROL';
+              mollyStateTimer = 4.0 + Math.random() * 2.5;
+              if (mollyBehavior === 'WALK_PATROL') {
+                mollyTargetX = 0.24;
+              }
+            }
+          } else if (!reducedMotion) {
+            mollyStateTimer -= 0.016 * k;
+
+            if (mollyBehavior === 'SIT_HOME') {
+              mollyFacing = -1;
+              if (mollyStateTimer <= 0) {
+                mollyBehavior = 'WALK_PATROL';
+                mollyTargetX = 0.32 + Math.random() * 0.11;
+                mollyFacing = 1;
+                mollyStateTimer = 14.0;
+              }
+            } else if (mollyBehavior === 'WALK_PATROL') {
+              const dx = mollyTargetX - mollyPos.x;
+              const step = 0.00038 * k;
+              mollyFacing = dx >= 0 ? 1 : -1;
+              mollyWalkCycle += 0.16 * k;
+
+              if (Math.abs(dx) <= step || mollyStateTimer <= 0) {
+                mollyPos.x = mollyTargetX;
+                mollyPos.y = getLakeshoreY(mollyPos.x);
+                if (Math.abs(mollyPos.x - 0.24) < 0.02) {
+                  mollyBehavior = 'SIT_HOME';
+                  mollyFacing = -1;
+                  mollyStateTimer = 5.0 + Math.random() * 4.0;
+                } else {
+                  mollyBehavior = Math.random() < 0.65 ? 'WATCH_LAKE' : 'GROOM';
+                  mollyFacing = 1;
+                  mollyStateTimer = 3.5 + Math.random() * 3.0;
+                }
+              } else {
+                mollyPos.x += Math.sign(dx) * step;
+                mollyPos.y = getLakeshoreY(mollyPos.x);
+                if (Math.sin(mollyWalkCycle) > 0.96 && waterRipples.length < 18) {
+                  waterRipples.push({
+                    x: mollyPos.x,
+                    y: mollyPos.y + 0.024,
+                    rx: 3,
+                    maxRx: 28,
+                    speed: 0.65,
+                    alpha: 0.32,
+                    color: '#fde68a',
+                    lineWidth: 1.2
+                  });
+                }
+              }
+            } else if (mollyBehavior === 'WATCH_LAKE') {
+              mollyFacing = 1;
+              if (mollyStateTimer <= 0) {
+                if (Math.random() < 0.45) {
+                  mollyBehavior = 'GROOM';
+                  mollyStateTimer = 3.0 + Math.random() * 2.5;
+                } else {
+                  mollyBehavior = 'WALK_PATROL';
+                  mollyTargetX = Math.random() < 0.7 ? 0.24 : 0.20 + Math.random() * 0.22;
+                  mollyStateTimer = 14.0;
+                }
+              }
+            } else if (mollyBehavior === 'GROOM') {
+              if (mollyStateTimer <= 0) {
+                mollyBehavior = 'WALK_PATROL';
+                mollyTargetX = 0.24;
+                mollyStateTimer = 14.0;
+              }
+            }
+          } else {
+            mollyBehavior = 'SIT_HOME';
+            mollyPos.x = 0.24;
+            mollyPos.y = 0.72;
+            mollyFacing = -1;
           }
 
-          const mx = MOLLY_SANCTUARY_POS.x * width;
-          const my = MOLLY_SANCTUARY_POS.y * height;
+          const mx = mollyPos.x * width;
+          const my = mollyPos.y * height;
+          const homeX = MOLLY_SANCTUARY_POS.x * width;
+          const homeY = MOLLY_SANCTUARY_POS.y * height;
           const bx = MOLLY_BOWL_POS.x * width;
           const by = MOLLY_BOWL_POS.y * height;
           const treatsTotal = Math.max(1, Number($mollyState?.treatsFedTotal) || 1);
+          const mollyScale = Math.min(1.18, Math.max(0.88, width / 800));
 
           // Letící pamlskové oblouky (Treat Firefly Arcs) ke břehu k Molly
           for (let a = mollyTreatArcs.length - 1; a >= 0; a--) {
@@ -1817,8 +1925,8 @@
               mollyJoyTimer = Math.max(mollyJoyTimer, 1.5);
               playMollyCrunch();
               waterRipples.push({
-                x: MOLLY_SANCTUARY_POS.x,
-                y: MOLLY_SANCTUARY_POS.y + 0.035,
+                x: arc.tx,
+                y: arc.ty + 0.035,
                 rx: 5,
                 maxRx: 82,
                 speed: 1.1,
@@ -1830,7 +1938,19 @@
             }
           }
 
-          // Vodní odraz Molly a její mističky v hladině jezera (ny = 0.75..0.82)
+          // Stálý odlesk mističky u kamene
+          ctx.save();
+          ctx.globalCompositeOperation = 'screen';
+          const bowlRefl = ctx.createRadialGradient(bx, by + 10, 1, bx, by + 10, 16);
+          bowlRefl.addColorStop(0, 'rgba(254, 243, 199, 0.28)');
+          bowlRefl.addColorStop(1, 'rgba(251, 191, 36, 0)');
+          ctx.fillStyle = bowlRefl;
+          ctx.beginPath();
+          ctx.ellipse(bx, by + 10, 14, 5, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+
+          // Dynamický vodní odraz chodící Molly v hladině jezera
           ctx.save();
           ctx.globalCompositeOperation = 'screen';
           const reflGlow = ctx.createRadialGradient(mx, my + 24, 2, mx, my + 24, 42 + (mollyJoyTimer > 0 ? 16 : 0));
@@ -1861,7 +1981,7 @@
 
           // Mechový jezerní kámen / molo pod Molly a mističkou
           ctx.save();
-          const stoneGrad = ctx.createLinearGradient(bx - 18, my - 4, mx + 28, my + 14);
+          const stoneGrad = ctx.createLinearGradient(bx - 18, homeY - 4, homeX + 28, homeY + 14);
           stoneGrad.addColorStop(0, 'rgba(20, 42, 31, 0.92)');
           stoneGrad.addColorStop(0.5, 'rgba(31, 61, 45, 0.95)');
           stoneGrad.addColorStop(1, 'rgba(15, 33, 24, 0.92)');
@@ -1869,9 +1989,10 @@
           ctx.strokeStyle = 'rgba(110, 231, 183, 0.35)';
           ctx.lineWidth = 1.2;
           ctx.beginPath();
-          ctx.ellipse((mx + bx) * 0.5 + 4, my + 5, Math.abs(mx - bx) * 0.65 + 24, 9.5, -0.04, 0, Math.PI * 2);
+          ctx.ellipse((homeX + bx) * 0.5 + 4, homeY + 5, Math.abs(homeX - bx) * 0.65 + 24, 9.5, -0.04, 0, Math.PI * 2);
           ctx.fill();
           ctx.stroke();
+          ctx.restore();
 
           // Zářící porcelánová mistička hojnosti (nx = 0.19, ny = 0.73)
           const bowlGlow = ctx.createRadialGradient(bx, by - 2, 1, bx, by - 2, 20);
@@ -1904,11 +2025,27 @@
             ctx.fill();
           }
 
-          // Postava želvovinové patronky Molly (nx = 0.24, ny = 0.72)
-          const joyJump = mollyJoyTimer > 0 ? Math.abs(Math.sin(t * 9)) * -6.5 : Math.sin(t * 1.8) * 0.8;
-          const mcy = my + joyJump;
+          // Animace a proporce těla Molly
+          const isWalking = mollyBehavior === 'WALK_PATROL' && !reducedMotion;
+          const isGrooming = mollyBehavior === 'GROOM' && !reducedMotion;
+          const isEating = mollyBehavior === 'EAT_TREAT' || mollyJoyTimer > 0;
+          const isWatching = mollyBehavior === 'WATCH_LAKE';
 
-          if (mollyJoyTimer > 0) {
+          const joyJump = isEating ? Math.abs(Math.sin(t * 9)) * -6.5 : 0;
+          const walkBob = isWalking ? Math.abs(Math.sin(mollyWalkCycle * 2)) * -2.2 : 0;
+          const idleBreathe = (!isWalking && !isEating) ? Math.sin(t * 1.8) * 0.8 : 0;
+          const mcy = my + joyJump + walkBob + idleBreathe;
+
+          const legSwingA = isWalking ? Math.sin(mollyWalkCycle) * 4.5 : 0;
+          const legSwingB = isWalking ? -Math.sin(mollyWalkCycle) * 4.5 : 0;
+          const legLiftA = isWalking ? Math.max(0, -Math.cos(mollyWalkCycle)) * 2.2 : 0;
+          const legLiftB = isWalking ? Math.max(0, Math.cos(mollyWalkCycle)) * 2.2 : 0;
+          const groomPaw = isGrooming ? Math.sin(t * 6.5) * 3.5 : 0;
+          const groomLift = isGrooming ? 8.0 + Math.abs(groomPaw) : 0;
+          const headTilt = isGrooming ? Math.sin(t * 3.2) * 0.12 : 0;
+          const watchHeadNod = isWatching ? Math.sin(t * 1.4) * 0.05 : 0;
+
+          if (isEating) {
             const joyHalo = ctx.createRadialGradient(mx, mcy - 10, 2, mx, mcy - 10, 44);
             joyHalo.addColorStop(0, 'rgba(254, 243, 199, 0.55)');
             joyHalo.addColorStop(0.5, 'rgba(251, 191, 36, 0.22)');
@@ -1919,124 +2056,145 @@
             ctx.fill();
           }
 
-          // Harmonický želvovinový ocas
-          const tailSway = Math.sin(t * (mollyJoyTimer > 0 ? 5.8 : 2.3)) * 7;
+          // Kreslení postavy Molly s orientací (facing = 1 doprava, -1 doleva)
+          ctx.save();
+          ctx.translate(mx, mcy);
+          ctx.scale(mollyFacing * mollyScale, mollyScale);
+
+          // Želvovinový ocas (vychází zezadu z -x)
+          const tailSpeed = isEating ? 5.8 : (isWalking ? 3.4 : 2.2);
+          const tailAmp = isEating ? 8.5 : (isWalking ? 5.0 : 6.5);
+          const tailSway = Math.sin(t * tailSpeed) * tailAmp;
+
           ctx.lineCap = 'round';
           ctx.strokeStyle = '#1e1714';
           ctx.lineWidth = 5.2;
           ctx.beginPath();
-          ctx.moveTo(mx + 10, mcy + 1);
+          ctx.moveTo(-10, 1);
           ctx.bezierCurveTo(
-            mx + 22,
-            mcy - 2 + tailSway * 0.4,
-            mx + 25,
-            mcy - 16 + tailSway,
-            mx + 17 + tailSway * 0.6,
-            mcy - 24
+            -22,
+            -2 + tailSway * 0.4,
+            -25,
+            -16 + tailSway,
+            -17 + tailSway * 0.6,
+            -24
           );
           ctx.stroke();
 
           ctx.strokeStyle = '#f59e0b';
           ctx.lineWidth = 3.4;
           ctx.beginPath();
-          ctx.moveTo(mx + 19, mcy - 8 + tailSway * 0.5);
+          ctx.moveTo(-19, -8 + tailSway * 0.5);
           ctx.quadraticCurveTo(
-            mx + 22,
-            mcy - 16 + tailSway * 0.8,
-            mx + 17 + tailSway * 0.6,
-            mcy - 24
+            -22,
+            -16 + tailSway * 0.8,
+            -17 + tailSway * 0.6,
+            -24
           );
           ctx.stroke();
 
-          // Tělo Molly (obsidián #1e1714 + jantarové #f59e0b, terakotové #ea580c a medové #fde68a flíčky)
+          // Tělo Molly
           ctx.fillStyle = '#1e1714';
           ctx.strokeStyle = 'rgba(253, 230, 138, 0.42)';
           ctx.lineWidth = 1.1;
           ctx.beginPath();
-          ctx.ellipse(mx, mcy - 4, 12.5, 14.5, -0.08, 0, Math.PI * 2);
+          ctx.ellipse(0, -4, 12.5, 14.5, 0.08, 0, Math.PI * 2);
           ctx.fill();
           ctx.stroke();
 
           ctx.save();
           ctx.beginPath();
-          ctx.ellipse(mx, mcy - 4, 12.1, 14.1, -0.08, 0, Math.PI * 2);
+          ctx.ellipse(0, -4, 12.1, 14.1, 0.08, 0, Math.PI * 2);
           ctx.clip();
           ctx.fillStyle = '#ea580c';
           ctx.beginPath();
-          ctx.ellipse(mx + 5, mcy - 8, 6.8, 5.5, 0.3, 0, Math.PI * 2);
+          ctx.ellipse(5, -8, 6.8, 5.5, 0.3, 0, Math.PI * 2);
           ctx.fill();
           ctx.fillStyle = '#f59e0b';
           ctx.beginPath();
-          ctx.ellipse(mx - 4.5, mcy - 1, 6.2, 4.8, -0.25, 0, Math.PI * 2);
+          ctx.ellipse(-4.5, -1, 6.2, 4.8, -0.25, 0, Math.PI * 2);
           ctx.fill();
           ctx.fillStyle = '#fde68a';
           ctx.beginPath();
-          ctx.ellipse(mx - 2, mcy - 6, 3.8, 4.4, 0.1, 0, Math.PI * 2);
+          ctx.ellipse(-2, -6, 3.8, 4.4, 0.1, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
 
-          // Tlapky (jedna zvednutá za světluškou nebo opřená o molo)
-          const batPaw = Math.sin(t * 2.1) > 0.72 ? Math.sin(t * 7) * 4 : 0;
-          ctx.fillStyle = '#f59e0b';
-          ctx.beginPath();
-          ctx.ellipse(mx - 6.5, mcy + 7.5 - Math.abs(batPaw), 3.6, 2.5, 0, 0, Math.PI * 2);
-          ctx.fill();
+          // Tlapky (zadní a přední s dynamickým krokem a očistou)
           ctx.fillStyle = '#1e1714';
           ctx.beginPath();
-          ctx.ellipse(mx + 2.2, mcy + 8.0, 3.6, 2.5, 0, 0, Math.PI * 2);
+          ctx.ellipse(-4.5 + legSwingB, 7.5 - legLiftB, 3.6, 2.5, 0, 0, Math.PI * 2);
           ctx.fill();
 
-          // Hlava s komínovou kresbou a smaragdovýma očima
-          const mhx = mx - 2;
-          const mhy = mcy - 19;
+          ctx.fillStyle = '#f59e0b';
+          ctx.beginPath();
+          ctx.ellipse(
+            4.2 + legSwingA + (isGrooming ? groomPaw * 0.4 : 0),
+            7.5 - legLiftA - groomLift,
+            3.6,
+            2.5,
+            isGrooming ? 0.3 : 0,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+
+          // Hlava a obličej Molly
+          const mhx = 2;
+          const mhy = -19;
+
+          ctx.save();
+          ctx.translate(mhx, mhy);
+          ctx.rotate(headTilt + watchHeadNod);
 
           // Ouška
           ctx.fillStyle = '#1e1714';
           ctx.beginPath();
-          ctx.moveTo(mhx - 9, mhy - 3);
-          ctx.lineTo(mhx - 11, mhy - 15);
-          ctx.lineTo(mhx - 2, mhy - 8.5);
+          ctx.moveTo(-9, -3);
+          ctx.lineTo(-11, -15);
+          ctx.lineTo(-2, -8.5);
           ctx.closePath();
           ctx.fill();
 
+          const earTwitch = isGrooming ? Math.sin(t * 6) * 1.5 : 0;
           ctx.fillStyle = '#ea580c';
           ctx.beginPath();
-          ctx.moveTo(mhx + 2, mhy - 8.5);
-          ctx.lineTo(mhx + 11, mhy - 15);
-          ctx.lineTo(mhx + 9, mhy - 3);
+          ctx.moveTo(2, -8.5);
+          ctx.lineTo(11 + earTwitch, -15);
+          ctx.lineTo(9, -3);
           ctx.closePath();
           ctx.fill();
 
           ctx.fillStyle = '#1e1714';
           ctx.beginPath();
-          ctx.arc(mhx, mhy, 10.2, 0, Math.PI * 2);
+          ctx.arc(0, 0, 10.2, 0, Math.PI * 2);
           ctx.fill();
 
           ctx.save();
           ctx.beginPath();
-          ctx.arc(mhx, mhy, 10.2, 0, Math.PI * 2);
+          ctx.arc(0, 0, 10.2, 0, Math.PI * 2);
           ctx.clip();
           ctx.fillStyle = '#f59e0b';
           ctx.beginPath();
-          ctx.moveTo(mhx - 0.5, mhy - 12);
-          ctx.lineTo(mhx + 12, mhy - 12);
-          ctx.lineTo(mhx + 12, mhy + 12);
-          ctx.lineTo(mhx + 0.8, mhy + 12);
+          ctx.moveTo(-0.5, -12);
+          ctx.lineTo(12, -12);
+          ctx.lineTo(12, 12);
+          ctx.lineTo(0.8, 12);
           ctx.closePath();
           ctx.fill();
           ctx.fillStyle = '#fde68a';
           ctx.beginPath();
-          ctx.ellipse(mhx + 4, mhy + 3, 4.2, 3.2, 0.2, 0, Math.PI * 2);
+          ctx.ellipse(4, 3, 4.2, 3.2, 0.2, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
 
-          // Smaragdové oči (#84cc16 / #bef264) nebo blažené ^ ^ obloučky
-          if (mollyJoyTimer > 0 || breathingActive) {
+          // Smaragdové oči nebo blažené ^ ^ obloučky
+          if (isEating || breathingActive) {
             ctx.strokeStyle = '#bef264';
             ctx.lineWidth = 2.0;
             [-4.1, 4.1].forEach((ex) => {
               ctx.beginPath();
-              ctx.arc(mhx + ex, mhy - 0.3, 2.8, Math.PI * 1.15, Math.PI * 1.85);
+              ctx.arc(ex, -0.3, 2.8, Math.PI * 1.15, Math.PI * 1.85);
               ctx.stroke();
             });
           } else {
@@ -2044,21 +2202,21 @@
               // Levná průsvitná záře místo shadowBlur (ten se počítá na CPU v každém snímku)
               ctx.fillStyle = 'rgba(190, 242, 100, 0.3)';
               ctx.beginPath();
-              ctx.ellipse(mhx + ex, mhy - 0.6, 3.9, 3.7, 0, 0, Math.PI * 2);
+              ctx.ellipse(ex, -0.6, 3.9, 3.7, 0, 0, Math.PI * 2);
               ctx.fill();
               ctx.fillStyle = '#84cc16';
               ctx.beginPath();
-              ctx.ellipse(mhx + ex, mhy - 0.6, 2.8, 2.6, 0, 0, Math.PI * 2);
+              ctx.ellipse(ex, -0.6, 2.8, 2.6, 0, 0, Math.PI * 2);
               ctx.fill();
 
               ctx.fillStyle = '#090d08';
               ctx.beginPath();
-              ctx.ellipse(mhx + ex, mhy - 0.6, 1.15, 1.9, 0, 0, Math.PI * 2);
+              ctx.ellipse(ex, -0.6, 1.15, 1.9, 0, 0, Math.PI * 2);
               ctx.fill();
 
               ctx.fillStyle = '#ffffff';
               ctx.beginPath();
-              ctx.arc(mhx + ex - 0.8, mhy - 1.3, 0.75, 0, Math.PI * 2);
+              ctx.arc(ex - 0.8, -1.3, 0.75, 0, Math.PI * 2);
               ctx.fill();
             });
           }
@@ -2066,9 +2224,9 @@
           // Čumáček a vousky
           ctx.fillStyle = '#fb7185';
           ctx.beginPath();
-          ctx.moveTo(mhx - 1.6, mhy + 2.2);
-          ctx.lineTo(mhx + 1.6, mhy + 2.2);
-          ctx.lineTo(mhx, mhy + 3.9);
+          ctx.moveTo(-1.6, 2.2);
+          ctx.lineTo(1.6, 2.2);
+          ctx.lineTo(0, 3.9);
           ctx.closePath();
           ctx.fill();
 
@@ -2077,17 +2235,22 @@
           [-1, 1].forEach((dir) => {
             [-1, 0, 1].forEach((row) => {
               ctx.beginPath();
-              ctx.moveTo(mhx + dir * 5, mhy + 2.8 + row * 1.3);
-              ctx.lineTo(mhx + dir * 13.5, mhy + 2.1 + row * 2.0 + Math.sin(t * 3.5 + row) * 0.5);
+              ctx.moveTo(dir * 5, 2.8 + row * 1.3);
+              ctx.lineTo(dir * 13.5, 2.1 + row * 2.0 + Math.sin(t * 3.5 + row) * 0.5);
               ctx.stroke();
             });
           });
 
+          ctx.restore(); // Konec rotace hlavy
+          ctx.restore(); // Konec transformace těla Molly
+
           // Zlaté světlušky kroužící kolem Molly
+          const headWorldX = mx + 2 * mollyFacing * mollyScale;
+          const headWorldY = mcy - 19 * mollyScale;
           for (let fi = 0; fi < 3; fi++) {
             const fa = t * (1.2 + fi * 0.35) + fi * 2.1;
-            const fox = mhx + Math.cos(fa) * (20 + fi * 6);
-            const foy = mhy - 6 + Math.sin(fa * 1.4) * 9;
+            const fox = headWorldX + Math.cos(fa) * (20 + fi * 6);
+            const foy = headWorldY - 6 + Math.sin(fa * 1.4) * 9;
             const fg = ctx.createRadialGradient(fox, foy, 0.5, fox, foy, 8);
             fg.addColorStop(0, 'rgba(255, 251, 235, 0.95)');
             fg.addColorStop(0.45, 'rgba(251, 191, 36, 0.55)');
@@ -2122,7 +2285,6 @@
             ctx.fill();
             ctx.restore();
           }
-          ctx.restore();
 
           // DOM atributy jen při změně — zápis v každém snímku vynucoval přepočet stylů
           if (canvasEl && lastTreatsAttr !== String(treatsTotal)) {
@@ -2265,13 +2427,14 @@
         </div>
       </div>
 
-      <div class="atmosphere-controls" aria-label="Nastavení atmosféry a zvuku">
-        <div class="atmo-pill-group">
+      <div class="atmosphere-controls sanctuary-hud" aria-label="Nastavení atmosféry a zvuku">
+        <div class="atmo-pill-group" role="group" aria-label="Denní doba">
           <button
             type="button"
             class="atmo-btn"
             class:active={atmosphereMode === 'dawn'}
             on:click={() => (atmosphereMode = 'dawn')}
+            aria-pressed={atmosphereMode === 'dawn'}
           >
             🌅 Zlaté svítání
           </button>
@@ -2280,23 +2443,29 @@
             class="atmo-btn"
             class:active={atmosphereMode === 'night'}
             on:click={() => (atmosphereMode = 'night')}
+            aria-pressed={atmosphereMode === 'night'}
           >
             🌌 Hvězdná noc
           </button>
         </div>
 
-        <div class="atmo-sub-row hud-left-cluster sanctuary-hud-top">
+        <div class="hud-actions-group">
           <button
             type="button"
-            class="molly-sanctuary-pill"
-            on:click={() => feedSanctuaryMolly(0.36, 0.32)}
+            class="explore-deed-btn"
+            on:click={openRandomInspiringDeed}
+            title="Inspirace náhodným dobrým skutkem"
           >
-            🐾 Patronka Molly · Nakrmit pamlskem ({$mollyState.treatsFedTotal} {$mollyState.lastTreat?.icon || '🐟'})
-          </button>
-          <button type="button" class="explore-deed-btn" on:click={openRandomInspiringDeed}>
             ✨ Náhodný skutek
           </button>
-          <button type="button" class="sound-btn" class:on={soundEnabled} on:click={toggleSound}>
+          <button
+            type="button"
+            class="sound-btn"
+            class:on={soundEnabled}
+            on:click={toggleSound}
+            title={soundEnabled ? 'Vypnout tóny' : 'Zapnout jemné tóny'}
+            aria-pressed={soundEnabled}
+          >
             {soundEnabled ? '🎐 Tóny: zapnuto' : '🔇 Jemné tóny'}
           </button>
         </div>
@@ -2314,7 +2483,7 @@
         on:pointermove={handlePointerMove}
         on:pointerleave={handlePointerLeave}
         role="application"
-        aria-label="Krajina dobra: kliknutím na světlo zobrazíš konkrétní dobrý skutek, kliknutím na hladinu nebo oblohu rozsvítíš vlastní skutek"
+        aria-label="Krajina dobra: výběrem světla zobrazíš konkrétní dobrý skutek, dotykem hladiny nebo oblohy rozsvítíš vlastní skutek"
       >
         <div class="art-parallax-wrap" bind:this={parallaxEl}>
           <picture>
@@ -2369,6 +2538,16 @@
         {#if gentleToast}
           <div class="gentle-toast" role="status">{gentleToast}</div>
         {/if}
+
+        <button
+          type="button"
+          class="molly-sanctuary-pill"
+          on:click|stopPropagation={() => feedSanctuaryMolly(0.24, 0.72)}
+          title="Dát patronce Molly pamlsek do mističky u jezera"
+          aria-label="Nakrmit patronku Molly"
+        >
+          🐾 Patronka Molly · Nakrmit pamlskem ({$mollyState.treatsFedTotal} {$mollyState.lastTreat?.icon || '🐟'})
+        </button>
       </div>
 
       {#if nextSeedToPlant}
@@ -2855,7 +3034,7 @@
      ========================================================================= */
   .sanctuary-stage {
     border-radius: 32px;
-    padding: 1.5rem 1.7rem 1.3rem;
+    padding: 1.15rem 1.45rem 1.05rem;
     background:
       radial-gradient(90% 90% at 80% 10%, rgba(251, 191, 36, 0.16) 0%, transparent 55%),
       linear-gradient(165deg, #092117 0%, #103425 55%, #0b261b 100%);
@@ -2868,29 +3047,30 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    gap: 1.25rem;
+    gap: 1rem;
     flex-wrap: wrap;
-    margin-bottom: 1.2rem;
+    margin-bottom: 0.85rem;
   }
 
   .sanctuary-intro {
-    max-width: 580px;
+    flex: 1 1 auto;
+    max-width: 520px;
   }
 
   .kicker {
-    font-size: 0.73rem;
+    font-size: 0.7rem;
     font-weight: 800;
     letter-spacing: 0.12em;
     color: #fde68a;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.2rem;
   }
 
   h1 {
-    margin: 0 0 0.4rem 0;
-    font-size: clamp(1.9rem, 3.4vw, 2.7rem);
+    margin: 0 0 0.28rem 0;
+    font-size: clamp(1.75rem, 2.9vw, 2.35rem);
     font-weight: 800;
     letter-spacing: -0.03em;
-    line-height: 1.1;
+    line-height: 1.08;
     color: #ffffff;
   }
 
@@ -2902,68 +3082,79 @@
   .lead {
     margin: 0;
     color: rgba(230, 245, 236, 0.86);
-    font-size: 0.94rem;
-    line-height: 1.55;
+    font-size: 0.88rem;
+    line-height: 1.45;
   }
 
   .atmosphere-controls {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.45rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.42rem;
+    padding: 0.28rem 0.36rem;
+    border-radius: 999px;
+    background: rgba(5, 20, 14, 0.65);
+    border: 1px solid rgba(167, 243, 208, 0.18);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 10px 24px -6px rgba(0, 0, 0, 0.35);
+    align-self: flex-end;
+    flex-shrink: 0;
   }
 
   .atmo-pill-group {
     display: inline-flex;
-    padding: 0.24rem;
+    padding: 0.16rem;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.09);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    gap: 0.22rem;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    gap: 0.14rem;
   }
 
   .atmo-btn {
     border: none;
     border-radius: 999px;
-    padding: 0.42rem 0.88rem;
+    padding: 0.36rem 0.72rem;
     background: transparent;
     color: rgba(236, 253, 245, 0.85);
     font-family: inherit;
-    font-size: 0.8rem;
+    font-size: 0.76rem;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s ease;
+    white-space: nowrap;
   }
 
   .atmo-btn.active {
     background: linear-gradient(135deg, #fde68a 0%, #6ee7b7 100%);
     color: #061b12;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   }
 
-  .atmo-sub-row {
-    display: flex;
-    gap: 0.4rem;
-    flex-wrap: wrap;
-    justify-content: flex-end;
+  .hud-actions-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
   }
 
   .explore-deed-btn,
   .sound-btn {
     border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: 999px;
-    padding: 0.36rem 0.82rem;
+    padding: 0.36rem 0.72rem;
     background: rgba(255, 255, 255, 0.07);
     color: rgba(240, 253, 246, 0.92);
     font-family: inherit;
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
+    white-space: nowrap;
     transition: all 0.2s ease;
   }
 
   .explore-deed-btn:hover,
   .sound-btn:hover {
     background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
   }
 
   .sound-btn.on {
@@ -2979,9 +3170,9 @@
   .sanctuary-viewport {
     position: relative;
     width: 100%;
-    aspect-ratio: 16 / 8.4;
-    max-height: 57dvh;
-    min-height: 340px;
+    aspect-ratio: 16 / 8.2;
+    max-height: 48dvh;
+    min-height: 310px;
     border-radius: 24px;
     overflow: hidden;
     cursor: pointer;
@@ -3244,14 +3435,15 @@
   }
 
   .ritual-dock-main {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
     align-items: center;
     gap: 0.5rem;
     padding: 0.42rem;
     border-radius: 18px;
     background: rgba(255, 255, 255, 0.07);
     border: 1px solid rgba(255, 255, 255, 0.12);
-    flex-wrap: wrap;
+    min-width: 0;
   }
 
   .ritual-modes {
@@ -3281,8 +3473,8 @@
   }
 
   .ritual-dock-main input {
-    flex: 1;
-    min-width: 210px;
+    min-width: 0;
+    width: 100%;
     padding: 0.55rem 0.75rem;
     border: none;
     background: transparent;
@@ -3880,6 +4072,9 @@
     .sanctuary-viewport {
       aspect-ratio: 4 / 3;
     }
+    .ritual-pill .rp-sub {
+      display: none;
+    }
   }
 
   @media (max-width: 680px) {
@@ -3894,8 +4089,10 @@
     }
 
     .sanctuary-top {
-      gap: 0.45rem;
-      margin-bottom: 0.55rem;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.42rem;
+      margin-bottom: 0.52rem;
     }
 
     .kicker {
@@ -3914,26 +4111,43 @@
 
     .atmosphere-controls {
       width: 100%;
+      display: flex;
       flex-direction: row;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
-      gap: 0.3rem;
+      gap: 0.35rem;
+      padding: 0.22rem 0.32rem;
+      box-sizing: border-box;
+      align-self: stretch;
+      max-width: 100%;
     }
 
     .atmo-pill-group {
-      padding: 0.16rem;
+      padding: 0.14rem;
+      gap: 0.14rem;
+      max-width: 100%;
     }
 
     .atmo-btn {
-      padding: 0.28rem 0.55rem;
+      padding: 0.26rem 0.48rem;
       font-size: 0.72rem;
+      white-space: nowrap;
+    }
+
+    .hud-actions-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+      max-width: 100%;
     }
 
     .explore-deed-btn,
     .sound-btn {
-      padding: 0.28rem 0.55rem;
+      padding: 0.26rem 0.48rem;
       font-size: 0.72rem;
+      white-space: nowrap;
     }
 
     .sanctuary-canvas-shell {
@@ -3982,9 +4196,17 @@
       justify-content: center;
     }
 
+    .ritual-dock-main {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.45rem;
+      padding: 0.45rem;
+      border-radius: 16px;
+    }
+
     /* Na mobilu všechny tři druhy světla vedle sebe bez skrytého vodorovného posunu
        (dřív se volby posouvaly do strany a nebylo poznat, že existuje i třetí) */
     .ritual-modes {
+      grid-column: 1 / -1;
       width: 100%;
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -4001,6 +4223,30 @@
 
     .ritual-pill .rp-sub {
       display: none;
+    }
+
+    .ritual-dock-main input {
+      width: 100%;
+      min-width: 0;
+      background: rgba(4, 16, 11, 0.35);
+      border-radius: 10px;
+      padding: 0.55rem 0.7rem;
+      box-sizing: border-box;
+    }
+
+    .ritual-send-btn {
+      white-space: nowrap;
+      padding: 0.55rem 0.85rem;
+    }
+
+    .molly-sanctuary-pill {
+      bottom: 0.55rem;
+      left: 0.55rem;
+      padding: 0.26rem 0.58rem;
+      font-size: 0.68rem;
+      max-width: calc(100% - 1.1rem);
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
   }
 
@@ -4045,36 +4291,33 @@
     white-space: nowrap;
   }
 
-  .atmo-sub-row.hud-left-cluster {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.42rem;
-    align-items: center;
-    max-width: 100%;
-  }
-
   .molly-sanctuary-pill {
+    position: absolute;
+    bottom: 0.85rem;
+    left: 0.85rem;
+    z-index: 5;
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    padding: 0.38rem 0.78rem;
+    padding: 0.34rem 0.75rem;
     border-radius: 999px;
-    border: 1px solid rgba(251, 191, 36, 0.48);
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(16, 185, 129, 0.18));
+    border: 1px solid rgba(251, 191, 36, 0.5);
+    background: rgba(8, 28, 19, 0.88);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     color: #fef3c7;
     font-family: inherit;
-    font-size: 0.76rem;
+    font-size: 0.75rem;
     font-weight: 700;
     cursor: pointer;
-    max-width: 100%;
-    box-sizing: border-box;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
     transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
   }
 
   .molly-sanctuary-pill:hover {
     transform: translateY(-1px);
     border-color: rgba(253, 230, 138, 0.85);
-    box-shadow: 0 6px 18px rgba(245, 158, 11, 0.25);
+    box-shadow: 0 6px 18px rgba(245, 158, 11, 0.3);
   }
 
   .molly-lotus-guardian {

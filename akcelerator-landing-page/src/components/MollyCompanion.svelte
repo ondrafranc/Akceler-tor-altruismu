@@ -1884,7 +1884,7 @@
       class="molly-whisper-bubble"
       on:click|stopPropagation={hideWhisperBubble}
       aria-label="Skrýt zprávu od Molly"
-      title="Klepnutím skryješ"
+      title="Skrýt zprávu"
     >
       <span class="molly-whisper-inner">
         <span class="whisper-icon" aria-hidden="true">{activeWhisper.icon || '🐾'}</span>
@@ -1928,8 +1928,8 @@
       class:has-tip={Boolean(pendingTip)}
       on:pointerdown|stopPropagation
       on:click|stopPropagation={() => triggerPetInteraction(true)}
-      title={`${pendingTip ? 'Molly má pro tebe tip — klepni. ' : ''}Pohladit želvovinovou kočku Molly (spustí předení). ${nextGiftText}`}
-      aria-label={`${pendingTip ? 'Molly má pro tebe tip. ' : ''}Pohladit Molly. Nasbírané pamlsky: ${$mollyState.treatsFedTotal}. ${nextGiftText}`}
+      title={`${pendingTip ? 'Molly má pro tebe laskavý tip. ' : ''}Pohladit kočičku Molly. ${nextGiftText}`}
+      aria-label={`${pendingTip ? 'Molly má pro tebe laskavý tip. ' : ''}Pohladit Molly. Darované pamlsky: ${$mollyState.treatsFedTotal}. ${nextGiftText}`}
     >
       {#if pendingTip}
         <span class="molly-tip-dot" aria-hidden="true" data-testid="molly-tip-dot">💬</span>
@@ -1968,14 +1968,14 @@
       on:click|stopPropagation={toggleMollyPelisek}
       aria-pressed={$mollyState.mode === 'docked'}
       aria-label={$mollyState.mode === 'docked'
-        ? 'Vypustit Molly z pelíšku na procházku po stránce'
-        : 'Uložit Molly do klidového pelíšku'}
+        ? 'Pozvat Molly na procházku'
+        : 'Dopřát Molly odpočinek v pelíšku'}
       title={$mollyState.mode === 'docked'
-        ? 'Vypustit Molly z pelíšku na procházku po stránce'
-        : 'Uložit Molly do klidového pelíšku'}
+        ? 'Pozvat Molly na procházku'
+        : 'Dopřát Molly odpočinek v pelíšku'}
     >
       <span aria-hidden="true">{$mollyState.mode === 'docked' ? '✨' : '🧺'}</span>
-      <span class="molly-toggle-text">{$mollyState.mode === 'docked' ? 'Toulat se' : 'Pelíšek'}</span>
+      <span class="molly-toggle-text">{$mollyState.mode === 'docked' ? 'Procházka' : 'Pelíšek'}</span>
     </button>
   </div>
 </div>

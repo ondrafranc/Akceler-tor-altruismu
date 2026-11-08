@@ -7,42 +7,42 @@ export const MOLLY_TREAT_BY_FOOD = {
   salmon: {
     icon: '🐟',
     name: 'lososová granulka',
-    shortLabel: '+1 rybka pro Molly',
+    shortLabel: 'Rybka pro Molly',
     color: '#f59e0b',
     foodType: 'salmon'
   },
   milk: {
     icon: '🥛',
     name: 'teplé kočičí mlíčko v misce',
-    shortLabel: '+1 mlíčko pro Molly',
+    shortLabel: 'Mlíčko pro Molly',
     color: '#fde68a',
     foodType: 'milk'
   },
   tuna: {
     icon: '🍣',
     name: 'rýžový polštářek s tuňákem',
-    shortLabel: '+1 sousto pro Molly',
+    shortLabel: 'Voňavé sousto pro Molly',
     color: '#fbbf24',
     foodType: 'tuna'
   },
   catnip: {
     icon: '🌿',
     name: 'čerstvý lístek šanty kočičí',
-    shortLabel: '+1 šanta pro Molly',
+    shortLabel: 'Lístek šanty pro Molly',
     color: '#4ade80',
     foodType: 'catnip'
   },
   cream: {
     icon: '🧶',
     name: 'smetanový pamlsek a klubíčko',
-    shortLabel: '+1 pamlsek pro Molly',
+    shortLabel: 'Smetanový pamlsek pro Molly',
     color: '#f472b6',
     foodType: 'cream'
   },
   star_treat: {
     icon: '✨',
     name: 'křupavá hvězdička',
-    shortLabel: '+1 hvězdička pro Molly',
+    shortLabel: 'Křupavá hvězdička pro Molly',
     color: '#a78bfa',
     foodType: 'star_treat'
   }
@@ -216,11 +216,11 @@ export const MOLLY_ROUTE_GUIDES = {
   '/app': {
     icon: '🧭',
     hint: 'Vyber si cestu, která ti dnes sedí. Každá vede ke skutečné pomoci.',
-    nudge: 'Nevíš, kudy kam? Průvodce ti najde skutek na míru.'
+    nudge: 'Když si nebudeš jistý výběrem, ráda ti pomůžu najít krok na míru.'
   },
   '/app/guided': {
     icon: '🧭',
-    hint: 'Pár otázek a najdu ti skutek přesně na míru.',
+    hint: 'Společně najdeme pomoc, která ti dnes nejlépe sedne.',
     nudge: 'Tenhle skutek ti teď sedí nejvíc. Zkusíš ho?'
   },
   '/app/online': {
@@ -231,17 +231,17 @@ export const MOLLY_ROUTE_GUIDES = {
   '/near': {
     icon: '📍',
     hint: 'Podívej se, kdo potřebuje pomoc kousek od tebe.',
-    nudge: 'Začni třeba tímhle místem. Jak pomoct, máš napsané přímo na kartě.'
+    nudge: 'Začni třeba tímto místem — najdeš u něj i jednoduchý návod, jak pomoci.'
   },
   '/svet': {
     icon: '✨',
-    hint: 'Tady u jezera bydlím. Klikni na hladinu a rozsviť své světlo.',
+    hint: 'Tady u jezera ráda odpočívám. Vyber si místo na hladině a rozsviť své světlo dobra.',
     nudge: 'Zkus se mnou chvilku klidně dýchat.'
   },
   '/submit': {
     icon: '🌱',
     hint: 'Znáš místo, kde se pomáhá? Přidej ho a ukaž cestu dalším.',
-    nudge: 'Stačí název a místo. Před zveřejněním to ještě zkontrolujeme.'
+    nudge: 'Stačí jen název a adresa, zbytek s péčí ověříme.'
   }
 };
 

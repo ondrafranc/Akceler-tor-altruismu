@@ -3059,6 +3059,9 @@
   @media (max-width: 680px) {
     .near-page {
       padding: 0.2rem 0.55rem 1.8rem;
+      overflow-x: hidden;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .subpage-hero.near-header {
@@ -3079,8 +3082,8 @@
     }
 
     .controls-card {
-      padding: 0.42rem 0.5rem;
-      margin-bottom: 0.3rem;
+      padding: 0.42rem 0.55rem;
+      margin-bottom: 0.35rem;
       border-radius: 14px;
       max-width: 100%;
       box-sizing: border-box;
@@ -3089,47 +3092,72 @@
     .controls-top {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.26rem;
-      min-width: 0;
+      gap: 0.35rem;
+      align-items: center;
+      width: 100%;
     }
 
     .gps-btn {
-      padding: 0.3rem 0.48rem;
-      font-size: 0.71rem;
+      order: 1;
       flex-shrink: 0;
+      padding: 0.38rem 0.58rem;
+      font-size: 0.74rem;
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 9px;
+      box-sizing: border-box;
     }
 
     .search-box {
+      order: 2;
+      flex: 1 1 140px;
       min-width: 0;
-      flex: 1 1 150px;
-      gap: 0.24rem;
+      display: flex;
+      gap: 0.25rem;
     }
 
     .search-box input {
+      flex: 1;
       min-width: 0;
-      padding: 0.3rem 0.46rem;
-      font-size: 0.75rem;
+      padding: 0.36rem 0.5rem;
+      font-size: 0.76rem;
+      border-radius: 9px;
+      min-height: 36px;
+      box-sizing: border-box;
     }
 
     .btn-find {
-      padding: 0.3rem 0.52rem;
-      font-size: 0.73rem;
+      padding: 0.36rem 0.58rem;
+      font-size: 0.75rem;
+      min-height: 36px;
       flex-shrink: 0;
+      border-radius: 9px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
     }
 
     .city-jump-select {
-      padding: 0.26rem 0.42rem;
-      font-size: 0.71rem;
-      border-radius: 8px;
-      max-width: 128px;
+      order: 3;
+      flex: 0 1 92px;
       min-width: 0;
+      max-width: 102px;
+      padding: 0.26rem 0.34rem;
+      font-size: 0.72rem;
+      min-height: 32px;
+      border-radius: 9px;
+      box-sizing: border-box;
     }
 
     .radius-box {
-      gap: 0.2rem;
-      font-size: 0.7rem;
+      order: 4;
+      flex: 0 0 auto;
       margin-left: auto;
-      max-width: 100%;
+      display: flex;
+      align-items: center;
     }
 
     .radius-label {
@@ -3137,19 +3165,25 @@
     }
 
     .radius-pills {
-      padding: 0.1rem;
+      display: inline-flex;
       gap: 0.1rem;
+      padding: 0.1rem;
     }
 
     .radius-pill {
-      padding: 0.16rem 0.34rem;
-      font-size: 0.66rem;
+      padding: 0.2rem 0.32rem;
+      font-size: 0.68rem;
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
     }
 
     .controls-bottom {
-      margin-top: 0.26rem;
-      padding-top: 0.24rem;
-      gap: 0.24rem;
+      margin-top: 0.3rem;
+      padding-top: 0.28rem;
+      gap: 0.25rem;
       min-width: 0;
     }
 
@@ -3157,12 +3191,16 @@
       display: flex;
       flex-wrap: nowrap;
       overflow-x: auto;
-      gap: 0.24rem;
+      gap: 0.28rem;
       width: 100%;
       max-width: 100%;
       min-width: 0;
       scrollbar-width: none;
       -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x mandatory;
+      mask-image: linear-gradient(to right, black 0%, black calc(100% - 28px), transparent 100%);
+      -webkit-mask-image: linear-gradient(to right, black 0%, black calc(100% - 28px), transparent 100%);
+      padding: 0.1rem 1.1rem 0.2rem 0.05rem;
     }
 
     .presets-bar::-webkit-scrollbar {
@@ -3172,8 +3210,15 @@
     .preset-pill {
       flex: 0 0 auto;
       white-space: nowrap;
-      padding: 0.22rem 0.5rem;
-      font-size: 0.71rem;
+      padding: 0.36rem 0.65rem;
+      font-size: 0.75rem;
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      scroll-snap-align: start;
+      box-sizing: border-box;
     }
 
     .controls-links {
@@ -3187,14 +3232,41 @@
     }
 
     .mobile-tabs {
-      margin-bottom: 0.28rem;
-      gap: 0.28rem;
+      display: flex;
+      gap: 0.35rem;
+      margin-bottom: 0.45rem;
+      background: rgba(22, 66, 48, 0.06);
+      padding: 0.22rem;
+      border-radius: 14px;
+      border: 1px solid rgba(22, 66, 48, 0.1);
+      box-sizing: border-box;
     }
 
     .mobile-tabs button {
-      padding: 0.28rem 0.5rem;
-      font-size: 0.74rem;
-      border-radius: 9px;
+      flex: 1;
+      min-height: 44px;
+      padding: 0.55rem 0.75rem;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      transition: all 0.18s ease;
+      box-sizing: border-box;
+    }
+
+    .mobile-tabs button.active {
+      background: var(--forest-850);
+      color: #fde68a;
+      border-color: var(--forest-850);
+      box-shadow: var(--shadow-sm);
     }
 
     .split-layout {
@@ -3243,17 +3315,20 @@
 
     .filter-input,
     .sort-select {
-      padding: 0.22rem 0.38rem;
-      font-size: 0.71rem;
+      min-height: 34px;
+      font-size: 0.74rem;
+      border-radius: 8px;
+      padding: 0.25rem 0.45rem;
+      box-sizing: border-box;
       min-width: 0;
     }
 
     .filter-input {
-      max-width: 96px;
+      max-width: 70px;
     }
 
     .sort-select {
-      max-width: 122px;
+      max-width: 160px;
     }
 
     .source-tier-bar {
@@ -3274,8 +3349,13 @@
     .source-chip {
       flex: 0 0 auto;
       white-space: nowrap;
-      padding: 0.18rem 0.48rem;
-      font-size: 0.68rem;
+      min-height: 30px;
+      padding: 0.28rem 0.55rem;
+      font-size: 0.72rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
     }
 
     .places-stack {
@@ -3287,6 +3367,7 @@
       border-radius: 15px;
       max-width: 100%;
       box-sizing: border-box;
+      overflow-wrap: break-word;
     }
 
     .pc-meta-top {
@@ -3340,8 +3421,14 @@
     }
 
     .pc-btn {
-      padding: 0.34rem 0.62rem;
-      font-size: 0.74rem;
+      min-height: 40px;
+      padding: 0.48rem 0.75rem;
+      font-size: 0.78rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      box-sizing: border-box;
     }
 
     .card-effect-stage {

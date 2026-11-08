@@ -107,7 +107,7 @@
         <div class="win-sensory-stage card-effect-stage" data-scene={effectMeta?.scene || 'light'}>
           <div class="win-sensory-head card-effect-head">
             <span class="impact-payoff-badge">{effectMeta?.badge || '✨ Světelná stopa'}</span>
-            <span class="win-sensory-hint card-effect-hint">Klepni do plátna pro jiskru</span>
+            <span class="win-sensory-hint card-effect-hint">Dotkni se pro jiskru</span>
           </div>
           <canvas
             class="impact-payoff-canvas"
@@ -127,9 +127,9 @@
           <div class="molly-celebration-note">
             <span>{effectMeta.mollyTreat.icon}</span>
             <span>
-              Patronka <strong>Molly</strong> si pochutnala na dobrotě (<strong
+              Patronka <strong>Molly</strong> ti s láskou děkuje za dobrotu (<strong
                 >{effectMeta.mollyTreat.name}</strong
-              >) a čeká na tebe u jezera v Krajině dobra.
+              >) a spokojeně na tebe čeká u jezera v Krajině dobra.
             </span>
           </div>
         {/if}

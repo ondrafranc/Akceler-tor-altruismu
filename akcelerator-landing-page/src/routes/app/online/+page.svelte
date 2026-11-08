@@ -1069,6 +1069,9 @@
   @media (max-width: 680px) {
     .page {
       padding: 0.35rem 0.65rem 2.2rem;
+      overflow-x: hidden;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .subpage-hero.header {
@@ -1119,11 +1122,15 @@
       flex-wrap: nowrap;
       overflow-x: auto;
       justify-content: flex-start;
-      gap: 0.3rem;
-      margin-bottom: 0.55rem;
-      padding-bottom: 0.15rem;
+      gap: 0.38rem;
+      margin: 0.35rem 0 0.6rem;
+      padding: 0.15rem 1.25rem 0.35rem 0.15rem;
       scrollbar-width: none;
       -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x mandatory;
+      scroll-padding: 0 0.5rem;
+      mask-image: linear-gradient(to right, black 0%, black calc(100% - 32px), transparent 100%);
+      -webkit-mask-image: linear-gradient(to right, black 0%, black calc(100% - 32px), transparent 100%);
     }
 
     .filters-bar::-webkit-scrollbar,
@@ -1134,18 +1141,35 @@
     .filter-chip {
       flex: 0 0 auto;
       white-space: nowrap;
-      padding: 0.34rem 0.62rem;
-      font-size: 0.75rem;
+      padding: 0.44rem 0.8rem;
+      font-size: 0.78rem;
+      min-height: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      scroll-snap-align: start;
+      box-sizing: border-box;
     }
 
     .grid {
       grid-template-columns: 1fr;
       gap: 0.85rem;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
     }
 
     .card {
       padding: 0.88rem 0.88rem;
       border-radius: 16px;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+      overflow-wrap: break-word;
+      word-break: break-word;
     }
 
     .card-effect-stage :global(.impact-payoff-canvas) {
@@ -1187,13 +1211,18 @@
     }
 
     .actions-row {
-      gap: 0.4rem;
-      padding-top: 0.1rem;
+      gap: 0.45rem;
+      padding-top: 0.15rem;
     }
 
     .cta {
-      padding: 0.58rem 0.8rem;
+      padding: 0.62rem 0.88rem;
       font-size: 0.82rem;
+      min-height: 44px;
+      box-sizing: border-box;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .card-verify-footer {
@@ -1204,6 +1233,19 @@
 
     .online-methodology-drawer {
       max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    .online-pulse-wrap {
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    .ambient-pulse-pill {
+      max-width: 100%;
+      box-sizing: border-box;
+      white-space: normal;
+      text-align: center;
     }
   }
 </style>

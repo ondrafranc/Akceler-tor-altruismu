@@ -843,7 +843,7 @@
                   aria-label="Fyzikální vizualizace dopadu dobrého skutku"
                 ></canvas>
                 <div class="molly-celebration-note">
-                  🐾 Pamlsek pro Molly: <strong
+                  🐾 Molly ti děkuje za dobrý skutek: <strong
                     >{getActionEffectMeta(currentQuickAction, kibbleGrams)
                       .mollyTreat?.name || "lososová granulka"}</strong
                   >
@@ -873,7 +873,7 @@
               >
                 <div class="inline-celebration-head">
                   <div class="return-dopamine-text">
-                    ✨ <strong>Vítej zpět! Povedlo se?</strong> Klikni na „Hotovo“ a rozsviť svou lucernu v Krajině dobra.
+                    ✨ <strong>Vítej zpět! Povedlo se?</strong> Potvrď svůj dobrý skutek a rozsviť lucernu v Krajině dobra.
                   </div>
                   <span class="impact-payoff-badge">
                     {getActionEffectMeta(currentQuickAction, kibbleGrams, {
@@ -889,7 +889,7 @@
                   aria-label="Fyzikální vizualizace dopadu dobrého skutku"
                 ></canvas>
                 <div class="molly-celebration-note">
-                  🐾 Po kliknutí na „Hotovo“ dostane Molly pamlsek: <strong
+                  🐾 Za každý dokončený krok čeká na Molly odměna: <strong
                     >{getActionEffectMeta(currentQuickAction, kibbleGrams)
                       .mollyTreat?.name || "lososová granulka"}</strong
                   >
@@ -2645,7 +2645,11 @@
 
   @media (max-width: 680px) {
     .hero-painted-backdrop {
-      display: none !important;
+      display: block;
+      opacity: 0.22;
+      mix-blend-mode: overlay;
+      pointer-events: none;
+      background-position: center 30%;
     }
 
     .hero-stage {
@@ -2668,25 +2672,49 @@
       max-width: 100%;
     }
 
-    .hero-overline,
-    .hero-lead,
     .hero-ctas {
       display: none !important;
     }
 
+    .hero-overline {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      color: #a7f3d0;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      margin-bottom: 0.22rem;
+    }
+
+    .hero-overline .live-dot {
+      width: 6px;
+      height: 6px;
+    }
+
+    .hero-lead {
+      display: block;
+      font-size: 0.78rem;
+      line-height: 1.32;
+      color: rgba(230, 245, 236, 0.88);
+      margin: 0.12rem 0 0.32rem 0;
+    }
+
     .hero-title {
-      font-size: 1.08rem;
+      font-size: 1.18rem;
       line-height: 1.18;
-      margin: 0 0 0.1rem 0;
+      margin: 0 0 0.12rem 0;
       letter-spacing: -0.02em;
       overflow-wrap: break-word;
+      color: #ffffff;
+      text-shadow: 0 2px 10px rgba(5, 24, 16, 0.45);
     }
 
     .hero-serif {
       display: block;
-      font-size: 1.1rem;
+      font-size: 1.2rem;
       line-height: 1.18;
-      margin-top: 0.04rem;
+      margin-top: 0.06rem;
     }
 
     .instant-card {
@@ -2712,27 +2740,31 @@
     }
 
     .energy-tabs {
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
       min-width: 0;
       max-width: 100%;
       box-sizing: border-box;
-      gap: 0.12rem;
-      padding: 0.14rem;
-      margin-bottom: 0.42rem;
-      border-radius: 13px;
+      gap: 0.32rem;
+      padding: 0.25rem;
+      margin-bottom: 0.45rem;
+      border-radius: 14px;
+      background: #eef3ef;
+      width: 100%;
     }
 
     .energy-tab {
-      flex: 1 1 auto;
-      min-width: 0;
-      padding: 0.3rem 0.14rem;
-      font-size: 0.63rem;
+      min-height: 44px;
+      padding: 0.48rem 0.4rem;
+      font-size: 0.84rem;
+      font-weight: 700;
       white-space: nowrap;
-      text-align: center;
+      display: inline-flex;
+      align-items: center;
       justify-content: center;
-      border-radius: 9px;
-      letter-spacing: -0.02em;
+      text-align: center;
+      border-radius: 11px;
+      letter-spacing: -0.01em;
     }
 
     .instant-body {
