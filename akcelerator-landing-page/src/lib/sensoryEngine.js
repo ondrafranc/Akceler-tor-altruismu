@@ -1128,7 +1128,13 @@ export function mountImpactCanvas(cv, o = {}) {
   let ro = null;
   if (win() && typeof ResizeObserver !== 'undefined') {
     ro = new ResizeObserver(() => {
+      const prevW = cv.width;
+      const prevH = cv.height;
       syncCanvasDpr();
+      if (cv.width !== prevW || cv.height !== prevH) {
+        wakeUpLoop();
+        fn(true);
+      }
     });
     ro.observe(cv);
   }
@@ -1165,10 +1171,13 @@ export function mountImpactCanvas(cv, o = {}) {
   const sparks = [];
   const treatArcs = [];
   const mollyTreat = spec.mollyTreat || resolveMollyTreat(spec);
-  const mollyX = w - 26;
-  const mollyY = h - 16;
-  const mollyBowlX = w - 48;
-  const mollyBowlY = h - 10;
+  const initScale = Math.min((cv.width || 300) / w, (cv.height || 92) / h);
+  const initFullW = (cv.width || 300) / initScale;
+  const initOffsetX = (initFullW - w) / 2;
+  let mollyX = w + initOffsetX - 26;
+  let mollyY = h - 16;
+  let mollyBowlX = w + initOffsetX - 48;
+  let mollyBowlY = h - 10;
   let mollyEatTimer = o.climax ? 0.85 : 0;
   let mollyTreatsCount = 1;
   let totalTreatArcsLaunched = 0;
@@ -1184,8 +1193,8 @@ export function mountImpactCanvas(cv, o = {}) {
     if (cv) {
       cv.dataset.mollyArcs = String(totalTreatArcsLaunched);
     }
-    const targetX = w - 32;
-    const targetY = h - 20;
+    const targetX = mollyBowlX + 16;
+    const targetY = mollyY - 4;
     const ctrlX = (fromX + targetX) * 0.5;
     const ctrlY = Math.min(10, Math.min(fromY, targetY) - 28);
     treatArcs.push({
@@ -1318,11 +1327,13 @@ export function mountImpactCanvas(cv, o = {}) {
   const mapPointerToScene = (e) => {
     const b = cv.getBoundingClientRect();
     if (!b.width || !b.height) return { tx: cx, ty: cy };
-    const scale = (cv.height || 92) / h;
-    const fullW = Math.max(w, (cv.width || 300) / scale);
+    const scale = Math.min((cv.width || 300) / w, (cv.height || 92) / h);
+    const fullW = (cv.width || 300) / scale;
+    const fullH = (cv.height || 92) / scale;
     const offsetX = (fullW - w) / 2;
+    const offsetY = (fullH - h) / 2;
     const tx = ((e.clientX - b.left) / b.width) * fullW - offsetX;
-    const ty = ((e.clientY - b.top) / b.height) * h;
+    const ty = ((e.clientY - b.top) / b.height) * fullH - offsetY;
     return { tx, ty };
   };
 
@@ -1440,23 +1451,30 @@ export function mountImpactCanvas(cv, o = {}) {
     const t = tAcc;
 
     // Uniform 1:1 scaling so circles, stars, hearts, and scenes are NEVER squashed/stretched
-    const scale = (cv.height || 92) / h;
-    const fullW = Math.max(w, (cv.width || 300) / scale);
+    const scale = Math.min((cv.width || 300) / w, (cv.height || 92) / h);
+    const fullW = (cv.width || 300) / scale;
+    const fullH = (cv.height || 92) / scale;
     const offsetX = (fullW - w) / 2;
+    const offsetY = (fullH - h) / 2;
     const leftEdge = -offsetX - 2;
     const rightEdge = w + offsetX + 2;
 
+    mollyX = w + offsetX - 26;
+    mollyY = h - 16;
+    mollyBowlX = w + offsetX - 48;
+    mollyBowlY = h - 10;
+
     c.save();
-    c.setTransform(scale, 0, 0, scale, offsetX * scale, 0);
-    c.clearRect(leftEdge, 0, fullW + 4, h);
+    c.setTransform(scale, 0, 0, scale, offsetX * scale, offsetY * scale);
+    c.clearRect(leftEdge, -offsetY - 2, fullW + 4, fullH + 4);
 
     // 1. Hluboké smaragdové nokturno & polární záře (Krajina dobra styl)
-    const bgGrad = c.createLinearGradient(0, 0, 0, h);
+    const bgGrad = c.createLinearGradient(0, -offsetY, 0, h + offsetY);
     bgGrad.addColorStop(0, '#04140e');
     bgGrad.addColorStop(0.55, '#092318');
     bgGrad.addColorStop(1, '#0e3625');
     c.fillStyle = bgGrad;
-    c.fillRect(leftEdge, 0, fullW + 4, h);
+    c.fillRect(leftEdge, -offsetY - 2, fullW + 4, fullH + 4);
 
     // Dýchající polární záře v barvách aktivity
     drawGlow(
@@ -1482,11 +1500,11 @@ export function mountImpactCanvas(cv, o = {}) {
     // Jemná silueta českých kopců v pozadí a světelná mlha u země
     c.fillStyle = 'rgba(4, 18, 12, 0.52)';
     c.beginPath();
-    c.moveTo(leftEdge, h);
+    c.moveTo(leftEdge, h + offsetY);
     c.lineTo(leftEdge, by - 4);
     c.quadraticCurveTo(cx - 90, by - 16, cx, by - 6);
     c.quadraticCurveTo(cx + 95, by + 2, rightEdge, by - 10);
-    c.lineTo(rightEdge, h);
+    c.lineTo(rightEdge, h + offsetY);
     c.closePath();
     c.fill();
 

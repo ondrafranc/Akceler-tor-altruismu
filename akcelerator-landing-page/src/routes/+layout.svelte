@@ -532,9 +532,10 @@
       overflow-x: auto;
       justify-content: flex-start;
       margin-left: auto;
-      gap: 0.18rem;
+      gap: 0.2rem;
       scrollbar-width: none;
       -webkit-overflow-scrolling: touch;
+      padding-right: 0.35rem;
     }
     .nav-links::-webkit-scrollbar {
       display: none;
@@ -542,9 +543,32 @@
     .nav-pill {
       flex-shrink: 0;
       white-space: nowrap;
-      font-size: 0.75rem;
-      padding: 0.32rem 0.52rem;
-      gap: 0.25rem;
+      font-size: 0.74rem;
+      padding: 0.28rem 0.44rem;
+      gap: 0.22rem;
+    }
+    .nav-pill.world-pill {
+      flex-shrink: 0;
+      font-weight: 700;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.14) 0%, rgba(245, 158, 11, 0.16) 100%);
+      border-color: rgba(16, 185, 129, 0.32);
+      color: #065f46;
+    }
+  }
+
+  @media (min-width: 681px) and (max-width: 767px) {
+    .nav-capsule {
+      padding: 0.35rem 0.5rem;
+    }
+    .nav-pill span {
+      display: none;
+    }
+    .nav-pill.world-pill span {
+      display: inline;
+      font-size: 0.72rem;
+    }
+    .nav-pill {
+      padding: 0.32rem 0.44rem;
     }
   }
 

@@ -645,44 +645,92 @@
   }
 
   .card-effect-stage {
-    margin: 0.6rem 0;
-    border-radius: 14px;
-    background: rgba(240, 253, 244, 0.6);
-    padding: 0.6rem;
-    border: 1px solid rgba(16, 185, 129, 0.2);
+    position: relative;
+    margin: 0.5rem 0 0.6rem;
+    padding: 0;
+    border-radius: 18px;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 38%, #0e3625 0%, #04140e 100%);
+    border: 1px solid rgba(52, 211, 153, 0.38);
+    color: #ecfdf5;
+    box-shadow:
+      0 14px 30px -12px rgba(4, 18, 12, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.14);
   }
 
   .card-effect-head {
+    position: absolute;
+    top: 8px;
+    left: 10px;
+    right: 10px;
+    z-index: 3;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 0.35rem;
+    gap: 0.4rem;
+    pointer-events: none;
+  }
+
+  .card-effect-head > * {
+    pointer-events: auto;
   }
 
   .card-effect-controls {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.3rem;
+  }
+
+  .card-effect-stage .impact-payoff-badge {
+    background: rgba(5, 20, 14, 0.76);
+    color: #fde68a;
+    border: 1px solid rgba(251, 191, 36, 0.44);
+    border-radius: 999px;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 700;
   }
 
   .effect-spark-btn,
   .sound-mute-btn {
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    background: rgba(255, 255, 255, 0.8);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.24rem;
+    padding: 0.22rem 0.52rem;
     border-radius: 999px;
-    padding: 0.2rem 0.5rem;
-    font-size: 0.72rem;
-    font-weight: 600;
+    border: 1px solid rgba(52, 211, 153, 0.38);
+    background: rgba(5, 20, 14, 0.74);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #ecfdf5;
+    font-family: var(--font-sans);
+    font-size: 0.71rem;
+    font-weight: 800;
+    line-height: 1.2;
     cursor: pointer;
+    transition: all 0.16s ease;
+    white-space: nowrap;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.24);
+  }
+
+  .effect-spark-btn:hover,
+  .effect-spark-btn.active,
+  .sound-mute-btn:hover {
+    background: linear-gradient(135deg, #0d2e20 0%, #174933 100%);
+    color: #fde68a;
+    border-color: rgba(251, 191, 36, 0.55);
   }
 
   .impact-payoff-canvas {
     display: block;
     width: 100%;
-    max-width: 320px;
+    max-width: 100%;
     height: 118px;
-    margin: 0 auto;
-    border-radius: 8px;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    touch-action: manipulation;
   }
 
   .celebration-card,
@@ -883,6 +931,7 @@
   }
 
   @media (min-width: 681px) {
+    .instant-body > .card-effect-stage,
     .instant-body > :global(.card-effect-stage) {
       order: 4;
       margin: 0.15rem 0 0.6rem;
@@ -998,6 +1047,33 @@
 
     .how-toggle summary {
       font-size: 0.76rem;
+    }
+
+    .card-effect-stage {
+      margin: 0.32rem 0 0.36rem;
+      border-radius: 14px;
+    }
+
+    .card-effect-stage .impact-payoff-canvas,
+    .impact-payoff-canvas {
+      height: 76px;
+    }
+
+    .card-effect-head {
+      top: 6px;
+      left: 7px;
+      right: 7px;
+    }
+
+    .card-effect-stage .impact-payoff-badge {
+      font-size: 0.66rem;
+      padding: 0.14rem 0.44rem;
+    }
+
+    .effect-spark-btn,
+    .sound-mute-btn {
+      font-size: 0.65rem;
+      padding: 0.14rem 0.38rem;
     }
 
     .instant-actions {

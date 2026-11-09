@@ -36,6 +36,7 @@
   import { notifyMollySpark } from "../lib/mollyStore.js";
   import { cleanTitle, stripLeadingEmoji, safeGetItem } from "../lib/utils.js";
   import HeroSection from "../lib/features/home/HeroSection.svelte";
+  import QuickStartSection from "../lib/features/home/QuickStartSection.svelte";
   import PathwaysBento from "../lib/features/home/PathwaysBento.svelte";
   import CityJumpStrip from "../lib/features/home/CityJumpStrip.svelte";
   import SanctuaryTeaser from "../lib/features/home/SanctuaryTeaser.svelte";
@@ -521,7 +522,8 @@
        ===================================================================== -->
   <HeroSection microActionsCount={MICRO_ACTIONS.length} fireflies={FIREFLIES}>
     <!-- CLEAN, BREATHABLE INSTANT CARD (ZERO NESTED BOXES) -->
-    <div class="instant-card">
+    <QuickStartSection id="quick-start-area">
+      <div class="instant-card" id="dnesni-skutek">
       <div class="card-halo" aria-hidden="true"></div>
 
       <div class="studio-head">
@@ -624,7 +626,8 @@
           onNextIdea={nextQuickIdea}
         />
       {/if}
-    </div>
+      </div>
+    </QuickStartSection>
   </HeroSection>
 
   <PathwaysBento>
@@ -660,6 +663,7 @@
     box-shadow:
       0 30px 60px -14px rgba(3, 12, 8, 0.5),
       0 0 0 1px rgba(255, 255, 255, 0.6);
+    scroll-margin-top: 2rem;
   }
 
   .card-halo {
@@ -754,22 +758,27 @@
       min-width: 0;
       max-width: 100%;
       box-sizing: border-box;
-      padding: 0.85rem 0.92rem;
-      border-radius: 22px;
+      padding: 1.15rem 1.1rem;
+      border-radius: 24px;
+      margin-top: 0.35rem;
+      scroll-margin-top: 1.5rem;
+      box-shadow:
+        0 24px 48px -12px rgba(3, 12, 8, 0.52),
+        0 0 0 1px rgba(255, 255, 255, 0.75);
     }
 
     .studio-head {
-      margin-bottom: 0.35rem;
-      padding-bottom: 0.22rem;
+      margin-bottom: 0.5rem;
+      padding-bottom: 0.25rem;
     }
 
     .studio-label {
-      font-size: 0.78rem;
+      font-size: 0.82rem;
     }
 
     .cycle-link {
-      padding: 0.22rem 0.48rem;
-      font-size: 0.74rem;
+      padding: 0.25rem 0.52rem;
+      font-size: 0.78rem;
     }
 
     .energy-tabs {
@@ -784,7 +793,7 @@
       box-sizing: border-box;
       gap: 0.25rem;
       padding: 0.25rem;
-      margin-bottom: 0.45rem;
+      margin-bottom: 0.75rem;
       border-radius: 999px;
       background: #eef3ef;
       width: 100%;

@@ -1,6 +1,6 @@
 <script>
-  import { onMount } from 'svelte';
-  import { page } from '$app/stores';
+  import { onMount } from "svelte";
+  import { page } from "$app/stores";
   import {
     completedSteps,
     unplantedSteps,
@@ -14,11 +14,11 @@
     clearSanctuaryWishes,
     saveStepReflection,
     createProgressBackupCode,
-    restoreProgressFromBackupCode
-  } from '../../lib/progress.js';
-  import { MICRO_ACTIONS } from '../../lib/data/czech-actions.js';
-  import { renderStoryCardPng } from '../../lib/storyCard.js';
-  import { trackEvent } from '../../lib/analytics.js';
+    restoreProgressFromBackupCode,
+  } from "../../lib/progress.js";
+  import { MICRO_ACTIONS } from "../../lib/data/czech-actions.js";
+  import { renderStoryCardPng } from "../../lib/storyCard.js";
+  import { trackEvent } from "../../lib/analytics.js";
   import {
     fetchAmbientPulse,
     describeAmbientPulse,
@@ -31,28 +31,30 @@
     isLowPowerDevice,
     getCanvasDprCap,
     optimizeCanvasContext,
-    frameStep
-  } from '../../lib/sensoryEngine.js';
+    frameStep,
+  } from "../../lib/sensoryEngine.js";
   import {
     mollyState,
     feedMolly,
     feedMollyFromAction,
     unlockMollyTreat,
     petMolly,
-    setMollyMood
-  } from '../../lib/mollyStore.js';
-  import { cleanTitle, isInAppBrowser } from '../../lib/utils.js';
-  import DeedInspectorModal from '$lib/features/sanctuary/components/DeedInspectorModal.svelte';
-  import RitualBar from '$lib/features/sanctuary/components/RitualBar.svelte';
-  import BreathingPacer from '$lib/features/sanctuary/components/BreathingPacer.svelte';
-  import ProgressDashboard from '$lib/features/sanctuary/components/ProgressDashboard.svelte';
+    setMollyMood,
+  } from "../../lib/mollyStore.js";
+  import { cleanTitle, isInAppBrowser } from "../../lib/utils.js";
+  import DeedInspectorModal from "$lib/features/sanctuary/components/DeedInspectorModal.svelte";
+  import RitualBar from "$lib/features/sanctuary/components/RitualBar.svelte";
+  import BreathingPacer from "$lib/features/sanctuary/components/BreathingPacer.svelte";
+  import ProgressDashboard from "$lib/features/sanctuary/components/ProgressDashboard.svelte";
 
   /** @type {any} */
   let ambientPulse = null;
   $: ambientPulseText = describeAmbientPulse(ambientPulse, {});
 
   /** @type {Record<string, typeof SANCTUARY_ELEMENTS[0]>} */
-  const ELEMENT_MAP = Object.fromEntries(SANCTUARY_ELEMENTS.map((e) => [e.key, e]));
+  const ELEMENT_MAP = Object.fromEntries(
+    SANCTUARY_ELEMENTS.map((e) => [e.key, e]),
+  );
   /** @type {Record<string, typeof MICRO_ACTIONS[0]>} */
   const ACTION_BY_ID = Object.fromEntries(MICRO_ACTIONS.map((a) => [a.id, a]));
 
@@ -60,33 +62,89 @@
   // ALWAYS 100% FULL BEAUTY — CONNECTED TO REAL GOOD DEEDS
   // =========================================================================
   /** @type {'dawn' | 'night'} */
-  let atmosphereMode = 'dawn';
-  $: dawnLayerOpacity = atmosphereMode === 'dawn' ? 0.88 : 0.14;
+  let atmosphereMode = "dawn";
+  $: dawnLayerOpacity = atmosphereMode === "dawn" ? 0.88 : 0.14;
 
   // 8 living deed lights seeded across the sky & lake — each linked to a real Czech micro-action
   // 3 semantic light types: lantern (Osobní skutek), star (Inspirace), wave (Pomoc druhému)
   const INSPIRING_DEED_SEEDS = [
-    { actionId: 'zvirata_utulek_online', element: 'animals', x: 0.32, y: 0.67, zone: 'water', lightType: 'lantern' },
-    { actionId: 'missing_maps', element: 'care', x: 0.2, y: 0.21, zone: 'sky', lightType: 'star' },
-    { actionId: 'knihobudka_kniha', element: 'community', x: 0.46, y: 0.74, zone: 'water', lightType: 'wave' },
-    { actionId: 'birdlife_ptaci_pasti', element: 'nature', x: 0.41, y: 0.15, zone: 'sky', lightType: 'star' },
-    { actionId: 'estudanky_pramen', element: 'nature', x: 0.66, y: 0.66, zone: 'water', lightType: 'lantern' },
-    { actionId: 'remobil_telefon', element: 'nature', x: 0.62, y: 0.23, zone: 'sky', lightType: 'star' },
-    { actionId: 'letters_seniors', element: 'community', x: 0.72, y: 0.26, zone: 'sky', lightType: 'star' },
-    { actionId: 'trash_hero_uklid', element: 'nature', x: 0.81, y: 0.72, zone: 'water', lightType: 'wave' }
+    {
+      actionId: "zvirata_utulek_online",
+      element: "animals",
+      x: 0.32,
+      y: 0.67,
+      zone: "water",
+      lightType: "lantern",
+    },
+    {
+      actionId: "missing_maps",
+      element: "care",
+      x: 0.2,
+      y: 0.21,
+      zone: "sky",
+      lightType: "star",
+    },
+    {
+      actionId: "knihobudka_kniha",
+      element: "community",
+      x: 0.46,
+      y: 0.74,
+      zone: "water",
+      lightType: "wave",
+    },
+    {
+      actionId: "birdlife_ptaci_pasti",
+      element: "nature",
+      x: 0.41,
+      y: 0.15,
+      zone: "sky",
+      lightType: "star",
+    },
+    {
+      actionId: "estudanky_pramen",
+      element: "nature",
+      x: 0.66,
+      y: 0.66,
+      zone: "water",
+      lightType: "lantern",
+    },
+    {
+      actionId: "remobil_telefon",
+      element: "nature",
+      x: 0.62,
+      y: 0.23,
+      zone: "sky",
+      lightType: "star",
+    },
+    {
+      actionId: "letters_seniors",
+      element: "community",
+      x: 0.72,
+      y: 0.26,
+      zone: "sky",
+      lightType: "star",
+    },
+    {
+      actionId: "trash_hero_uklid",
+      element: "nature",
+      x: 0.81,
+      y: 0.72,
+      zone: "water",
+      lightType: "wave",
+    },
   ];
 
   /** @type {'water' | 'sky' | 'wave'} */
-  let ritualMode = 'water';
-  let ritualInput = '';
-  let gentleToast = '';
+  let ritualMode = "water";
+  let ritualInput = "";
+  let gentleToast = "";
   let toastTimer = null;
 
   function showGentleToast(msg) {
     gentleToast = msg;
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
-      gentleToast = '';
+      gentleToast = "";
     }, 4400);
   }
 
@@ -100,7 +158,7 @@
     const muted = toggleSoundMuted();
     soundEnabled = !muted;
     if (soundEnabled) {
-      playChime('water');
+      playChime("water");
     }
   }
 
@@ -112,29 +170,45 @@
   function playChime(type) {
     if (!soundEnabled) return;
     const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-    if (type === 'hover') {
-      playSanctuaryChime(pick([880, 987.77, 1046.5, 1174.66, 1318.51]), 0.55, 'sine', 0);
-    } else if (type === 'sky') {
+    if (type === "hover") {
+      playSanctuaryChime(
+        pick([880, 987.77, 1046.5, 1174.66, 1318.51]),
+        0.55,
+        "sine",
+        0,
+      );
+    } else if (type === "sky") {
       // Arpeggiated celesta / harp triad
       const base = pick([523.25, 587.33, 659.25]);
       [1, 1.25, 1.5, 2].forEach((mult, idx) => {
-        playSanctuaryChime(base * mult, 2.4, idx === 3 ? 'triangle' : 'sine', idx * 0.065);
+        playSanctuaryChime(
+          base * mult,
+          2.4,
+          idx === 3 ? "triangle" : "sine",
+          idx * 0.065,
+        );
       });
-    } else if (type === 'water') {
+    } else if (type === "water") {
       // Warm singing bowl + water harmonic overtone
       const base = pick([261.63, 293.66, 329.63, 392.0]);
       [1, 1.5, 2.01].forEach((mult, idx) => {
-        playSanctuaryChime(base * mult, 2.8 - idx * 0.35, idx === 0 ? 'triangle' : 'sine', 0);
+        playSanctuaryChime(
+          base * mult,
+          2.8 - idx * 0.35,
+          idx === 0 ? "triangle" : "sine",
+          0,
+        );
       });
-    } else if (type === 'breath_in' || type === 'breath_out') {
-      const freqs = type === 'breath_in' ? [261.63, 392.0] : [220.0, 329.63];
-      freqs.forEach((f) => playSanctuaryChime(f, 3.1, 'sine', 0));
+    } else if (type === "breath_in" || type === "breath_out") {
+      const freqs = type === "breath_in" ? [261.63, 392.0] : [220.0, 329.63];
+      freqs.forEach((f) => playSanctuaryChime(f, 3.1, "sine", 0));
     }
   }
 
   // =========================================================================
   let breathingActive = false;
   let breathScale = 1;
+  let targetBreathScale = 1;
 
   // =========================================================================
   // ONE QUIET GOOD NEWS WHISPER
@@ -143,9 +217,9 @@
   $: currentProof = HOPE_PROOFS[proofIndex % HOPE_PROOFS.length];
 
   const ACTION_ALIASES = {
-    'click-and-feed': 'zvirata_utulek_online',
-    click_and_feed: 'zvirata_utulek_online',
-    mapswipe: 'missing_maps'
+    "click-and-feed": "zvirata_utulek_online",
+    click_and_feed: "zvirata_utulek_online",
+    mapswipe: "missing_maps",
   };
 
   function resolveActionFromSeed(rawSeed) {
@@ -154,22 +228,22 @@
     if (!cleaned) return null;
     const aliased = ACTION_ALIASES[cleaned.toLowerCase()] || cleaned;
     if (ACTION_BY_ID[aliased]) return ACTION_BY_ID[aliased];
-    const normUnder = aliased.replace(/-/g, '_').toLowerCase();
-    const normHyphen = aliased.replace(/_/g, '-').toLowerCase();
+    const normUnder = aliased.replace(/-/g, "_").toLowerCase();
+    const normHyphen = aliased.replace(/_/g, "-").toLowerCase();
     return (
       MICRO_ACTIONS.find(
         (a) =>
           a.id.toLowerCase() === normUnder ||
-          a.id.toLowerCase().replace(/_/g, '-') === normHyphen
+          a.id.toLowerCase().replace(/_/g, "-") === normHyphen,
       ) || null
     );
   }
 
   let urlSeedPlanted = false;
-  let lastUrlSeedKey = '';
+  let lastUrlSeedKey = "";
 
-  $: rawUrlSeed = $page?.url?.searchParams?.get('seed') || '';
-  $: rawUrlTitle = $page?.url?.searchParams?.get('title') || '';
+  $: rawUrlSeed = $page?.url?.searchParams?.get("seed") || "";
+  $: rawUrlTitle = $page?.url?.searchParams?.get("title") || "";
   $: currentUrlSeedKey = `${rawUrlSeed}::${rawUrlTitle}`;
   $: if (currentUrlSeedKey !== lastUrlSeedKey) {
     lastUrlSeedKey = currentUrlSeedKey;
@@ -179,10 +253,13 @@
   function humanizeSeedFallback(raw) {
     const trimmed = cleanTitle(raw);
     if (!trimmed || /^(true|false|\d+|step|seed|custom)$/i.test(trimmed)) {
-      return 'Dobrý skutek ze dneška';
+      return "Dobrý skutek ze dneška";
     }
-    const spaced = trimmed.replace(/[_-]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
-    if (!spaced) return 'Dobrý skutek ze dneška';
+    const spaced = trimmed
+      .replace(/[_-]+/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+    if (!spaced) return "Dobrý skutek ze dneška";
     return spaced.charAt(0).toUpperCase() + spaced.slice(1);
   }
 
@@ -194,23 +271,30 @@
       : matched?.title
         ? cleanTitle(matched.title)
         : humanizeSeedFallback(rawUrlSeed);
-    const resolvedTitle = String(baseTitle || '').slice(0, 110).trim();
+    const resolvedTitle = String(baseTitle || "")
+      .slice(0, 110)
+      .trim();
     if (!resolvedTitle) return null;
-    const resolvedId = matched?.id || rawUrlSeed || 'step';
+    const resolvedId = matched?.id || rawUrlSeed || "step";
     return {
       uid: `url-seed-${resolvedId}`,
       id: resolvedId,
       title: resolvedTitle,
-      element: inferStepElement(matched || { id: resolvedId, title: resolvedTitle }),
-      fromUrlFallback: true
+      element: inferStepElement(
+        matched || { id: resolvedId, title: resolvedTitle },
+      ),
+      fromUrlFallback: true,
     };
   })();
 
-  $: latestStep = ($completedSteps || [])[($completedSteps || []).length - 1] || null;
+  $: latestStep =
+    ($completedSteps || [])[($completedSteps || []).length - 1] || null;
   $: nextSeedToPlant = (() => {
     const unplanted = $unplantedSteps || [];
     if (urlSeedFallback) {
-      const matchingUnplanted = unplanted.find((s) => s.id === urlSeedFallback.id);
+      const matchingUnplanted = unplanted.find(
+        (s) => s.id === urlSeedFallback.id,
+      );
       if (matchingUnplanted) {
         return rawUrlTitle
           ? { ...matchingUnplanted, title: urlSeedFallback.title }
@@ -230,8 +314,8 @@
         id: seed.id,
         title: seed.title,
         element: seed.element,
-        surface: 'svet_seed_url',
-        silent: true
+        surface: "svet_seed_url",
+        silent: true,
       });
       if (entry) {
         plantStepLight(entry.uid, pos);
@@ -244,14 +328,18 @@
   function deterministicPos(index, elementKey) {
     const golden = (index * 0.61803398875 + 0.17) % 1;
     const x = 0.14 + golden * 0.72;
-    const prefersWater = elementKey === 'community' || (elementKey === 'animals' && index % 2 === 1);
+    const prefersWater =
+      elementKey === "community" ||
+      (elementKey === "animals" && index % 2 === 1);
     const y = prefersWater
       ? 0.61 + ((index * 0.29) % 0.2)
       : 0.14 + ((index * 0.23 + 0.07) % 0.28);
-    return { x, y, zone: prefersWater ? 'water' : 'sky' };
+    return { x, y, zone: prefersWater ? "water" : "sky" };
   }
 
-  $: seededDeedLights = INSPIRING_DEED_SEEDS.filter((seed) => !completedActionIds.has(seed.actionId))
+  $: seededDeedLights = INSPIRING_DEED_SEEDS.filter(
+    (seed) => !completedActionIds.has(seed.actionId),
+  )
     .map((seed) => {
       const action = ACTION_BY_ID[seed.actionId];
       if (!action) return null;
@@ -260,17 +348,18 @@
         actionId: seed.actionId,
         action,
         title: action.title,
-        note: '',
-        concreteImpact: action.concreteImpact || action.whyItMatters || action.desc,
-        orgName: action.org || '',
+        note: "",
+        concreteImpact:
+          action.concreteImpact || action.whyItMatters || action.desc,
+        orgName: action.org || "",
         minutes: action.timeMinutes || 0,
-        url: action.url || '',
+        url: action.url || "",
         element: seed.element,
         x: seed.x,
         y: seed.y,
         zone: /** @type {'sky' | 'water'} */ (seed.zone),
-        lightType: seed.lightType || (seed.zone === 'sky' ? 'star' : 'lantern'),
-        isMine: false
+        lightType: seed.lightType || (seed.zone === "sky" ? "star" : "lantern"),
+        isMine: false,
       };
     })
     .filter(Boolean);
@@ -281,45 +370,58 @@
       .map((s, idx) => {
         const pos = s.plantedPos || deterministicPos(idx, s.element);
         const linked = ACTION_BY_ID[s.id] || null;
-        const zone = /** @type {'sky' | 'water'} */ (pos.zone || (pos.y < 0.53 ? 'sky' : 'water'));
+        const zone = /** @type {'sky' | 'water'} */ (
+          pos.zone || (pos.y < 0.53 ? "sky" : "water")
+        );
         return {
           uid: s.uid,
           actionId: s.id,
           action: linked,
           title: s.title,
-          note: s.note || '',
-          concreteImpact: s.concreteImpact || linked?.concreteImpact || linked?.whyItMatters || '',
-          orgName: linked?.org || '',
+          note: s.note || "",
+          concreteImpact:
+            s.concreteImpact ||
+            linked?.concreteImpact ||
+            linked?.whyItMatters ||
+            "",
+          orgName: linked?.org || "",
           minutes: linked?.timeMinutes || 0,
-          url: linked?.url || '',
-          element: s.element || 'care',
+          url: linked?.url || "",
+          element: s.element || "care",
           x: pos.x,
           y: pos.y,
           zone,
-          lightType: s.lightType || pos.lightType || (zone === 'sky' ? 'star' : 'lantern'),
-          isMine: true
+          lightType:
+            s.lightType ||
+            pos.lightType ||
+            (zone === "sky" ? "star" : "lantern"),
+          isMine: true,
         };
       }),
     ...($sanctuaryWishes || []).map((w) => {
-      const zone = /** @type {'sky' | 'water'} */ (w.zone || (w.y < 0.53 ? 'sky' : 'water'));
+      const zone = /** @type {'sky' | 'water'} */ (
+        w.zone || (w.y < 0.53 ? "sky" : "water")
+      );
       return {
         uid: w.uid,
-        actionId: '',
+        actionId: "",
         action: null,
         title: w.title,
-        note: '',
-        concreteImpact: 'Dobrý skutek přidaný do tvé Krajiny dobra.',
-        orgName: '',
+        note: "",
+        concreteImpact: "Dobrý skutek přidaný do tvé Krajiny dobra.",
+        orgName: "",
         minutes: 0,
-        url: '',
-        element: w.element || 'care',
+        url: "",
+        element: w.element || "care",
         x: w.x,
         y: w.y,
         zone,
-        lightType: w.lightType || (w.kind === 'wave' ? 'wave' : zone === 'sky' ? 'star' : 'lantern'),
-        isMine: true
+        lightType:
+          w.lightType ||
+          (w.kind === "wave" ? "wave" : zone === "sky" ? "star" : "lantern"),
+        isMine: true,
       };
-    })
+    }),
   ];
 
   $: activeLights = [...seededDeedLights, ...userLights];
@@ -371,7 +473,7 @@
   // Stavový automat chodící Molly: 'SIT_HOME' | 'WALK_PATROL' | 'WATCH_LAKE' | 'GROOM' | 'EAT_TREAT'
   let mollyPos = { x: 0.24, y: 0.72 };
   let mollyTargetX = 0.24;
-  let mollyBehavior = 'SIT_HOME';
+  let mollyBehavior = "SIT_HOME";
   let mollyStateTimer = 1.6;
   let mollyFacing = -1; // -1 = doleva k mističce / domů, 1 = doprava k jezeru
   let mollyWalkCycle = 0;
@@ -382,7 +484,11 @@
   let mollyLakeHearts = [];
   let mollyJoyTimer = 0;
 
-  function launchSanctuaryTreatArc(fromNx = 0.48, fromNy = 0.34, color = '#fbbf24') {
+  function launchSanctuaryTreatArc(
+    fromNx = 0.48,
+    fromNy = 0.34,
+    color = "#fbbf24",
+  ) {
     const tx = mollyPos.x;
     const ty = mollyPos.y - 0.02;
     if (mollyTreatArcs.length >= 12) {
@@ -396,19 +502,23 @@
       tx,
       ty,
       progress: 0,
-      color
+      color,
     });
   }
 
   function feedSanctuaryMolly(fromNx = 0.36, fromNy = 0.42) {
     if ($mollyState.availableTreats > 0) {
-      const res = feedMolly('sanctuary_molly', {
-        action: { id: 'zvirata_utulek_online', element: 'animals', title: 'Pamlsek pro patronku Molly u jezera' }
+      const res = feedMolly("sanctuary_molly", {
+        action: {
+          id: "zvirata_utulek_online",
+          element: "animals",
+          title: "Pamlsek pro patronku Molly u jezera",
+        },
       });
-      petMolly('Mrrr… u lesní tůně v Krajině dobra je s tebou krásně!');
-      launchSanctuaryTreatArc(fromNx, fromNy, res?.treat?.color || '#fbbf24');
+      petMolly("Mrrr… u lesní tůně v Krajině dobra je s tebou krásně!");
+      launchSanctuaryTreatArc(fromNx, fromNy, res?.treat?.color || "#fbbf24");
       mollyJoyTimer = 2.4;
-      mollyBehavior = 'EAT_TREAT';
+      mollyBehavior = "EAT_TREAT";
       for (let i = 0; i < 8; i++) {
         mollyLakeHearts.push({
           x: mollyPos.x + (Math.random() - 0.5) * 0.04,
@@ -416,7 +526,7 @@
           vx: (Math.random() - 0.5) * 0.001,
           vy: -0.0012 - Math.random() * 0.001,
           alpha: 1,
-          color: i % 2 === 0 ? '#fbbf24' : '#f472b6'
+          color: i % 2 === 0 ? "#fbbf24" : "#f472b6",
         });
       }
       if (mollyLakeHearts.length > 32) {
@@ -429,14 +539,16 @@
         maxRx: 95,
         speed: 1.15,
         alpha: 0.72,
-        color: '#fde68a',
-        lineWidth: 2.0
+        color: "#fde68a",
+        lineWidth: 2.0,
       });
-      showGentleToast('🐾 Patronka Molly spokojeně přede u břehu tůně a chroupe zasloužený pamlsek.');
+      showGentleToast(
+        "🐾 Patronka Molly spokojeně přede u břehu tůně a chroupe zasloužený pamlsek.",
+      );
     } else {
       petMolly();
       mollyJoyTimer = 1.8;
-      mollyBehavior = 'PET_BLISS';
+      mollyBehavior = "PET_BLISS";
       for (let i = 0; i < 6; i++) {
         mollyLakeHearts.push({
           x: mollyPos.x + (Math.random() - 0.5) * 0.04,
@@ -444,17 +556,20 @@
           vx: (Math.random() - 0.5) * 0.001,
           vy: -0.0012 - Math.random() * 0.001,
           alpha: 1,
-          color: '#f472b6'
+          color: "#f472b6",
         });
       }
       if (mollyLakeHearts.length > 32) {
         mollyLakeHearts.splice(0, mollyLakeHearts.length - 32);
       }
-      showGentleToast('🐾 Hladíš Molly u břehu tůně. Přede a pamlsky si šetří na další dobrý skutek.');
+      showGentleToast(
+        "🐾 Hladíš Molly u břehu tůně. Přede a pamlsky si šetří na další dobrý skutek.",
+      );
     }
   }
 
   function spawnBreathWave(isInhale) {
+    targetBreathScale = isInhale ? 1.32 : 0.82;
     waterRipples.push({
       x: 0.5,
       y: 0.68,
@@ -462,8 +577,8 @@
       maxRx: 260,
       speed: isInhale ? 1.05 : 0.72,
       alpha: 0.55,
-      color: isInhale ? '#6ee7b7' : '#fde68a',
-      lineWidth: 2.2
+      color: isInhale ? "#6ee7b7" : "#fde68a",
+      lineWidth: 2.2,
     });
     shockwaves.push({
       x: 0.5,
@@ -471,20 +586,31 @@
       r: 14,
       maxR: 210,
       alpha: 0.32,
-      color: isInhale ? '#6ee7b7' : '#fde68a',
-      isWater: true
+      color: isInhale ? "#6ee7b7" : "#fde68a",
+      isWater: true,
     });
   }
 
   /**
    * Full cinematic bloom + comet/lantern ceremony
    */
-  function triggerLightBloom(nx, ny, color = '#fde68a', isWater = false, withLaunchArc = false) {
+  function triggerLightBloom(
+    nx,
+    ny,
+    color = "#fde68a",
+    isWater = false,
+    withLaunchArc = false,
+  ) {
     if (withLaunchArc) {
-      const startX = Math.max(0.12, Math.min(0.88, nx + (Math.random() - 0.5) * 0.18));
+      const startX = Math.max(
+        0.12,
+        Math.min(0.88, nx + (Math.random() - 0.5) * 0.18),
+      );
       const startY = isWater ? 0.92 : 0.56;
       const ctrlX = (startX + nx) * 0.5 + (Math.random() - 0.5) * 0.14;
-      const ctrlY = isWater ? Math.min(startY, ny) - 0.12 : Math.min(startY, ny) - 0.08;
+      const ctrlY = isWater
+        ? Math.min(startY, ny) - 0.12
+        : Math.min(startY, ny) - 0.08;
       activeComets.push({
         sx: startX,
         sy: startY,
@@ -495,23 +621,30 @@
         progress: 0,
         speed: isWater ? 0.036 : 0.028,
         color,
-        isWater
+        isWater,
       });
-      launchSanctuaryTreatArc(nx, ny, color || '#fbbf24');
+      launchSanctuaryTreatArc(nx, ny, color || "#fbbf24");
     }
 
     detonateBloomAt(nx, ny, color, isWater, withLaunchArc ? 0.55 : 1);
   }
 
-  function detonateBloomAt(nx, ny, color = '#fde68a', isWater = false, intensity = 1) {
+  function detonateBloomAt(
+    nx,
+    ny,
+    color = "#fde68a",
+    isWater = false,
+    intensity = 1,
+  ) {
     const count = Math.round((isWater ? 58 : 72) * intensity);
     const palette = isWater
-      ? [color, '#fef3c7', '#6ee7b7', '#fed7aa']
-      : [color, '#ffffff', '#fde68a', '#6ee7b7'];
+      ? [color, "#fef3c7", "#6ee7b7", "#fed7aa"]
+      : [color, "#ffffff", "#fde68a", "#6ee7b7"];
 
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.35;
-      const speed = (0.0012 + Math.random() * 0.0056) * (0.7 + intensity * 0.35);
+      const speed =
+        (0.0012 + Math.random() * 0.0056) * (0.7 + intensity * 0.35);
       const upwardLift = isWater ? -(0.0008 + Math.random() * 0.0022) : -0.0002;
       burstParticles.push({
         x: nx,
@@ -524,7 +657,7 @@
         life: 0,
         maxLife: 68 + Math.random() * 58,
         gravity: isWater ? -0.000022 : 0.000018,
-        twinkle: Math.random() * Math.PI * 2
+        twinkle: Math.random() * Math.PI * 2,
       });
     }
 
@@ -535,8 +668,8 @@
       r: 4,
       maxR: isWater ? 145 : 175,
       alpha: 0.85 * intensity,
-      color: '#ffffff',
-      isWater
+      color: "#ffffff",
+      isWater,
     });
     shockwaves.push({
       x: nx,
@@ -545,14 +678,19 @@
       maxR: isWater ? 210 : 240,
       alpha: 0.62 * intensity,
       color,
-      isWater
+      isWater,
     });
 
     // If sky star, connect glowing constellation filaments to nearest stars + reflect on pond
     if (!isWater) {
       const skyPeers = activeLights
-        .filter((l) => l.zone === 'sky' && Math.hypot(l.x - nx, l.y - ny) > 0.02)
-        .sort((a, b) => Math.hypot(a.x - nx, a.y - ny) - Math.hypot(b.x - nx, b.y - ny))
+        .filter(
+          (l) => l.zone === "sky" && Math.hypot(l.x - nx, l.y - ny) > 0.02,
+        )
+        .sort(
+          (a, b) =>
+            Math.hypot(a.x - nx, a.y - ny) - Math.hypot(b.x - nx, b.y - ny),
+        )
         .slice(0, 3);
 
       for (const peer of skyPeers) {
@@ -563,7 +701,7 @@
           y2: peer.y,
           progress: 0,
           alpha: 0.9,
-          color
+          color,
         });
       }
 
@@ -577,14 +715,14 @@
         speed: 1.15,
         alpha: 0.55,
         color,
-        lineWidth: 1.6
+        lineWidth: 1.6,
       });
     }
 
     // Lush concentric water waves
     if (isWater || ny >= 0.5) {
       const wy = Math.max(0.57, ny);
-      const waveColors = ['#ffffff', color, '#6ee7b7', '#fde68a'];
+      const waveColors = ["#ffffff", color, "#6ee7b7", "#fde68a"];
       waveColors.forEach((wc, idx) => {
         setTimeout(() => {
           waterRipples.push({
@@ -595,7 +733,7 @@
             speed: 1.35 - idx * 0.14,
             alpha: (0.86 - idx * 0.14) * intensity,
             color: wc,
-            lineWidth: 2.3 - idx * 0.35
+            lineWidth: 2.3 - idx * 0.35,
           });
         }, idx * 140);
       });
@@ -609,67 +747,95 @@
     const next = pool[(currentIdx + 1) % pool.length];
     if (!next) return;
     selectedLight = next;
-    triggerLightBloom(next.x, next.y, ELEMENT_MAP[next.element]?.softColor || '#fde68a', next.zone === 'water', false);
-    playChime(next.zone === 'water' ? 'water' : 'sky');
+    triggerLightBloom(
+      next.x,
+      next.y,
+      ELEMENT_MAP[next.element]?.softColor || "#fde68a",
+      next.zone === "water",
+      false,
+    );
+    playChime(next.zone === "water" ? "water" : "sky");
   }
 
   function markDeedLightDone(light) {
     if (!light) return;
-    const semanticType = light.lightType || (light.zone === 'sky' ? 'star' : 'lantern');
+    const semanticType =
+      light.lightType || (light.zone === "sky" ? "star" : "lantern");
     if (light.action) {
       const entry = recordSmallWin({
         id: light.action.id,
         title: light.action.title,
-        surface: 'svet_landscape',
+        surface: "svet_landscape",
         element: light.element,
         lightType: semanticType,
         concreteImpact: light.concreteImpact,
-        silent: true
+        silent: true,
       });
       if (entry) {
-        plantStepLight(entry.uid, { x: light.x, y: light.y, lightType: semanticType });
+        plantStepLight(entry.uid, {
+          x: light.x,
+          y: light.y,
+          lightType: semanticType,
+        });
       }
     } else {
       addSanctuaryWish({
         x: light.x,
         y: light.y,
-        kind: semanticType === 'wave' ? 'wave' : 'deed',
+        kind: semanticType === "wave" ? "wave" : "deed",
         lightType: semanticType,
         title: light.title,
-        element: light.element || 'care'
+        element: light.element || "care",
       });
     }
-    triggerLightBloom(light.x, light.y, '#fde68a', light.zone === 'water', true);
-    playChime(light.zone === 'water' ? 'water' : 'sky');
+    triggerLightBloom(
+      light.x,
+      light.y,
+      "#fde68a",
+      light.zone === "water",
+      true,
+    );
+    playChime(light.zone === "water" ? "water" : "sky");
     selectedLight = { ...light, isMine: true };
     showGentleToast(
-      `Dnes se ti povedlo něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.`
+      `Dnes se ti povedlo něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.`,
     );
   }
 
   function addQuickOfflineDeed(deed) {
-    const isWater = ritualMode === 'water' || ritualMode === 'wave' || deed.lightType === 'wave';
+    const isWater =
+      ritualMode === "water" ||
+      ritualMode === "wave" ||
+      deed.lightType === "wave";
     const semanticType =
-      ritualMode === 'wave'
-        ? 'wave'
-        : ritualMode === 'sky'
-        ? 'star'
-        : deed.lightType || 'lantern';
+      ritualMode === "wave"
+        ? "wave"
+        : ritualMode === "sky"
+          ? "star"
+          : deed.lightType || "lantern";
     const nx = 0.16 + Math.random() * 0.68;
-    const ny = isWater ? 0.61 + Math.random() * 0.19 : 0.14 + Math.random() * 0.26;
+    const ny = isWater
+      ? 0.61 + Math.random() * 0.19
+      : 0.14 + Math.random() * 0.26;
     const saved = addSanctuaryWish({
       x: nx,
       y: ny,
-      kind: semanticType === 'wave' ? 'wave' : 'deed',
+      kind: semanticType === "wave" ? "wave" : "deed",
       lightType: semanticType,
       title: deed.title,
-      element: deed.element
+      element: deed.element,
     });
     selectedLight = null;
-    triggerLightBloom(saved.x, saved.y, ELEMENT_MAP[deed.element]?.softColor || '#fde68a', isWater, true);
-    playChime(isWater ? 'water' : 'sky');
+    triggerLightBloom(
+      saved.x,
+      saved.y,
+      ELEMENT_MAP[deed.element]?.softColor || "#fde68a",
+      isWater,
+      true,
+    );
+    playChime(isWater ? "water" : "sky");
     showGentleToast(
-      `Dnes se ti povedlo něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.`
+      `Dnes se ti povedlo něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.`,
     );
   }
 
@@ -687,7 +853,7 @@
       const dx = (l.x - nx) * width;
       const dy = (l.y - ny) * h;
       let d = Math.hypot(dx, dy);
-      if (l.actionId === 'letters_seniors') {
+      if (l.actionId === "letters_seniors") {
         const dLegacy = Math.hypot((0.79 - nx) * width, (0.18 - ny) * h);
         if (dLegacy < d) d = dLegacy;
       }
@@ -715,7 +881,7 @@
       const now = performance.now();
       if (nearLight && now - lastHoverChimeAt > 240) {
         lastHoverChimeAt = now;
-        playChime('hover');
+        playChime("hover");
       }
     }
 
@@ -730,8 +896,8 @@
         maxRx: 58,
         speed: 0.92,
         alpha: 0.36,
-        color: atmosphereMode === 'night' ? '#6ee7b7' : '#fde68a',
-        lineWidth: 1.35
+        color: atmosphereMode === "night" ? "#6ee7b7" : "#fde68a",
+        lineWidth: 1.35,
       });
     }
 
@@ -745,11 +911,11 @@
         vy: -0.00035 - Math.random() * 0.0005,
         r: 1.1 + Math.random() * 1.9,
         alpha: 0.72,
-        color: ny > 0.54 ? '#6ee7b7' : '#fde68a',
+        color: ny > 0.54 ? "#6ee7b7" : "#fde68a",
         life: 0,
         maxLife: 34 + Math.random() * 24,
         gravity: -0.00001,
-        twinkle: Math.random() * 6.28
+        twinkle: Math.random() * 6.28,
       });
     }
   }
@@ -762,8 +928,14 @@
   function handleStageClick(e) {
     if (!stageWrapEl) return;
     const rect = stageWrapEl.getBoundingClientRect();
-    const nx = Math.max(0.06, Math.min(0.94, (e.clientX - rect.left) / rect.width));
-    const ny = Math.max(0.07, Math.min(0.88, (e.clientY - rect.top) / rect.height));
+    const nx = Math.max(
+      0.06,
+      Math.min(0.94, (e.clientX - rect.left) / rect.width),
+    );
+    const ny = Math.max(
+      0.07,
+      Math.min(0.88, (e.clientY - rect.top) / rect.height),
+    );
 
     // Přímé pohlazení / nakrmení patronky Molly na břehu jezera:
     // Podporuje jak stálou domovskou zónu (0.24 * w, 0.72 * h) pro 100% testovací kompatibilitu,
@@ -790,8 +962,14 @@
 
     if (closest && !nextSeedToPlant && !ritualInput.trim()) {
       selectedLight = closest;
-      triggerLightBloom(closest.x, closest.y, ELEMENT_MAP[closest.element]?.softColor || '#fde68a', closest.zone === 'water', false);
-      playChime(closest.zone === 'water' ? 'water' : 'sky');
+      triggerLightBloom(
+        closest.x,
+        closest.y,
+        ELEMENT_MAP[closest.element]?.softColor || "#fde68a",
+        closest.zone === "water",
+        false,
+      );
+      playChime(closest.zone === "water" ? "water" : "sky");
       return;
     }
 
@@ -801,65 +979,103 @@
     }
 
     if (nextSeedToPlant) {
-      const elMeta = ELEMENT_MAP[nextSeedToPlant.element] || SANCTUARY_ELEMENTS[0];
+      const elMeta =
+        ELEMENT_MAP[nextSeedToPlant.element] || SANCTUARY_ELEMENTS[0];
       const isWater = ny >= 0.53;
-      const semanticType = !isWater ? 'star' : ritualMode === 'wave' ? 'wave' : 'lantern';
-      plantActiveSeed(nextSeedToPlant, { x: nx, y: ny, lightType: semanticType });
+      const semanticType = !isWater
+        ? "star"
+        : ritualMode === "wave"
+          ? "wave"
+          : "lantern";
+      plantActiveSeed(nextSeedToPlant, {
+        x: nx,
+        y: ny,
+        lightType: semanticType,
+      });
       triggerLightBloom(nx, ny, elMeta.softColor, isWater, true);
-      playChime(isWater ? 'water' : 'sky');
+      playChime(isWater ? "water" : "sky");
       showGentleToast(
-        'Dnes se ti povedlo něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.'
+        "Dnes se ti povedlo něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.",
       );
       return;
     }
 
     const text = ritualInput.trim();
     if (!text) {
-      triggerLightBloom(nx, ny, ny >= 0.53 ? '#fed7aa' : '#fde68a', ny >= 0.53, false);
-      playChime(ny >= 0.53 ? 'water' : 'sky');
+      triggerLightBloom(
+        nx,
+        ny,
+        ny >= 0.53 ? "#fed7aa" : "#fde68a",
+        ny >= 0.53,
+        false,
+      );
+      playChime(ny >= 0.53 ? "water" : "sky");
       return;
     }
 
     const clickedWater = ny >= 0.53;
-    const semanticType = !clickedWater ? 'star' : ritualMode === 'wave' ? 'wave' : 'lantern';
+    const semanticType = !clickedWater
+      ? "star"
+      : ritualMode === "wave"
+        ? "wave"
+        : "lantern";
     const yClamped = clickedWater ? Math.max(0.58, ny) : Math.min(0.46, ny);
     const saved = addSanctuaryWish({
       x: nx,
       y: yClamped,
-      kind: semanticType === 'wave' ? 'wave' : 'deed',
+      kind: semanticType === "wave" ? "wave" : "deed",
       lightType: semanticType,
       title: text,
-      element: clickedWater ? 'community' : 'care'
+      element: clickedWater ? "community" : "care",
     });
-    ritualInput = '';
+    ritualInput = "";
     selectedLight = null;
-    triggerLightBloom(saved.x, saved.y, clickedWater ? '#fed7aa' : '#fde68a', clickedWater, true);
-    playChime(clickedWater ? 'water' : 'sky');
+    triggerLightBloom(
+      saved.x,
+      saved.y,
+      clickedWater ? "#fed7aa" : "#fde68a",
+      clickedWater,
+      true,
+    );
+    playChime(clickedWater ? "water" : "sky");
     showGentleToast(
-      'Dnes se ti povedlo něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.'
+      "Dnes se ti povedlo něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.",
     );
   }
 
   function submitRitualBar() {
-    const isWater = ritualMode === 'water' || ritualMode === 'wave';
-    const semanticType = ritualMode === 'wave' ? 'wave' : ritualMode === 'sky' ? 'star' : 'lantern';
+    const isWater = ritualMode === "water" || ritualMode === "wave";
+    const semanticType =
+      ritualMode === "wave"
+        ? "wave"
+        : ritualMode === "sky"
+          ? "star"
+          : "lantern";
     const nx = 0.18 + Math.random() * 0.64;
-    const ny = isWater ? 0.62 + Math.random() * 0.18 : 0.15 + Math.random() * 0.25;
+    const ny = isWater
+      ? 0.62 + Math.random() * 0.18
+      : 0.15 + Math.random() * 0.25;
     const text = ritualInput.trim();
     const saved = addSanctuaryWish({
       x: nx,
       y: ny,
-      kind: semanticType === 'wave' ? 'wave' : 'deed',
+      kind: semanticType === "wave" ? "wave" : "deed",
       lightType: semanticType,
-      title: text || 'Drobný dobrý skutek ze dneška',
-      element: isWater ? 'community' : 'care'
+      title: text || "Drobný dobrý skutek ze dneška",
+      element: isWater ? "community" : "care",
     });
-    ritualInput = '';
+    ritualInput = "";
     selectedLight = null;
-    triggerLightBloom(saved.x, saved.y, semanticType === 'wave' ? '#6ee7b7' : isWater ? '#fed7aa' : '#fde68a', isWater, true);
-    playChime(isWater ? 'water' : 'sky');
+    triggerLightBloom(
+      saved.x,
+      saved.y,
+      semanticType === "wave" ? "#6ee7b7" : isWater ? "#fed7aa" : "#fde68a",
+      isWater,
+      true,
+    );
+    playChime(isWater ? "water" : "sky");
     showGentleToast(
-      'Dnes se ti povedlo něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.'
+      "Dnes se ti povedlo něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.",
     );
   }
 
@@ -868,9 +1084,9 @@
     inAppBrowserDetected = isInAppBrowser();
     soundEnabled = !isSoundMuted();
     const reducedMotion =
-      typeof window !== 'undefined' &&
+      typeof window !== "undefined" &&
       window.matchMedia &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const lowPower = isLowPowerDevice();
     const fireflies = Array.from({ length: lowPower ? 30 : 54 }, (_, i) => ({
@@ -880,20 +1096,20 @@
       vy: (Math.random() - 0.5) * 0.00028,
       phase: i * 1.37,
       size: 1.5 + (i % 4) * 0.85,
-      gold: i % 3 !== 0
+      gold: i % 3 !== 0,
     }));
 
     const ambientStars = Array.from({ length: 78 }, (_, i) => ({
       x: ((i * 73 + 19) % 97) / 97,
       y: ((i * 41 + 5) % 45) / 100 + 0.02,
       r: 0.55 + (i % 3) * 0.48,
-      twinkle: i * 0.91
+      twinkle: i * 0.91,
     }));
 
     const mistClouds = [
       { x: 0.22, y: 0.57, w: 0.38, h: 0.065, speed: 0.00018, phase: 0.4 },
       { x: 0.68, y: 0.61, w: 0.44, h: 0.075, speed: -0.00014, phase: 2.1 },
-      { x: 0.45, y: 0.66, w: 0.5, h: 0.06, speed: 0.00012, phase: 4.0 }
+      { x: 0.45, y: 0.66, w: 0.5, h: 0.06, speed: 0.00012, phase: 4.0 },
     ];
 
     let width = 0;
@@ -909,28 +1125,41 @@
     let lastRenderMs = 0;
     /** @type {CanvasRenderingContext2D | null} */
     let ctxCache = null;
-    let lastParallax = '';
-    let lastTreatsAttr = '';
+    let lastParallax = "";
+    let lastTreatsAttr = "";
 
     // Předrenderované sprity světlušek: 1× gradient místo 54 nových gradientů v každém snímku
     function makeGlowSprite(inner, mid) {
       const size = 64;
-      const sprite = document.createElement('canvas');
+      const sprite = document.createElement("canvas");
       sprite.width = size;
       sprite.height = size;
-      const sctx = sprite.getContext('2d');
+      const sctx = sprite.getContext("2d");
       if (sctx) {
-        const g = sctx.createRadialGradient(size / 2, size / 2, 0.5, size / 2, size / 2, size / 2);
+        const g = sctx.createRadialGradient(
+          size / 2,
+          size / 2,
+          0.5,
+          size / 2,
+          size / 2,
+          size / 2,
+        );
         g.addColorStop(0, inner);
         g.addColorStop(0.42, mid);
-        g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        g.addColorStop(1, "rgba(0, 0, 0, 0)");
         sctx.fillStyle = g;
         sctx.fillRect(0, 0, size, size);
       }
       return sprite;
     }
-    const goldFireflySprite = makeGlowSprite('rgba(254, 243, 199, 1)', 'rgba(251, 191, 36, 0.45)');
-    const greenFireflySprite = makeGlowSprite('rgba(209, 250, 229, 1)', 'rgba(52, 211, 153, 0.45)');
+    const goldFireflySprite = makeGlowSprite(
+      "rgba(254, 243, 199, 1)",
+      "rgba(251, 191, 36, 0.45)",
+    );
+    const greenFireflySprite = makeGlowSprite(
+      "rgba(209, 250, 229, 1)",
+      "rgba(52, 211, 153, 0.45)",
+    );
 
     function resize() {
       if (!canvasEl || !stageWrapEl) return;
@@ -941,27 +1170,48 @@
       canvasEl.width = Math.round(width * dpr);
       canvasEl.height = Math.round(height * dpr);
       // Změna rozměru resetuje stav kontextu; instanci si ponecháme (shadowBlur override drží na objektu)
-      ctxCache = ctxCache || optimizeCanvasContext(canvasEl.getContext('2d'));
+      ctxCache = ctxCache || optimizeCanvasContext(canvasEl.getContext("2d"));
     }
 
     resize();
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(resize) : null;
+    const ro =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(resize) : null;
     if (ro && stageWrapEl) ro.observe(stageWrapEl);
 
     // Gentle entrance shimmer when user enters /svet (especially after completing a deed!)
     try {
       const sp = new URLSearchParams(window.location.search);
-      const ritualParam = sp.get('ritual');
-      if (ritualParam === 'lantern' || ritualParam === 'water') ritualMode = 'water';
-      else if (ritualParam === 'star' || ritualParam === 'sky') ritualMode = 'sky';
-      else if (ritualParam === 'wave') ritualMode = 'wave';
+      const ritualParam = sp.get("ritual");
+      if (ritualParam === "lantern" || ritualParam === "water")
+        ritualMode = "water";
+      else if (ritualParam === "star" || ritualParam === "sky")
+        ritualMode = "sky";
+      else if (ritualParam === "wave") ritualMode = "wave";
 
-      if (sp.get('just_lit') === '1' && !reducedMotion) {
+      if (sp.get("just_lit") === "1" && !reducedMotion) {
         setTimeout(() => {
-          triggerLightBloom(0.48, 0.26, '#fde68a', false, true);
+          triggerLightBloom(0.48, 0.26, "#fde68a", false, true);
         }, 280);
       }
     } catch {}
+
+    const handleHashScroll = () => {
+      try {
+        if (typeof window !== "undefined" && window.location.hash === "#dech") {
+          setTimeout(() => {
+            const el = document.getElementById("dech");
+            if (el) {
+              el.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+          }, 320);
+        }
+      } catch {}
+    };
+
+    handleHashScroll();
+    if (typeof window !== "undefined") {
+      window.addEventListener("hashchange", handleHashScroll);
+    }
 
     function drawStarSpikes(ctx, sx, sy, outerR, innerR, rot = 0) {
       ctx.save();
@@ -989,25 +1239,38 @@
       // k = 1 při 60 fps; fyzika (mlha, částice, vlny, Molly) tak běží stejně rychle na 60/120 Hz i při poklesu FPS
       const k = frameStep(rawDt);
 
+      breathScale +=
+        ((breathingActive ? targetBreathScale : 1) - breathScale) * 0.04 * k;
+
       // Adaptivní kvalita (jen směrem dolů, max. 1× za 2 s, ignoruje návrat ze skryté záložky).
       // Snižujeme jen když jsou snímky pomalé A zároveň je drahé samotné kreslení — úsporné režimy
       // (iOS Low Power Mode, Android spořič baterie) omezují rAF na 30 fps i u lehké scény, a tam by
       // snížení rozlišení jen zbytečně rozmazalo obraz.
       if (rawDt < 250) {
         slowFrameAvg = slowFrameAvg * 0.94 + rawDt * 0.06;
-        if (nowMs > qualityCheckAt && slowFrameAvg > 24 && renderWorkAvg > 9 && dprCap > 1) {
+        if (
+          nowMs > qualityCheckAt &&
+          slowFrameAvg > 24 &&
+          renderWorkAvg > 9 &&
+          dprCap > 1
+        ) {
           qualityCheckAt = nowMs + 2000;
           const prevDpr = Math.min(window.devicePixelRatio || 1, dprCap);
           dprCap = Math.max(1, dprCap - 0.5);
           slowFrameAvg = 16.7;
           // Přealokace plátna jen pokud se efektivní rozlišení opravdu změní (DPR 1 monitor nic nezíská)
-          if (Math.min(window.devicePixelRatio || 1, dprCap) !== prevDpr) resize();
+          if (Math.min(window.devicePixelRatio || 1, dprCap) !== prevDpr)
+            resize();
         }
       }
 
       // Smooth pointer parallax for painted backdrop layers
-      const targetPX = pointer.active ? pointer.x : 0.5 + Math.sin(t * 0.25) * 0.08;
-      const targetPY = pointer.active ? pointer.y : 0.5 + Math.cos(t * 0.2) * 0.06;
+      const targetPX = pointer.active
+        ? pointer.x
+        : 0.5 + Math.sin(t * 0.25) * 0.08;
+      const targetPY = pointer.active
+        ? pointer.y
+        : 0.5 + Math.cos(t * 0.2) * 0.06;
       const ease = 1 - Math.pow(0.94, k);
       pointer.smoothX += (targetPX - pointer.smoothX) * ease;
       pointer.smoothY += (targetPY - pointer.smoothY) * ease;
@@ -1022,17 +1285,19 @@
       }
 
       if (canvasEl && width > 0 && height > 0) {
-        const ctx = ctxCache || (ctxCache = optimizeCanvasContext(canvasEl.getContext('2d')));
+        const ctx =
+          ctxCache ||
+          (ctxCache = optimizeCanvasContext(canvasEl.getContext("2d")));
         if (ctx) {
           ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
           ctx.clearRect(0, 0, width, height);
 
-          const isNight = atmosphereMode === 'night';
+          const isNight = atmosphereMode === "night";
 
           // 1A. DAWN MODE: Soft Feathered Volumetric Golden God-Rays (Zero Hard Polygon Edges)
           if (!isNight) {
             ctx.save();
-            ctx.globalCompositeOperation = 'screen';
+            ctx.globalCompositeOperation = "screen";
             for (let r = 0; r < 4; r++) {
               const sway = Math.sin(t * 0.32 + r * 1.4) * 0.045;
               const originX = width * (0.48 + r * 0.095);
@@ -1046,13 +1311,27 @@
               ctx.rotate(angle);
 
               // Feathered perpendicular gradient so left & right edges melt invisibly into the sky
-              const perpGrad = ctx.createLinearGradient(-halfBeamW, 0, halfBeamW, 0);
+              const perpGrad = ctx.createLinearGradient(
+                -halfBeamW,
+                0,
+                halfBeamW,
+                0,
+              );
               const peakAlpha = 0.095 - r * 0.012;
-              perpGrad.addColorStop(0, 'rgba(254, 243, 199, 0)');
-              perpGrad.addColorStop(0.28, `rgba(253, 230, 138, ${(peakAlpha * 0.52).toFixed(3)})`);
-              perpGrad.addColorStop(0.5, `rgba(255, 251, 235, ${peakAlpha.toFixed(3)})`);
-              perpGrad.addColorStop(0.72, `rgba(253, 230, 138, ${(peakAlpha * 0.52).toFixed(3)})`);
-              perpGrad.addColorStop(1, 'rgba(254, 243, 199, 0)');
+              perpGrad.addColorStop(0, "rgba(254, 243, 199, 0)");
+              perpGrad.addColorStop(
+                0.28,
+                `rgba(253, 230, 138, ${(peakAlpha * 0.52).toFixed(3)})`,
+              );
+              perpGrad.addColorStop(
+                0.5,
+                `rgba(255, 251, 235, ${peakAlpha.toFixed(3)})`,
+              );
+              perpGrad.addColorStop(
+                0.72,
+                `rgba(253, 230, 138, ${(peakAlpha * 0.52).toFixed(3)})`,
+              );
+              perpGrad.addColorStop(1, "rgba(254, 243, 199, 0)");
 
               ctx.fillStyle = perpGrad;
               ctx.fillRect(-halfBeamW, 0, halfBeamW * 2, beamLen);
@@ -1063,30 +1342,46 @@
 
           // 1B. SILKY NORTHERN LIGHTS AURORA CURTAINS (Organic Sine Top & Bottom, Zero Flat Seams)
           ctx.save();
-          ctx.globalCompositeOperation = 'screen';
+          ctx.globalCompositeOperation = "screen";
           const auroraBase = isNight ? 0.28 : 0.075;
           for (let band = 0; band < 3; band++) {
             const baseY = height * (0.1 + band * 0.062);
             const curtainH = height * (0.13 - band * 0.015);
-            const ag = ctx.createLinearGradient(0, baseY - 26, 0, baseY + curtainH + 22);
-            ag.addColorStop(0, 'rgba(52, 211, 153, 0)');
-            ag.addColorStop(0.26, `rgba(52, 211, 153, ${(auroraBase * (1 - band * 0.16)).toFixed(3)})`);
-            ag.addColorStop(0.56, `rgba(56, 189, 248, ${(auroraBase * 0.72).toFixed(3)})`);
-            ag.addColorStop(0.78, `rgba(192, 132, 252, ${(isNight ? auroraBase * 0.36 : 0).toFixed(3)})`);
-            ag.addColorStop(1, 'rgba(192, 132, 252, 0)');
+            const ag = ctx.createLinearGradient(
+              0,
+              baseY - 26,
+              0,
+              baseY + curtainH + 22,
+            );
+            ag.addColorStop(0, "rgba(52, 211, 153, 0)");
+            ag.addColorStop(
+              0.26,
+              `rgba(52, 211, 153, ${(auroraBase * (1 - band * 0.16)).toFixed(3)})`,
+            );
+            ag.addColorStop(
+              0.56,
+              `rgba(56, 189, 248, ${(auroraBase * 0.72).toFixed(3)})`,
+            );
+            ag.addColorStop(
+              0.78,
+              `rgba(192, 132, 252, ${(isNight ? auroraBase * 0.36 : 0).toFixed(3)})`,
+            );
+            ag.addColorStop(1, "rgba(192, 132, 252, 0)");
             ctx.fillStyle = ag;
 
             ctx.beginPath();
             for (let sx = 0; sx <= width + 32; sx += 32) {
               const wave =
-                Math.sin(sx * 0.0055 + t * (0.48 + band * 0.11) + band * 1.7) * 15 +
+                Math.sin(sx * 0.0055 + t * (0.48 + band * 0.11) + band * 1.7) *
+                  15 +
                 Math.cos(sx * 0.01 - t * 0.32 + band) * 7;
               if (sx === 0) ctx.moveTo(0, baseY + wave - 18);
               else ctx.lineTo(sx, baseY + wave - 18);
             }
             for (let sx = width + 32; sx >= 0; sx -= 32) {
               const wave =
-                Math.sin(sx * 0.0055 + t * (0.48 + band * 0.11) + band * 1.7) * 15 +
+                Math.sin(sx * 0.0055 + t * (0.48 + band * 0.11) + band * 1.7) *
+                  15 +
                 Math.cos(sx * 0.01 - t * 0.32 + band) * 7;
               ctx.lineTo(sx, baseY + wave + curtainH + 18);
             }
@@ -1100,13 +1395,17 @@
             nextMeteorAt = t + 4.2 + Math.random() * 4.5;
             const fromRight = Math.random() > 0.4;
             meteors.push({
-              x: fromRight ? 0.65 + Math.random() * 0.28 : 0.08 + Math.random() * 0.28,
+              x: fromRight
+                ? 0.65 + Math.random() * 0.28
+                : 0.08 + Math.random() * 0.28,
               y: 0.05 + Math.random() * 0.14,
-              vx: fromRight ? -(0.009 + Math.random() * 0.005) : 0.009 + Math.random() * 0.005,
+              vx: fromRight
+                ? -(0.009 + Math.random() * 0.005)
+                : 0.009 + Math.random() * 0.005,
               vy: 0.0038 + Math.random() * 0.0025,
               len: 68 + Math.random() * 45,
               life: 0,
-              maxLife: 46
+              maxLife: 46,
             });
           }
 
@@ -1128,11 +1427,14 @@
             const ty = my - Math.sin(angle) * mt.len;
             const mg = ctx.createLinearGradient(mx, my, tx, ty);
             mg.addColorStop(0, `rgba(255, 255, 255, ${alpha.toFixed(3)})`);
-            mg.addColorStop(0.3, `rgba(253, 230, 138, ${(alpha * 0.7).toFixed(3)})`);
-            mg.addColorStop(1, 'rgba(253, 230, 138, 0)');
+            mg.addColorStop(
+              0.3,
+              `rgba(253, 230, 138, ${(alpha * 0.7).toFixed(3)})`,
+            );
+            mg.addColorStop(1, "rgba(253, 230, 138, 0)");
             ctx.strokeStyle = mg;
             ctx.lineWidth = 2.1;
-            ctx.lineCap = 'round';
+            ctx.lineCap = "round";
             ctx.beginPath();
             ctx.moveTo(mx, my);
             ctx.lineTo(tx, ty);
@@ -1151,7 +1453,7 @@
 
           // 4. Drifting Lake Mist Over the Mirror Pond
           ctx.save();
-          ctx.globalCompositeOperation = 'screen';
+          ctx.globalCompositeOperation = "screen";
           for (const mc of mistClouds) {
             if (!reducedMotion) {
               mc.x += mc.speed * k;
@@ -1162,12 +1464,21 @@
             const my = mc.y * height + Math.sin(t * 0.5 + mc.phase) * 4;
             const mw = mc.w * width;
             const mh = mc.h * height;
-            const mistGrad = ctx.createRadialGradient(mx, my, 4, mx, my, mw * 0.55);
+            const mistGrad = ctx.createRadialGradient(
+              mx,
+              my,
+              4,
+              mx,
+              my,
+              mw * 0.55,
+            );
             mistGrad.addColorStop(
               0,
-              isNight ? 'rgba(110, 231, 183, 0.085)' : 'rgba(254, 249, 235, 0.13)'
+              isNight
+                ? "rgba(110, 231, 183, 0.085)"
+                : "rgba(254, 249, 235, 0.13)",
             );
-            mistGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            mistGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
             ctx.fillStyle = mistGrad;
             ctx.beginPath();
             ctx.ellipse(mx, my, mw * 0.55, mh, 0, 0, Math.PI * 2);
@@ -1179,39 +1490,52 @@
           if (breathingActive) {
             const pulseR = width * (0.16 + (breathScale - 0.86) * 0.24);
             ctx.save();
-            ctx.globalCompositeOperation = 'screen';
+            ctx.globalCompositeOperation = "screen";
             const bg = ctx.createRadialGradient(
               width * 0.5,
               height * 0.62,
               8,
               width * 0.5,
               height * 0.62,
-              pulseR
+              pulseR,
             );
-            bg.addColorStop(0, 'rgba(253, 230, 138, 0.32)');
-            bg.addColorStop(0.5, 'rgba(52, 211, 153, 0.16)');
-            bg.addColorStop(1, 'rgba(52, 211, 153, 0)');
+            bg.addColorStop(0, "rgba(253, 230, 138, 0.32)");
+            bg.addColorStop(0.5, "rgba(52, 211, 153, 0.16)");
+            bg.addColorStop(1, "rgba(52, 211, 153, 0)");
             ctx.fillStyle = bg;
             ctx.beginPath();
-            ctx.ellipse(width * 0.5, height * 0.62, pulseR, pulseR * 0.42, 0, 0, Math.PI * 2);
+            ctx.ellipse(
+              width * 0.5,
+              height * 0.62,
+              pulseR,
+              pulseR * 0.42,
+              0,
+              0,
+              Math.PI * 2,
+            );
             ctx.fill();
             ctx.restore();
           }
 
           // 6. Living Deed Constellation & Animated Filament Pulses
           const lights = activeLights;
-          const skyLights = lights.filter((l) => l.zone === 'sky');
-          const waterLights = lights.filter((l) => l.zone === 'water');
+          const skyLights = lights.filter((l) => l.zone === "sky");
+          const waterLights = lights.filter((l) => l.zone === "water");
 
           if (skyLights.length >= 2) {
             ctx.save();
-            ctx.strokeStyle = isNight ? 'rgba(253, 230, 138, 0.34)' : 'rgba(253, 230, 138, 0.24)';
+            ctx.strokeStyle = isNight
+              ? "rgba(253, 230, 138, 0.34)"
+              : "rgba(253, 230, 138, 0.24)";
             ctx.lineWidth = 1.25;
             ctx.setLineDash([4, 7]);
             ctx.beginPath();
             for (let i = 0; i < skyLights.length - 1; i++) {
               ctx.moveTo(skyLights[i].x * width, skyLights[i].y * height);
-              ctx.lineTo(skyLights[i + 1].x * width, skyLights[i + 1].y * height);
+              ctx.lineTo(
+                skyLights[i + 1].x * width,
+                skyLights[i + 1].y * height,
+              );
             }
             ctx.stroke();
             ctx.restore();
@@ -1231,8 +1555,11 @@
             const xB = (cp.x1 + (cp.x2 - cp.x1) * headP) * width;
             const yB = (cp.y1 + (cp.y2 - cp.y1) * headP) * height;
             const lg = ctx.createLinearGradient(xA, yA, xB, yB);
-            lg.addColorStop(0, 'rgba(253, 230, 138, 0)');
-            lg.addColorStop(1, `rgba(253, 230, 138, ${(cp.alpha * (1 - cp.progress / 1.25)).toFixed(3)})`);
+            lg.addColorStop(0, "rgba(253, 230, 138, 0)");
+            lg.addColorStop(
+              1,
+              `rgba(253, 230, 138, ${(cp.alpha * (1 - cp.progress / 1.25)).toFixed(3)})`,
+            );
             ctx.strokeStyle = lg;
             ctx.lineWidth = 2.6;
             ctx.beginPath();
@@ -1247,8 +1574,11 @@
             cm.progress += cm.speed * k;
             const p = Math.min(1, cm.progress);
             const inv = 1 - p;
-            const cx = (inv * inv * cm.sx + 2 * inv * p * cm.cx + p * p * cm.tx) * width;
-            const cy = (inv * inv * cm.sy + 2 * inv * p * cm.cy + p * p * cm.ty) * height;
+            const cx =
+              (inv * inv * cm.sx + 2 * inv * p * cm.cx + p * p * cm.tx) * width;
+            const cy =
+              (inv * inv * cm.sy + 2 * inv * p * cm.cy + p * p * cm.ty) *
+              height;
 
             // Shed sparkling wake embers
             for (let s = 0; s < 2; s++) {
@@ -1259,20 +1589,20 @@
                 vy: 0.0004 + Math.random() * 0.0008,
                 r: 1.5 + Math.random() * 2.4,
                 alpha: 0.92,
-                color: s === 0 ? '#ffffff' : cm.color,
+                color: s === 0 ? "#ffffff" : cm.color,
                 life: 0,
                 maxLife: 28 + Math.random() * 18,
                 gravity: 0.00001,
-                twinkle: Math.random() * 6.28
+                twinkle: Math.random() * 6.28,
               });
             }
 
             ctx.save();
-            ctx.globalCompositeOperation = 'screen';
+            ctx.globalCompositeOperation = "screen";
             const cg = ctx.createRadialGradient(cx, cy, 1, cx, cy, 24);
-            cg.addColorStop(0, '#ffffff');
+            cg.addColorStop(0, "#ffffff");
             cg.addColorStop(0.35, cm.color);
-            cg.addColorStop(1, 'rgba(253, 230, 138, 0)');
+            cg.addColorStop(1, "rgba(253, 230, 138, 0)");
             ctx.fillStyle = cg;
             ctx.beginPath();
             ctx.arc(cx, cy, 24, 0, Math.PI * 2);
@@ -1302,13 +1632,13 @@
             const pulse = (1 + 0.13 * Math.sin(t * 2.2 + i * 1.4)) * hScale;
 
             ctx.save();
-            ctx.globalCompositeOperation = 'screen';
+            ctx.globalCompositeOperation = "screen";
             const haloR = (st.isMine ? 34 : 26) * pulse;
             const halo = ctx.createRadialGradient(sx, sy, 0.5, sx, sy, haloR);
-            halo.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+            halo.addColorStop(0, "rgba(255, 255, 255, 0.95)");
             halo.addColorStop(0.2, meta.glow);
-            halo.addColorStop(0.55, 'rgba(253, 230, 138, 0.16)');
-            halo.addColorStop(1, 'rgba(253, 230, 138, 0)');
+            halo.addColorStop(0.55, "rgba(253, 230, 138, 0.16)");
+            halo.addColorStop(1, "rgba(253, 230, 138, 0)");
             ctx.fillStyle = halo;
             ctx.beginPath();
             ctx.arc(sx, sy, haloR, 0, Math.PI * 2);
@@ -1316,7 +1646,10 @@
             ctx.restore();
 
             if (st.isMine || isSelected || isHovered) {
-              ctx.strokeStyle = isSelected || isHovered ? 'rgba(255, 255, 255, 0.92)' : 'rgba(253, 230, 138, 0.68)';
+              ctx.strokeStyle =
+                isSelected || isHovered
+                  ? "rgba(255, 255, 255, 0.92)"
+                  : "rgba(253, 230, 138, 0.68)";
               ctx.lineWidth = isSelected || isHovered ? 1.8 : 1.25;
               ctx.beginPath();
               ctx.arc(sx, sy, 15 * pulse, 0, Math.PI * 2);
@@ -1325,22 +1658,30 @@
 
             // 8-point celestial diffraction starflare
             const flare = (st.isMine ? 13 : 10.5) * pulse;
-            ctx.fillStyle = '#ffffff';
+            ctx.fillStyle = "#ffffff";
             drawStarSpikes(ctx, sx, sy, flare, 2.2 * hScale, 0);
-            ctx.fillStyle = 'rgba(254, 243, 199, 0.72)';
-            drawStarSpikes(ctx, sx, sy, flare * 0.62, 1.3 * hScale, Math.PI / 4);
+            ctx.fillStyle = "rgba(254, 243, 199, 0.72)";
+            drawStarSpikes(
+              ctx,
+              sx,
+              sy,
+              flare * 0.62,
+              1.3 * hScale,
+              Math.PI / 4,
+            );
 
             // Shimmering water-stroke column reflection on the pond
             const ry = height * (0.6 + (0.48 - Math.min(0.46, st.y)) * 0.44);
             ctx.save();
-            ctx.globalCompositeOperation = 'screen';
+            ctx.globalCompositeOperation = "screen";
             for (let row = 0; row < 4; row++) {
               const rowY = ry + row * 4.5;
-              const waveX = sx + Math.sin(t * 2.8 + i + row * 1.3) * (3 + row * 1.4);
+              const waveX =
+                sx + Math.sin(t * 2.8 + i + row * 1.3) * (3 + row * 1.4);
               const halfW = (13 - row * 2.2) * hScale;
               ctx.strokeStyle = `rgba(253, 230, 138, ${(0.36 - row * 0.07).toFixed(3)})`;
               ctx.lineWidth = 1.6;
-              ctx.lineCap = 'round';
+              ctx.lineCap = "round";
               ctx.beginPath();
               ctx.moveTo(waveX - halfW, rowY);
               ctx.lineTo(waveX + halfW, rowY);
@@ -1364,7 +1705,15 @@
             ctx.strokeStyle = rp.color;
             ctx.lineWidth = rp.lineWidth;
             ctx.beginPath();
-            ctx.ellipse(rp.x * width, rp.y * height, rp.rx, rp.rx * 0.29, 0, 0, Math.PI * 2);
+            ctx.ellipse(
+              rp.x * width,
+              rp.y * height,
+              rp.rx,
+              rp.rx * 0.29,
+              0,
+              0,
+              Math.PI * 2,
+            );
             ctx.stroke();
             ctx.restore();
           }
@@ -1384,7 +1733,10 @@
             let rippleTilt = 0;
             let rippleBob = 0;
             for (const rp of waterRipples) {
-              const distPx = Math.hypot((wl.x - rp.x) * width, (wl.y - rp.y) * height * 2.6);
+              const distPx = Math.hypot(
+                (wl.x - rp.x) * width,
+                (wl.y - rp.y) * height * 2.6,
+              );
               const diff = Math.abs(distPx - rp.rx);
               if (diff < 18) {
                 const amp = (1 - diff / 18) * (1 - rp.rx / rp.maxRx);
@@ -1394,22 +1746,33 @@
             }
 
             const bobX = wl.x * width + Math.sin(t * 0.85 + i * 1.7) * 5.5;
-            const bobY = wl.y * height + Math.cos(t * 1.25 + i * 2.1) * 2.4 + rippleBob;
+            const bobY =
+              wl.y * height + Math.cos(t * 1.25 + i * 2.1) * 2.4 + rippleBob;
             const meta = ELEMENT_MAP[wl.element] || SANCTUARY_ELEMENTS[2];
             const flicker = 0.94 + 0.06 * Math.sin(t * 7.5 + i * 2.3);
 
-            const depthScale = Math.max(0.76, Math.min(1.18, 0.78 + (wl.y - 0.58) * 1.15));
+            const depthScale = Math.max(
+              0.76,
+              Math.min(1.18, 0.78 + (wl.y - 0.58) * 1.15),
+            );
             const totalScale = hScale * depthScale;
 
             // Soft translucent warm underwater reflection pool (zero opaque saucer!)
             ctx.save();
-            ctx.globalCompositeOperation = 'screen';
+            ctx.globalCompositeOperation = "screen";
             const poolR = (wl.isMine ? 40 : 32) * totalScale * flicker;
-            const pg = ctx.createRadialGradient(bobX, bobY + 6, 1, bobX, bobY + 6, poolR);
-            pg.addColorStop(0, 'rgba(255, 251, 235, 0.56)');
-            pg.addColorStop(0.28, 'rgba(251, 191, 36, 0.26)');
-            pg.addColorStop(0.62, meta.glow.replace(/0\.\d+\)/, '0.14)'));
-            pg.addColorStop(1, 'rgba(251, 146, 60, 0)');
+            const pg = ctx.createRadialGradient(
+              bobX,
+              bobY + 6,
+              1,
+              bobX,
+              bobY + 6,
+              poolR,
+            );
+            pg.addColorStop(0, "rgba(255, 251, 235, 0.56)");
+            pg.addColorStop(0.28, "rgba(251, 191, 36, 0.26)");
+            pg.addColorStop(0.62, meta.glow.replace(/0\.\d+\)/, "0.14)"));
+            pg.addColorStop(1, "rgba(251, 146, 60, 0)");
             ctx.fillStyle = pg;
             ctx.beginPath();
             ctx.ellipse(bobX, bobY + 7, poolR, poolR * 0.36, 0, 0, Math.PI * 2);
@@ -1422,7 +1785,7 @@
               const ww = (10 - wr * 2.4) * totalScale;
               ctx.strokeStyle = `rgba(254, 243, 199, ${(0.38 - wr * 0.1).toFixed(3)})`;
               ctx.lineWidth = 1.3;
-              ctx.lineCap = 'round';
+              ctx.lineCap = "round";
               ctx.beginPath();
               ctx.moveTo(wx - ww, wy);
               ctx.lineTo(wx + ww, wy);
@@ -1430,17 +1793,19 @@
             }
             ctx.restore();
 
-            if (wl.lightType === 'wave') {
+            if (wl.lightType === "wave") {
               // Semantic Wave ("Vlna · Pomoc druhému"): 3 expanding concentric bioluminescent pond rings + droplet core
               ctx.save();
               ctx.translate(bobX, bobY);
               ctx.scale(totalScale, totalScale);
 
               for (let ringIdx = 0; ringIdx < 3; ringIdx++) {
-                const phase = ((t * 0.55 + i * 0.37 + ringIdx * 0.33) % 1);
+                const phase = (t * 0.55 + i * 0.37 + ringIdx * 0.33) % 1;
                 const rx = 6 + phase * (wl.isMine ? 24 : 20);
                 const ry = rx * 0.38;
-                const ringAlpha = (1 - phase) * (wl.isMine || isSelected || isHovered ? 0.78 : 0.48);
+                const ringAlpha =
+                  (1 - phase) *
+                  (wl.isMine || isSelected || isHovered ? 0.78 : 0.48);
                 ctx.strokeStyle =
                   ringIdx % 2 === 0
                     ? `rgba(110, 231, 183, ${ringAlpha.toFixed(3)})`
@@ -1453,15 +1818,15 @@
 
               // Luminous water droplet core
               const dropAura = ctx.createRadialGradient(0, 0, 0.5, 0, 0, 10);
-              dropAura.addColorStop(0, 'rgba(209, 250, 229, 0.92)');
-              dropAura.addColorStop(0.5, 'rgba(52, 211, 153, 0.42)');
-              dropAura.addColorStop(1, 'rgba(16, 185, 129, 0)');
+              dropAura.addColorStop(0, "rgba(209, 250, 229, 0.92)");
+              dropAura.addColorStop(0.5, "rgba(52, 211, 153, 0.42)");
+              dropAura.addColorStop(1, "rgba(16, 185, 129, 0)");
               ctx.fillStyle = dropAura;
               ctx.beginPath();
               ctx.arc(0, 0, 10, 0, Math.PI * 2);
               ctx.fill();
 
-              ctx.fillStyle = '#ffffff';
+              ctx.fillStyle = "#ffffff";
               ctx.beginPath();
               ctx.arc(0, 0, 2.6 * flicker, 0, Math.PI * 2);
               ctx.fill();
@@ -1471,18 +1836,19 @@
               // Gentle water ring around lantern base
               ctx.strokeStyle =
                 wl.isMine || isSelected || isHovered
-                  ? 'rgba(253, 230, 138, 0.72)'
-                  : 'rgba(253, 230, 138, 0.32)';
+                  ? "rgba(253, 230, 138, 0.72)"
+                  : "rgba(253, 230, 138, 0.32)";
               ctx.lineWidth = isSelected || isHovered ? 1.6 : 1.05;
               ctx.beginPath();
               ctx.ellipse(
                 bobX,
                 bobY + 4.5 * totalScale,
-                (wl.isMine ? 16 : 13) * totalScale + Math.sin(t * 1.9 + i) * 1.5,
+                (wl.isMine ? 16 : 13) * totalScale +
+                  Math.sin(t * 1.9 + i) * 1.5,
                 3.8 * totalScale,
                 0,
                 0,
-                Math.PI * 2
+                Math.PI * 2,
               );
               ctx.stroke();
 
@@ -1496,32 +1862,39 @@
               const lh = wl.isMine ? 16 : 13.5;
 
               // Warm outer candle aura around the paper body
-              const aura = ctx.createRadialGradient(0, -lh * 0.4, 1, 0, -lh * 0.4, lw * 1.6);
-              aura.addColorStop(0, 'rgba(254, 243, 199, 0.55)');
-              aura.addColorStop(1, 'rgba(251, 146, 60, 0)');
+              const aura = ctx.createRadialGradient(
+                0,
+                -lh * 0.4,
+                1,
+                0,
+                -lh * 0.4,
+                lw * 1.6,
+              );
+              aura.addColorStop(0, "rgba(254, 243, 199, 0.55)");
+              aura.addColorStop(1, "rgba(251, 146, 60, 0)");
               ctx.fillStyle = aura;
               ctx.beginPath();
               ctx.arc(0, -lh * 0.4, lw * 1.6, 0, Math.PI * 2);
               ctx.fill();
 
               // Floating wooden lotus base
-              ctx.fillStyle = 'rgba(62, 35, 16, 0.9)';
+              ctx.fillStyle = "rgba(62, 35, 16, 0.9)";
               ctx.beginPath();
               ctx.ellipse(0, 3.2, lw * 0.86, 2.4, 0, 0, Math.PI * 2);
               ctx.fill();
 
               // Glowing warm paper lantern body
               const bodyGrad = ctx.createLinearGradient(0, -lh + 3, 0, 3.2);
-              bodyGrad.addColorStop(0, '#fde68a');
-              bodyGrad.addColorStop(0.5, '#fffbeb');
-              bodyGrad.addColorStop(1, '#fb923c');
+              bodyGrad.addColorStop(0, "#fde68a");
+              bodyGrad.addColorStop(0.5, "#fffbeb");
+              bodyGrad.addColorStop(1, "#fb923c");
               ctx.fillStyle = bodyGrad;
               ctx.beginPath();
               ctx.roundRect(-lw * 0.54, -lh + 3, lw * 1.08, lh, 4);
               ctx.fill();
 
               // Delicate top wooden cap & subtle vertical ribs
-              ctx.strokeStyle = 'rgba(120, 66, 24, 0.42)';
+              ctx.strokeStyle = "rgba(120, 66, 24, 0.42)";
               ctx.lineWidth = 0.85;
               ctx.beginPath();
               ctx.moveTo(-lw * 0.22, -lh + 3.5);
@@ -1530,13 +1903,21 @@
               ctx.lineTo(lw * 0.22, 2.8);
               ctx.stroke();
 
-              ctx.fillStyle = 'rgba(78, 44, 18, 0.82)';
+              ctx.fillStyle = "rgba(78, 44, 18, 0.82)";
               ctx.fillRect(-lw * 0.48, -lh + 2.4, lw * 0.96, 1.6);
 
               // Bright inner candle flame core
-              ctx.fillStyle = '#ffffff';
+              ctx.fillStyle = "#ffffff";
               ctx.beginPath();
-              ctx.ellipse(0, -2.2 * flicker, 2.3, 3.9 * flicker, 0, 0, Math.PI * 2);
+              ctx.ellipse(
+                0,
+                -2.2 * flicker,
+                2.3,
+                3.9 * flicker,
+                0,
+                0,
+                Math.PI * 2,
+              );
               ctx.fill();
 
               ctx.restore();
@@ -1545,7 +1926,7 @@
 
           // 11. Expanding Luminous Shockwaves
           ctx.save();
-          ctx.globalCompositeOperation = 'screen';
+          ctx.globalCompositeOperation = "screen";
           for (let s = shockwaves.length - 1; s >= 0; s--) {
             const sw = shockwaves[s];
             sw.r += ((sw.maxR - sw.r) * 0.065 + 1.4) * k;
@@ -1560,7 +1941,15 @@
             ctx.lineWidth = 2.4 * (1 - p * 0.6);
             ctx.beginPath();
             if (sw.isWater) {
-              ctx.ellipse(sw.x * width, sw.y * height, sw.r, sw.r * 0.36, 0, 0, Math.PI * 2);
+              ctx.ellipse(
+                sw.x * width,
+                sw.y * height,
+                sw.r,
+                sw.r * 0.36,
+                0,
+                0,
+                Math.PI * 2,
+              );
             } else {
               ctx.arc(sw.x * width, sw.y * height, sw.r, 0, Math.PI * 2);
             }
@@ -1591,39 +1980,50 @@
               if (ff.y > 0.95) ff.vy = -Math.abs(ff.vy) - 0.0001;
             }
 
-            const breathSync = breathingActive ? 0.55 + (breathScale - 0.86) * 0.9 : 1;
-            const glowPulse = (0.3 + 0.7 * Math.max(0, Math.sin(t * 2.0 + ff.phase))) * breathSync;
+            const breathSync = breathingActive
+              ? 0.55 + (breathScale - 0.86) * 0.9
+              : 1;
+            const glowPulse =
+              (0.3 + 0.7 * Math.max(0, Math.sin(t * 2.0 + ff.phase))) *
+              breathSync;
             const fx = ff.x * width;
             const fy = ff.y * height;
             const fr = ff.size * 5.6;
             ctx.globalAlpha = Math.max(0, Math.min(1, glowPulse));
-            ctx.drawImage(ff.gold ? goldFireflySprite : greenFireflySprite, fx - fr, fy - fr, fr * 2, fr * 2);
+            ctx.drawImage(
+              ff.gold ? goldFireflySprite : greenFireflySprite,
+              fx - fr,
+              fy - fr,
+              fr * 2,
+              fr * 2,
+            );
           }
           ctx.globalAlpha = 1;
 
           // 12B. Sanctuary Molly — Stavový automat a animace chodící patronky po břehu jezera
           if (mollyJoyTimer > 0) {
-            mollyBehavior = 'EAT_TREAT';
+            mollyBehavior = "EAT_TREAT";
             mollyJoyTimer = Math.max(0, mollyJoyTimer - 0.02 * k);
             if (mollyJoyTimer === 0) {
-              mollyBehavior = Math.abs(mollyPos.x - 0.24) < 0.03 ? 'SIT_HOME' : 'WALK_PATROL';
+              mollyBehavior =
+                Math.abs(mollyPos.x - 0.24) < 0.03 ? "SIT_HOME" : "WALK_PATROL";
               mollyStateTimer = 4.0 + Math.random() * 2.5;
-              if (mollyBehavior === 'WALK_PATROL') {
+              if (mollyBehavior === "WALK_PATROL") {
                 mollyTargetX = 0.24;
               }
             }
           } else if (!reducedMotion) {
             mollyStateTimer -= 0.016 * k;
 
-            if (mollyBehavior === 'SIT_HOME') {
+            if (mollyBehavior === "SIT_HOME") {
               mollyFacing = -1;
               if (mollyStateTimer <= 0) {
-                mollyBehavior = 'WALK_PATROL';
+                mollyBehavior = "WALK_PATROL";
                 mollyTargetX = 0.32 + Math.random() * 0.11;
                 mollyFacing = 1;
                 mollyStateTimer = 14.0;
               }
-            } else if (mollyBehavior === 'WALK_PATROL') {
+            } else if (mollyBehavior === "WALK_PATROL") {
               const dx = mollyTargetX - mollyPos.x;
               const step = 0.00038 * k;
               mollyFacing = dx >= 0 ? 1 : -1;
@@ -1633,18 +2033,21 @@
                 mollyPos.x = mollyTargetX;
                 mollyPos.y = getLakeshoreY(mollyPos.x);
                 if (Math.abs(mollyPos.x - 0.24) < 0.02) {
-                  mollyBehavior = 'SIT_HOME';
+                  mollyBehavior = "SIT_HOME";
                   mollyFacing = -1;
                   mollyStateTimer = 5.0 + Math.random() * 4.0;
                 } else {
-                  mollyBehavior = Math.random() < 0.65 ? 'WATCH_LAKE' : 'GROOM';
+                  mollyBehavior = Math.random() < 0.65 ? "WATCH_LAKE" : "GROOM";
                   mollyFacing = 1;
                   mollyStateTimer = 3.5 + Math.random() * 3.0;
                 }
               } else {
                 mollyPos.x += Math.sign(dx) * step;
                 mollyPos.y = getLakeshoreY(mollyPos.x);
-                if (Math.sin(mollyWalkCycle) > 0.96 && waterRipples.length < 18) {
+                if (
+                  Math.sin(mollyWalkCycle) > 0.96 &&
+                  waterRipples.length < 18
+                ) {
                   waterRipples.push({
                     x: mollyPos.x,
                     y: mollyPos.y + 0.024,
@@ -1652,32 +2055,33 @@
                     maxRx: 28,
                     speed: 0.65,
                     alpha: 0.32,
-                    color: '#fde68a',
-                    lineWidth: 1.2
+                    color: "#fde68a",
+                    lineWidth: 1.2,
                   });
                 }
               }
-            } else if (mollyBehavior === 'WATCH_LAKE') {
+            } else if (mollyBehavior === "WATCH_LAKE") {
               mollyFacing = 1;
               if (mollyStateTimer <= 0) {
                 if (Math.random() < 0.45) {
-                  mollyBehavior = 'GROOM';
+                  mollyBehavior = "GROOM";
                   mollyStateTimer = 3.0 + Math.random() * 2.5;
                 } else {
-                  mollyBehavior = 'WALK_PATROL';
-                  mollyTargetX = Math.random() < 0.7 ? 0.24 : 0.20 + Math.random() * 0.22;
+                  mollyBehavior = "WALK_PATROL";
+                  mollyTargetX =
+                    Math.random() < 0.7 ? 0.24 : 0.2 + Math.random() * 0.22;
                   mollyStateTimer = 14.0;
                 }
               }
-            } else if (mollyBehavior === 'GROOM') {
+            } else if (mollyBehavior === "GROOM") {
               if (mollyStateTimer <= 0) {
-                mollyBehavior = 'WALK_PATROL';
+                mollyBehavior = "WALK_PATROL";
                 mollyTargetX = 0.24;
                 mollyStateTimer = 14.0;
               }
             }
           } else {
-            mollyBehavior = 'SIT_HOME';
+            mollyBehavior = "SIT_HOME";
             mollyPos.x = 0.24;
             mollyPos.y = 0.72;
             mollyFacing = -1;
@@ -1689,21 +2093,29 @@
           const homeY = MOLLY_SANCTUARY_POS.y * height;
           const bx = MOLLY_BOWL_POS.x * width;
           const by = MOLLY_BOWL_POS.y * height;
-          const treatsTotal = Math.max(1, Number($mollyState?.treatsFedTotal) || 1);
+          const treatsTotal = Math.max(
+            1,
+            Number($mollyState?.treatsFedTotal) || 1,
+          );
           const mollyScale = Math.min(1.18, Math.max(0.88, width / 800));
 
           // Letící pamlskové oblouky (Treat Firefly Arcs) ke břehu k Molly
           for (let a = mollyTreatArcs.length - 1; a >= 0; a--) {
             const arc = mollyTreatArcs[a];
-            arc.progress = Math.min(1, arc.progress + (reducedMotion ? 0.25 : 0.032) * k);
+            arc.progress = Math.min(
+              1,
+              arc.progress + (reducedMotion ? 0.25 : 0.032) * k,
+            );
             const p = arc.progress;
             const u = 1 - p;
-            const ax = (u * u * arc.sx + 2 * u * p * arc.cx + p * p * arc.tx) * width;
-            const ay = (u * u * arc.sy + 2 * u * p * arc.cy + p * p * arc.ty) * height;
+            const ax =
+              (u * u * arc.sx + 2 * u * p * arc.cx + p * p * arc.tx) * width;
+            const ay =
+              (u * u * arc.sy + 2 * u * p * arc.cy + p * p * arc.ty) * height;
 
             ctx.save();
-            ctx.globalCompositeOperation = 'screen';
-            ctx.strokeStyle = arc.color || '#fbbf24';
+            ctx.globalCompositeOperation = "screen";
+            ctx.strokeStyle = arc.color || "#fbbf24";
             ctx.globalAlpha = 0.55 * (1 - p * 0.35);
             ctx.lineWidth = 2.0;
             ctx.setLineDash([3, 4]);
@@ -1713,9 +2125,9 @@
             ctx.stroke();
 
             const tg = ctx.createRadialGradient(ax, ay, 1, ax, ay, 18);
-            tg.addColorStop(0, '#ffffff');
-            tg.addColorStop(0.4, arc.color || '#fbbf24');
-            tg.addColorStop(1, 'rgba(251, 191, 36, 0)');
+            tg.addColorStop(0, "#ffffff");
+            tg.addColorStop(0.4, arc.color || "#fbbf24");
+            tg.addColorStop(1, "rgba(251, 191, 36, 0)");
             ctx.fillStyle = tg;
             ctx.beginPath();
             ctx.arc(ax, ay, 18, 0, Math.PI * 2);
@@ -1732,8 +2144,8 @@
                 maxRx: 82,
                 speed: 1.1,
                 alpha: 0.65,
-                color: '#fde68a',
-                lineWidth: 1.8
+                color: "#fde68a",
+                lineWidth: 1.8,
               });
               mollyTreatArcs.splice(a, 1);
             }
@@ -1741,10 +2153,17 @@
 
           // Stálý odlesk mističky u kamene
           ctx.save();
-          ctx.globalCompositeOperation = 'screen';
-          const bowlRefl = ctx.createRadialGradient(bx, by + 10, 1, bx, by + 10, 16);
-          bowlRefl.addColorStop(0, 'rgba(254, 243, 199, 0.28)');
-          bowlRefl.addColorStop(1, 'rgba(251, 191, 36, 0)');
+          ctx.globalCompositeOperation = "screen";
+          const bowlRefl = ctx.createRadialGradient(
+            bx,
+            by + 10,
+            1,
+            bx,
+            by + 10,
+            16,
+          );
+          bowlRefl.addColorStop(0, "rgba(254, 243, 199, 0.28)");
+          bowlRefl.addColorStop(1, "rgba(251, 191, 36, 0)");
           ctx.fillStyle = bowlRefl;
           ctx.beginPath();
           ctx.ellipse(bx, by + 10, 14, 5, 0, 0, Math.PI * 2);
@@ -1753,11 +2172,18 @@
 
           // Dynamický vodní odraz chodící Molly v hladině jezera
           ctx.save();
-          ctx.globalCompositeOperation = 'screen';
-          const reflGlow = ctx.createRadialGradient(mx, my + 24, 2, mx, my + 24, 42 + (mollyJoyTimer > 0 ? 16 : 0));
-          reflGlow.addColorStop(0, 'rgba(253, 230, 138, 0.36)');
-          reflGlow.addColorStop(0.5, 'rgba(245, 158, 11, 0.16)');
-          reflGlow.addColorStop(1, 'rgba(245, 158, 11, 0)');
+          ctx.globalCompositeOperation = "screen";
+          const reflGlow = ctx.createRadialGradient(
+            mx,
+            my + 24,
+            2,
+            mx,
+            my + 24,
+            42 + (mollyJoyTimer > 0 ? 16 : 0),
+          );
+          reflGlow.addColorStop(0, "rgba(253, 230, 138, 0.36)");
+          reflGlow.addColorStop(0.5, "rgba(245, 158, 11, 0.16)");
+          reflGlow.addColorStop(1, "rgba(245, 158, 11, 0)");
           ctx.fillStyle = reflGlow;
           ctx.beginPath();
           ctx.ellipse(mx, my + 24, 42, 14, 0, 0, Math.PI * 2);
@@ -1772,7 +2198,7 @@
                 ? `rgba(245, 158, 11, ${(0.34 - rRow * 0.05).toFixed(3)})`
                 : `rgba(190, 242, 100, ${(0.28 - rRow * 0.04).toFixed(3)})`;
             ctx.lineWidth = 1.6;
-            ctx.lineCap = 'round';
+            ctx.lineCap = "round";
             ctx.beginPath();
             ctx.moveTo(mx + rxOff - rw, ry);
             ctx.lineTo(mx + rxOff + rw, ry);
@@ -1782,30 +2208,50 @@
 
           // Mechový jezerní kámen / molo pod Molly a mističkou
           ctx.save();
-          const stoneGrad = ctx.createLinearGradient(bx - 18, homeY - 4, homeX + 28, homeY + 14);
-          stoneGrad.addColorStop(0, 'rgba(20, 42, 31, 0.92)');
-          stoneGrad.addColorStop(0.5, 'rgba(31, 61, 45, 0.95)');
-          stoneGrad.addColorStop(1, 'rgba(15, 33, 24, 0.92)');
+          const stoneGrad = ctx.createLinearGradient(
+            bx - 18,
+            homeY - 4,
+            homeX + 28,
+            homeY + 14,
+          );
+          stoneGrad.addColorStop(0, "rgba(20, 42, 31, 0.92)");
+          stoneGrad.addColorStop(0.5, "rgba(31, 61, 45, 0.95)");
+          stoneGrad.addColorStop(1, "rgba(15, 33, 24, 0.92)");
           ctx.fillStyle = stoneGrad;
-          ctx.strokeStyle = 'rgba(110, 231, 183, 0.35)';
+          ctx.strokeStyle = "rgba(110, 231, 183, 0.35)";
           ctx.lineWidth = 1.2;
           ctx.beginPath();
-          ctx.ellipse((homeX + bx) * 0.5 + 4, homeY + 5, Math.abs(homeX - bx) * 0.65 + 24, 9.5, -0.04, 0, Math.PI * 2);
+          ctx.ellipse(
+            (homeX + bx) * 0.5 + 4,
+            homeY + 5,
+            Math.abs(homeX - bx) * 0.65 + 24,
+            9.5,
+            -0.04,
+            0,
+            Math.PI * 2,
+          );
           ctx.fill();
           ctx.stroke();
           ctx.restore();
 
           // Zářící porcelánová mistička hojnosti (nx = 0.19, ny = 0.73)
-          const bowlGlow = ctx.createRadialGradient(bx, by - 2, 1, bx, by - 2, 20);
-          bowlGlow.addColorStop(0, 'rgba(254, 243, 199, 0.65)');
-          bowlGlow.addColorStop(1, 'rgba(251, 191, 36, 0)');
+          const bowlGlow = ctx.createRadialGradient(
+            bx,
+            by - 2,
+            1,
+            bx,
+            by - 2,
+            20,
+          );
+          bowlGlow.addColorStop(0, "rgba(254, 243, 199, 0.65)");
+          bowlGlow.addColorStop(1, "rgba(251, 191, 36, 0)");
           ctx.fillStyle = bowlGlow;
           ctx.beginPath();
           ctx.arc(bx, by - 2, 20, 0, Math.PI * 2);
           ctx.fill();
 
-          ctx.fillStyle = '#29201b';
-          ctx.strokeStyle = '#fbbf24';
+          ctx.fillStyle = "#29201b";
+          ctx.strokeStyle = "#fbbf24";
           ctx.lineWidth = 1.5;
           ctx.beginPath();
           ctx.moveTo(bx - 11, by - 4);
@@ -1820,37 +2266,51 @@
           for (let ti = 0; ti < visibleTreats; ti++) {
             const tx = bx - 6.5 + ti * 2.2;
             const ty = by - 5.2 - (ti % 2) * 1.6;
-            ctx.fillStyle = ti % 2 === 0 ? '#f59e0b' : '#fde68a';
+            ctx.fillStyle = ti % 2 === 0 ? "#f59e0b" : "#fde68a";
             ctx.beginPath();
             ctx.arc(tx, ty, 2.1, 0, Math.PI * 2);
             ctx.fill();
           }
 
           // Animace a proporce těla Molly
-          const isWalking = mollyBehavior === 'WALK_PATROL' && !reducedMotion;
-          const isGrooming = mollyBehavior === 'GROOM' && !reducedMotion;
-          const isEating = mollyBehavior === 'EAT_TREAT' || mollyJoyTimer > 0;
-          const isWatching = mollyBehavior === 'WATCH_LAKE';
+          const isWalking = mollyBehavior === "WALK_PATROL" && !reducedMotion;
+          const isGrooming = mollyBehavior === "GROOM" && !reducedMotion;
+          const isEating = mollyBehavior === "EAT_TREAT" || mollyJoyTimer > 0;
+          const isWatching = mollyBehavior === "WATCH_LAKE";
 
           const joyJump = isEating ? Math.abs(Math.sin(t * 9)) * -6.5 : 0;
-          const walkBob = isWalking ? Math.abs(Math.sin(mollyWalkCycle * 2)) * -2.2 : 0;
-          const idleBreathe = (!isWalking && !isEating) ? Math.sin(t * 1.8) * 0.8 : 0;
+          const walkBob = isWalking
+            ? Math.abs(Math.sin(mollyWalkCycle * 2)) * -2.2
+            : 0;
+          const idleBreathe =
+            !isWalking && !isEating ? Math.sin(t * 1.8) * 0.8 : 0;
           const mcy = my + joyJump + walkBob + idleBreathe;
 
           const legSwingA = isWalking ? Math.sin(mollyWalkCycle) * 4.5 : 0;
           const legSwingB = isWalking ? -Math.sin(mollyWalkCycle) * 4.5 : 0;
-          const legLiftA = isWalking ? Math.max(0, -Math.cos(mollyWalkCycle)) * 2.2 : 0;
-          const legLiftB = isWalking ? Math.max(0, Math.cos(mollyWalkCycle)) * 2.2 : 0;
+          const legLiftA = isWalking
+            ? Math.max(0, -Math.cos(mollyWalkCycle)) * 2.2
+            : 0;
+          const legLiftB = isWalking
+            ? Math.max(0, Math.cos(mollyWalkCycle)) * 2.2
+            : 0;
           const groomPaw = isGrooming ? Math.sin(t * 6.5) * 3.5 : 0;
           const groomLift = isGrooming ? 8.0 + Math.abs(groomPaw) : 0;
           const headTilt = isGrooming ? Math.sin(t * 3.2) * 0.12 : 0;
           const watchHeadNod = isWatching ? Math.sin(t * 1.4) * 0.05 : 0;
 
           if (isEating) {
-            const joyHalo = ctx.createRadialGradient(mx, mcy - 10, 2, mx, mcy - 10, 44);
-            joyHalo.addColorStop(0, 'rgba(254, 243, 199, 0.55)');
-            joyHalo.addColorStop(0.5, 'rgba(251, 191, 36, 0.22)');
-            joyHalo.addColorStop(1, 'rgba(251, 191, 36, 0)');
+            const joyHalo = ctx.createRadialGradient(
+              mx,
+              mcy - 10,
+              2,
+              mx,
+              mcy - 10,
+              44,
+            );
+            joyHalo.addColorStop(0, "rgba(254, 243, 199, 0.55)");
+            joyHalo.addColorStop(0.5, "rgba(251, 191, 36, 0.22)");
+            joyHalo.addColorStop(1, "rgba(251, 191, 36, 0)");
             ctx.fillStyle = joyHalo;
             ctx.beginPath();
             ctx.arc(mx, mcy - 10, 44, 0, Math.PI * 2);
@@ -1863,12 +2323,12 @@
           ctx.scale(mollyFacing * mollyScale, mollyScale);
 
           // Želvovinový ocas (vychází zezadu z -x)
-          const tailSpeed = isEating ? 5.8 : (isWalking ? 3.4 : 2.2);
-          const tailAmp = isEating ? 8.5 : (isWalking ? 5.0 : 6.5);
+          const tailSpeed = isEating ? 5.8 : isWalking ? 3.4 : 2.2;
+          const tailAmp = isEating ? 8.5 : isWalking ? 5.0 : 6.5;
           const tailSway = Math.sin(t * tailSpeed) * tailAmp;
 
-          ctx.lineCap = 'round';
-          ctx.strokeStyle = '#1e1714';
+          ctx.lineCap = "round";
+          ctx.strokeStyle = "#1e1714";
           ctx.lineWidth = 5.2;
           ctx.beginPath();
           ctx.moveTo(-10, 1);
@@ -1878,11 +2338,11 @@
             -25,
             -16 + tailSway,
             -17 + tailSway * 0.6,
-            -24
+            -24,
           );
           ctx.stroke();
 
-          ctx.strokeStyle = '#f59e0b';
+          ctx.strokeStyle = "#f59e0b";
           ctx.lineWidth = 3.4;
           ctx.beginPath();
           ctx.moveTo(-19, -8 + tailSway * 0.5);
@@ -1890,13 +2350,13 @@
             -22,
             -16 + tailSway * 0.8,
             -17 + tailSway * 0.6,
-            -24
+            -24,
           );
           ctx.stroke();
 
           // Tělo Molly
-          ctx.fillStyle = '#1e1714';
-          ctx.strokeStyle = 'rgba(253, 230, 138, 0.42)';
+          ctx.fillStyle = "#1e1714";
+          ctx.strokeStyle = "rgba(253, 230, 138, 0.42)";
           ctx.lineWidth = 1.1;
           ctx.beginPath();
           ctx.ellipse(0, -4, 12.5, 14.5, 0.08, 0, Math.PI * 2);
@@ -1907,27 +2367,35 @@
           ctx.beginPath();
           ctx.ellipse(0, -4, 12.1, 14.1, 0.08, 0, Math.PI * 2);
           ctx.clip();
-          ctx.fillStyle = '#ea580c';
+          ctx.fillStyle = "#ea580c";
           ctx.beginPath();
           ctx.ellipse(5, -8, 6.8, 5.5, 0.3, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = '#f59e0b';
+          ctx.fillStyle = "#f59e0b";
           ctx.beginPath();
           ctx.ellipse(-4.5, -1, 6.2, 4.8, -0.25, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = '#fde68a';
+          ctx.fillStyle = "#fde68a";
           ctx.beginPath();
           ctx.ellipse(-2, -6, 3.8, 4.4, 0.1, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
 
           // Tlapky (zadní a přední s dynamickým krokem a očistou)
-          ctx.fillStyle = '#1e1714';
+          ctx.fillStyle = "#1e1714";
           ctx.beginPath();
-          ctx.ellipse(-4.5 + legSwingB, 7.5 - legLiftB, 3.6, 2.5, 0, 0, Math.PI * 2);
+          ctx.ellipse(
+            -4.5 + legSwingB,
+            7.5 - legLiftB,
+            3.6,
+            2.5,
+            0,
+            0,
+            Math.PI * 2,
+          );
           ctx.fill();
 
-          ctx.fillStyle = '#f59e0b';
+          ctx.fillStyle = "#f59e0b";
           ctx.beginPath();
           ctx.ellipse(
             4.2 + legSwingA + (isGrooming ? groomPaw * 0.4 : 0),
@@ -1936,7 +2404,7 @@
             2.5,
             isGrooming ? 0.3 : 0,
             0,
-            Math.PI * 2
+            Math.PI * 2,
           );
           ctx.fill();
 
@@ -1949,7 +2417,7 @@
           ctx.rotate(headTilt + watchHeadNod);
 
           // Ouška
-          ctx.fillStyle = '#1e1714';
+          ctx.fillStyle = "#1e1714";
           ctx.beginPath();
           ctx.moveTo(-9, -3);
           ctx.lineTo(-11, -15);
@@ -1958,7 +2426,7 @@
           ctx.fill();
 
           const earTwitch = isGrooming ? Math.sin(t * 6) * 1.5 : 0;
-          ctx.fillStyle = '#ea580c';
+          ctx.fillStyle = "#ea580c";
           ctx.beginPath();
           ctx.moveTo(2, -8.5);
           ctx.lineTo(11 + earTwitch, -15);
@@ -1966,7 +2434,7 @@
           ctx.closePath();
           ctx.fill();
 
-          ctx.fillStyle = '#1e1714';
+          ctx.fillStyle = "#1e1714";
           ctx.beginPath();
           ctx.arc(0, 0, 10.2, 0, Math.PI * 2);
           ctx.fill();
@@ -1975,7 +2443,7 @@
           ctx.beginPath();
           ctx.arc(0, 0, 10.2, 0, Math.PI * 2);
           ctx.clip();
-          ctx.fillStyle = '#f59e0b';
+          ctx.fillStyle = "#f59e0b";
           ctx.beginPath();
           ctx.moveTo(-0.5, -12);
           ctx.lineTo(12, -12);
@@ -1983,7 +2451,7 @@
           ctx.lineTo(0.8, 12);
           ctx.closePath();
           ctx.fill();
-          ctx.fillStyle = '#fde68a';
+          ctx.fillStyle = "#fde68a";
           ctx.beginPath();
           ctx.ellipse(4, 3, 4.2, 3.2, 0.2, 0, Math.PI * 2);
           ctx.fill();
@@ -1991,7 +2459,7 @@
 
           // Smaragdové oči nebo blažené ^ ^ obloučky
           if (isEating || breathingActive) {
-            ctx.strokeStyle = '#bef264';
+            ctx.strokeStyle = "#bef264";
             ctx.lineWidth = 2.0;
             [-4.1, 4.1].forEach((ex) => {
               ctx.beginPath();
@@ -2001,21 +2469,21 @@
           } else {
             [-4.1, 4.1].forEach((ex) => {
               // Levná průsvitná záře místo shadowBlur (ten se počítá na CPU v každém snímku)
-              ctx.fillStyle = 'rgba(190, 242, 100, 0.3)';
+              ctx.fillStyle = "rgba(190, 242, 100, 0.3)";
               ctx.beginPath();
               ctx.ellipse(ex, -0.6, 3.9, 3.7, 0, 0, Math.PI * 2);
               ctx.fill();
-              ctx.fillStyle = '#84cc16';
+              ctx.fillStyle = "#84cc16";
               ctx.beginPath();
               ctx.ellipse(ex, -0.6, 2.8, 2.6, 0, 0, Math.PI * 2);
               ctx.fill();
 
-              ctx.fillStyle = '#090d08';
+              ctx.fillStyle = "#090d08";
               ctx.beginPath();
               ctx.ellipse(ex, -0.6, 1.15, 1.9, 0, 0, Math.PI * 2);
               ctx.fill();
 
-              ctx.fillStyle = '#ffffff';
+              ctx.fillStyle = "#ffffff";
               ctx.beginPath();
               ctx.arc(ex - 0.8, -1.3, 0.75, 0, Math.PI * 2);
               ctx.fill();
@@ -2023,7 +2491,7 @@
           }
 
           // Čumáček a vousky
-          ctx.fillStyle = '#fb7185';
+          ctx.fillStyle = "#fb7185";
           ctx.beginPath();
           ctx.moveTo(-1.6, 2.2);
           ctx.lineTo(1.6, 2.2);
@@ -2031,13 +2499,16 @@
           ctx.closePath();
           ctx.fill();
 
-          ctx.strokeStyle = 'rgba(254, 243, 199, 0.8)';
+          ctx.strokeStyle = "rgba(254, 243, 199, 0.8)";
           ctx.lineWidth = 0.85;
           [-1, 1].forEach((dir) => {
             [-1, 0, 1].forEach((row) => {
               ctx.beginPath();
               ctx.moveTo(dir * 5, 2.8 + row * 1.3);
-              ctx.lineTo(dir * 13.5, 2.1 + row * 2.0 + Math.sin(t * 3.5 + row) * 0.5);
+              ctx.lineTo(
+                dir * 13.5,
+                2.1 + row * 2.0 + Math.sin(t * 3.5 + row) * 0.5,
+              );
               ctx.stroke();
             });
           });
@@ -2053,9 +2524,9 @@
             const fox = headWorldX + Math.cos(fa) * (20 + fi * 6);
             const foy = headWorldY - 6 + Math.sin(fa * 1.4) * 9;
             const fg = ctx.createRadialGradient(fox, foy, 0.5, fox, foy, 8);
-            fg.addColorStop(0, 'rgba(255, 251, 235, 0.95)');
-            fg.addColorStop(0.45, 'rgba(251, 191, 36, 0.55)');
-            fg.addColorStop(1, 'rgba(251, 191, 36, 0)');
+            fg.addColorStop(0, "rgba(255, 251, 235, 0.95)");
+            fg.addColorStop(0.45, "rgba(251, 191, 36, 0.55)");
+            fg.addColorStop(1, "rgba(251, 191, 36, 0)");
             ctx.fillStyle = fg;
             ctx.beginPath();
             ctx.arc(fox, foy, 8, 0, Math.PI * 2);
@@ -2090,13 +2561,13 @@
           // DOM atributy jen při změně — zápis v každém snímku vynucoval přepočet stylů
           if (canvasEl && lastTreatsAttr !== String(treatsTotal)) {
             lastTreatsAttr = String(treatsTotal);
-            canvasEl.dataset.sanctuaryMolly = 'ready';
+            canvasEl.dataset.sanctuaryMolly = "ready";
             canvasEl.dataset.mollyTreats = lastTreatsAttr;
           }
 
           // 13. Cascading Stardust, Lantern Embers & Cursor Wake Particles
           ctx.save();
-          ctx.globalCompositeOperation = 'screen';
+          ctx.globalCompositeOperation = "screen";
           for (let i = burstParticles.length - 1; i >= 0; i--) {
             const bp = burstParticles[i];
             bp.life += k;
@@ -2122,7 +2593,7 @@
             ctx.fill();
 
             ctx.globalAlpha = fade * bp.alpha;
-            ctx.fillStyle = '#ffffff';
+            ctx.fillStyle = "#ffffff";
             ctx.beginPath();
             ctx.arc(px, py, rad * 0.72, 0, Math.PI * 2);
             ctx.fill();
@@ -2134,11 +2605,11 @@
             const lx = pointer.x * width;
             const ly = pointer.y * height;
             ctx.save();
-            ctx.globalCompositeOperation = 'screen';
+            ctx.globalCompositeOperation = "screen";
             const lantern = ctx.createRadialGradient(lx, ly, 2, lx, ly, 115);
-            lantern.addColorStop(0, 'rgba(254, 243, 199, 0.34)');
-            lantern.addColorStop(0.4, 'rgba(110, 231, 183, 0.12)');
-            lantern.addColorStop(1, 'rgba(251, 191, 36, 0)');
+            lantern.addColorStop(0, "rgba(254, 243, 199, 0.34)");
+            lantern.addColorStop(0.4, "rgba(110, 231, 183, 0.12)");
+            lantern.addColorStop(1, "rgba(251, 191, 36, 0)");
             ctx.fillStyle = lantern;
             ctx.beginPath();
             ctx.arc(lx, ly, 115, 0, Math.PI * 2);
@@ -2148,7 +2619,8 @@
         }
       }
       // Skutečná cena vykreslení snímku (bez čekání na vsync) — pro adaptivní kvalitu
-      renderWorkAvg = renderWorkAvg * 0.9 + (performance.now() - workStart) * 0.1;
+      renderWorkAvg =
+        renderWorkAvg * 0.9 + (performance.now() - workStart) * 0.1;
       if (!isOffscreen) {
         rafId = requestAnimationFrame(render);
       }
@@ -2156,7 +2628,7 @@
 
     let isOffscreen = false;
     let io = null;
-    if (typeof IntersectionObserver !== 'undefined' && stageWrapEl) {
+    if (typeof IntersectionObserver !== "undefined" && stageWrapEl) {
       io = new IntersectionObserver(
         (entries) => {
           const entry = entries[0];
@@ -2171,7 +2643,7 @@
             if (!rafId) rafId = requestAnimationFrame(render);
           }
         },
-        { threshold: 0.02 }
+        { threshold: 0.02 },
       );
       io.observe(stageWrapEl);
     }
@@ -2188,26 +2660,18 @@
       if (ro) ro.disconnect();
       if (io) io.disconnect();
       clearTimeout(pulseTimer);
-      if (breathingActive) {
-        stopBreathing(false);
-      } else if (breathInterval) {
-        clearInterval(breathInterval);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("hashchange", handleHashScroll);
       }
       if (toastTimer) clearTimeout(toastTimer);
-      if (
-        storyDataUrl &&
-        storyDataUrl.startsWith('blob:') &&
-        typeof URL !== 'undefined' &&
-        typeof URL.revokeObjectURL === 'function'
-      ) {
-        URL.revokeObjectURL(storyDataUrl);
-      }
     };
   });
 </script>
 
 <svelte:head>
-  <title>Krajina dobra — živé dobré skutky a klidný dech | Akcelerátor altruismu</title>
+  <title
+    >Krajina dobra — živé dobré skutky a klidný dech | Akcelerátor altruismu</title
+  >
 </svelte:head>
 
 <div class="sanctuary-page">
@@ -2218,9 +2682,12 @@
     <div class="sanctuary-top">
       <div class="sanctuary-intro">
         <div class="kicker">KRAJINA DOBRA · SKUTEČNÉ SKUTKY V ČESKU</div>
-        <h1>Krajina, kde svítí <span class="serif-accent">dobré skutky</span></h1>
+        <h1>
+          Krajina, kde svítí <span class="serif-accent">dobré skutky</span>
+        </h1>
         <p class="lead">
-          Klikni na kterékoliv světlo pro inspiraci na dnešní skutek — nebo klikni na hladinu či oblohu a rozsviť ten svůj.
+          Klikni na kterékoliv světlo pro inspiraci na dnešní skutek — nebo
+          klikni na hladinu či oblohu a rozsviť ten svůj.
         </p>
         <div class="ambient-pulse-pill" role="status" aria-live="off">
           <span class="ambient-pulse-dot" aria-hidden="true"></span>
@@ -2231,23 +2698,26 @@
 
     <!-- FULL-BLEED PAINTERLY ART + 60FPS INTERACTIVE DEED LIGHTS -->
     <div class="sanctuary-canvas-shell canvas-stage">
-      <div class="atmosphere-controls sanctuary-hud" aria-label="Nastavení atmosféry a zvuku">
+      <div
+        class="atmosphere-controls sanctuary-hud"
+        aria-label="Nastavení atmosféry a zvuku"
+      >
         <div class="atmo-pill-group" role="group" aria-label="Denní doba">
           <button
             type="button"
             class="atmo-btn"
-            class:active={atmosphereMode === 'dawn'}
-            on:click={() => (atmosphereMode = 'dawn')}
-            aria-pressed={atmosphereMode === 'dawn'}
+            class:active={atmosphereMode === "dawn"}
+            on:click={() => (atmosphereMode = "dawn")}
+            aria-pressed={atmosphereMode === "dawn"}
           >
             🌅 Zlaté svítání
           </button>
           <button
             type="button"
             class="atmo-btn"
-            class:active={atmosphereMode === 'night'}
-            on:click={() => (atmosphereMode = 'night')}
-            aria-pressed={atmosphereMode === 'night'}
+            class:active={atmosphereMode === "night"}
+            on:click={() => (atmosphereMode = "night")}
+            aria-pressed={atmosphereMode === "night"}
           >
             🌌 Hvězdná noc
           </button>
@@ -2267,10 +2737,10 @@
             class="sound-btn"
             class:on={soundEnabled}
             on:click={toggleSound}
-            title={soundEnabled ? 'Vypnout tóny' : 'Zapnout jemné tóny'}
+            title={soundEnabled ? "Vypnout tóny" : "Zapnout jemné tóny"}
             aria-pressed={soundEnabled}
           >
-            {soundEnabled ? '🎐 Tóny: zapnuto' : '🔇 Jemné tóny'}
+            {soundEnabled ? "🎐 Tóny: zapnuto" : "🔇 Jemné tóny"}
           </button>
         </div>
       </div>
@@ -2320,11 +2790,13 @@
           </picture>
         </div>
 
-        <canvas bind:this={canvasEl} class="sanctuary-canvas world-canvas"></canvas>
+        <canvas bind:this={canvasEl} class="sanctuary-canvas world-canvas"
+        ></canvas>
 
         <!-- MAGNETIC HOVER TOOLTIP PREVIEW -->
         {#if hoveredLight && (!selectedLight || selectedLight.uid !== hoveredLight.uid)}
-          {@const hMeta = ELEMENT_MAP[hoveredLight.element] || SANCTUARY_ELEMENTS[3]}
+          {@const hMeta =
+            ELEMENT_MAP[hoveredLight.element] || SANCTUARY_ELEMENTS[3]}
           <div
             class="light-hover-pill"
             style={`left: ${Math.min(86, Math.max(14, hoveredLight.x * 100)).toFixed(1)}%; top: ${Math.max(10, hoveredLight.y * 100 - 6).toFixed(1)}%;`}
@@ -2351,9 +2823,11 @@
             : "Pohladit patronku Molly"}
         >
           {#if $mollyState.availableTreats > 0}
-            🐾 Dát Molly pamlsek ({$mollyState.availableTreats} {$mollyState.lastTreat?.icon || '🐟'})
+            🐾 Dát Molly pamlsek ({$mollyState.availableTreats}
+            {$mollyState.lastTreat?.icon || "🐟"})
           {:else}
-            🐾 Pohladit Molly ({$mollyState.treatsFedTotal} {$mollyState.lastTreat?.icon || '🐟'})
+            🐾 Pohladit Molly ({$mollyState.treatsFedTotal}
+            {$mollyState.lastTreat?.icon || "🐟"})
           {/if}
         </button>
       </div>
@@ -2364,15 +2838,18 @@
           <div class="seed-copy">
             <span class="seed-tag">TVŮJ DOKONČENÝ SKUTEK</span>
             <strong>{cleanTitle(nextSeedToPlant.title)}</strong>
-            <span>Klikni na oblohu (hvězda) nebo na hladinu (lucerna) a rozsviť ho v krajině.</span>
+            <span
+              >Klikni na oblohu (hvězda) nebo na hladinu (lucerna) a rozsviť ho
+              v krajině.</span
+            >
           </div>
           <button
             type="button"
             class="seed-auto-btn"
             on:click|stopPropagation={() => {
               plantActiveSeed(nextSeedToPlant, { x: 0.48, y: 0.24 });
-              triggerLightBloom(0.48, 0.24, '#fde68a', false, true);
-              playChime('sky');
+              triggerLightBloom(0.48, 0.24, "#fde68a", false, true);
+              playChime("sky");
             }}
           >
             ✨ Rozsvítit hvězdu
@@ -2382,7 +2859,7 @@
 
       {#if selectedLight}
         <DeedInspectorModal
-          selectedLight={selectedLight}
+          {selectedLight}
           elementMap={ELEMENT_MAP}
           onClose={() => (selectedLight = null)}
           onMarkDone={markDeedLightDone}
@@ -2394,7 +2871,7 @@
     <RitualBar
       bind:ritualMode
       bind:ritualInput
-      nextSeedToPlant={nextSeedToPlant}
+      {nextSeedToPlant}
       wishesCount={($sanctuaryWishes || []).length}
       onSubmit={submitRitualBar}
       onQuickDeed={addQuickOfflineDeed}
@@ -2416,10 +2893,15 @@
   <section class="quiet-proof" aria-label="Dobrá zpráva z Česka">
     <span class="sec-kicker">DOBRÁ ZPRÁVA Z ČESKA</span>
     <p class="qp-text">
-      <strong>{currentProof.title}.</strong> {currentProof.realWorldProof}
+      <strong>{currentProof.title}.</strong>
+      {currentProof.realWorldProof}
     </p>
     <div class="qp-actions">
-      <button type="button" class="qp-next" on:click={() => (proofIndex = (proofIndex + 1) % HOPE_PROOFS.length)}>
+      <button
+        type="button"
+        class="qp-next"
+        on:click={() => (proofIndex = (proofIndex + 1) % HOPE_PROOFS.length)}
+      >
         ↻ Další dobrá zpráva
       </button>
       {#if currentProof.sourceUrl}
@@ -2430,7 +2912,8 @@
           rel="noopener noreferrer"
           class="qp-link"
         >
-          Ověřeno {currentProof.verifiedAt || '2026'} · Zdroj: {currentProof.sourceLabel} ↗
+          Ověřeno {currentProof.verifiedAt || "2026"} · Zdroj: {currentProof.sourceLabel}
+          ↗
         </a>
       {/if}
       <span>·</span>
@@ -2439,10 +2922,10 @@
   </section>
 
   <ProgressDashboard
-    activeLights={activeLights}
-    myDeedsCount={myDeedsCount}
-    latestStep={unplanted[0] || ($completedSteps || [])[0]}
-    inAppBrowserDetected={inAppBrowserDetected}
+    {activeLights}
+    {myDeedsCount}
+    {latestStep}
+    {inAppBrowserDetected}
   />
 </div>
 
@@ -2462,8 +2945,11 @@
   .sanctuary-stage {
     border-radius: 32px;
     padding: 1.15rem 1.45rem 1.05rem;
-    background:
-      radial-gradient(90% 90% at 80% 10%, rgba(251, 191, 36, 0.16) 0%, transparent 55%),
+    background: radial-gradient(
+        90% 90% at 80% 10%,
+        rgba(251, 191, 36, 0.16) 0%,
+        transparent 55%
+      ),
       linear-gradient(165deg, #092117 0%, #103425 55%, #0b261b 100%);
     color: #f8faf8;
     box-shadow: 0 28px 60px -18px rgba(8, 28, 19, 0.3);
@@ -3035,7 +3521,10 @@
     font-weight: 700;
     cursor: pointer;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    transition:
+      transform 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease;
   }
 
   .molly-sanctuary-pill:hover {

@@ -6,6 +6,7 @@
     mollyEvents,
     petMolly,
     toggleMollyPelisek,
+    toggleMollyFollowMouse,
     mollyWhisper
   } from '$lib/mollyStore.js';
   import {
@@ -15,7 +16,7 @@
     MOLLY_ROUTE_GUIDES,
     getMollyGreeting
   } from '$lib/mollyTypes.js';
-  import { prefersReducedMotion, frameStep } from '$lib/sensoryEngine.js';
+  import { prefersReducedMotion, frameStep, playMollyPurr, playMollyMeow } from '$lib/sensoryEngine.js';
   import { safeGetItem, safeSetItem } from '$lib/utils.js';
 
   let catCanvas = null;
@@ -75,6 +76,16 @@
   let pointerY = 380;
   let blinkTimer = 3.6;
   let blinkProgress = 0;
+  let hasFinePointer = false;
+  let lastPointerMoveTs = 0;
+
+  // Star / Firefly chasing ("honit hvezdicky v pozadi") & Bleeding-Edge VFX (R3)
+  let chasedStar = null; // { x, y, vx, vy, phase, life, alpha, caught, catchTimer }
+  let starEl = null;
+  let lastStarTransform = '';
+  let stardust = []; // [{ x, y, vx, vy, size, color, alpha, twinkle }]
+  let pouncePhase = 0;
+  let lastStarSpawnTs = 0;
 
   // Ambient firefly & heart particles around Molly
   let firefly = null; // { x, y, vx, vy, phase, alpha }
@@ -256,6 +267,103 @@
     if (hearts.length > 18) {
       hearts = hearts.slice(-18);
     }
+  }
+
+  function spawnStardustShower(count = 16) {
+    if (prefersReducedMotion()) return;
+    const colors = ['#fde047', '#fbbf24', '#34d399', '#ffffff', '#67e8f9', '#f472b6'];
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+      const speed = 1.2 + Math.random() * 2.4;
+      stardust.push({
+        x: 8 + (Math.random() - 0.5) * 16,
+        y: -34 + (Math.random() - 0.5) * 14,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 0.8,
+        size: 1.8 + Math.random() * 1.6,
+        color: colors[i % colors.length],
+        alpha: 1,
+        twinkle: Math.random() * 6.28
+      });
+    }
+    if (stardust.length > 36) {
+      stardust = stardust.slice(-36);
+    }
+  }
+
+  function spawnChasedStar(initialCoords = null) {
+    if (typeof window === 'undefined') return;
+    if (prefersReducedMotion() || currentState.mode === 'docked' || atHome || document.hidden) return;
+    if (chasedStar && !chasedStar.caught) return;
+    if (flyingTreat) return;
+
+    const { vw, vh } = viewportSize();
+    const { minX, maxX } = roamRange(vw);
+    const ground = groundLine(vw, vh);
+
+    let sx = 0;
+    let sy = 0;
+    if (initialCoords && Number.isFinite(initialCoords.x) && Number.isFinite(initialCoords.y)) {
+      sx = initialCoords.x;
+      sy = Math.max(80, Math.min(ground - 30, initialCoords.y));
+    } else {
+      // Autonomous star spawn in Molly's vicinity
+      const side = Math.random() > 0.5 ? 1 : -1;
+      const offset = side * (60 + Math.random() * 100);
+      sx = posX + offset;
+      sy = ground - 42 - Math.random() * 32;
+    }
+
+    sx = Math.max(minX + 20, Math.min(maxX - 20, sx));
+    chasedStar = {
+      x: sx,
+      y: sy,
+      vx: (Math.random() - 0.5) * 22,
+      vy: (Math.random() - 0.5) * 12,
+      phase: Math.random() * Math.PI * 2,
+      life: 9.0,
+      alpha: 0,
+      caught: false,
+      catchTimer: 0
+    };
+    lastStarTransform = '';
+
+    // Molly spots the star!
+    if (behavior !== 'CATCH_TREAT' && !hurry) {
+      behavior = 'CHASE_STAR';
+      behaviorTimer = 9.0;
+      pouncePhase = 0;
+    }
+    ensureLoopRunning();
+  }
+
+  function catchStar() {
+    if (!chasedStar || chasedStar.caught) return;
+    chasedStar.caught = true;
+    chasedStar.catchTimer = 0;
+    spawnStardustShower(16);
+    spawnHeartBurst(5);
+    petBlissTimer = 2.0;
+    behavior = 'PET_BLISS';
+    behaviorTimer = 2.4;
+    pouncePhase = 0;
+    playMollyPurr(0.85, 0.7);
+    if (Math.random() < 0.35) {
+      setTimeout(() => playMollyMeow(), 220);
+    }
+    if (!activeWhisper && Math.random() < 0.45) {
+      mollyWhisper('Chytila jsem zlatou hvězdičku! ✨', '🌟');
+    }
+  }
+
+  function applyStarTransform() {
+    if (!starEl || !chasedStar) return;
+    const tf = `translate3d(${(chasedStar.x - 14).toFixed(1)}px, ${(chasedStar.y - 14).toFixed(1)}px, 0)`;
+    if (tf !== lastStarTransform) {
+      lastStarTransform = tf;
+      starEl.style.transform = tf;
+    }
+    starEl.style.opacity = Math.max(0, Math.min(1, chasedStar.alpha)).toFixed(2);
   }
 
   function launchViewportTreatToMolly(treat) {
@@ -651,16 +759,19 @@
       return;
     }
     const roll = Math.random();
-    if (roll < 0.42) {
+    if (roll < 0.38) {
       behavior = 'WALK_ROAM';
       behaviorTimer = 3.5 + Math.random() * 3.0;
       pickSafeTarget(false);
-    } else if (roll < 0.68) {
+    } else if (roll < 0.60) {
       behavior = 'IDLE_SIT';
       behaviorTimer = 3.2 + Math.random() * 2.8;
-    } else if (roll < 0.86) {
+    } else if (roll < 0.76) {
       behavior = 'GROOM';
       behaviorTimer = 2.8 + Math.random() * 2.0;
+    } else if (roll < 0.90 && !prefersReducedMotion()) {
+      // Star chasing ("honit hvezdicky v pozadi") (R3)
+      spawnChasedStar();
     } else {
       behavior = 'CHASE_FIREFLY';
       behaviorTimer = 3.4 + Math.random() * 2.0;
@@ -729,16 +840,34 @@
         ? 1 + Math.sin(nowSec * 1.4) * 0.065
         : 1 + Math.sin(nowSec * 2.4) * 0.025;
     const walkBob = isWalking ? Math.abs(Math.sin(walkCycle * 2)) * -3.2 : 0;
+    const isChasingStar = behavior === 'CHASE_STAR';
+    const isFollowingMouse = $mollyState.followMouse && hasFinePointer && !prefersReducedMotion();
     const leapOffset =
       behavior === 'CATCH_TREAT' && flyingTreat
         ? Math.sin(flyingTreat.p * Math.PI) * -14
-        : 0;
+        : isChasingStar && pouncePhase > 0
+          ? -Math.sin(Math.min(1, pouncePhase) * Math.PI) * 16
+          : 0;
 
     ctx.translate(0, walkBob + leapOffset);
 
     // 1. 6-Control-Point Harmonic Bézier Tail (Obsidian with amber/rust/honey tortoiseshell rings)
-    const tailFreq = isBliss || isEating ? 5.2 : isWalking ? 3.8 : 2.1;
-    const tailAmp = isBliss || isEating ? 11 : 7.5;
+    const tailFreq = isChasingStar
+      ? 6.2
+      : isBliss || isEating
+        ? 5.2
+        : isFollowingMouse
+          ? 4.8
+          : isWalking
+            ? 3.8
+            : 2.1;
+    const tailAmp = isChasingStar
+      ? 13
+      : isBliss || isEating
+        ? 11
+        : isFollowingMouse
+          ? 9.5
+          : 7.5;
     const w1 = Math.sin(nowSec * tailFreq) * tailAmp;
     const w2 = Math.cos(nowSec * tailFreq * 0.85 - 0.8) * (tailAmp * 1.15);
 
@@ -849,7 +978,7 @@
     ctx.fill();
     ctx.restore();
 
-    // 4. Front Paws (Animated walking or grooming)
+    // 4. Front Paws (Animated walking, grooming or star pouncing)
     if (isGrooming) {
       // Lifted ginger paw washing cheek
       const lickY = -24 + Math.sin(groomPhase * 7) * 3.2;
@@ -860,6 +989,17 @@
       ctx.fillStyle = '#fde68a';
       ctx.beginPath();
       ctx.arc(17.5, lickY - 1, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (isChasingStar && pouncePhase > 0.08 && pouncePhase < 0.92) {
+      // Playfully reaching up with paws to catch the fluttering star
+      const reachY = -12 - Math.sin(pouncePhase * Math.PI) * 14;
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.ellipse(10, reachY, 5.0, 3.8, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#1e1714';
+      ctx.beginPath();
+      ctx.ellipse(15, reachY + 2, 4.8, 3.6, 0.2, 0, Math.PI * 2);
       ctx.fill();
     } else {
       // Front-left paw (ginger-amber)
@@ -926,11 +1066,16 @@
     ctx.translate(headX, headY);
     ctx.rotate(headTilt);
 
-    // Independent ear twitches
+    // Independent ear twitches + dynamic ear bounce physics
+    const earBounce = isWalking ? Math.sin(walkCycle * 2) * 0.12 : 0;
     const leftEarTwitch =
-      Math.sin(nowSec * 3.1) > 0.9 ? Math.sin(nowSec * 20) * 0.12 : 0;
+      isChasingStar
+        ? Math.sin(nowSec * 16) * 0.16 + earBounce
+        : (Math.sin(nowSec * 3.1) > 0.9 ? Math.sin(nowSec * 20) * 0.12 : 0) + earBounce;
     const rightEarTwitch =
-      Math.cos(nowSec * 2.7) > 0.88 ? Math.cos(nowSec * 19) * -0.14 : 0;
+      isChasingStar
+        ? Math.cos(nowSec * 14) * -0.18 - earBounce
+        : (Math.cos(nowSec * 2.7) > 0.88 ? Math.cos(nowSec * 19) * -0.14 : 0) - earBounce;
 
     // Left ear (Obsidian with honey tuft)
     ctx.save();
@@ -1224,6 +1369,38 @@
       ctx.restore();
     }
 
+    // 10B. Shower of Stardust Sparkles when Molly catches a star
+    for (let i = stardust.length - 1; i >= 0; i--) {
+      const sp = stardust[i];
+      sp.x += sp.vx * frameK;
+      sp.y += sp.vy * frameK;
+      sp.vy += 0.08 * frameK; // gentle stardust gravity
+      sp.twinkle += 0.25 * frameK;
+      sp.alpha *= Math.pow(0.94, frameK);
+      if (sp.alpha < 0.05) {
+        stardust.splice(i, 1);
+        continue;
+      }
+      ctx.save();
+      ctx.globalAlpha = sp.alpha;
+      ctx.fillStyle = sp.color;
+      const s = Math.max(0.8, sp.size * (0.8 + Math.sin(sp.twinkle) * 0.35));
+      // 4-point diamond star sparkle
+      ctx.beginPath();
+      ctx.moveTo(sp.x, sp.y - s * 2.2);
+      ctx.quadraticCurveTo(sp.x, sp.y, sp.x + s * 2.2, sp.y);
+      ctx.quadraticCurveTo(sp.x, sp.y, sp.x, sp.y + s * 2.2);
+      ctx.quadraticCurveTo(sp.x, sp.y, sp.x - s * 2.2, sp.y);
+      ctx.quadraticCurveTo(sp.x, sp.y, sp.x, sp.y - s * 2.2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, s * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
     ctx.restore();
   }
 
@@ -1330,6 +1507,10 @@
   function handleWindowPointerMove(e) {
     pointerX = e.clientX;
     pointerY = e.clientY;
+    lastPointerMoveTs = performance.now();
+    if ($mollyState.followMouse && hasFinePointer && !prefersReducedMotion() && currentState.mode === 'roaming' && !atHome) {
+      ensureLoopRunning();
+    }
 
     // Když se kurzor blíží k tlačítku, u kterého Molly sedí, uhne na volné místo
     if (currentState.mode === 'roaming' && !atHome && e.pointerType !== 'touch') {
@@ -1678,12 +1859,105 @@
       // Chůzi na volné místo přerušilo pohlazení / krmení → bublinu ukážeme hned
       if (hurry && behavior !== 'WALK_ROAM') onArrived();
       if (currentState.mode === 'roaming' && !reduced && !atHome) {
+        // Star / Firefly fluttering physics
+        if (chasedStar) {
+          if (!chasedStar.caught) {
+            chasedStar.alpha = Math.min(1, chasedStar.alpha + dt * 3.5);
+            chasedStar.phase += dt * 3.2;
+            chasedStar.x += chasedStar.vx * dt;
+            chasedStar.y += Math.sin(chasedStar.phase) * 16 * dt + chasedStar.vy * dt;
+            const { minX, maxX } = roamRange(vw);
+            if (chasedStar.x < minX + 16) {
+              chasedStar.x = minX + 16;
+              chasedStar.vx = Math.abs(chasedStar.vx);
+            }
+            if (chasedStar.x > maxX - 16) {
+              chasedStar.x = maxX - 16;
+              chasedStar.vx = -Math.abs(chasedStar.vx);
+            }
+            chasedStar.life -= dt;
+            if (chasedStar.life <= 0) {
+              chasedStar.alpha -= dt * 2;
+              if (chasedStar.alpha <= 0) chasedStar = null;
+            }
+          } else {
+            chasedStar.catchTimer += dt;
+            if (chasedStar.catchTimer > 0.35) {
+              chasedStar = null;
+            }
+          }
+        }
+
+        // Autonomous Star Spawning Timer: every ~16-28s when roaming
+        if (!chasedStar && behavior !== 'CATCH_TREAT' && behavior !== 'PET_BLISS' && now - lastStarSpawnTs > 16000) {
+          if (Math.random() < 0.007) {
+            lastStarSpawnTs = now;
+            spawnChasedStar();
+          }
+        }
+
         behaviorTimer -= dt;
-        if (behaviorTimer <= 0 && !hurry) {
+        if (behaviorTimer <= 0 && !hurry && behavior !== 'CHASE_STAR') {
           chooseNextBehavior();
         }
 
-        if (behavior === 'WALK_ROAM') {
+        if (behavior === 'CHASE_STAR' && chasedStar && !chasedStar.caught) {
+          const dx = chasedStar.x - posX;
+          const dist = Math.abs(dx);
+          facing = dx >= 0 ? 1 : -1;
+          pointerX = chasedStar.x;
+          pointerY = chasedStar.y;
+
+          if (dist > 22) {
+            isWalkingNow = true;
+            const chaseSpd = Math.min(220, Math.max(90, dist * 3.4));
+            vx = Math.sign(dx) * chaseSpd;
+            posX += vx * dt;
+            walkCycle += dt * 14;
+            pouncePhase = 0;
+          } else {
+            // Close enough! Gentle leap and pounce!
+            vx *= 0.65;
+            pouncePhase += dt * 3.6;
+            if (pouncePhase >= 0.45 && !chasedStar.caught) {
+              catchStar();
+            }
+          }
+        } else if ($mollyState.followMouse && hasFinePointer && behavior !== 'CATCH_TREAT' && behavior !== 'PET_BLISS' && !activeWhisper) {
+          // Optional Mouse-Follow Mode (R2): gentle spring physics, sitting after 3s idle
+          const pointerIdle = now - lastPointerMoveTs > 3000;
+          if (pointerIdle) {
+            vx *= 0.8;
+            vy *= 0.8;
+            if (Math.abs(vx) < 1.5) {
+              vx = 0;
+              behavior = 'IDLE_SIT';
+            }
+          } else {
+            const { minX, maxX } = roamRange(vw);
+            const clampedX = Math.max(minX, Math.min(maxX, pointerX));
+            targetX = clampedX;
+            targetY = groundLine(vw, vh);
+            const dx = targetX - posX;
+            const dist = Math.abs(dx);
+
+            if (dist > 22) {
+              isWalkingNow = true;
+              const desiredVx = Math.sign(dx) * Math.min(220, dist * 3.5);
+              vx += (desiredVx - vx) * Math.min(1, dt * 8.5); // spring damping
+              posX += vx * dt;
+              facing = dx >= 0 ? 1 : -1; // faces cursor direction
+              walkCycle += dt * 11;
+              behavior = 'WALK_ROAM';
+            } else {
+              vx *= 0.72;
+              if (Math.abs(vx) < 1.5) {
+                vx = 0;
+                behavior = 'IDLE_SIT';
+              }
+            }
+          }
+        } else if (behavior === 'WALK_ROAM') {
           const dx = targetX - posX;
           const dy = targetY - posY;
           const dist = Math.hypot(dx, dy);
@@ -1722,9 +1996,15 @@
       }
 
       applyActorTransform();
+      applyStarTransform();
 
       const hasActiveTransient =
-        Boolean(flyingTreat) || eatTimer > 0 || petBlissTimer > 0 || hearts.length > 0;
+        Boolean(flyingTreat) ||
+        Boolean(chasedStar) ||
+        eatTimer > 0 ||
+        petBlissTimer > 0 ||
+        hearts.length > 0 ||
+        stardust.length > 0;
 
       // Úspora baterie: když Molly jen sedí/myje se, stačí ~30 fps (pomalé sinusové pohyby
       // vypadají stejně). Chůze, krmení a srdíčka běží na plnou obnovovací frekvenci.
@@ -1771,8 +2051,15 @@
 
     unsubEvents = mollyEvents.subscribe((ev) => {
       if (!ev) return;
-      if (ev.type === 'feed' || ev.type === 'spark') {
+      if (ev.type === 'feed') {
         launchViewportTreatToMolly(ev.treat);
+      } else if (ev.type === 'spark') {
+        launchViewportTreatToMolly(ev.treat);
+        if (!prefersReducedMotion() && currentState.mode === 'roaming' && !atHome) {
+          setTimeout(() => {
+            spawnChasedStar();
+          }, 400);
+        }
       } else if (ev.type === 'pet') {
         petBlissTimer = 2.6;
         spawnHeartBurst(7);
@@ -1784,6 +2071,19 @@
       }
       ensureLoopRunning();
     });
+
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      const mql = window.matchMedia('(pointer: fine)');
+      hasFinePointer = mql.matches;
+      const onPointerChange = (ev) => {
+        hasFinePointer = ev.matches;
+      };
+      if (typeof mql.addEventListener === 'function') {
+        mql.addEventListener('change', onPointerChange);
+      } else if (typeof mql.addListener === 'function') {
+        mql.addListener(onPointerChange);
+      }
+    }
 
     unsubPage = page.subscribe(($p) => {
       handleRouteChange($p?.url?.pathname || '/');
@@ -1874,6 +2174,30 @@
       aria-hidden="true"
     >
       <span class="treat-emoji">{flyingTreatView.icon}</span>
+    </div>
+  {/if}
+
+  <!-- Luminous little star / firefly being playfully chased by Molly ("honit hvezdicky v pozadi") -->
+  {#if chasedStar && !chasedStar.caught}
+    <div
+      bind:this={starEl}
+      class="molly-chased-star"
+      aria-hidden="true"
+    >
+      <svg viewBox="0 0 24 24" class="chased-star-svg">
+        <defs>
+          <radialGradient id="starAura" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="1" />
+            <stop offset="35%" stop-color="#fde047" stop-opacity="0.9" />
+            <stop offset="70%" stop-color="#f59e0b" stop-opacity="0.45" />
+            <stop offset="100%" stop-color="#f59e0b" stop-opacity="0" />
+          </radialGradient>
+        </defs>
+        <circle cx="12" cy="12" r="11" fill="url(#starAura)" />
+        <path d="M12 2 L13.8 10.2 L22 12 L13.8 13.8 L12 22 L10.2 13.8 L2 12 L10.2 10.2 Z" fill="#fef08a" />
+        <path d="M12 5.5 L13.2 10.8 L18.5 12 L13.2 13.2 L12 18.5 L10.8 13.2 L5.5 12 L10.8 10.8 Z" fill="#fbbf24" opacity="0.85" />
+        <circle cx="12" cy="12" r="2.2" fill="#ffffff" />
+      </svg>
     </div>
   {/if}
 
@@ -1978,6 +2302,22 @@
       <span aria-hidden="true">{$mollyState.mode === 'docked' ? '✨' : '🧺'}</span>
       <span class="molly-toggle-text">{$mollyState.mode === 'docked' ? 'Procházka' : 'Pelíšek'}</span>
     </button>
+
+    {#if hasFinePointer}
+      <button
+        type="button"
+        class="molly-dock-follow-btn"
+        class:is-active={$mollyState.followMouse}
+        on:pointerdown|stopPropagation
+        on:click|stopPropagation={toggleMollyFollowMouse}
+        aria-pressed={$mollyState.followMouse}
+        aria-label={$mollyState.followMouse ? 'Vypnout sledování myši' : 'Zapnout sledování myši (Molly půjde za kurzorem)'}
+        title={$mollyState.followMouse ? 'Vypnout sledování myši' : 'Zapnout sledování myši (Molly půjde za kurzorem)'}
+      >
+        <span aria-hidden="true">{$mollyState.followMouse ? '🐾' : '🖱️'}</span>
+        <span class="molly-follow-text">{$mollyState.followMouse ? 'Sleduji' : 'Myš'}</span>
+      </button>
+    {/if}
   </div>
 </div>
 
@@ -2264,6 +2604,65 @@
     border-color: rgba(52, 211, 153, 0.45);
   }
 
+  .molly-dock-follow-btn {
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    color: #e2e8f0;
+    font-family: inherit;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .molly-dock-follow-btn:hover {
+    background: rgba(251, 191, 36, 0.18);
+    border-color: rgba(251, 191, 36, 0.45);
+    color: #fde68a;
+  }
+
+  .molly-dock-follow-btn.is-active {
+    background: rgba(245, 158, 11, 0.22);
+    border-color: rgba(251, 191, 36, 0.65);
+    color: #fde68a;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.35);
+  }
+
+  .molly-chased-star {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 28px;
+    height: 28px;
+    pointer-events: none;
+    user-select: none;
+    z-index: 939;
+    will-change: transform, opacity;
+    filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.85));
+    animation: starPulseTwinkle 1.6s ease-in-out infinite alternate;
+  }
+
+  .chased-star-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  @keyframes starPulseTwinkle {
+    0% {
+      transform: scale(0.88) rotate(0deg);
+    }
+    100% {
+      transform: scale(1.18) rotate(22deg);
+    }
+  }
+
   /* Jen průhlednost — animace transformace by přebila inline polohu bubliny */
   @keyframes mollyBubbleIn {
     from {
@@ -2298,6 +2697,11 @@
 
     .molly-whisper-bubble {
       animation: none;
+    }
+
+    .molly-chased-star {
+      display: none !important;
+      animation: none !important;
     }
   }
 
@@ -2335,7 +2739,8 @@
     /* Užší pelíšek (jen ikony + počet + dárek) → méně přeplněný spodní okraj a místo pro Molly
        mezi „Opora 24/7“ a pelíškem. Celý popis zůstává v aria-label. */
     .molly-dock-name,
-    .molly-toggle-text {
+    .molly-toggle-text,
+    .molly-follow-text {
       display: none;
     }
   }

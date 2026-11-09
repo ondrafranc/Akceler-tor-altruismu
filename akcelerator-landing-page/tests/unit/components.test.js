@@ -52,6 +52,9 @@ describe('Milestone 3: Extracted Feature Components & UI Primitives', () => {
       expect(source).toContain('action-card');
       expect(source).toContain('instant-body');
       expect(source).toContain('action-title');
+      expect(source).toContain('card-effect-stage');
+      expect(source).toContain('impact-payoff-canvas');
+      expect(source).not.toContain('max-width: 320px;');
     });
   });
 
@@ -92,7 +95,21 @@ describe('Milestone 3: Extracted Feature Components & UI Primitives', () => {
       expect(compiled.js.code).toBeDefined();
 
       expect(source).toContain('href="/svet"');
+      expect(source).toContain('href="/svet#dech"');
       expect(source).toContain('sanctuary-portal-card');
+      expect(source).toContain('living-lantern');
+      expect(source).toContain('living-firefly');
+      expect(source).toContain('spw-live-pill');
+    });
+
+    it('Krajina dobra (+page.svelte) compiles cleanly and has safe unmount cleanup without ReferenceError', () => {
+      const svetPath = path.resolve(__dirname, '../../src/routes/svet/+page.svelte');
+      const source = readFileSync(svetPath, 'utf8');
+      expect(source).not.toContain('breathInterval');
+      expect(source).not.toContain('stopBreathing');
+      expect(source).not.toContain('storyDataUrl');
+      expect(source).toContain('handleHashScroll');
+      expect(source).toContain('targetBreathScale');
     });
 
     it('HopeCarousel.svelte compiles and preserves quiet-hope selector', () => {

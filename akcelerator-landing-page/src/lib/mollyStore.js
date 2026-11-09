@@ -15,11 +15,13 @@ import {
 } from './sensoryEngine.js';
 
 export const MOLLY_STORAGE_KEY = 'aa_molly_companion_v1';
+export const MOLLY_FOLLOW_MOUSE_KEY = 'aa_molly_follow_mouse';
 export { MOLLY_PET_WHISPERS, MOLLY_UNEARNED_PET_WHISPERS };
 
 const DEFAULT_MOLLY_STATE = {
   mode: 'roaming', // 'roaming' | 'docked'
   mood: 'curious', // 'curious' | 'purring' | 'eating' | 'playful' | 'sleeping' | 'breathing'
+  followMouse: false, // Volitelné doprovázení kurzoru myši (R2)
   treatsFedTotal: 0,
   treatsFedToday: 0,
   availableTreats: 0, // Počet odemčených pamlsků za skutečné altruistické skutky
@@ -85,15 +87,18 @@ function milestoneWhisperOr(prevTotal, nextTotal, fallback) {
 }
 
 function loadMollyState() {
-  if (typeof window === 'undefined') return { ...DEFAULT_MOLLY_STATE };
+  const followFromKey = safeGetItem(MOLLY_FOLLOW_MOUSE_KEY, 'local');
+  const initialFollow = followFromKey !== null ? followFromKey === 'true' : false;
+  if (typeof window === 'undefined') return { ...DEFAULT_MOLLY_STATE, followMouse: initialFollow };
   try {
     const raw = safeGetItem(MOLLY_STORAGE_KEY, 'local');
-    if (!raw) return { ...DEFAULT_MOLLY_STATE, giftDeeds: countStoredDeeds() };
+    if (!raw) return { ...DEFAULT_MOLLY_STATE, followMouse: initialFollow, giftDeeds: countStoredDeeds() };
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return { ...DEFAULT_MOLLY_STATE };
+      return { ...DEFAULT_MOLLY_STATE, followMouse: initialFollow };
     }
     const mode = parsed.mode === 'docked' ? 'docked' : 'roaming';
+    const followMouseVal = followFromKey !== null ? followFromKey === 'true' : Boolean(parsed.followMouse);
     const treatsFedTotal = Math.max(0, Number(parsed.treatsFedTotal) || 0);
     const lastFedIso = typeof parsed.lastFedIso === 'string' ? parsed.lastFedIso : null;
     const treatsFedToday = isSameDayIso(lastFedIso)
@@ -114,6 +119,7 @@ function loadMollyState() {
       ...DEFAULT_MOLLY_STATE,
       mode,
       mood: mode === 'docked' ? 'sleeping' : 'curious',
+      followMouse: followMouseVal,
       treatsFedTotal,
       treatsFedToday,
       availableTreats,
@@ -127,16 +133,16 @@ function loadMollyState() {
       whisper: null
     };
   } catch {
-    return { ...DEFAULT_MOLLY_STATE };
+    return { ...DEFAULT_MOLLY_STATE, followMouse: initialFollow };
   }
 }
 
 function saveMollyState(state) {
-  if (typeof window === 'undefined') return;
   try {
     const toPersist = {
       mode: state.mode,
       mood: state.mood,
+      followMouse: Boolean(state.followMouse),
       treatsFedTotal: state.treatsFedTotal,
       treatsFedToday: state.treatsFedToday,
       availableTreats: Math.max(0, Number(state.availableTreats) || 0),
@@ -147,15 +153,17 @@ function saveMollyState(state) {
       giftDeeds: Math.max(0, Number(state.giftDeeds) || 0)
     };
     safeSetItem(MOLLY_STORAGE_KEY, JSON.stringify(toPersist), 'local');
+    safeSetItem(MOLLY_FOLLOW_MOUSE_KEY, state.followMouse ? 'true' : 'false', 'local');
   } catch {}
 }
 
 export const mollyState = writable({ ...DEFAULT_MOLLY_STATE });
+export const followMouse = writable(false);
 export const mollyEvents = writable(null);
 
-if (typeof window !== 'undefined') {
-  mollyState.set(loadMollyState());
-}
+const initialLoadedMolly = loadMollyState();
+mollyState.set(initialLoadedMolly);
+followMouse.set(initialLoadedMolly.followMouse);
 
 let moodResetTimer = null;
 let lastSparkNotifyTs = 0;
@@ -487,6 +495,55 @@ export function toggleMollyPelisek() {
     playMollyPurr(0.8, 0.6);
   }
   return nextMode;
+}
+
+/**
+ * Nastaví, zda má Molly na desktopu volitelně sledovat kurzor myši (R2).
+ * @param {boolean} val
+ * @returns {boolean}
+ */
+export function setMollyFollowMouse(val) {
+  const boolVal = Boolean(val);
+  followMouse.set(boolVal);
+  mollyState.update((prev) => {
+    const next = {
+      ...prev,
+      followMouse: boolVal
+    };
+    saveMollyState(next);
+    return next;
+  });
+  safeSetItem(MOLLY_FOLLOW_MOUSE_KEY, boolVal ? 'true' : 'false', 'local');
+  return boolVal;
+}
+
+/**
+ * Přepne volitelné sledování myši pro Molly (R2).
+ * @returns {boolean}
+ */
+export function toggleMollyFollowMouse() {
+  let nextVal = false;
+  followMouse.update((curr) => {
+    nextVal = !curr;
+    return nextVal;
+  });
+  mollyState.update((prev) => {
+    const next = {
+      ...prev,
+      followMouse: nextVal,
+      whisper: {
+        icon: nextVal ? '🐾' : '🧺',
+        text: nextVal
+          ? 'Mňau! Půjdu s tebou a budu tě tiše doprovázet.'
+          : 'Zůstanu na svém klidném místě.',
+        ts: Date.now()
+      }
+    };
+    saveMollyState(next);
+    return next;
+  });
+  safeSetItem(MOLLY_FOLLOW_MOUSE_KEY, nextVal ? 'true' : 'false', 'local');
+  return nextVal;
 }
 
 /**

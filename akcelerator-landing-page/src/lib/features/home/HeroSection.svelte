@@ -1,6 +1,6 @@
 <script>
-  import { trackEvent } from '../../analytics.js';
-  import { MICRO_ACTIONS } from '../../data/czech-actions.js';
+  import { trackEvent } from '$lib/analytics.js';
+  import { MICRO_ACTIONS } from '$lib/data/czech-actions.js';
 
   export let microActionsCount = MICRO_ACTIONS.length;
   export let fireflies = [
@@ -12,6 +12,17 @@
     { left: "81%", top: "22%", size: 7, delay: "2.2s", dur: "9.4s", gold: true },
     { left: "90%", top: "60%", size: 5, delay: "1.5s", dur: "7.1s", gold: false },
   ];
+
+  function handleActionAnchorClick(e) {
+    if (typeof document !== 'undefined') {
+      const target = document.getElementById('dnesni-skutek');
+      if (target) {
+        if (e && e.preventDefault) e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        trackEvent('aa_hero_mobile_scroll_action', { to: 'dnesni-skutek' });
+      }
+    }
+  }
 </script>
 
 <section class="hero-stage">
@@ -30,7 +41,7 @@
   <div class="hero-inner">
     <div class="hero-copy">
       <div class="hero-overline">
-        <span class="live-dot"></span>
+        <span class="live-dot" aria-hidden="true"></span>
         <span>Zdarma a bez účtu · {microActionsCount} ověřených cest v Česku</span>
       </div>
 
@@ -45,9 +56,10 @@
       </p>
 
       <div class="hero-ctas">
+        <!-- Desktop Primary CTA: Near Map -->
         <a
           href="/near"
-          class="hero-btn primary"
+          class="hero-btn primary hero-btn-desktop"
           on:click={() => trackEvent("aa_launch", { from: "hero_map" })}
         >
           <svg
@@ -59,14 +71,26 @@
             stroke-width="2.3"
             stroke-linecap="round"
             stroke-linejoin="round"
+            aria-hidden="true"
           >
             <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
             <circle cx="12" cy="10" r="3" />
           </svg>
           <span>Mapa pomoci v okolí</span>
-          <span class="arrow">→</span>
+          <span class="arrow" aria-hidden="true">→</span>
         </a>
 
+        <!-- Mobile Visual-First Primary Action Anchor: Smooth scroll to today's deed -->
+        <a
+          href="#dnesni-skutek"
+          class="hero-btn primary hero-btn-mobile"
+          on:click={handleActionAnchorClick}
+          aria-label="Přejít k dnešnímu doporučenému skutku"
+        >
+          <span>⚡ Dnešní skutek (2 min) ↓</span>
+        </a>
+
+        <!-- Shared Sanctuary Link: Krajina dobra -->
         <a
           href="/svet"
           class="hero-btn sanctuary-hero-btn"
@@ -268,6 +292,7 @@
     font-size: 0.94rem;
     text-decoration: none;
     transition: all 0.22s var(--ease-gentle);
+    box-sizing: border-box;
   }
 
   .hero-btn.primary {
@@ -287,6 +312,14 @@
 
   .hero-btn.primary:hover .arrow {
     transform: translateX(3px);
+  }
+
+  .hero-btn-mobile {
+    display: none;
+  }
+
+  .hero-btn-desktop {
+    display: inline-flex;
   }
 
   .sanctuary-hero-btn {
@@ -327,15 +360,32 @@
   @media (max-width: 680px) {
     .hero-painted-backdrop {
       display: block;
-      opacity: 0.22;
-      mix-blend-mode: overlay;
+      opacity: 0.44;
+      background-position: center 36%;
+      mask-image: linear-gradient(
+        180deg,
+        rgba(0, 0, 0, 0.95) 0%,
+        rgba(0, 0, 0, 0.85) 60%,
+        rgba(0, 0, 0, 0.22) 100%
+      );
+      -webkit-mask-image: linear-gradient(
+        180deg,
+        rgba(0, 0, 0, 0.95) 0%,
+        rgba(0, 0, 0, 0.85) 60%,
+        rgba(0, 0, 0, 0.22) 100%
+      );
       pointer-events: none;
-      background-position: center 30%;
+    }
+
+    .hero-aurora {
+      opacity: 0.88;
+      filter: blur(30px);
+      inset: -15% -15% 10% -15%;
     }
 
     .hero-stage {
-      margin-top: -3.2rem;
-      padding: 3.35rem 0.75rem 1.15rem;
+      margin-top: -3.6rem;
+      padding: 4.8rem 1rem 2.5rem;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
@@ -344,58 +394,154 @@
 
     .hero-inner {
       grid-template-columns: minmax(0, 1fr);
-      gap: 0.45rem;
+      gap: 1.75rem;
       width: 100%;
+      max-width: 100%;
     }
 
     .hero-copy {
       min-width: 0;
       max-width: 100%;
-    }
-
-    .hero-ctas {
-      display: none !important;
+      min-height: calc(100svh - 6rem);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      box-sizing: border-box;
+      padding: 1.25rem 0.25rem 2.25rem;
     }
 
     .hero-overline {
       display: inline-flex;
       align-items: center;
-      gap: 0.35rem;
+      gap: 0.5rem;
       color: #a7f3d0;
-      font-size: 0.72rem;
+      font-size: 0.82rem;
       font-weight: 600;
-      letter-spacing: 0.01em;
-      margin-bottom: 0.22rem;
+      letter-spacing: 0.015em;
+      margin-bottom: 0.85rem;
+      background: rgba(16, 185, 129, 0.12);
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid rgba(52, 211, 153, 0.22);
+      backdrop-filter: blur(8px);
+      max-width: 100%;
+      box-sizing: border-box;
     }
 
     .hero-overline .live-dot {
-      width: 6px;
-      height: 6px;
-    }
-
-    .hero-lead {
-      display: block;
-      font-size: 0.78rem;
-      line-height: 1.32;
-      color: rgba(230, 245, 236, 0.88);
-      margin: 0.12rem 0 0.32rem 0;
+      width: 7px;
+      height: 7px;
     }
 
     .hero-title {
-      font-size: 1.18rem;
-      line-height: 1.18;
-      margin: 0 0 0.12rem 0;
-      letter-spacing: -0.02em;
+      font-size: clamp(2rem, 7.8vw, 2.75rem);
+      line-height: 1.1;
+      margin: 0 0 0.85rem 0;
+      letter-spacing: -0.03em;
       overflow-wrap: break-word;
       color: #ffffff;
-      text-shadow: 0 2px 10px rgba(5, 24, 16, 0.45);
+      text-shadow: 0 2px 14px rgba(5, 24, 16, 0.5);
     }
 
     .hero-serif {
       display: block;
-      font-size: 1.2rem;
-      line-height: 1.18;
-      margin-top: 0.06rem;
+      font-size: clamp(2.05rem, 8.2vw, 2.85rem);
+      line-height: 1.08;
+      margin-top: 0.25rem;
+    }
+
+    .hero-lead {
+      display: block;
+      font-size: clamp(0.96rem, 3.6vw, 1.1rem);
+      line-height: 1.58;
+      color: rgba(230, 245, 236, 0.92);
+      margin: 0 0 1.6rem 0;
+      max-width: 44ch;
+    }
+
+    .hero-ctas {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+      width: 100%;
+      max-width: 380px;
+      margin-top: 0.35rem;
+    }
+
+    .hero-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.92rem 1.35rem;
+      font-size: 0.98rem;
+      border-radius: 999px;
+      text-align: center;
+      box-sizing: border-box;
+      width: 100%;
+    }
+
+    .hero-btn-desktop {
+      display: none !important;
+    }
+
+    .hero-btn-mobile {
+      display: inline-flex !important;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      box-shadow: 0 12px 28px -4px rgba(52, 211, 153, 0.45);
+    }
+
+    .sanctuary-hero-btn {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(253, 230, 138, 0.38);
+      backdrop-filter: blur(10px);
+    }
+  }
+
+  @media (min-width: 460px) and (max-width: 680px) {
+    .hero-ctas {
+      flex-direction: row;
+      align-items: center;
+    }
+
+    .hero-btn {
+      flex: 1 1 0;
+      width: auto;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .hero-stage {
+      padding: 4.2rem 0.65rem 1.8rem;
+    }
+
+    .hero-copy {
+      padding: 1rem 0.15rem 1.8rem;
+    }
+
+    .hero-title {
+      font-size: 1.7rem;
+    }
+
+    .hero-serif {
+      font-size: 1.75rem;
+    }
+
+    .hero-lead {
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+
+    .hero-overline {
+      font-size: 0.74rem;
+      padding: 0.28rem 0.55rem;
+    }
+
+    .hero-btn {
+      padding: 0.82rem 1.1rem;
+      font-size: 0.9rem;
     }
   }
 </style>
