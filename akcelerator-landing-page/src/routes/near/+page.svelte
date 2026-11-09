@@ -1291,7 +1291,7 @@
 
   <!-- UNIFIED SEARCH + FILTER BAR -->
   <div class="controls-card">
-    <div class="controls-top">
+    <div class="controls-top search-capsule">
       <button type="button" class="gps-btn" on:click={useGps} disabled={gpsStatus === 'requesting'}>
         {gpsStatus === 'requesting' ? '📍 Hledám…' : '📍 Moje poloha'}
       </button>
@@ -2526,10 +2526,20 @@
   .list-filters {
     display: flex;
     gap: 0.4rem;
+    align-items: center;
     flex-wrap: wrap;
   }
 
-  .filter-input,
+  .filter-input {
+    padding: 0.38rem 0.68rem;
+    border-radius: 10px;
+    border: 1px solid rgba(22, 66, 48, 0.12);
+    background: rgba(255, 255, 255, 0.94);
+    font-family: var(--font-sans);
+    font-size: 0.79rem;
+    color: var(--text-primary);
+  }
+
   .sort-select {
     padding: 0.38rem 0.68rem;
     border-radius: 10px;
@@ -3153,27 +3163,36 @@
     }
 
     .radius-box {
-      order: 4;
-      flex: 0 0 auto;
-      margin-left: auto;
+      width: 100%;
       display: flex;
       align-items: center;
+      gap: 0.3rem;
+      margin-top: 0.25rem;
     }
 
     .radius-label {
-      display: none;
+      display: inline-block;
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--text-secondary);
     }
 
     .radius-pills {
-      display: inline-flex;
-      gap: 0.1rem;
-      padding: 0.1rem;
+      display: flex;
+      flex: 1;
+      width: 100%;
+      box-sizing: border-box;
+      gap: 0.2rem;
+      padding: 0.15rem;
+      overflow-x: auto;
+      scrollbar-width: none;
     }
 
     .radius-pill {
-      padding: 0.2rem 0.32rem;
-      font-size: 0.68rem;
-      min-height: 28px;
+      flex: 1 1 0;
+      padding: 0.35rem 0.4rem;
+      font-size: 0.74rem;
+      min-height: 44px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -3306,6 +3325,7 @@
     }
 
     .list-filters {
+      display: flex;
       flex-wrap: nowrap;
       gap: 0.22rem;
       min-width: 0;
@@ -3315,7 +3335,7 @@
 
     .filter-input,
     .sort-select {
-      min-height: 34px;
+      min-height: 44px;
       font-size: 0.74rem;
       border-radius: 8px;
       padding: 0.25rem 0.45rem;
@@ -3324,11 +3344,11 @@
     }
 
     .filter-input {
-      max-width: 70px;
+      max-width: 85px;
     }
 
     .sort-select {
-      max-width: 160px;
+      max-width: 145px;
     }
 
     .source-tier-bar {
@@ -3349,7 +3369,7 @@
     .source-chip {
       flex: 0 0 auto;
       white-space: nowrap;
-      min-height: 30px;
+      min-height: 44px;
       padding: 0.28rem 0.55rem;
       font-size: 0.72rem;
       display: inline-flex;

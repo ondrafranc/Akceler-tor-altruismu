@@ -1858,6 +1858,7 @@
   data-molly-mode={$mollyState.mode}
   data-molly-mood={$mollyState.mood}
   data-molly-treats={$mollyState.treatsFedTotal}
+  data-molly-available-treats={$mollyState.availableTreats}
   data-molly-gift-deeds={$mollyState.giftDeeds || 0}
   data-molly-home={atHome ? 'lake' : undefined}
 >

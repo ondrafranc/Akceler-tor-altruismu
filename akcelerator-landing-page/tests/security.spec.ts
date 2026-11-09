@@ -3,8 +3,23 @@ import { test, expect } from '@playwright/test';
 test.beforeEach(async ({ page }) => {
   const origGoto = page.goto.bind(page);
   page.goto = async (url, options) => {
-    const res = await origGoto(url, options);
-    await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 15000 });
+    let res;
+    for (let attempt = 1; attempt <= 7; attempt++) {
+      try {
+        res = await origGoto(url, options);
+        break;
+      } catch (err: any) {
+        const isConnErr =
+          err.message?.includes('ERR_CONNECTION_REFUSED') ||
+          err.message?.includes('ERR_CONNECTION_RESET') ||
+          err.message?.includes('ECONNREFUSED') ||
+          err.message?.includes('ERR_EMPTY_RESPONSE') ||
+          err.message?.includes('ERR_NAME_NOT_RESOLVED');
+        if (attempt === 7 || !isConnErr) throw err;
+        await page.waitForTimeout(1000);
+      }
+    }
+    await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 20000 });
     return res;
   };
 });
@@ -733,12 +748,13 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
   const badgeAfter = await page.locator('.instant-card .card-effect-stage .impact-payoff-badge').innerText();
   const numAfter = Number((badgeAfter.match(/\d+/) || ['0'])[0]);
   // Ukazatel dopadu ukazuje jediný pravdivý údaj (1 klik = 25 g, viz impactFacts.js) — ✨ Impuls ho může
-  // nanejvýš dorovnat na skutečnou hodnotu, nikdy nenafoukne. Odezvou Impulsu je jiskra/pamlsek pro Molly.
+  // nanejvýš dorovnat na skutečnou hodnotu, nikdy nenafoukne. Odezvou Impulsu je jiskra na plátně, pamlsky se odemykají až skutečným skutkem (delayed gratification).
   expect(numAfter).toBeGreaterThanOrEqual(numBefore);
   expect(numAfter).toBeLessThanOrEqual(25);
-  await expect
-    .poll(async () => Number((await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0'))
-    .toBeGreaterThan(treatsBeforeImpulse);
+  const treatsAfterImpulse = Number(
+    (await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0'
+  );
+  expect(treatsAfterImpulse, 'Impuls sparks visual canvas wave without inflating treats').toBe(treatsBeforeImpulse);
 
   // Rapidly switching .energy-tab while holding .btn-studio-primary cleanly resets --spark-charge to 0
   await page.locator('.instant-card .btn-studio-primary').dispatchEvent('pointerdown');
@@ -925,7 +941,7 @@ test('Molly tortoiseshell cat companion, action-driven feeding, in-canvas Mini-M
   const treatsAfterSpark = Number(
     (await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0'
   );
-  expect(treatsAfterSpark).toBe(treatsBefore + 1);
+  expect(treatsAfterSpark, 'Spark button does not increment treats on empty click').toBe(treatsBefore);
 
   const arcsCount = Number((await homeCanvas.getAttribute('data-molly-arcs')) || '0');
   expect(arcsCount).toBeGreaterThan(0);
@@ -981,13 +997,14 @@ test('Molly tortoiseshell cat companion, action-driven feeding, in-canvas Mini-M
   const treatsBeforeSanctuary = Number(
     (await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0'
   );
+  // Sanctuary pill feeds the 1 earned treat unlocked by the deed above
   await sanctuaryPill.click();
   const treatsAfterSanctuary = Number(
     (await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0'
   );
-  expect(treatsAfterSanctuary).toBeGreaterThan(treatsBeforeSanctuary);
+  expect(treatsAfterSanctuary, 'Sanctuary pill feeds the earned treat unlocked by the completed deed').toBe(treatsBeforeSanctuary + 1);
 
-  // Direct click on Sanctuary Molly on the lakeshore (0.24 * w, 0.72 * h) feeds/pets her
+  // Direct click on Sanctuary Molly now that availableTreats is 0 pets her without further treat inflation (delayed gratification)
   const vpBox = await page.locator('.sanctuary-viewport').boundingBox();
   expect(vpBox).not.toBeNull();
   await page.locator('.sanctuary-viewport').click({
@@ -996,7 +1013,7 @@ test('Molly tortoiseshell cat companion, action-driven feeding, in-canvas Mini-M
   const treatsAfterDirectClick = Number(
     (await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0'
   );
-  expect(treatsAfterDirectClick).toBeGreaterThan(treatsAfterSanctuary);
+  expect(treatsAfterDirectClick, 'Direct canvas click with 0 available treats pets Molly without incrementing treats').toBe(treatsAfterSanctuary);
 
   await expect(page.locator('#dech .lotus-stage .molly-lotus-guardian')).toBeVisible();
   await page.locator('#dech .breath-cta.start').click();

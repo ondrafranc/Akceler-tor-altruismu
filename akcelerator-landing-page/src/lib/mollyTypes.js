@@ -257,3 +257,37 @@ export function getMollyGreeting(d = new Date()) {
   return 'Ahoj, noční sovo!';
 }
 
+/**
+ * Vlídná a hřejivá šeptanda při pohlazení, když uživatel ještě nezískal pamlsek (delayed gratification).
+ * Záměrně bez kárání či herních hlášek — Molly vyjadřuje vděčnost za blízkost a jemně
+ * směřuje pozornost ke skutečnému dobrému skutku, po kterém si s radostí pochutná na odměně.
+ */
+export const MOLLY_UNEARNED_PET_WHISPERS = [
+  'Mrrr… děkuji za pohlazení! Bříško mám teď klidné. Kdybychom ale společně udělali jeden dobrý skutek, moc ráda bych si za něj pochutnala na křupavé rybce.',
+  'Mňau ~ tvé pohlazení krásně hřeje! Pamlsky si šetřím na chvíli, kdy společně někomu pomůžeme. Zkusíš dnes jeden malý krok?',
+  'Předu radostí, že jsi tu se mnou. Až někoho potěšíš nebo rozsvítíš světýlko, oslavíme to společnou dobrotou.',
+  'Mňamku si schovávám jako odměnu za dobrý skutek. Podívej se do průvodce – najdeš tam pomoc, která zabere jen dvě minuty!',
+  'Mrrr… pohlazení je ten nejhezčí dárek. Až společně uděláme malý dobrý skutek, s radostí si dám pamlsek.',
+  'Děkuji za jemné pohlazení! Dobroty si nechávám na oslavu, až někomu vykouzlíme úsměv.',
+  'Předu ti do dlaně. Každý dobrý čin začíná jedním malým nádechem — a po něm si ráda zamlsám.',
+  'Mňau! Tvoje blízkost mě těší. Kdykoliv někomu pomůžeš, odemkne se pro mě čerstvá dobrota.',
+  'Mrrr… každé pohlazení mě zahřeje. Až uděláš dobrý skutek, moc ráda si pochutnám na odměně.',
+  'Tichounce předu s tebou. Na pamlsek se těším, až společně pošleme trochu dobra do světa.'
+];
+
+/**
+ * Běžná šeptanda při pohlazení, když uživatel pamlsky má nebo se s Molly jen tak mazlí.
+ */
+export const MOLLY_PET_WHISPERS = [
+  'Mrrr… každá drobná laskavost krásně hřeje.',
+  'Předu radostí! Děkuji, že tu dnes jsi.',
+  'Mrrr… tvá laskavost zahřeje víc než odpolední slunce.',
+  'Mňau ~ u jezera v Krajině dobra už svítí tvoje světýlka.',
+  'Tichounce předu s tebou. Každý malý čin se počítá.',
+  'Mrrr… klidně si na chvilku vydechni, hlídám to tu s tebou.',
+  'Mňau ~ děláš svět o kousek vlídnějším místem.',
+  'Tvoje pomoc má smysl. I malý krok mění den k lepšímu.',
+  'Mrrr ~ protahuji tlapky a posílám ti klid do dnešního dne.'
+];
+
+

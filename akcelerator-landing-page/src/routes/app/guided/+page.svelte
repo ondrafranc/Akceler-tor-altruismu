@@ -1059,7 +1059,7 @@
       {/if}
 
       <details class="adaptive-params-drawer">
-        <summary>⚙️ Upřesnit další volby (anonymita, čas, důkazy)</summary>
+        <summary>⚙️ Upřesnit další volby: podrobnější filtry (anonymita, závazek, důkazy)</summary>
         <div class="adaptive-params-grid">
           <div class="ap-group">
             <span class="ap-label">Závazek:</span>

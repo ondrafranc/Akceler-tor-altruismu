@@ -718,14 +718,7 @@
             </div>
 
             <details class="how-toggle">
-              <summary
-                >Jak se zapojit ({currentQuickAction.steps?.length || 1}
-                {(currentQuickAction.steps?.length || 1) === 1
-                  ? "krok"
-                  : (currentQuickAction.steps?.length || 1) < 5
-                    ? "kroky"
-                    : "kroků"}) a řetězec dopadu</summary
-              >
+              <summary>ℹ️ Jak se zapojit a podrobnosti</summary>
               {#if currentQuickAction.steps?.length}
                 <ol class="how-steps">
                   {#each currentQuickAction.steps as step}
@@ -2740,30 +2733,39 @@
     }
 
     .energy-tabs {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
       min-width: 0;
       max-width: 100%;
       box-sizing: border-box;
-      gap: 0.32rem;
+      gap: 0.25rem;
       padding: 0.25rem;
       margin-bottom: 0.45rem;
-      border-radius: 14px;
+      border-radius: 999px;
       background: #eef3ef;
       width: 100%;
     }
 
+    .energy-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
     .energy-tab {
       min-height: 44px;
-      padding: 0.48rem 0.4rem;
-      font-size: 0.84rem;
+      padding: 0.35rem 0.55rem;
+      font-size: 0.78rem;
       font-weight: 700;
       white-space: nowrap;
+      flex: 1 1 0;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       text-align: center;
-      border-radius: 11px;
+      border-radius: 999px;
       letter-spacing: -0.01em;
     }
 
@@ -2925,7 +2927,31 @@
     .sanctuary-portal-card {
       padding: 1.65rem 1.35rem;
     }
-    .bento-paths,
+    .bento-paths {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+    .bento-card {
+      padding: 1.05rem 1.15rem;
+      border-radius: 18px;
+    }
+    .bento-icon-wrap {
+      width: 36px;
+      height: 36px;
+      margin-bottom: 0.6rem;
+    }
+    .bento-card h3 {
+      font-size: 1.05rem;
+      margin-bottom: 0.25rem;
+    }
+    .bento-desc {
+      font-size: 0.86rem;
+      line-height: 1.45;
+      margin-bottom: 0.65rem;
+    }
+    .bento-cta {
+      font-size: 0.82rem;
+    }
     .portals-grid {
       grid-template-columns: 1fr;
     }

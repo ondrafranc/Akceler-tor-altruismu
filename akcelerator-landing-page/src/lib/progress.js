@@ -2,7 +2,12 @@ import { writable, derived, get } from 'svelte/store';
 import { getRandomEncouragement, MICRO_ACTIONS } from './data/czech-actions.js';
 import { CLICK_AND_FEED } from './data/impactFacts.js';
 import { trackEvent, trackFunnel, hasActionStarted } from './analytics.js';
-import { feedMollyFromAction, mollyState, MOLLY_STORAGE_KEY } from './mollyStore.js';
+import {
+  feedMollyFromAction,
+  unlockMollyTreat,
+  mollyState,
+  MOLLY_STORAGE_KEY
+} from './mollyStore.js';
 import {
   safeGetItem,
   safeSetItem,
@@ -375,8 +380,9 @@ export function recordSmallWin(step, options = {}) {
   });
 
   const isSilent = Boolean(step?.silent || options?.silent);
-  feedMollyFromAction(catalogMatch || step || entry, {
-    silent: isSilent,
+  // Odložená odměna: skutek odemkne 1 pamlsek pro Molly (delayed gratification)
+  unlockMollyTreat(catalogMatch || step || entry, {
+    reason: 'small_win',
     source: 'win'
   });
 
@@ -504,13 +510,17 @@ export function addSanctuaryWish(item) {
     return next;
   });
 
-  feedMollyFromAction(
+  // Odložená odměna: zapsání skutku v Krajině dobra odemkne pamlsek pro Molly
+  unlockMollyTreat(
     { id: 'sanctuary_wish', element: entry.element, title: entry.title },
-    { source: 'sanctuary' }
+    { reason: 'sanctuary_wish', source: 'sanctuary' }
   );
 
   return entry;
 }
+
+/** Zpětně kompatibilní alias pro addSanctuaryWish */
+export const recordSanctuaryWish = addSanctuaryWish;
 
 export function clearSanctuaryWishes() {
   sanctuaryWishes.set([]);
@@ -537,6 +547,7 @@ export function closeCelebration() {
 
 /**
  * Vytvoří anonymní přenosný kód pro zálohu postupu mimo In-App prohlížeč (M18 / AUDIT #26).
+ * Zahrnuje i dostupné pamlsky pro Molly (delayed gratification).
  * @returns {string}
  */
 export function createProgressBackupCode() {
@@ -549,7 +560,8 @@ export function createProgressBackupCode() {
     m: {
       treatsFedTotal: molly?.treatsFedTotal || 0,
       petCount: molly?.petCount || 0,
-      giftDeeds: molly?.giftDeeds || 0
+      giftDeeds: molly?.giftDeeds || 0,
+      availableTreats: molly?.availableTreats || 0
     }
   });
 }
@@ -576,6 +588,7 @@ export function restoreProgressFromBackupCode(code) {
         ...prev,
         treatsFedTotal: Math.max(prev.treatsFedTotal || 0, Number(decoded.m.treatsFedTotal) || 0),
         petCount: Math.max(prev.petCount || 0, Number(decoded.m.petCount) || 0),
+        availableTreats: Math.max(prev.availableTreats || 0, Number(decoded.m.availableTreats) || 0),
         giftDeeds: Math.max(
           prev.giftDeeds || 0,
           Number(decoded.m.giftDeeds) || 0,

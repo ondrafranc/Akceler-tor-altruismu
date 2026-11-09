@@ -160,12 +160,12 @@ test.describe('Adversarial Challenge: Walking Molly Stability & State Machine', 
     const w = vpBox!.width;
     const h = vpBox!.height;
 
-    // 1. Faraway click test (matches F7-B1): Click on existing sky light at (0.80w, 0.15h) selects deed, does NOT feed Molly
+    // 1. Faraway click test (matches F7-B1): Click on sky at (0.50w, 0.25h) clear of HUD does NOT feed Molly
     const initialTreats = Number(await companion.getAttribute('data-molly-treats') || '0');
-    await viewport.click({ position: { x: Math.round(w * 0.80), y: Math.round(h * 0.15) } });
+    await viewport.click({ position: { x: Math.round(w * 0.50), y: Math.round(h * 0.25) } });
     await page.waitForTimeout(300);
     const afterSkyClick = Number(await companion.getAttribute('data-molly-treats') || '0');
-    expect(afterSkyClick, 'Click on sky deed (0.80w, 0.15h) must NOT feed Molly').toBe(initialTreats);
+    expect(afterSkyClick, 'Click on sky (0.50w, 0.25h) must NOT feed Molly').toBe(initialTreats);
 
     // Dismiss the opened memory-whisper dialog so viewport is clear
     const closeBtn = page.locator('.memory-whisper .mw-close');
@@ -186,22 +186,22 @@ test.describe('Adversarial Challenge: Walking Molly Stability & State Machine', 
       await page.waitForTimeout(200);
     }
 
-    // 3. Direct hit accuracy: Home sanctuary coordinates (0.24w, 0.72h) MUST feed Molly
+    // 3. Direct hit accuracy: Home sanctuary coordinates (0.24w, 0.72h) pets Molly
     await viewport.click({ position: { x: Math.round(w * 0.24), y: Math.round(h * 0.72) } });
     await page.waitForTimeout(400);
     const afterHomeClick = Number(await companion.getAttribute('data-molly-treats') || '0');
-    expect(afterHomeClick, 'Direct click at (0.24w, 0.72h) MUST increment Molly treats').toBe(initialTreats + 1);
+    expect(afterHomeClick, 'Direct click at (0.24w, 0.72h) pets Molly without incrementing treats on empty clicks').toBe(initialTreats);
 
     // Verify Molly toast appeared
     const toast = page.locator('.gentle-toast');
-    await expect(toast).toContainText('Patronka Molly');
+    await expect(toast).toContainText('Molly');
 
     // 4. Boundary precision test:
-    // Distance 22px from home (well within 48px radius) -> MUST feed Molly
+    // Distance 22px from home (well within 48px radius) -> pets Molly without treat increment
     await viewport.click({ position: { x: Math.round(w * 0.24 + 14), y: Math.round(h * 0.72 + 14) } });
     await page.waitForTimeout(400);
     const afterNearClick = Number(await companion.getAttribute('data-molly-treats') || '0');
-    expect(afterNearClick, 'Click within 48px radius MUST feed Molly').toBe(afterHomeClick + 1);
+    expect(afterNearClick, 'Click within 48px radius pets Molly without incrementing treats').toBe(initialTreats);
 
     // Click outside 48px radius: First select a light to verify that clicking Molly's zone vs faraway zone behaves as expected
     // At distance 65px away from home when clicking on another light (e.g. zvirata_utulek at 0.32w, 0.67h)
@@ -209,7 +209,7 @@ test.describe('Adversarial Challenge: Walking Molly Stability & State Machine', 
     await viewport.click({ position: { x: Math.round(w * 0.32), y: Math.round(h * 0.67) } });
     await page.waitForTimeout(400);
     const afterLanternClick = Number(await companion.getAttribute('data-molly-treats') || '0');
-    expect(afterLanternClick, 'Clicking lantern outside Molly radius must NOT feed Molly').toBe(afterNearClick);
+    expect(afterLanternClick, 'Clicking lantern outside Molly radius must NOT feed Molly').toBe(initialTreats);
 
     // Dismiss whisper dialog to return to clean canvas state
     if (await closeBtn.isVisible()) {
@@ -244,13 +244,13 @@ test.describe('Adversarial Challenge: Walking Molly Stability & State Machine', 
       });
       await page.waitForTimeout(400);
       const treatsAfterDynamic = Number(await companion.getAttribute('data-molly-treats') || '0');
-      expect(treatsAfterDynamic, 'Click on moving Molly actor along patrol path MUST feed Molly').toBe(treatsBeforeDynamic + 1);
+      expect(treatsAfterDynamic, 'Click on moving Molly actor pets Molly without unearned treats').toBe(treatsBeforeDynamic);
 
       // Now click at home bowl (0.24w, 0.72h) while Molly is patrolling away
       await viewport.click({ position: { x: Math.round(w * 0.24), y: Math.round(h * 0.72) } });
       await page.waitForTimeout(400);
       const treatsAfterHomeSecondary = Number(await companion.getAttribute('data-molly-treats') || '0');
-      expect(treatsAfterHomeSecondary, 'Click on home sanctuary bowl while Molly is away MUST ALSO feed Molly').toBe(treatsAfterDynamic + 1);
+      expect(treatsAfterHomeSecondary, 'Click on home sanctuary bowl while Molly is away pets Molly without unearned treats').toBe(treatsBeforeDynamic);
     }
   });
 
@@ -271,14 +271,15 @@ test.describe('Adversarial Challenge: Walking Molly Stability & State Machine', 
 
     const initialTreats = Number(await companion.getAttribute('data-molly-treats') || '0');
 
-    // Fire 30 rapid clicks at Molly's position in rapid succession
+    // Fire 30 rapid clicks at Molly's position in rapid succession (rapid click storm)
     for (let i = 0; i < 30; i++) {
       await viewport.click({ position: { x: homeX, y: homeY }, delay: 10 });
     }
 
     await page.waitForTimeout(500);
     const treatsAfterSpam = Number(await companion.getAttribute('data-molly-treats') || '0');
-    expect(treatsAfterSpam).toBeGreaterThan(initialTreats + 15);
+    // Delayed gratification: empty click storms must NEVER inflate treat counts
+    expect(treatsAfterSpam, 'Rapid empty clicks must not increment Molly treat count').toBe(initialTreats);
     expect(pageErrors).toHaveLength(0);
 
     // Wait for treat eating animation to resolve (mollyJoyTimer ~ 2.4s)
@@ -374,7 +375,7 @@ test.describe('Adversarial Challenge: Walking Molly Stability & State Machine', 
     await page.reload();
     await expect(page.locator('canvas.sanctuary-canvas')).toHaveAttribute('data-sanctuary-molly', 'ready');
 
-    // In reduced motion, clicking home position still feeds Molly
+    // In reduced motion, clicking home position pets Molly without unearned treats
     const companion = page.locator('.molly-companion-layer');
     const viewport = page.locator('.sanctuary-viewport');
     const vpBox = await viewport.boundingBox();
@@ -386,7 +387,8 @@ test.describe('Adversarial Challenge: Walking Molly Stability & State Machine', 
     await page.waitForTimeout(400);
 
     const afterTreats = Number(await companion.getAttribute('data-molly-treats') || '0');
-    expect(afterTreats).toBeGreaterThan(beforeTreats);
+    expect(afterTreats, 'Clicking home position in reduced motion pets Molly without unearned treats').toBe(beforeTreats);
+    await expect(page.locator('.gentle-toast, .molly-whisper-bubble').first()).toBeVisible();
     expect(pageErrors).toHaveLength(0);
   });
 

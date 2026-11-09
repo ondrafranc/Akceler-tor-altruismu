@@ -329,23 +329,23 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
       console.log(`[T5-3] Molly is at (${curPxX}, ${curPxY}), home base is at (${homePxX}, ${homePxY}), separation: ${distBetween.toFixed(1)}px`);
       expect(distBetween, 'Molly patrol position should be separated from home base by > 60px').toBeGreaterThan(60);
 
-      // A. Feed at home base while Molly is patrolling away
+      // A. Pet at home base while Molly is patrolling away
       console.log('[T5-3] Sub-test A: Clicking home base (0.24w, 0.72h) while Molly is patrolling away...');
       await viewport.click({ position: { x: homePxX, y: homePxY } });
       await page.waitForTimeout(400);
 
       const treatsAfterHome = Number(await companion.getAttribute('data-molly-treats') || '0');
-      expect(treatsAfterHome, 'Click on home base while Molly is patrolling MUST increment treats').toBe(initialTreats + 1);
+      expect(treatsAfterHome, 'Click on home base pets Molly without incrementing treats on empty clicks').toBe(initialTreats);
 
       // Check gentle toast appears
       const toast = page.locator('.gentle-toast');
       await expect(toast).toBeVisible();
-      await expect(toast).toContainText('Patronka Molly');
+      await expect(toast).toContainText('Molly');
 
-      // Wait for treat eating animation to finish (mollyJoyTimer = 2.4s)
-      await page.waitForTimeout(2600);
+      // Wait for toast / purr animation to settle
+      await page.waitForTimeout(1000);
 
-      // B. Feed directly at moving actor position along patrol path
+      // B. Pet directly at moving actor position along patrol path
       const latestMollyPos2 = await page.evaluate(() => {
         const g = (window as any).__t5Telemetry;
         return g && g.mollyPositions && g.mollyPositions.length > 0 ? g.mollyPositions[g.mollyPositions.length - 1] : null;
@@ -359,10 +359,10 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
       await page.waitForTimeout(400);
 
       const treatsAfterDynamic = Number(await companion.getAttribute('data-molly-treats') || '0');
-      expect(treatsAfterDynamic, 'Click on moving Molly actor MUST increment treats').toBe(treatsAfterHome + 1);
+      expect(treatsAfterDynamic, 'Click on moving Molly actor pets Molly without unearned treats').toBe(initialTreats);
 
-      // Wait for treat eating animation to settle
-      await page.waitForTimeout(2600);
+      // Wait for petting to settle
+      await page.waitForTimeout(1000);
 
       // C. Boundary evasion: Clicking an existing deed light at (0.79w, 0.18h) far outside 48px radius selects the deed without feeding Molly
       console.log('[T5-3] Sub-test C: Clicking deed light at (0.79w, 0.18h) outside 48px radius...');
@@ -370,7 +370,7 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
       await page.waitForTimeout(300);
 
       const treatsAfterDeedSelect = Number(await companion.getAttribute('data-molly-treats') || '0');
-      expect(treatsAfterDeedSelect, 'Click on distant deed light must select deed without feeding Molly').toBe(treatsAfterDynamic);
+      expect(treatsAfterDeedSelect, 'Click on distant deed light must select deed without feeding Molly').toBe(initialTreats);
 
       // Verify deed detail opened
       const openedModal = page.locator('.memory-whisper');
@@ -385,7 +385,7 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
       await viewport.click({ position: { x: Math.round(0.24 * w), y: Math.round(0.72 * h) } });
       await page.waitForTimeout(400);
       const treatsNow = Number(await companion.getAttribute('data-molly-treats') || '0');
-      expect(treatsNow).toBe(initialTreats + 1);
+      expect(treatsNow, 'Direct hit at home base pets Molly without unearned treats').toBe(initialTreats);
     }
 
     // D. Modal occlusion priority test:
@@ -416,11 +416,11 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
     const treatsAfterModalDismiss = Number(await companion.getAttribute('data-molly-treats') || '0');
     expect(treatsAfterModalDismiss, 'First click when modal is open should dismiss modal without feeding').toBe(treatsBeforeModalClick);
 
-    // Second click on clean stage now feeds Molly
+    // Second click on clean stage pets Molly without unearned treats
     await viewport.click({ position: { x: Math.round(w * 0.24), y: Math.round(h * 0.72) } });
     await page.waitForTimeout(400);
     const treatsAfterSecondClick = Number(await companion.getAttribute('data-molly-treats') || '0');
-    expect(treatsAfterSecondClick, 'Second click after modal dismiss should feed Molly').toBe(treatsBeforeModalClick + 1);
+    expect(treatsAfterSecondClick, 'Second click after modal dismiss pets Molly without unearned treats').toBe(treatsBeforeModalClick);
 
     expect(pageErrors).toHaveLength(0);
   });
@@ -567,6 +567,10 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
     page.on('pageerror', err => pageErrors.push(err.message));
 
     await page.setViewportSize({ width: 1280, height: 800 });
+
+    // Ensure clean state so previous tests' unplanted deeds don't leave remaining unplanted seeds
+    await page.goto('/svet');
+    await page.evaluate(() => localStorage.clear());
 
     // 1. Navigate with URL seed query parameters
     await page.goto('/svet?seed=birdlife_ptaci_pasti&title=Ptaci+budka+v+parku');

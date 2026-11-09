@@ -353,17 +353,18 @@ test.describe('Tier 1: Feature Coverage', () => {
       await expect(canvas).toHaveAttribute('data-sanctuary-molly', 'ready');
     });
 
-    test('F7-2: Clicking Molly sanctuary pill increments total treats fed', async ({ page }) => {
+    test('F7-2: Clicking Molly sanctuary pill pets Molly without incrementing treats on empty clicks', async ({ page }) => {
       await page.goto('/svet');
       const pill = page.locator('.molly-sanctuary-pill');
       await expect(pill).toBeVisible();
       const before = Number((await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0');
       await pill.click();
       const after = Number((await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0');
-      expect(after).toBeGreaterThan(before);
+      expect(after).toBe(before);
+      await expect(page.locator('.gentle-toast, .molly-whisper-bubble').first()).toBeVisible();
     });
 
-    test('F7-3: Direct click on canvas at Molly coordinate (0.24w, 0.72h) feeds Molly', async ({ page }) => {
+    test('F7-3: Direct click on canvas at Molly coordinate (0.24w, 0.72h) pets Molly without unearned treats', async ({ page }) => {
       await page.goto('/svet');
       const vp = page.locator('.sanctuary-viewport');
       const box = await vp.boundingBox();
@@ -373,15 +374,22 @@ test.describe('Tier 1: Feature Coverage', () => {
         position: { x: Math.round(box!.width * 0.24), y: Math.round(box!.height * 0.72) }
       });
       const after = Number((await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0');
-      expect(after).toBeGreaterThan(before);
+      expect(after).toBe(before);
+      await expect(page.locator('.gentle-toast, .molly-whisper-bubble').first()).toBeVisible();
     });
 
-    test('F7-4: Feeding Molly updates companion store state and last treat details', async ({ page }) => {
+    test('F7-4: Altruistic deed unlocks and feeds Molly, updating companion store state and treat count', async ({ page }) => {
       await page.goto('/svet');
+      const before = Number((await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0');
+      await page.locator('#ritual-deed-input').fill('Pomoc sousedovi s nákupem');
+      await page.locator('.ritual-bar button[type="submit"]').click();
+      await page.waitForTimeout(600);
+      // Under delayed gratification, deed unlocks treat; feed Molly via sanctuary pill
       await page.locator('.molly-sanctuary-pill').click();
+      await page.waitForTimeout(400);
       const layer = page.locator('.molly-companion-layer');
       const treats = Number(await layer.getAttribute('data-molly-treats'));
-      expect(treats).toBeGreaterThanOrEqual(1);
+      expect(treats).toBeGreaterThan(before);
     });
 
     test('F7-5: Canvas diorama renders without JavaScript exceptions during execution', async ({ page }) => {
@@ -819,13 +827,13 @@ test.describe('Tier 2: Boundary & Corner Cases', () => {
       const box = await vp.boundingBox();
       expect(box).not.toBeNull();
       const before = Number((await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0');
-      // Click near upper sky (0.8w, 0.15h)
-      await vp.click({ position: { x: Math.round(box!.width * 0.8), y: Math.round(box!.height * 0.15) } });
+      // Click open sky (0.5w, 0.25h) far from Molly (0.24w, 0.72h) and clear of HUD controls
+      await vp.click({ position: { x: Math.round(box!.width * 0.5), y: Math.round(box!.height * 0.25) } });
       const after = Number((await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0');
       expect(after).toBe(before);
     });
 
-    test('F7-B2: Canvas click directly at Molly coordinate on mobile 375px feeds Molly', async ({ page }) => {
+    test('F7-B2: Canvas click directly at Molly coordinate on mobile 375px pets Molly without unearned treats', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
       await page.goto('/svet');
       const vp = page.locator('.sanctuary-viewport');
@@ -836,17 +844,19 @@ test.describe('Tier 2: Boundary & Corner Cases', () => {
         position: { x: Math.round(box!.width * 0.24), y: Math.round(box!.height * 0.72) }
       });
       const after = Number((await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0');
-      expect(after).toBeGreaterThan(before);
+      expect(after).toBe(before);
+      await expect(page.locator('.gentle-toast, .molly-whisper-bubble').first()).toBeVisible();
     });
 
-    test('F7-B3: Rapid consecutive clicks on Molly are handled gracefully without runtime error', async ({ page }) => {
+    test('F7-B3: Rapid consecutive clicks on Molly are handled gracefully without runtime error and without treat inflation', async ({ page }) => {
       await page.goto('/svet');
       const pill = page.locator('.molly-sanctuary-pill');
+      const before = Number((await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0');
       for (let i = 0; i < 5; i++) {
         await pill.click();
       }
       const treats = Number(await page.locator('.molly-companion-layer').getAttribute('data-molly-treats'));
-      expect(treats).toBeGreaterThanOrEqual(5);
+      expect(treats).toBe(before);
     });
 
     test('F7-B4: Resizing window while diorama canvas is running recalculates bounds safely', async ({ page }) => {
@@ -905,6 +915,11 @@ test.describe('Tier 2: Boundary & Corner Cases', () => {
     test('F8-B5: Navigating between multiple routes retains cumulative treat count', async ({ page }) => {
       await page.goto('/');
       await page.locator('.instant-card .btn-studio-done').click();
+      const av1 = Number(await page.locator('.molly-companion-layer').getAttribute('data-molly-available-treats'));
+      expect(av1).toBeGreaterThanOrEqual(1);
+
+      await page.goto('/svet');
+      await page.locator('.molly-sanctuary-pill').click();
       const t1 = Number(await page.locator('.molly-companion-layer').getAttribute('data-molly-treats'));
       expect(t1).toBeGreaterThanOrEqual(1);
 
@@ -1024,18 +1039,24 @@ test.describe('Tier 2: Boundary & Corner Cases', () => {
 
 test.describe('Tier 3: Cross-Feature Combinations', () => {
 
-  test('T3-1: Deed completion on Home (F2) feeds Molly (F8) and creates celebration link to Krajina dobra (F5)', async ({ page }) => {
+  test('T3-1: Deed completion on Home (F2) unlocks treat (F8) and creates celebration link to Krajina dobra (F5)', async ({ page }) => {
     await page.goto('/');
-    const beforeTreats = Number((await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0');
+    const beforeAvail = Number((await page.locator('.molly-companion-layer').getAttribute('data-molly-available-treats')) || '0');
     await page.locator('.instant-card .btn-studio-done').click();
     await expect(page.locator('.instant-card .molly-celebration-note')).toContainText('Molly');
-    const afterTreats = Number((await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0');
-    expect(afterTreats).toBeGreaterThan(beforeTreats);
+    const afterAvail = Number((await page.locator('.molly-companion-layer').getAttribute('data-molly-available-treats')) || '0');
+    expect(afterAvail, 'Deed completion unlocks an earned treat').toBeGreaterThan(beforeAvail);
 
     const worldLink = page.locator('.return-dopamine-actions a[href*="/svet"]');
     await expect(worldLink).toBeVisible();
     await worldLink.click();
     await expect(page.locator('canvas.sanctuary-canvas')).toBeVisible();
+
+    // In Krajina dobra, feed the unlocked treat
+    const treatsBefore = Number((await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0');
+    await page.locator('.molly-sanctuary-pill').click();
+    const treatsAfter = Number((await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0');
+    expect(treatsAfter, 'Feeding the earned treat increments treatsFedTotal').toBeGreaterThan(treatsBefore);
   });
 
   test('T3-2: Guided help recommendation selection (F3) preserves tone (F9) and zero horizontal overflow (F1)', async ({ page }) => {
@@ -1173,7 +1194,7 @@ test.describe('Tier 4: Real-World Application Scenarios', () => {
     await checkZeroHorizontalOverflow(page, 'scenario-3-desktop-svet');
   });
 
-  test('Scenario 4: Mobile user enters Krajina dobra, watches walking Molly, feeds Molly (F6, F7, F8, F9) [412x915]', async ({ page }) => {
+  test('Scenario 4: Mobile user enters Krajina dobra, watches walking Molly, pets Molly without unearned treats (F6, F7, F8, F9) [412x915]', async ({ page }) => {
     await page.setViewportSize({ width: 412, height: 915 });
     await page.goto('/svet');
 
@@ -1181,19 +1202,20 @@ test.describe('Tier 4: Real-World Application Scenarios', () => {
     const canvas = page.locator('canvas.sanctuary-canvas');
     await expect(canvas).toHaveAttribute('data-sanctuary-molly', 'ready');
 
-    // 2. Feed Molly via sanctuary pill
+    // 2. Pet Molly via sanctuary pill (delayed gratification: no unearned treats)
     const before = Number((await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0');
     await page.locator('.molly-sanctuary-pill').click();
     const after = Number((await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0');
-    expect(after).toBeGreaterThan(before);
+    expect(after).toBe(before);
+    await expect(page.locator('.gentle-toast, .molly-whisper-bubble').first()).toBeVisible();
 
-    // 3. Direct lakeshore click on Molly at (0.24w, 0.72h)
+    // 3. Direct lakeshore click on Molly at (0.24w, 0.72h) pets Molly
     const vp = page.locator('.sanctuary-viewport');
     const vpBox = await vp.boundingBox();
     expect(vpBox).not.toBeNull();
     await vp.click({ position: { x: Math.round(vpBox!.width * 0.24), y: Math.round(vpBox!.height * 0.72) } });
     const afterDirect = Number((await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0');
-    expect(afterDirect).toBeGreaterThan(after);
+    expect(afterDirect).toBe(before);
 
     // 4. Zero overflow
     await checkZeroHorizontalOverflow(page, 'scenario-4-mobile-svet');

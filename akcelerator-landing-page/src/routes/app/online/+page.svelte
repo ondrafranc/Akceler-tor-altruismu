@@ -459,52 +459,54 @@
             </button>
           </div>
 
-          <div
-            class="card-effect-stage"
-            data-scene={getActionEffectMeta(o, cardMetrics[o.id] || 0).scene}
-          >
-            <div class="card-effect-head">
-              <span class="impact-payoff-badge">
-                {getActionEffectMeta(o, cardMetrics[o.id] || 0).badge}
-              </span>
-              <div class="card-effect-controls">
-                <button
-                  type="button"
-                  class="effect-spark-btn"
-                  class:active={activeEffectCardId === o.id}
-                  title="Spustit vlnu dopadu na plátně"
-                  aria-label="Vyzkoušet interaktivní fyzikální a zvukový efekt aktivity"
-                  aria-pressed={activeEffectCardId === o.id}
-                  on:click={(e) => toggleCardEffect(o, e)}
-                >
-                  ✨ Impuls
-                </button>
-                <button
-                  type="button"
-                  class="sound-mute-btn"
-                  on:click={handleToggleSound}
-                  aria-pressed={soundMuted}
-                  aria-label={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
-                  title={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
-                >
-                  {soundMuted ? '🔇' : '🔊'}
-                </button>
+          {#if oi === 0}
+            <div
+              class="card-effect-stage"
+              data-scene={getActionEffectMeta(o, cardMetrics[o.id] || 0).scene}
+            >
+              <div class="card-effect-head">
+                <span class="impact-payoff-badge">
+                  {getActionEffectMeta(o, cardMetrics[o.id] || 0).badge}
+                </span>
+                <div class="card-effect-controls">
+                  <button
+                    type="button"
+                    class="effect-spark-btn"
+                    class:active={activeEffectCardId === o.id}
+                    title="Spustit vlnu dopadu na plátně"
+                    aria-label="Vyzkoušet interaktivní fyzikální a zvukový efekt aktivity"
+                    aria-pressed={activeEffectCardId === o.id}
+                    on:click={(e) => toggleCardEffect(o, e)}
+                  >
+                    ✨ Impuls
+                  </button>
+                  <button
+                    type="button"
+                    class="sound-mute-btn"
+                    on:click={handleToggleSound}
+                    aria-pressed={soundMuted}
+                    aria-label={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
+                    title={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
+                  >
+                    {soundMuted ? '🔇' : '🔊'}
+                  </button>
+                </div>
               </div>
+              <canvas
+                class="impact-payoff-canvas"
+                width="320"
+                height="118"
+                aria-label="Fyzikální vizualizace dopadu dobrého skutku"
+                use:impactCanvas={{
+                  action: o,
+                  climax: false,
+                  onProgress: (v) => {
+                    cardMetrics = { ...cardMetrics, [o.id]: v };
+                  }
+                }}
+              ></canvas>
             </div>
-            <canvas
-              class="impact-payoff-canvas"
-              width="320"
-              height="118"
-              aria-label="Fyzikální vizualizace dopadu dobrého skutku"
-              use:impactCanvas={{
-                action: o,
-                climax: false,
-                onProgress: (v) => {
-                  cardMetrics = { ...cardMetrics, [o.id]: v };
-                }
-              }}
-            ></canvas>
-          </div>
+          {/if}
 
           <!-- 5. Patička ověření + Sdílení + Nahlásit nefunkční odkaz -->
           <div class="card-verify-footer">
@@ -1141,9 +1143,9 @@
     .filter-chip {
       flex: 0 0 auto;
       white-space: nowrap;
-      padding: 0.44rem 0.8rem;
-      font-size: 0.78rem;
-      min-height: 40px;
+      padding: 0.44rem 0.85rem;
+      font-size: 0.8rem;
+      min-height: 44px;
       display: inline-flex;
       align-items: center;
       justify-content: center;

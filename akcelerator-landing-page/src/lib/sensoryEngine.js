@@ -1674,10 +1674,12 @@ export function mountImpactCanvas(cv, o = {}) {
     if (addBonus) {
       mollyEatTimer = Math.max(mollyEatTimer, 0.7);
       mollyTreatsCount = Math.min(6, mollyTreatsCount + 1);
+      // Klepnutí do plátna spouští vizuální jiskru/impuls, ale STRIKTNĚ NEZVYŠUJE globální pamlsky (delayed gratification)
       if (mollySparkNotifier) {
         mollySparkNotifier(o.action || spec.mode, {
           surface: 'canvas',
-          fromCanvas: true
+          fromCanvas: true,
+          isSpark: true
         });
       }
     }

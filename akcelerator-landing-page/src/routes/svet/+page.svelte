@@ -35,7 +35,9 @@
   } from '../../lib/sensoryEngine.js';
   import {
     mollyState,
+    feedMolly,
     feedMollyFromAction,
+    unlockMollyTreat,
     petMolly,
     setMollyMood
   } from '../../lib/mollyStore.js';
@@ -66,7 +68,7 @@
     { actionId: 'birdlife_ptaci_pasti', element: 'nature', x: 0.41, y: 0.15, zone: 'sky', lightType: 'star' },
     { actionId: 'estudanky_pramen', element: 'nature', x: 0.66, y: 0.66, zone: 'water', lightType: 'lantern' },
     { actionId: 'remobil_telefon', element: 'nature', x: 0.62, y: 0.23, zone: 'sky', lightType: 'star' },
-    { actionId: 'letters_seniors', element: 'community', x: 0.79, y: 0.18, zone: 'sky', lightType: 'star' },
+    { actionId: 'letters_seniors', element: 'community', x: 0.72, y: 0.26, zone: 'sky', lightType: 'star' },
     { actionId: 'trash_hero_uklid', element: 'nature', x: 0.81, y: 0.72, zone: 'water', lightType: 'wave' }
   ];
 
@@ -251,6 +253,13 @@
     setMollyMood('curious');
     breathScale = 1;
     breathPhase = completed ? 'done' : 'idle';
+    if (completed) {
+      unlockMollyTreat(
+        { id: 'mindful_breathing', mode: 'breath_lotus', title: 'Minuta klidného dechu pro načerpání sil' },
+        { reason: 'breathing_completed', source: 'dech' }
+      );
+      showGentleToast('🌿 Dokončený klidný dech. Pro Molly se odemkl čerstvý lístek šanty kočičí!');
+    }
   }
 
   // =========================================================================
@@ -529,38 +538,57 @@
   }
 
   function feedSanctuaryMolly(fromNx = 0.36, fromNy = 0.42) {
-    feedMollyFromAction(
-      { id: 'zvirata_utulek_online', element: 'animals', title: 'Pamlsek pro patronku Molly u jezera' },
-      { source: 'sanctuary_molly' }
-    );
-    petMolly('Mrrr… u lesní tůně v Krajině dobra je s tebou krásně!');
-    launchSanctuaryTreatArc(fromNx, fromNy, '#fbbf24');
-    mollyJoyTimer = 2.4;
-    mollyBehavior = 'EAT_TREAT';
-    for (let i = 0; i < 8; i++) {
-      mollyLakeHearts.push({
-        x: mollyPos.x + (Math.random() - 0.5) * 0.04,
-        y: mollyPos.y - 0.03 - Math.random() * 0.02,
-        vx: (Math.random() - 0.5) * 0.001,
-        vy: -0.0012 - Math.random() * 0.001,
-        alpha: 1,
-        color: i % 2 === 0 ? '#fbbf24' : '#f472b6'
+    if ($mollyState.availableTreats > 0) {
+      const res = feedMolly('sanctuary_molly', {
+        action: { id: 'zvirata_utulek_online', element: 'animals', title: 'Pamlsek pro patronku Molly u jezera' }
       });
+      petMolly('Mrrr… u lesní tůně v Krajině dobra je s tebou krásně!');
+      launchSanctuaryTreatArc(fromNx, fromNy, res?.treat?.color || '#fbbf24');
+      mollyJoyTimer = 2.4;
+      mollyBehavior = 'EAT_TREAT';
+      for (let i = 0; i < 8; i++) {
+        mollyLakeHearts.push({
+          x: mollyPos.x + (Math.random() - 0.5) * 0.04,
+          y: mollyPos.y - 0.03 - Math.random() * 0.02,
+          vx: (Math.random() - 0.5) * 0.001,
+          vy: -0.0012 - Math.random() * 0.001,
+          alpha: 1,
+          color: i % 2 === 0 ? '#fbbf24' : '#f472b6'
+        });
+      }
+      if (mollyLakeHearts.length > 32) {
+        mollyLakeHearts.splice(0, mollyLakeHearts.length - 32);
+      }
+      waterRipples.push({
+        x: mollyPos.x,
+        y: mollyPos.y + 0.03,
+        rx: 6,
+        maxRx: 95,
+        speed: 1.15,
+        alpha: 0.72,
+        color: '#fde68a',
+        lineWidth: 2.0
+      });
+      showGentleToast('🐾 Patronka Molly spokojeně přede u břehu tůně a chroupe zasloužený pamlsek.');
+    } else {
+      petMolly();
+      mollyJoyTimer = 1.8;
+      mollyBehavior = 'PET_BLISS';
+      for (let i = 0; i < 6; i++) {
+        mollyLakeHearts.push({
+          x: mollyPos.x + (Math.random() - 0.5) * 0.04,
+          y: mollyPos.y - 0.03 - Math.random() * 0.02,
+          vx: (Math.random() - 0.5) * 0.001,
+          vy: -0.0012 - Math.random() * 0.001,
+          alpha: 1,
+          color: '#f472b6'
+        });
+      }
+      if (mollyLakeHearts.length > 32) {
+        mollyLakeHearts.splice(0, mollyLakeHearts.length - 32);
+      }
+      showGentleToast('🐾 Hladíš Molly u břehu tůně. Přede a pamlsky si šetří na další dobrý skutek.');
     }
-    if (mollyLakeHearts.length > 32) {
-      mollyLakeHearts.splice(0, mollyLakeHearts.length - 32);
-    }
-    waterRipples.push({
-      x: mollyPos.x,
-      y: mollyPos.y + 0.03,
-      rx: 6,
-      maxRx: 95,
-      speed: 1.15,
-      alpha: 0.72,
-      color: '#fde68a',
-      lineWidth: 2.0
-    });
-    showGentleToast('🐾 Patronka Molly spokojeně přede u břehu tůně a chroupe pamlsek.');
   }
 
   function spawnBreathWave(isInhale) {
@@ -795,7 +823,11 @@
     for (const l of activeLights) {
       const dx = (l.x - nx) * width;
       const dy = (l.y - ny) * h;
-      const d = Math.hypot(dx, dy);
+      let d = Math.hypot(dx, dy);
+      if (l.actionId === 'letters_seniors') {
+        const dLegacy = Math.hypot((0.79 - nx) * width, (0.18 - ny) * h);
+        if (dLegacy < d) d = dLegacy;
+      }
       if (d < minDist) {
         minDist = d;
         closest = l;
@@ -919,6 +951,12 @@
     }
 
     const text = ritualInput.trim();
+    if (!text) {
+      triggerLightBloom(nx, ny, ny >= 0.53 ? '#fed7aa' : '#fde68a', ny >= 0.53, false);
+      playChime(ny >= 0.53 ? 'water' : 'sky');
+      return;
+    }
+
     const clickedWater = ny >= 0.53;
     const semanticType = !clickedWater ? 'star' : ritualMode === 'wave' ? 'wave' : 'lantern';
     const yClamped = clickedWater ? Math.max(0.58, ny) : Math.min(0.46, ny);
@@ -927,7 +965,7 @@
       y: yClamped,
       kind: semanticType === 'wave' ? 'wave' : 'deed',
       lightType: semanticType,
-      title: text || 'Drobný dobrý skutek ze dneška',
+      title: text,
       element: clickedWater ? 'community' : 'care'
     });
     ritualInput = '';
@@ -2426,7 +2464,10 @@
           <span class="ambient-pulse-text">{ambientPulseText}</span>
         </div>
       </div>
+    </div>
 
+    <!-- FULL-BLEED PAINTERLY ART + 60FPS INTERACTIVE DEED LIGHTS -->
+    <div class="sanctuary-canvas-shell canvas-stage">
       <div class="atmosphere-controls sanctuary-hud" aria-label="Nastavení atmosféry a zvuku">
         <div class="atmo-pill-group" role="group" aria-label="Denní doba">
           <button
@@ -2470,10 +2511,6 @@
           </button>
         </div>
       </div>
-    </div>
-
-    <!-- FULL-BLEED PAINTERLY ART + 60FPS INTERACTIVE DEED LIGHTS -->
-    <div class="sanctuary-canvas-shell canvas-stage">
       <!-- svelte-ignore a11y-click-events-have-key-events -->
       <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
       <div
@@ -2543,10 +2580,18 @@
           type="button"
           class="molly-sanctuary-pill"
           on:click|stopPropagation={() => feedSanctuaryMolly(0.24, 0.72)}
-          title="Dát patronce Molly pamlsek do mističky u jezera"
-          aria-label="Nakrmit patronku Molly"
+          title={$mollyState.availableTreats > 0
+            ? "Dát patronce Molly zasloužený pamlsek do mističky u jezera"
+            : "Pohladit patronku Molly u jezera"}
+          aria-label={$mollyState.availableTreats > 0
+            ? "Dát patronce Molly pamlsek"
+            : "Pohladit patronku Molly"}
         >
-          🐾 Patronka Molly · Nakrmit pamlskem ({$mollyState.treatsFedTotal} {$mollyState.lastTreat?.icon || '🐟'})
+          {#if $mollyState.availableTreats > 0}
+            🐾 Dát Molly pamlsek ({$mollyState.availableTreats} {$mollyState.lastTreat?.icon || '🐟'})
+          {:else}
+            🐾 Pohladit Molly ({$mollyState.treatsFedTotal} {$mollyState.lastTreat?.icon || '🐟'})
+          {/if}
         </button>
       </div>
 
@@ -2686,23 +2731,25 @@
 
       <!-- Když čeká dokončený skutek na rozsvícení, necháme jen jednu jasnou cestu (banner výše) -->
       {#if !nextSeedToPlant}
-      <div class="ritual-whisper-row" aria-label="Rychlé příklady dnešních dobrých skutků">
-        <span class="rw-lbl">Rychle rozsvítit:</span>
-        {#each QUICK_OFFLINE_DEEDS as qd}
-          <button type="button" class="qd-chip" on:click={() => addQuickOfflineDeed(qd)}>
-            {qd.label}
-          </button>
-        {/each}
-        {#if ($sanctuaryWishes || []).length > 0}
-          <button
-            type="button"
-            class="ritual-clear-btn"
-            on:click={() => clearSanctuaryWishes()}
-          >
-            Vyčistit přidaná
-          </button>
-        {/if}
-      </div>
+      <details class="quick-ideas-toggle" open>
+        <summary class="quick-ideas-summary">💡 Rychlé nápady</summary>
+        <div class="ritual-whisper-row" aria-label="Rychlé příklady dnešních dobrých skutků">
+          {#each QUICK_OFFLINE_DEEDS as qd}
+            <button type="button" class="qd-chip" on:click={() => addQuickOfflineDeed(qd)}>
+              {qd.label}
+            </button>
+          {/each}
+          {#if ($sanctuaryWishes || []).length > 0}
+            <button
+              type="button"
+              class="ritual-clear-btn"
+              on:click={() => clearSanctuaryWishes()}
+            >
+              Vyčistit přidaná
+            </button>
+          {/if}
+        </div>
+      </details>
       {/if}
     </form>
   </section>
@@ -3086,19 +3133,56 @@
     line-height: 1.45;
   }
 
-  .atmosphere-controls {
+  .sanctuary-canvas-shell .atmosphere-controls {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
     display: inline-flex;
     align-items: center;
-    gap: 0.42rem;
-    padding: 0.28rem 0.36rem;
+    gap: 0.38rem;
+    padding: 0.24rem 0.34rem;
     border-radius: 999px;
-    background: rgba(5, 20, 14, 0.65);
-    border: 1px solid rgba(167, 243, 208, 0.18);
+    background: rgba(5, 20, 14, 0.72);
+    border: 1px solid rgba(167, 243, 208, 0.22);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    box-shadow: 0 10px 24px -6px rgba(0, 0, 0, 0.35);
-    align-self: flex-end;
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.45);
     flex-shrink: 0;
+    pointer-events: none;
+  }
+
+  .atmosphere-controls button {
+    pointer-events: auto;
+  }
+
+  .quick-ideas-toggle {
+    margin-top: 0.4rem;
+  }
+
+  .quick-ideas-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: rgba(230, 245, 236, 0.85);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    padding: 0.24rem 0.7rem;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.16s ease;
+  }
+
+  .quick-ideas-summary:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+  }
+
+  .quick-ideas-toggle[open] .quick-ideas-summary {
+    margin-bottom: 0.35rem;
   }
 
   .atmo-pill-group {
@@ -3165,6 +3249,9 @@
 
   .sanctuary-canvas-shell {
     position: relative;
+    max-width: 100%;
+    overflow: hidden;
+    border-radius: 24px;
   }
 
   .sanctuary-viewport {
@@ -3515,12 +3602,6 @@
     gap: 0.4rem;
     flex-wrap: wrap;
     padding: 0 0.25rem;
-  }
-
-  .rw-lbl {
-    font-size: 0.75rem;
-    color: rgba(209, 250, 229, 0.65);
-    font-weight: 600;
   }
 
   .qd-chip {
@@ -4109,45 +4190,89 @@
       display: none;
     }
 
-    .atmosphere-controls {
-      width: 100%;
+    .sanctuary-canvas-shell .atmosphere-controls {
+      top: 8px;
+      right: 8px;
       display: flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 0.35rem;
-      padding: 0.22rem 0.32rem;
+      flex-direction: column;
+      align-items: flex-end;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      padding: 0;
+      gap: 0.25rem;
+      max-width: calc(100% - 16px);
       box-sizing: border-box;
-      align-self: stretch;
-      max-width: 100%;
     }
 
     .atmo-pill-group {
-      padding: 0.14rem;
-      gap: 0.14rem;
+      background: rgba(5, 20, 14, 0.82);
+      border: 1px solid rgba(167, 243, 208, 0.22);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: 999px;
+      padding: 0.12rem;
+      gap: 0.1rem;
       max-width: 100%;
+      box-sizing: border-box;
     }
 
     .atmo-btn {
-      padding: 0.26rem 0.48rem;
-      font-size: 0.72rem;
+      padding: 0.22rem 0.44rem;
+      font-size: 0.68rem;
       white-space: nowrap;
     }
 
     .hud-actions-group {
       display: inline-flex;
       align-items: center;
-      gap: 0.25rem;
-      flex-wrap: wrap;
+      gap: 0.2rem;
+      flex-wrap: nowrap;
       max-width: 100%;
     }
 
     .explore-deed-btn,
     .sound-btn {
-      padding: 0.26rem 0.48rem;
-      font-size: 0.72rem;
+      background: rgba(5, 20, 14, 0.82);
+      border: 1px solid rgba(167, 243, 208, 0.22);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: 999px;
+      padding: 0.22rem 0.44rem;
+      font-size: 0.68rem;
       white-space: nowrap;
+    }
+
+    .quick-ideas-summary {
+      min-height: 36px;
+      padding: 0.28rem 0.68rem;
+      font-size: 0.74rem;
+      box-sizing: border-box;
+    }
+
+    .ritual-whisper-row {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 2px;
+    }
+
+    .ritual-whisper-row::-webkit-scrollbar {
+      display: none;
+    }
+
+    .qd-chip {
+      min-height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.3rem 0.65rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+      box-sizing: border-box;
     }
 
     .sanctuary-canvas-shell {

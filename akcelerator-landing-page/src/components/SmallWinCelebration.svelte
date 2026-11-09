@@ -10,12 +10,14 @@
     getActionEffectMeta,
     playPayoffAsmr
   } from '../lib/sensoryEngine.js';
+  import { feedMolly, mollyState } from '../lib/mollyStore.js';
   import { cleanTitle } from '../lib/utils.js';
 
   let restingMode = false;
   let sharedCopied = false;
   let impactMetricValue = 0;
   let lastCelebratedKey = '';
+  let fedThisCelebration = false;
 
   $: if ($activeCelebration) {
     restingMode = false;
@@ -24,10 +26,12 @@
     if (key !== lastCelebratedKey) {
       lastCelebratedKey = key;
       impactMetricValue = 0;
+      fedThisCelebration = false;
       playPayoffAsmr($activeCelebration);
     }
   } else {
     lastCelebratedKey = '';
+    fedThisCelebration = false;
   }
 
   $: activeElementMeta = $activeCelebration
@@ -46,6 +50,20 @@
   function handleContinue() {
     trackEvent('aa_after_done_choice', { choice: 'one_more' });
     closeCelebration();
+  }
+
+  function handleFeedMolly() {
+    if (!$activeCelebration || fedThisCelebration) return;
+    const res = feedMolly('celebration', {
+      action: $activeCelebration,
+      silent: false
+    });
+    if (res?.success) {
+      fedThisCelebration = true;
+      trackEvent('aa_molly_celebration_fed', {
+        actionId: $activeCelebration.id
+      });
+    }
   }
 
   function handleGoToWorld() {
@@ -132,6 +150,19 @@
               >) a spokojeně na tebe čeká u jezera v Krajině dobra.
             </span>
           </div>
+          {#if !fedThisCelebration && $mollyState.availableTreats > 0}
+            <button
+              type="button"
+              class="btn-celebration-feed"
+              on:click={handleFeedMolly}
+            >
+              🐾 Dát Molly zasloužený pamlsek ({effectMeta.mollyTreat.icon})
+            </button>
+          {:else if fedThisCelebration}
+            <div class="molly-fed-badge" role="status">
+              ✨ Molly spokojeně chroupe svůj zasloužený pamlsek a přede radostí!
+            </div>
+          {/if}
         {/if}
         <p class="win-rest-reassurance">
           Dnes se ti povedlo něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.
@@ -259,6 +290,41 @@
     font-size: 0.81rem;
     line-height: 1.4;
     text-align: left;
+  }
+
+  .btn-celebration-feed {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    margin: 0 0 0.85rem 0;
+    padding: 0.75rem 1.15rem;
+    border-radius: 14px;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .btn-celebration-feed:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.28);
+  }
+
+  .molly-fed-badge {
+    margin: 0 0 0.85rem 0;
+    padding: 0.55rem 0.85rem;
+    border-radius: 12px;
+    background: rgba(16, 185, 129, 0.12);
+    color: #065f46;
+    font-size: 0.84rem;
+    font-weight: 700;
   }
 
   .win-rest-reassurance {
