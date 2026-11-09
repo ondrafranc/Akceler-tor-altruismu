@@ -1,0 +1,35 @@
+name: ✨ Feature Request / Improvement
+description: Suggest an idea or enhancement for Akcelerátor altruismu
+title: "[FEATURE]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting an enhancement! Keep in mind our core product philosophy: **Agency first**, **ultra-low friction**, **zero guilt**, and **energy protection**.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement / Opportunity
+      description: Is your feature request related to a problem or user need?
+      placeholder: A clear and concise description of what the user need or problem is.
+    validations:
+      required: true
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: What would you like to happen?
+      placeholder: Describe the solution you'd like to see implemented.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative solutions or features you've considered?
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any other context, references to Czech civic initiatives, or mockups.

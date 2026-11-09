@@ -1,16 +1,20 @@
 ## Summary
-Describe the change and why it’s needed.
+<!-- Describe what this PR does, why it is needed, and link any related issues (e.g. Closes #123) -->
 
-## Checklist
-- [ ] Code works locally / in preview
-- [ ] Related docs updated:
-  - [ ] Root `README.md`
-  - [ ] `akcelerator-landing-page/README_LANDINGPAGE.md`
-  - [ ] Deployment docs (if affected)
-- [ ] Env variables documented and used (no hardcoded URLs/keys)
-- [ ] Added/updated `CHANGELOG.md`
-- [ ] Accessibility still OK (keyboard, contrast)
+## Type of Change
+- [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
+- [ ] ✨ New feature (non-breaking change which adds functionality)
+- [ ] ♻️ Refactoring / Modularization
+- [ ] 📝 Documentation update
+- [ ] 🧪 Tests / CI update
 
-## Notes
-Screenshots or additional context (optional).
+## Verification Checklist
+- [ ] `npm run check` passes with 0 errors and 0 warnings
+- [ ] `npm run build` succeeds locally
+- [ ] `npm run test:unit` passes (all unit tests green)
+- [ ] Tested on mobile viewport / responsive layout
+- [ ] No secrets or sensitive environment variables committed
+- [ ] Adheres to Svelte 5 Runes (`$state`, `$derived`, `$props()`) and project coding standards
 
+## Screenshots / Notes (optional)
+<!-- Add screenshots or testing notes if applicable -->

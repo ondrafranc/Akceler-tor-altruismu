@@ -34,6 +34,7 @@
   } from '../../lib/sensoryEngine.js';
   import { notifyMollySpark } from '../../lib/mollyStore.js';
   import { normSearchStr, safeGetItem } from '../../lib/utils.js';
+  import PlaceCard from '../../lib/features/map/components/PlaceCard.svelte';
 
   const CATEGORY_PRESETS = [
     { id: 'all', label: '✨ Vše smysluplné v okolí', kinds: ['ngo', 'community', 'food', 'animals'], onlyWeb: false },
@@ -1629,254 +1630,37 @@
       <!-- PLACES CARDS -->
       <div class="places-stack places-grid">
         {#each visiblePlaces as p, idx (p.id)}
-          {@const meta = KIND_META[p.kind] || KIND_META.ngo}
-          {@const webUrl = normalizeUrl(p.website)}
-          {@const placeAction = toPlaceAction(p)}
-          {@const selfService = isSelfServicePoint(p)}
-          {@const visitMode = VISIT_MODE_META[getPlaceVisitMode(p)] || VISIT_MODE_META.by_agreement}
-          {@const helpWays = getPlaceHelpWays(p)}
-          <article
-            id={`place-card-${String(p.id).replace(/[^a-zA-Z0-9_-]/g, '-')}`}
-            class="place-card"
-            data-molly-guide={idx === 0 ? 'true' : undefined}
-            class:active={activePlaceId === p.id}
-            class:top-pick={idx === 0 && sortBy === 'easy'}
-            on:mouseenter={() => setHoveredPlace(p.id)}
-            on:mouseleave={() => setHoveredPlace(null)}
-          >
-            <div class="pc-meta-top">
-              <span class="pc-cat">{meta.emoji} {p.subcategory || meta.label}</span>
-              <span>·</span>
-              <span class="pc-dist">{formatDist(p.distanceKm)}</span>
-              <span>·</span>
-              {#if p.curated || p.sourceType === 'verified_org'}
-                <span class="pc-verified" title="Ručně ověřená organizace v ČR">
-                  ✦ Ověřená organizace · Ověřeno {p.verifiedAt || '11/2026'}
-                </span>
-              {:else if p.sourceType === 'community'}
-                <span class="pc-community-badge" title="Sousedský komunitní tip">
-                  🌱 Komunitní tip
-                </span>
-                {#if p.pendingModeration}
-                  <span>·</span>
-                  <span class="pc-pending-badge" title="Tvůj tip čeká na schválení moderátorem">
-                    ⏳ Čeká na schválení
-                  </span>
-                {/if}
-              {:else}
-                <span class="pc-osm-badge" title="Orientační bod z veřejné mapy OpenStreetMap">
-                  🗺️ Orientační bod OSM
-                </span>
-              {/if}
-            </div>
-
-            <h3 class="pc-title">{p.name}</h3>
-
-            {#if p.address}
-              <div class="pc-addr">📍 {p.address}</div>
-            {/if}
-
-            <p class="pc-desc">{getPlaceDescription(p)}</p>
-
-            <!-- STRUCTURED DECISION CONTEXT: JAK TU MŮŽEŠ POMOCT -->
-            <div class="pc-decision-box">
-              <div class="pcd-chips">
-                <span class="pcd-visit-badge">{visitMode.icon} {visitMode.label}</span>
-                {#each helpWays as hw}
-                  {#if HELP_WAY_META[hw]}
-                    <span class="pcd-way-chip">{HELP_WAY_META[hw].icon} {HELP_WAY_META[hw].label}</span>
-                  {/if}
-                {/each}
-              </div>
-              <p class="pcd-mission">
-                <strong>Jak tu můžeš pomoct:</strong> {concreteActionHint(p)}
-              </p>
-            </div>
-
-            <div class="pc-actions">
-              {#if webUrl}
-                <a
-                  href={webUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="pc-btn primary"
-                  use:holdSpark={{ id: p.id, surface: 'near_place' }}
-                  on:click={() => handleStartNearPlace(p)}
-                >
-                  Web ↗
-                </a>
-              {:else if selfService}
-                <a
-                  href={`https://mapy.cz/zakladni?x=${p.lon}&y=${p.lat}&z=17&q=${encodeURIComponent(p.name)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="pc-btn primary"
-                  use:holdSpark={{ id: p.id, surface: 'near_place' }}
-                  on:click={() => handleStartNearPlace(p)}
-                >
-                  🧭 Navigovat (Mapy.cz) ↗
-                </a>
-              {:else}
-                <button
-                  type="button"
-                  class="pc-btn msg"
-                  on:click={() => {
-                    markActionStarted(p.id, 'near_place_msg');
-                    openTemplateId = openTemplateId === p.id ? null : p.id;
-                  }}
-                >
-                  {openTemplateId === p.id ? 'Skrýt zprávu' : '💬 Co napsat'}
-                </button>
-              {/if}
-
-              <button
-                type="button"
-                class="pc-btn done"
-                class:initiated={Array.isArray($startedActionIds) && $startedActionIds.includes(p.id)}
-                on:click={() =>
-                  recordSmallWin({
-                    id: p.id,
-                    title: `Místní krok: ${p.name}`,
-                    category: p.kind,
-                    surface: 'near'
-                  })}
-              >
-                {Array.isArray($startedActionIds) && $startedActionIds.includes(p.id) ? '✓ Dokončeno' : '✓ Hotovo'}
-              </button>
-            </div>
-
-            <div
-              class="card-effect-stage"
-              data-scene={getActionEffectMeta(placeAction, placeMetrics[p.id] || 0).scene}
-            >
-              <div class="card-effect-head">
-                <span class="impact-payoff-badge">
-                  {getActionEffectMeta(placeAction, placeMetrics[p.id] || 0).badge}
-                </span>
-                <div class="card-effect-controls">
-                  <button
-                    type="button"
-                    class="effect-spark-btn"
-                    class:active={activeEffectPlaceId === p.id}
-                    aria-pressed={activeEffectPlaceId === p.id}
-                    aria-label="Vyzkoušet interaktivní fyzikální a zvukový efekt místa"
-                    title="Spustit vlnu dopadu na plátně"
-                    on:click={(e) => togglePlaceEffect(p, e)}
-                  >
-                    ✨ Impuls
-                  </button>
-                  <button
-                    type="button"
-                    class="sound-mute-btn"
-                    on:click={handleToggleSound}
-                    aria-pressed={soundMuted}
-                    aria-label={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
-                    title={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
-                  >
-                    {soundMuted ? '🔇' : '🔊'}
-                  </button>
-                </div>
-              </div>
-              <canvas
-                class="impact-payoff-canvas"
-                width="320"
-                height="68"
-                aria-label="Fyzikální vizualizace dopadu dobrého skutku"
-                use:impactCanvas={{
-                  action: placeAction,
-                  climax: false,
-                  onProgress: (v) => {
-                    placeMetrics = { ...placeMetrics, [p.id]: v };
-                  }
-                }}
-              ></canvas>
-            </div>
-
-            {#if openTemplateId === p.id && !selfService}
-              {@const tpl = buildFirstContactTemplate(p)}
-              <div class="template-drawer">
-                <div class="td-head">
-                  <strong>Vzor krátké zprávy:</strong>
-                  {#if p.phone}
-                    <span>📞 <a href={`tel:${p.phone.replace(/[^\d+]/g, '')}`}>{p.phone}</a></span>
-                  {/if}
-                </div>
-                <pre class="td-body">{tpl.body}</pre>
-                <div class="td-btns">
-                  <button type="button" class="pc-btn primary" on:click={() => copyTemplateText(p)}>
-                    {copiedTemplateId === p.id ? '✓ Zkopírováno' : '📋 Zkopírovat text'}
-                  </button>
-                  {#if tpl.mailtoUrl}
-                    <a href={tpl.mailtoUrl} class="pc-btn ghost">✉️ E-mail</a>
-                  {/if}
-                  <a
-                    href={`https://mapy.cz/zakladni?x=${p.lon}&y=${p.lat}&z=16&q=${encodeURIComponent(p.name)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="pc-btn ghost"
-                  >
-                    🧭 Mapy.cz ↗
-                  </a>
-                </div>
-              </div>
-            {/if}
-
-            <div class="pc-verify-footer">
-              <span>
-                {#if p.curated || p.sourceType === 'verified_org'}
-                  Zdroj: Ověřený katalog ({p.verifiedAt || '11/2026'})
-                {:else if p.sourceType === 'community'}
-                  Zdroj: Komunitní tip v okolí
-                {:else}
-                  Zdroj: OpenStreetMap ČR — před návštěvou doporučujeme ověřit otevírací dobu
-                {/if}
-              </span>
-              <span class="pc-footer-links">
-                {#if webUrl && !selfService}
-                  <button
-                    type="button"
-                    class="pc-report-btn"
-                    on:click={() => {
-                      markActionStarted(p.id, 'near_place_msg');
-                      openTemplateId = openTemplateId === p.id ? null : p.id;
-                    }}
-                  >
-                    {openTemplateId === p.id ? 'Skrýt zprávu' : '💬 Co napsat'}
-                  </button>
-                  ·
-                {/if}
-                <button
-                  type="button"
-                  class="pc-report-btn"
-                  on:click={() => focusPlaceOnMap(p)}
-                >
-                  📍 Na mapě
-                </button>
-                ·
-                <button
-                  type="button"
-                  class="pc-report-btn pc-share-btn"
-                  on:click={() => sharePlaceLink(p)}
-                >
-                  {copiedPlaceLinkId === p.id ? '✓ Odkaz zkopírován' : '🔗 Sdílet místo'}
-                </button>
-                ·
-                <button
-                  type="button"
-                  class="pc-report-btn"
-                  on:click={() =>
-                    openBrokenLinkReport({
-                      id: p.id,
-                      title: p.name,
-                      org: p.subcategory || 'Místo na mapě',
-                      url: webUrl || ''
-                    })}
-                >
-                  Nahlásit chybu
-                </button>
-              </span>
-            </div>
-          </article>
+          <PlaceCard
+            {p}
+            {idx}
+            isActive={activePlaceId === p.id}
+            isTopPick={idx === 0 && sortBy === 'easy'}
+            isStarted={Array.isArray($startedActionIds) && $startedActionIds.includes(p.id)}
+            {soundMuted}
+            {activeEffectPlaceId}
+            {openTemplateId}
+            {copiedTemplateId}
+            placeMetric={placeMetrics[p.id] || 0}
+            onMouseEnter={() => setHoveredPlace(p.id)}
+            onMouseLeave={() => setHoveredPlace(null)}
+            onStart={handleStartNearPlace}
+            onDone={(place) =>
+              recordSmallWin({
+                id: place.id,
+                title: `Místní krok: ${place.name}`,
+                category: place.kind,
+                surface: 'near'
+              })}
+            onToggleEffect={togglePlaceEffect}
+            onToggleSound={handleToggleSound}
+            onFocusMap={focusPlaceOnMap}
+            onShare={sharePlaceLink}
+            onToggleTemplate={(place) => {
+              markActionStarted(place.id, 'near_place_msg');
+              openTemplateId = openTemplateId === place.id ? null : place.id;
+            }}
+            onCopyTemplate={copyTemplateText}
+          />
         {:else}
           <div class="near-empty-fallback">
             <h3>V okruhu {radiusKm} km teď neodpovídá žádné místo zvolenému filtru</h3>
@@ -2585,63 +2369,6 @@
     gap: 0.75rem;
   }
 
-  .place-card {
-    background: rgba(255, 255, 255, 0.97);
-    border: 1px solid rgba(22, 66, 48, 0.1);
-    border-radius: 20px;
-    padding: 1rem 1.15rem;
-    box-shadow: var(--shadow-sm);
-    transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
-  }
-
-  .place-card:hover,
-  .place-card.active {
-    border-color: rgba(16, 185, 129, 0.48);
-    box-shadow: var(--shadow-md);
-  }
-
-  .place-card.top-pick {
-    border-color: rgba(16, 185, 129, 0.35);
-  }
-
-  .pc-meta-top {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    flex-wrap: wrap;
-    font-size: 0.74rem;
-    color: var(--text-muted);
-    margin-bottom: 0.25rem;
-  }
-
-  .pc-cat {
-    font-weight: 700;
-    color: var(--text-secondary);
-  }
-
-  .pc-dist {
-    font-weight: 800;
-    color: var(--emerald-600);
-  }
-
-  .pc-verified {
-    font-weight: 700;
-    color: #0d4a33;
-  }
-
-  .pc-community-badge {
-    font-weight: 700;
-    color: #0f766e;
-  }
-
-  .pc-pending-badge {
-    font-weight: 700;
-    color: #b45309;
-    background: #fef3c7;
-    padding: 0.08rem 0.42rem;
-    border-radius: 999px;
-  }
-
   .map-gesture-hint {
     position: absolute;
     top: 50%;
@@ -2655,86 +2382,6 @@
     padding: 0.45rem 0.85rem;
     border-radius: 999px;
     pointer-events: none;
-  }
-
-  .pc-osm-badge {
-    font-weight: 600;
-    color: var(--text-muted);
-  }
-
-  .pc-title {
-    margin: 0 0 0.2rem;
-    font-size: 1.04rem;
-    font-weight: 800;
-    color: var(--text-primary);
-    line-height: 1.25;
-  }
-
-  .pc-addr {
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    margin-bottom: 0.35rem;
-  }
-
-  .pc-desc {
-    margin: 0 0 0.55rem;
-    font-size: 0.84rem;
-    color: var(--text-secondary);
-    line-height: 1.48;
-  }
-
-  /* Structured Decision Context */
-  .pc-decision-box {
-    background: #f4faf6;
-    border: 1px solid rgba(5, 150, 105, 0.16);
-    border-radius: 13px;
-    padding: 0.55rem 0.72rem;
-    margin-bottom: 0.65rem;
-  }
-
-  .pcd-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.3rem;
-    margin-bottom: 0.32rem;
-  }
-
-  .pcd-visit-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.22rem;
-    font-size: 0.71rem;
-    font-weight: 800;
-    color: #064e3b;
-    background: rgba(16, 185, 129, 0.14);
-    padding: 0.16rem 0.5rem;
-    border-radius: 999px;
-  }
-
-  .pcd-way-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.2rem;
-    font-size: 0.71rem;
-    font-weight: 700;
-    color: var(--text-secondary);
-    background: #ffffff;
-    border: 1px solid rgba(22, 66, 48, 0.11);
-    padding: 0.15rem 0.48rem;
-    border-radius: 999px;
-  }
-
-  .pcd-mission {
-    margin: 0;
-    font-size: 0.81rem;
-    line-height: 1.44;
-    color: #133a29;
-  }
-
-  .pc-actions {
-    display: flex;
-    gap: 0.4rem;
-    flex-wrap: wrap;
   }
 
   .pc-btn {
@@ -2757,64 +2404,9 @@
     color: #ffffff;
   }
 
-  .pc-btn.msg {
-    background: #f6faf7;
-    color: var(--forest-800);
-  }
-
   .pc-btn.ghost {
     background: transparent;
     color: var(--text-secondary);
-  }
-
-  .pc-btn.done {
-    background: #eef7f1;
-    border-color: rgba(5, 150, 105, 0.26);
-    color: #065f46;
-  }
-
-  .pc-btn.done:hover {
-    background: #059669;
-    color: #ffffff;
-  }
-
-  /* Compact 68px Impact Stage on Directory Cards */
-  .place-card .card-effect-stage {
-    margin: 0.5rem 0 0.45rem;
-    border-radius: 14px;
-  }
-
-  .place-card .card-effect-stage .impact-payoff-canvas {
-    height: 68px;
-  }
-
-  .pc-verify-footer {
-    margin-top: 0.55rem;
-    padding-top: 0.48rem;
-    border-top: 1px solid rgba(22, 66, 48, 0.08);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.45rem;
-    flex-wrap: wrap;
-    font-size: 0.72rem;
-    color: var(--text-muted);
-  }
-
-  .pc-report-btn {
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    font-family: var(--font-sans);
-    font-size: 0.72rem;
-    font-weight: 600;
-    text-decoration: underline;
-    cursor: pointer;
-    padding: 0;
-  }
-
-  .pc-report-btn:hover {
-    color: #b45309;
   }
 
   .near-empty-fallback {
@@ -2896,39 +2488,6 @@
   .nv-jump-btn:hover {
     background: #059669;
     color: #ffffff;
-  }
-
-  .template-drawer {
-    margin-top: 0.65rem;
-    padding-top: 0.65rem;
-    border-top: 1px solid rgba(22, 66, 48, 0.09);
-  }
-
-  .td-head {
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-    font-size: 0.79rem;
-    margin-bottom: 0.35rem;
-  }
-
-  .td-body {
-    margin: 0 0 0.5rem;
-    padding: 0.6rem;
-    border-radius: 10px;
-    background: #f7faf8;
-    font-family: var(--font-sans);
-    font-size: 0.79rem;
-    line-height: 1.46;
-    white-space: pre-wrap;
-    color: var(--text-secondary);
-  }
-
-  .td-btns {
-    display: flex;
-    gap: 0.4rem;
-    flex-wrap: wrap;
   }
 
   .near-more-wrap {
@@ -3382,64 +2941,6 @@
       gap: 0.75rem;
     }
 
-    .place-card {
-      padding: 0.68rem 0.78rem;
-      border-radius: 15px;
-      max-width: 100%;
-      box-sizing: border-box;
-      overflow-wrap: break-word;
-    }
-
-    .pc-meta-top {
-      font-size: 0.68rem;
-      margin-bottom: 0.18rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      flex-wrap: nowrap;
-    }
-
-    .pc-title {
-      font-size: 0.95rem;
-      margin: 0 0 0.14rem;
-    }
-
-    .pc-addr {
-      font-size: 0.71rem;
-      margin-bottom: 0.2rem;
-    }
-
-    .pc-desc {
-      display: -webkit-box;
-      line-clamp: 2;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      font-size: 0.75rem;
-      line-height: 1.32;
-      margin-bottom: 0.3rem;
-    }
-
-    .pc-decision-box {
-      padding: 0.32rem 0.48rem;
-      margin-bottom: 0.3rem;
-    }
-
-    .pcd-chips {
-      gap: 0.2rem;
-      margin-bottom: 0.16rem;
-    }
-
-    .pcd-mission {
-      font-size: 0.73rem;
-      line-height: 1.28;
-      display: -webkit-box;
-      line-clamp: 2;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
     .pc-btn {
       min-height: 40px;
       padding: 0.48rem 0.75rem;
@@ -3449,21 +2950,6 @@
       justify-content: center;
       border-radius: 10px;
       box-sizing: border-box;
-    }
-
-    .card-effect-stage {
-      margin-top: 0.28rem;
-      padding: 0.3rem 0.46rem;
-    }
-
-    .place-card :global(.impact-payoff-canvas) {
-      height: 48px;
-    }
-
-    .pc-verify-footer {
-      margin-top: 0.26rem;
-      padding-top: 0.22rem;
-      font-size: 0.65rem;
     }
   }
 </style>

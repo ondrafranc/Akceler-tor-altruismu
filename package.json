@@ -1,0 +1,15 @@
+{
+  "name": "akcelerator-altruismu-root",
+  "version": "2.1.0",
+  "private": true,
+  "description": "Akcelerátor altruismu — Root workspace orchestration and developer proxy scripts",
+  "scripts": {
+    "postinstall": "npm --prefix akcelerator-landing-page install",
+    "dev": "npm --prefix akcelerator-landing-page run dev",
+    "build": "npm --prefix akcelerator-landing-page run build",
+    "check": "npm --prefix akcelerator-landing-page run check",
+    "test": "npm --prefix akcelerator-landing-page test",
+    "test:unit": "npm --prefix akcelerator-landing-page run test:unit",
+    "test:api": "npm --prefix akcelerator-landing-page test -- tests/api.spec.ts"
+  }
+}

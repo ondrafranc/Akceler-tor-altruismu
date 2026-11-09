@@ -1,33 +1,25 @@
 {
-  "name": "Python 3",
-  // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-  "image": "mcr.microsoft.com/devcontainers/python:1-3.11-bullseye",
+  "name": "Akcelerátor altruismu (SvelteKit)",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
   "customizations": {
-    "codespaces": {
-      "openFiles": [
-        "README.md",
-        "app_czech_enhanced.py"
-      ]
-    },
     "vscode": {
-      "settings": {},
+      "settings": {
+        "typescript.tsdk": "akcelerator-landing-page/node_modules/typescript/lib"
+      },
       "extensions": [
-        "ms-python.python",
-        "ms-python.vscode-pylance"
+        "svelte.svelte-vscode",
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode",
+        "ms-playwright.playwright"
       ]
     }
   },
-  "updateContentCommand": "[ -f packages.txt ] && sudo apt update && sudo apt upgrade -y && sudo xargs apt install -y <packages.txt; [ -f requirements.txt ] && pip3 install --user -r requirements.txt; pip3 install --user streamlit; echo '✅ Packages installed and Requirements met'",
-  "postAttachCommand": {
-    "server": "streamlit run app_czech_enhanced.py --server.enableCORS false --server.enableXsrfProtection false"
-  },
+  "postCreateCommand": "cd akcelerator-landing-page && npm install && npx playwright install-deps chromium",
+  "forwardPorts": [5173],
   "portsAttributes": {
-    "8501": {
-      "label": "Application",
+    "5173": {
+      "label": "SvelteKit Dev Server",
       "onAutoForward": "openPreview"
     }
-  },
-  "forwardPorts": [
-    8501
-  ]
+  }
 }

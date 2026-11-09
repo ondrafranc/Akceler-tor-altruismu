@@ -1,4 +1,11 @@
-import { safeGetItem, safeSetItem } from './utils.js';
+/**
+ * Sensory Engine for Akcelerátor altruismu.
+ * Coordinates 2D canvas physics simulations, procedural Web Audio synthesis,
+ * device adaptations, and celebratory ceremony rituals.
+ *
+ * Decomposed into modular domains (audio, core, features) with 100% backward-compatible exports.
+ */
+
 import { CLICK_AND_FEED, FREERICE, czPlural as pl } from './data/impactFacts.js';
 import {
   MOLLY_TREAT_BY_FOOD,
@@ -6,20 +13,79 @@ import {
   resolveMollyTreat
 } from './mollyTypes.js';
 
-export { MOLLY_TREAT_BY_FOOD, MODE_TO_MOLLY_FOOD, resolveMollyTreat };
+import {
+  isSoundMuted,
+  toggleSoundMuted,
+  getAudioContext
+} from './audio/audioContext.js';
 
-const MK = 'aa_sound_muted';
-const RK = 'aa_pending_return_v1';
-const win = () => typeof window !== 'undefined';
-const vib = (v) => {
-  try {
-    navigator.vibrate?.(v);
-  } catch {}
+import {
+  tone,
+  noiseBurst
+} from './audio/synthesizer.js';
+
+import {
+  playSanctuaryChime,
+  playMollyPurr,
+  playMollyCrunch,
+  playMollyMeow,
+  playPayoffAsmr,
+  registerActionSpecResolver
+} from './audio/presets.js';
+
+import {
+  prefersReducedMotion,
+  isLowPowerDevice,
+  getCanvasDprCap,
+  optimizeCanvasContext,
+  frameStep,
+  ensureSharedOrientation,
+  getSharedOrientationGx,
+  sharedOrientationGx,
+  safeVibrate as vib
+} from './core/device.js';
+
+import {
+  savePendingPartnerReturn,
+  readPendingPartnerRecord,
+  getPendingPartnerReturnRemainingMs,
+  consumePendingPartnerReturn
+} from './features/actions/services/partnerReturnService.js';
+
+import {
+  fetchAmbientPulse,
+  describeAmbientPulse
+} from './features/pulse/services/pulseService.js';
+
+export {
+  MOLLY_TREAT_BY_FOOD,
+  MODE_TO_MOLLY_FOOD,
+  resolveMollyTreat,
+  isSoundMuted,
+  toggleSoundMuted,
+  getAudioContext,
+  tone,
+  noiseBurst,
+  playSanctuaryChime,
+  playMollyPurr,
+  playMollyCrunch,
+  playMollyMeow,
+  playPayoffAsmr,
+  prefersReducedMotion,
+  isLowPowerDevice,
+  getCanvasDprCap,
+  optimizeCanvasContext,
+  frameStep,
+  ensureSharedOrientation,
+  getSharedOrientationGx,
+  savePendingPartnerReturn,
+  getPendingPartnerReturnRemainingMs,
+  consumePendingPartnerReturn,
+  fetchAmbientPulse,
+  describeAmbientPulse
 };
 
-let ac = null;
-let mem = null;
-let lastAsmrTs = 0;
+const win = () => typeof window !== 'undefined';
 let globalSparkCharge = 0;
 const activeControllers = new Set();
 
@@ -34,104 +100,6 @@ export function registerMollyNotifier(fn) {
   mollySparkNotifier = typeof fn === 'function' ? fn : null;
 }
 
-/**
- * Shared singleton DeviceOrientation state across all canvases (H4 / AUDIT #5).
- */
-let sharedOrientationGx = 0;
-let sharedOrientationListening = false;
-
-function ensureSharedOrientation() {
-  if (sharedOrientationListening || !win()) return;
-  try {
-    window.addEventListener(
-      'deviceorientation',
-      (e) => {
-        if (typeof e?.gamma === 'number') {
-          sharedOrientationGx = Math.max(-0.42, Math.min(0.42, e.gamma * 0.01));
-        }
-      },
-      { passive: true }
-    );
-    sharedOrientationListening = true;
-  } catch {}
-}
-
-/**
- * Safe storage wrapper that never evaluates bare `localStorage` outside try/catch (H2).
- */
-export const isSoundMuted = () => win() && safeGetItem(MK, 'local') === '1';
-
-export const toggleSoundMuted = () => {
-  const n = !isSoundMuted();
-  safeSetItem(MK, n ? '1' : '0', 'local');
-  if (!n) {
-    tone(523.25, 0.22, 'sine', 0, 0.03);
-    tone(659.25, 0.28, 'triangle', 0.06, 0.028);
-  }
-  return n;
-};
-
-export const prefersReducedMotion = () =>
-  !!(win() && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
-
-let cachedLowPower = null;
-
-/**
- * Heuristika pro slabší zařízení (telefony, levné tablety, in-app prohlížeče, úsporný režim dat).
- * Na nich vypínáme drahé `shadowBlur` záře a snižujeme rozlišení pláten, aby animace nesekaly.
- * Výsledek se cachuje — zařízení se během session nemění.
- */
-export function isLowPowerDevice() {
-  if (cachedLowPower !== null) return cachedLowPower;
-  if (!win()) return false;
-  try {
-    const nav = /** @type {any} */ (navigator);
-    const coarse = !!window.matchMedia?.('(pointer: coarse)').matches;
-    const narrow = (window.innerWidth || 1280) <= 820;
-    const cores = Number(nav.hardwareConcurrency) || 4;
-    const devMem = Number(nav.deviceMemory) || 4;
-    const saveData = !!nav.connection?.saveData;
-    cachedLowPower = saveData || cores <= 2 || devMem <= 2 || coarse || (narrow && cores <= 4);
-  } catch {
-    cachedLowPower = false;
-  }
-  return cachedLowPower;
-}
-
-/**
- * Maximální devicePixelRatio pro animovaná plátna (Retina 3× by zbytečně čtyřnásobila počet pixelů).
- */
-export function getCanvasDprCap() {
-  return isLowPowerDevice() ? 1.5 : 2;
-}
-
-/**
- * Na slabších zařízeních udělá z `shadowBlur` no-op pro konkrétní 2D kontext.
- * Gaussovský rozmaz stínu se počítá na CPU při každém vykreslení tvaru a je hlavní příčinou sekání
- * částicových scén na telefonech. Barvy, tvary i aditivní záře (`lighter`) zůstávají zachované.
- * @param {CanvasRenderingContext2D | null | undefined} ctx
- */
-export function optimizeCanvasContext(ctx) {
-  if (!ctx || !isLowPowerDevice()) return ctx;
-  try {
-    Object.defineProperty(ctx, 'shadowBlur', {
-      configurable: true,
-      get: () => 0,
-      set: () => {}
-    });
-  } catch {}
-  return ctx;
-}
-
-/**
- * Normalizovaný krok snímku vůči 60 fps (1 = 16,7 ms). Omezený, aby se po přepnutí záložky
- * nebo zaseknutí hlavního vlákna částice „neteleportovaly“.
- * @param {number} dtMs
- */
-export function frameStep(dtMs) {
-  if (!Number.isFinite(dtMs) || dtMs <= 0) return 1;
-  return Math.max(0.25, Math.min(3, dtMs / 16.667));
-}
 
 export const isAnimalAction = (a) =>
   /zvirata_utulek_online|donio_utulky|click[-_]and[-_]feed|utulek|útulk|misk/i.test(
@@ -643,201 +611,10 @@ export function getActionEffectMeta(action, currentVal, opts = {}) {
   };
 }
 
-function ctx() {
-  if (!win() || isSoundMuted()) return null;
-  try {
-    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
-    if (ac.state === 'suspended') ac.resume().catch(() => {});
-    return ac;
-  } catch {
-    return null;
-  }
-}
 
-function tone(f, dur = 0.28, tp = 'sine', d = 0, pk = 0.038, ef = 0) {
-  const c = ctx();
-  if (!c) return null;
-  try {
-    const t = c.currentTime + d;
-    const o = c.createOscillator();
-    const o2 = c.createOscillator();
-    const g = c.createGain();
-    const g2 = c.createGain();
-    const r = (p, v, x) => p.linearRampToValueAtTime(v, x);
-    o.type = tp;
-    o.frequency.value = f;
-    o2.type = 'sine';
-    o2.frequency.value = f * 2;
-    if (ef) {
-      r(o.frequency, ef, t + dur * 0.85);
-      r(o2.frequency, ef * 2, t + dur * 0.85);
-    }
-    g.gain.setValueAtTime(0.001, t);
-    r(g.gain, pk, t + 0.018);
-    r(g.gain, 0.0001, t + dur);
-    g2.gain.setValueAtTime(0.0005, t);
-    r(g2.gain, pk * 0.22, t + 0.025);
-    r(g2.gain, 0.0001, t + dur * 0.9);
-    o.connect(g);
-    o2.connect(g2);
-    g.connect(c.destination);
-    g2.connect(c.destination);
-    o.start(t);
-    o2.start(t);
-    o.stop(t + dur + 0.03);
-    o2.stop(t + dur + 0.03);
-    return g;
-  } catch {
-    return null;
-  }
-}
+// Connect audio preset resolver to action catalog
+registerActionSpecResolver(resolveActionEffectSpec);
 
-/**
- * Shared chime generator for /svet so the entire app shares a single AudioContext
- * and honors the global mute setting `isSoundMuted()` (M19 / AUDIT #28).
- * @param {number} [freq=528]
- * @param {number} [dur=1.4]
- * @param {OscillatorType} [wave='sine']
- * @param {number} [delay=0]
- */
-export function playSanctuaryChime(freq = 528, dur = 1.4, wave = 'sine', delay = 0) {
-  return tone(freq, dur, wave, delay, 0.045);
-}
-
-function noiseBurst(dur = 0.03, freq = 1100, q = 5.5, delay = 0, gainPeak = 0.04) {
-  const c = ctx();
-  if (!c) return;
-  try {
-    const sr = c.sampleRate;
-    const len = Math.max(64, Math.floor(sr * dur));
-    const buf = c.createBuffer(1, len, sr);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < len; i++) {
-      data[i] = (Math.random() * 2 - 1) * (1 - i / len);
-    }
-    const t = c.currentTime + delay;
-    const src = c.createBufferSource();
-    const flt = c.createBiquadFilter();
-    const g = c.createGain();
-    src.buffer = buf;
-    flt.type = 'bandpass';
-    flt.frequency.value = freq;
-    flt.Q.value = q;
-    g.gain.setValueAtTime(gainPeak, t);
-    g.gain.linearRampToValueAtTime(0.0005, t + dur);
-    src.connect(flt);
-    flt.connect(g);
-    g.connect(c.destination);
-    src.start(t);
-  } catch {}
-}
-
-/**
- * Hřejivé procedurální předení želvovinové kočky Molly (27 Hz -> 31 Hz AM modulace 4.2 Hz + nízkopropustný filtr 145 Hz)
- */
-export function playMollyPurr(dur = 1.1, intensity = 0.8) {
-  if (isSoundMuted()) return;
-  const c = ctx();
-  if (!c) return;
-  try {
-    const t = c.currentTime;
-    const osc1 = c.createOscillator();
-    const osc2 = c.createOscillator();
-    const lfo = c.createOscillator();
-    const lfoGain = c.createGain();
-    const flt = c.createBiquadFilter();
-    const env = c.createGain();
-
-    osc1.type = 'sawtooth';
-    osc1.frequency.setValueAtTime(27.2, t);
-    osc1.frequency.linearRampToValueAtTime(30.8, t + dur * 0.55);
-    osc1.frequency.linearRampToValueAtTime(26.5, t + dur);
-
-    osc2.type = 'triangle';
-    osc2.frequency.setValueAtTime(54.4, t);
-    osc2.frequency.linearRampToValueAtTime(61.2, t + dur * 0.55);
-
-    lfo.type = 'sine';
-    lfo.frequency.setValueAtTime(4.2, t);
-    lfoGain.gain.setValueAtTime(0.018 * intensity, t);
-
-    flt.type = 'lowpass';
-    flt.frequency.setValueAtTime(145, t);
-    flt.Q.setValueAtTime(1.6, t);
-
-    const pk = Math.max(0.008, Math.min(0.045, 0.028 * intensity));
-    env.gain.setValueAtTime(0.0005, t);
-    env.gain.linearRampToValueAtTime(pk, t + 0.14);
-    env.gain.setValueAtTime(pk * 0.92, Math.max(t + 0.15, t + dur - 0.18));
-    env.gain.linearRampToValueAtTime(0.0001, t + dur);
-
-    lfo.connect(lfoGain);
-    lfoGain.connect(env.gain);
-    osc1.connect(flt);
-    osc2.connect(flt);
-    flt.connect(env);
-    env.connect(c.destination);
-
-    osc1.start(t);
-    osc2.start(t);
-    lfo.start(t);
-    osc1.stop(t + dur + 0.04);
-    osc2.stop(t + dur + 0.04);
-    lfo.stop(t + dur + 0.04);
-
-    // Jemný dechový třpyt
-    tone(528, Math.min(0.45, dur * 0.4), 'sine', 0.05, 0.012 * intensity, 660);
-  } catch {}
-}
-
-/**
- * Křupnutí pamlsku pro Molly (3 křupavé mikro-impulsy + spokojené vrknutí)
- */
-export function playMollyCrunch() {
-  if (isSoundMuted()) return;
-  try {
-    [0, 0.075, 0.155].forEach((d, i) => {
-      noiseBurst(0.022, 1280 + i * 240, 6.2, d, 0.042);
-      tone(380 + i * 90, 0.06, 'triangle', d, 0.02);
-    });
-    tone(587.33, 0.18, 'sine', 0.21, 0.024, 783.99);
-  } catch {}
-}
-
-/**
- * Melodické mňouknutí Molly (formantová kontura 440 Hz -> 690 Hz -> 590 Hz)
- */
-export function playMollyMeow() {
-  if (isSoundMuted()) return;
-  const c = ctx();
-  if (!c) return;
-  try {
-    const t = c.currentTime;
-    const dur = 0.36;
-    const osc = c.createOscillator();
-    const flt = c.createBiquadFilter();
-    const g = c.createGain();
-
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(440, t);
-    osc.frequency.exponentialRampToValueAtTime(690, t + 0.13);
-    osc.frequency.exponentialRampToValueAtTime(590, t + dur);
-
-    flt.type = 'bandpass';
-    flt.frequency.setValueAtTime(1150, t);
-    flt.Q.setValueAtTime(2.4, t);
-
-    g.gain.setValueAtTime(0.001, t);
-    g.gain.linearRampToValueAtTime(0.032, t + 0.05);
-    g.gain.linearRampToValueAtTime(0.0001, t + dur);
-
-    osc.connect(flt);
-    flt.connect(g);
-    g.connect(c.destination);
-    osc.start(t);
-    osc.stop(t + dur + 0.03);
-  } catch {}
-}
 
 export function triggerCanvasBurst(actionOrCanvas = null, superBurst = true) {
   const isBool = typeof superBurst === 'boolean';
@@ -901,7 +678,7 @@ export function startHoldSpark(el, cb) {
     el?.classList?.remove('spark-ready');
     try {
       [g1, g2].forEach((g) =>
-        g?.gain.setTargetAtTime(0.0001, ac?.currentTime || 0, 0.02)
+        g?.gain.setTargetAtTime(0.0001, getAudioContext()?.currentTime || 0, 0.02)
       );
     } catch {}
     if (rel && performance.now() - t0 < 200) {
@@ -965,227 +742,6 @@ export function holdSpark(node, params = {}) {
 /**
  * Procedurální Web Audio ASMR syntéza přizpůsobená každému z 18 zvukových profilů
  */
-export function playPayoffAsmr(actionOrMode = 'kibble') {
-  const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
-  if (now - lastAsmrTs < 80) return;
-  lastAsmrTs = now;
-
-  const spec =
-    typeof actionOrMode === 'object' && actionOrMode !== null
-      ? resolveActionEffectSpec(actionOrMode)
-      : ACTION_EFFECT_CATALOG[actionOrMode] ||
-        MODE_LOOKUP[actionOrMode] || {
-          asmr: actionOrMode === 'kibble' ? 'kibble' : actionOrMode
-        };
-  const kind = spec.asmr || 'light';
-
-  if (kind === 'kibble') {
-    for (let k = 0; k < 12; k++) {
-      noiseBurst(0.018, 950 + ((k * 137) % 700), 6.5, k * 0.038, 0.05);
-    }
-    tone(523.25, 0.35, 'sine', 0.38);
-    tone(659.25, 0.35, 'triangle', 0.43);
-    tone(783.99, 0.42, 'sine', 0.48);
-    return;
-  }
-
-  if (kind === 'rice') {
-    for (let k = 0; k < 16; k++) {
-      noiseBurst(0.012, 1850 + ((k * 193) % 1100), 8.0, k * 0.026, 0.035);
-    }
-    [587.33, 739.99, 880, 1174.66].forEach((f, i) =>
-      tone(f, 0.28, 'sine', 0.34 + i * 0.05, 0.03)
-    );
-    return;
-  }
-
-  if (kind === 'strnad') {
-    [1760, 1760, 1760].forEach((f, i) =>
-      tone(f, 0.09, 'sine', i * 0.11, 0.03, f * 1.06)
-    );
-    tone(1480, 0.42, 'triangle', 0.36, 0.035, 1318.5);
-    return;
-  }
-
-  if (kind === 'birds') {
-    tone(1318.5, 0.14, 'sine', 0.02, 0.03, 1760);
-    tone(1567.98, 0.16, 'sine', 0.16, 0.03, 2093);
-    tone(1760, 0.26, 'triangle', 0.32, 0.028, 1567.98);
-    return;
-  }
-
-  if (kind === 'heartbeat') {
-    tone(68, 0.14, 'sine', 0.02, 0.06, 52);
-    tone(86, 0.16, 'sine', 0.18, 0.055, 60);
-    tone(523.25, 0.36, 'sine', 0.36, 0.03);
-    tone(659.25, 0.4, 'triangle', 0.42, 0.028);
-    return;
-  }
-
-  if (kind === 'typewriter') {
-    for (let k = 0; k < 5; k++) {
-      noiseBurst(0.014, 1400 + k * 180, 7.0, k * 0.052, 0.04);
-    }
-    tone(659.25, 0.28, 'triangle', 0.28, 0.032);
-    tone(987.77, 0.36, 'sine', 0.34, 0.032);
-    return;
-  }
-
-  if (kind === 'sonar') {
-    tone(880, 0.14, 'sine', 0.0, 0.03);
-    tone(1318.5, 0.18, 'sine', 0.14, 0.03);
-    tone(1760, 0.32, 'triangle', 0.28, 0.028);
-    return;
-  }
-
-  if (kind === 'musicbox') {
-    [523.25, 659.25, 783.99, 987.77, 1046.5].forEach((f, i) =>
-      tone(f, 0.34, 'triangle', i * 0.07, 0.03)
-    );
-    return;
-  }
-
-  if (kind === 'pages') {
-    for (let k = 0; k < 4; k++) {
-      noiseBurst(0.04, 800 + k * 240, 3.2, k * 0.068, 0.032);
-    }
-    tone(523.25, 0.3, 'sine', 0.26, 0.03);
-    tone(659.25, 0.36, 'triangle', 0.32, 0.03);
-    return;
-  }
-
-  if (kind === 'water') {
-    tone(580, 0.12, 'sine', 0.02, 0.038, 1240);
-    tone(720, 0.14, 'sine', 0.16, 0.035, 1480);
-    tone(880, 0.32, 'triangle', 0.32, 0.028, 1568);
-    return;
-  }
-
-  if (kind === 'forest') {
-    noiseBurst(0.22, 620, 1.8, 0.01, 0.026);
-    [392, 440, 523.25, 659.25].forEach((f, i) =>
-      tone(f, 0.36, 'triangle', 0.06 + i * 0.062, 0.03)
-    );
-    return;
-  }
-
-  if (kind === 'campfire') {
-    noiseBurst(0.24, 380, 1.5, 0.0, 0.024);
-    for (let k = 0; k < 6; k++) {
-      noiseBurst(0.011, 1750 + ((k * 230) % 950), 7.5, 0.03 + k * 0.052, 0.035);
-    }
-    [329.63, 493.88, 659.25].forEach((f, i) =>
-      tone(f, 0.38, 'triangle', 0.1 + i * 0.075, 0.028)
-    );
-    return;
-  }
-
-  if (kind === 'bicycle') {
-    for (let k = 0; k < 6; k++) {
-      noiseBurst(0.01, 2200, 9.0, k * 0.038, 0.03);
-    }
-    tone(1046.5, 0.38, 'sine', 0.24, 0.04);
-    tone(1567.98, 0.42, 'triangle', 0.3, 0.035);
-    return;
-  }
-
-  if (kind === 'bowl') {
-    tone(432, 0.65, 'sine', 0.0, 0.038);
-    tone(648, 0.6, 'triangle', 0.06, 0.025);
-    tone(864, 0.5, 'sine', 0.12, 0.016);
-    return;
-  }
-
-  if (kind === 'harp') {
-    [523.25, 587.33, 659.25, 783.99, 880, 1046.5].forEach((f, i) =>
-      tone(f, 0.38, i % 2 ? 'triangle' : 'sine', i * 0.048, 0.03)
-    );
-    return;
-  }
-
-  if (kind === 'warmth') {
-    noiseBurst(0.16, 480, 2.0, 0.02, 0.022);
-    [349.23, 440, 523.25, 659.25].forEach((f, i) =>
-      tone(f, 0.38, 'sine', 0.04 + i * 0.062, 0.032)
-    );
-    return;
-  }
-
-  if (kind === 'crystal') {
-    [1046.5, 1318.5, 1567.98, 2093].forEach((f, i) =>
-      tone(f, 0.36, 'sine', i * 0.055, 0.026)
-    );
-    tone(783.99, 0.42, 'triangle', 0.02, 0.022);
-    return;
-  }
-
-  if (kind === 'pop_bloom') {
-    [320, 440, 587.33].forEach((f, i) => {
-      noiseBurst(0.012, 1600 + i * 300, 6.0, i * 0.08, 0.03);
-      tone(f, 0.16, 'sine', i * 0.08, 0.034, f * 2);
-    });
-    tone(880, 0.3, 'triangle', 0.26, 0.028);
-    return;
-  }
-
-  [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, 0.32, 'sine', i * 0.055));
-}
-
-const sync = (r) => {
-  mem = r;
-  const s = JSON.stringify(r);
-  if (win()) {
-    safeSetItem(RK, s, 'session');
-    safeSetItem(RK, s, 'local');
-  }
-};
-
-export const savePendingPartnerReturn = (a, surface = 'home') =>
-  a &&
-  sync({
-    id: a.id,
-    title: a.title || a.name,
-    category: a.category || a.kind,
-    values: a.values,
-    surface,
-    ts: Date.now()
-  });
-
-function readPendingPartnerRecord() {
-  let stored = null;
-  if (win()) {
-    try {
-      stored = JSON.parse(
-        safeGetItem(RK, 'session') || safeGetItem(RK, 'local') || 'null'
-      );
-    } catch {}
-  }
-  return mem || stored;
-}
-
-/**
- * If a pending partner return exists and is younger than `minDelayMs`,
- * returns the remaining milliseconds to wait so the caller can schedule a timer (M25 / AUDIT #35).
- * @param {number} [minDelayMs=3000]
- * @returns {number} 0 if none or already eligible/expired
- */
-export function getPendingPartnerReturnRemainingMs(minDelayMs = 3e3) {
-  const r = readPendingPartnerRecord();
-  if (!r || r.consumed || !r.ts) return 0;
-  const dt = Date.now() - r.ts;
-  if (dt >= 0 && dt < minDelayMs) {
-    return Math.max(50, minDelayMs - dt + 30);
-  }
-  return 0;
-}
-
-export function consumePendingPartnerReturn(m = 3e3) {
-  const r = readPendingPartnerRecord();
-  const dt = r ? Date.now() - (r.ts || 0) : 0;
-  if (!r || r.consumed || dt < m || dt > 18e5) return null;
-  sync({ ...r, consumed: 1 });
-  return { ...r, consumed: true, elapsedMs: dt };
-}
 
 function drawGlow(c, x, y, r, color, alpha = 0.35) {
   c.save();
@@ -3232,34 +2788,3 @@ export function impactCanvas(node, params = {}) {
   };
 }
 
-export async function fetchAmbientPulse() {
-  try {
-    const r = await fetch('/api/pulse');
-    if (r.ok) return await r.json();
-  } catch {}
-  // Bez odpovědi serveru nic nevymýšlíme (dříve se ukazovala smyšlená věta o Brně)
-  return null;
-}
-
-/**
- * Text „pulzu komunity“ podle místa, kde se zobrazuje.
- * - `inCard`: pod konkrétní kartou smí být bez označení jen skutečná událost ke STEJNÉMU skutku
- *   (dříve se pod Freerice nebo NADĚJÍ ukazovala „miska v útulku“, jako by šlo o tenhle krok).
- *   Jiná skutečná událost je zřetelně označená jako „Mezitím v komunitě“, tip na jiný skutek
- *   pod kartu nepatří (konkuroval by hlavní volbě).
- * - jinde: skutečná událost s označením „V komunitě:“, nebo tip na skutek.
- * @param {any} pulse
- * @param {{ actionId?: string | null, inCard?: boolean }} [opts]
- */
-export function describeAmbientPulse(pulse, opts = {}) {
-  const neutral = 'Až skutek dokončíš, objeví se tu anonymně jako pulz komunity.';
-  const msg = String(pulse?.message || '').trim();
-  if (!msg) return neutral;
-  const isLive = Boolean(pulse?.isLive);
-  const lowered = `${msg.charAt(0).toLowerCase()}${msg.slice(1)}`;
-  if (opts.inCard) {
-    if (!isLive) return neutral;
-    return opts.actionId && pulse.actionId === opts.actionId ? msg : `Mezitím v komunitě: ${lowered}`;
-  }
-  return isLive ? `V komunitě: ${lowered}` : msg;
-}

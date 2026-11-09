@@ -25,12 +25,17 @@ export function safeText(value) {
 
 /**
  * Converts unknown input to a finite number or null.
+ * Strictly rejects non-primitive non-numeric types (e.g. booleans, arrays, objects)
+ * and whitespace-only strings.
  * @param {unknown} value
  * @returns {number | null}
  */
 export function toFiniteNumber(value) {
-  if (value === null || value === undefined || value === '') return null;
-  const n = Number(value);
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const n = Number(trimmed);
   return Number.isFinite(n) ? n : null;
 }
 
@@ -125,6 +130,7 @@ export function sanitizeHttpUrl(raw, maxLen = 280) {
     if (parsed.username || parsed.password) return null;
     const host = parsed.hostname.toLowerCase();
     if (!host || (!host.includes('.') && host !== 'localhost')) return null;
+    if (host.startsWith('.') || host.endsWith('.') || host.includes('..')) return null;
     return parsed.toString();
   } catch {
     return null;
@@ -193,8 +199,11 @@ export function setBoundedCache(cache, key, data, ttlMs, maxEntries = 250) {
  * @returns {{ allowed: boolean, retryAfterSec: number }}
  */
 export function checkRateLimit(bucket, clientId, maxRequests, windowMs) {
+  if (maxRequests <= 0) {
+    return { allowed: false, retryAfterSec: Math.max(1, Math.ceil(windowMs / 1000)) };
+  }
   const now = Date.now();
-  const key = `${bucket}:${clientId || 'anon'}`;
+  const key = `${encodeURIComponent(bucket)}\x1F${encodeURIComponent(clientId || 'anon')}`;
 
   const existing = RATE_LIMIT_BUCKETS.get(key);
   if (existing && existing.resetAt > now) {
@@ -215,8 +224,15 @@ export function checkRateLimit(bucket, clientId, maxRequests, windowMs) {
         singleHitKey = k;
       }
     }
-    if (RATE_LIMIT_BUCKETS.size >= MAX_RATE_BUCKETS && singleHitKey !== undefined) {
-      RATE_LIMIT_BUCKETS.delete(singleHitKey);
+    if (RATE_LIMIT_BUCKETS.size >= MAX_RATE_BUCKETS) {
+      if (singleHitKey !== undefined) {
+        RATE_LIMIT_BUCKETS.delete(singleHitKey);
+      } else {
+        const oldestKey = RATE_LIMIT_BUCKETS.keys().next().value;
+        if (oldestKey !== undefined) {
+          RATE_LIMIT_BUCKETS.delete(oldestKey);
+        }
+      }
     }
   }
 
@@ -276,7 +292,7 @@ export function hasExcessiveBodySize(request, maxBytes = 32_768) {
  * transfer-encoding payloads cannot bypass Content-Length and cause OOM (M3 / AUDIT #25).
  * @param {Request} request
  * @param {number} [maxBytes=32768]
- * @returns {Promise<{ ok: true, data: any } | { ok: false, status: number, error: string }>}
+ * @returns {Promise<{ ok: true, data: any, status?: undefined, error?: undefined } | { ok: false, status: number, error: string, data?: undefined }>}
  */
 export async function readJsonBodyBounded(request, maxBytes = 32_768) {
   if (hasExcessiveBodySize(request, maxBytes)) {
