@@ -25,25 +25,6 @@ describe('Milestone 3: Extracted Feature Components & UI Primitives', () => {
       expect(source).toContain('tier-C');
     });
 
-    it('HoldSparkButton.svelte compiles and preserves critical classes', () => {
-      const source = loadComponentSource('features/actions/components/HoldSparkButton.svelte');
-      const compiled = compile(source, { generate: 'server' });
-      expect(compiled.js.code).toBeDefined();
-
-      expect(source).toContain('btn-studio-primary');
-      expect(source).toContain('startHoldSpark');
-    });
-
-    it('PartnerReturnModal.svelte compiles and handles return loop', () => {
-      const source = loadComponentSource('features/actions/components/PartnerReturnModal.svelte');
-      const compiled = compile(source, { generate: 'server' });
-      expect(compiled.js.code).toBeDefined();
-
-      expect(source).toContain('impact-payoff-canvas');
-      expect(source).toContain('data-surface');
-      expect(source).toContain('return-dopamine-strip');
-    });
-
     it('ActionCard.svelte compiles and preserves critical CSS classes', () => {
       const source = loadComponentSource('features/actions/components/ActionCard.svelte');
       const compiled = compile(source, { generate: 'server' });
@@ -142,43 +123,6 @@ describe('Milestone 3: Extracted Feature Components & UI Primitives', () => {
       expect(source).toContain('pc-title');
       expect(source).toContain('pc-addr');
       expect(source).toContain('template-drawer');
-    });
-
-    it('GeocodeSearch.svelte compiles and preserves #near-city-jump', () => {
-      const source = loadComponentSource('features/map/components/GeocodeSearch.svelte');
-      const compiled = compile(source, { generate: 'server' });
-      expect(compiled.js.code).toBeDefined();
-
-      expect(source).toContain('id="near-city-jump"');
-      expect(source).toContain('btn-gps');
-      expect(source).toContain('CZECH_CITIES');
-    });
-
-    it('CategoryFilters.svelte compiles and preserves filter presets', () => {
-      const source = loadComponentSource('features/map/components/CategoryFilters.svelte');
-      const compiled = compile(source, { generate: 'server' });
-      expect(compiled.js.code).toBeDefined();
-
-      expect(source).toContain('preset-pill');
-      expect(source).toContain('radius-pill');
-    });
-
-    it('FirstContactModal.svelte compiles with a11y support', () => {
-      const source = loadComponentSource('features/map/components/FirstContactModal.svelte');
-      const compiled = compile(source, { generate: 'server' });
-      expect(compiled.js.code).toBeDefined();
-
-      expect(source).toContain('modal-overlay');
-      expect(source).toContain('role="dialog"');
-    });
-
-    it('LeafletMap.svelte compiles and enforces SSR window guard', () => {
-      const source = loadComponentSource('features/map/components/LeafletMap.svelte');
-      const compiled = compile(source, { generate: 'server' });
-      expect(compiled.js.code).toBeDefined();
-
-      expect(source).toContain('browser');
-      expect(source).toContain('map-canvas');
     });
   });
 

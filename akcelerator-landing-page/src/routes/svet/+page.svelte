@@ -17,7 +17,6 @@
     restoreProgressFromBackupCode,
   } from "../../lib/progress.js";
   import { MICRO_ACTIONS } from "../../lib/data/czech-actions.js";
-  import { renderStoryCardPng } from "../../lib/storyCard.js";
   import { trackEvent } from "../../lib/analytics.js";
   import {
     fetchAmbientPulse,

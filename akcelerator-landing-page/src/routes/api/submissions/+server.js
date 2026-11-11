@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
+import crypto from 'node:crypto';
 import { env as privateEnv } from '$env/dynamic/private';
-import { getServerSupabase, withTimeout, hashClientKey } from '$lib/server/supabase.js';
+import { getServerSupabase, getAdminSupabase, withTimeout, hashClientKey } from '$lib/server/supabase.js';
 import {
   safeText,
   toFiniteNumber,
@@ -13,7 +14,8 @@ import {
   readJsonBodyBounded,
   validateMutationOrigin,
   isSubmissionTooFast,
-  isAuthorizedTestBypass
+  isAuthorizedTestBypass,
+  safeCompareTokens
 } from '$lib/security.js';
 
 function sanitizeOptionalIsoDate(raw) {
@@ -139,7 +141,9 @@ export async function POST({ request, url, getClientAddress }) {
     rawDescription ||
     `${name}${city || address_label ? ` (${city || address_label})` : ''}`;
 
+  const submissionId = crypto.randomUUID();
   const dbRow = {
+    id: submissionId,
     name,
     category,
     description,
@@ -165,17 +169,13 @@ export async function POST({ request, url, getClientAddress }) {
   }
 
   try {
-    const { data, error } = await withTimeout(
-      supabase
-        .from('community_submissions')
-        .insert([dbRow])
-        .select('id, created_at, status')
-        .single(),
+    const { error } = await withTimeout(
+      supabase.from('community_submissions').insert([dbRow]),
       2800,
       'Supabase submission insert timeout'
     );
 
-    if (error || !data) {
+    if (error) {
       return json(
         {
           success: false,
@@ -185,15 +185,17 @@ export async function POST({ request, url, getClientAddress }) {
       );
     }
 
+    const nowIso = new Date().toISOString();
+
     return json({
       success: true,
-      id: data.id,
-      status: data.status || 'pending',
+      id: submissionId,
+      status: 'pending',
       fallback: false,
       moderationNotice:
         'Tvůj tip byl odeslán ke kontrole. Jakmile ověříme kontaktní údaje, zobrazí se na mapě všem. Na tomto zařízení už své místo vidíš s označením „Čeká na schválení“.',
       item: {
-        id: data.id,
+        id: submissionId,
         kind,
         name,
         category,
@@ -207,7 +209,7 @@ export async function POST({ request, url, getClientAddress }) {
         lat,
         lon,
         status: 'pending',
-        created_at: data.created_at
+        created_at: nowIso
       }
     });
   } catch {
@@ -223,19 +225,14 @@ export async function POST({ request, url, getClientAddress }) {
 
 /**
  * Moderator endpoint to approve or reject pending community submissions (H11 / AUDIT #17).
- * Requires header `x-moderator-secret` matching MODERATOR_SECRET or SUPABASE_SERVICE_ROLE_KEY.
+ * Requires header `x-moderator-secret` matching MODERATOR_SECRET strictly.
  * @type {import('./$types').RequestHandler}
  */
 export async function PATCH({ request }) {
   const modSecret = (request.headers.get('x-moderator-secret') || '').trim();
-  const expectedSecret = (
-    privateEnv.MODERATOR_SECRET ||
-    privateEnv.SUPABASE_SERVICE_ROLE_KEY ||
-    privateEnv.SUPABASE_SECRET_KEY ||
-    ''
-  ).trim();
+  const expectedSecret = (privateEnv.MODERATOR_SECRET || '').trim();
 
-  if (!modSecret || !expectedSecret || modSecret !== expectedSecret) {
+  if (!modSecret || !expectedSecret || !safeCompareTokens(modSecret, expectedSecret)) {
     return json({ success: false, error: 'Neautorizovaný přístup.' }, { status: 401 });
   }
 
@@ -250,7 +247,7 @@ export async function PATCH({ request }) {
     return json({ success: false, error: 'Chybí platné ID nebo cílový status.' }, { status: 400 });
   }
 
-  const supabase = getServerSupabase();
+  const supabase = getAdminSupabase() || getServerSupabase();
   if (!supabase) {
     return json({ success: false, error: 'Databáze není nakonfigurována.' }, { status: 503 });
   }

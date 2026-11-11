@@ -385,7 +385,7 @@
 
     .hero-stage {
       margin-top: -3.6rem;
-      padding: 4.8rem 1rem 2.5rem;
+      padding: 1.8rem 0.75rem 1.25rem;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
@@ -394,21 +394,13 @@
 
     .hero-inner {
       grid-template-columns: minmax(0, 1fr);
-      gap: 1.75rem;
+      gap: 0;
       width: 100%;
       max-width: 100%;
     }
 
     .hero-copy {
-      min-width: 0;
-      max-width: 100%;
-      min-height: calc(100svh - 6rem);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: flex-start;
-      box-sizing: border-box;
-      padding: 1.25rem 0.25rem 2.25rem;
+      display: none !important;
     }
 
     .hero-overline {
@@ -514,7 +506,7 @@
 
   @media (max-width: 360px) {
     .hero-stage {
-      padding: 4.2rem 0.65rem 1.8rem;
+      padding: 1.4rem 0.5rem 1.15rem;
     }
 
     .hero-copy {

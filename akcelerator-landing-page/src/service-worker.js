@@ -106,3 +106,18 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(respond());
 });
+
+// Service Worker Background Sync for draining offline outbox
+self.addEventListener('sync', (event) => {
+  const syncEvent = /** @type {any} */ (event);
+  if (syncEvent.tag === 'akcelerator-sync' || syncEvent.tag === 'offline-outbox-sync') {
+    syncEvent.waitUntil(
+      (async () => {
+        const clients = await self.clients.matchAll({ type: 'window' });
+        for (const client of clients) {
+          client.postMessage({ type: 'SYNC_OFFLINE_OUTBOX' });
+        }
+      })()
+    );
+  }
+});

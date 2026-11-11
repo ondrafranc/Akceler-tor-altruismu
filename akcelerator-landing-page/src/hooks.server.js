@@ -30,7 +30,12 @@ export async function handle({ event, resolve }) {
     !headers.has('cache-control') &&
     (headers.get('content-type') || '').includes('text/html')
   ) {
-    headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+    const isAuthed = event.request.headers.has('authorization') || event.request.headers.has('cookie');
+    if (isAuthed) {
+      headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+    } else {
+      headers.set('Cache-Control', 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400');
+    }
   }
 
   return new Response(response.body, {

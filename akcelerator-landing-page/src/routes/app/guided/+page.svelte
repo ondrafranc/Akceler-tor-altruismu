@@ -40,6 +40,7 @@
     safeGetItem,
     safeSetItem,
   } from "../../../lib/utils.js";
+  import ActionCard from "$lib/features/actions/components/ActionCard.svelte";
 
   const SITUATIONS = [
     {
@@ -568,271 +569,47 @@
     >
       {#if bestAction}
         <div class="card highlight-card">
-          <div class="rec-top-row">
-            <div class="rec-meta-line">
-              <span class="rec-quick-tags"
-                >{bestAction.quickTagsLabel || "2 min · Zdarma · Online"}</span
-              >
-              <span>·</span>
-              <span
-                class="rec-evidence-pill tier-{bestAction.impactEvidence ||
-                  'B'}"
-                title={EVIDENCE_TIERS[bestAction.impactEvidence || "B"]?.desc}
-              >
-                Důkazy {bestAction.impactEvidence || "B"} · {EVIDENCE_TIERS[
-                  bestAction.impactEvidence || "B"
-                ]?.shortLabel}
-              </span>
-              {#if isDone(bestAction.id)}
-                <span class="done-inline">· ✓ Splněno</span>
-              {/if}
-            </div>
-
-            <div class="rec-top-actions">
-              <button
-                type="button"
-                class="btn-cycle-inline"
-                on:click={cycleRecommendation}
-              >
-                ↻ Jiný nápad
-              </button>
-            </div>
-          </div>
-
-          {#if guidedReturnAction}
-            <div
-              class="return-dopamine-strip"
-              role="status"
-              aria-live="polite"
-              data-scene={getActionEffectMeta(guidedReturnAction, guidedReturnMetric).scene}
-            >
-              <div class="return-dopamine-head">
-                <span class="return-dopamine-title">
-                  ✨ Vítej zpět! Povedlo se?
-                </span>
-                <span class="impact-payoff-badge">
-                  {getActionEffectMeta(guidedReturnAction, guidedReturnMetric, {
-                    isReturnStrip: true,
-                  }).badge}
-                </span>
-              </div>
-              <canvas
-                class="impact-payoff-canvas"
-                width="320"
-                height="118"
-                aria-label="Fyzikální vizualizace dopadu dobrého skutku"
-                use:impactCanvas={{
-                  action: guidedReturnAction,
-                  climax: true,
-                  onProgress: (v) => {
-                    guidedReturnMetric = v;
-                  },
-                }}
-              ></canvas>
-              <div class="return-dopamine-actions">
-                <button
-                  type="button"
-                  class="btn-return-complete"
-                  on:click={() => {
-                    const done = guidedReturnAction;
-                    guidedReturnAction = null;
-                    recordSmallWin({
-                      id: done.id,
-                      title: done.title,
-                      surface: "guided",
-                    });
-                  }}
-                >
-                  ✓ Hotovo – rozsvítit stopu
-                </button>
-                <button
-                  type="button"
-                  class="btn-return-dismiss"
-                  on:click={() => (guidedReturnAction = null)}
-                >
-                  Později
-                </button>
-              </div>
-            </div>
-          {/if}
-
-          <h2 class="rec-title">{cleanTitle(bestAction.title)}</h2>
-          <p class="rec-desc">{bestAction.desc}</p>
-
-          <div class="rec-impact-block">
-            <p class="rec-impact-line">
-              <strong>Přínos ({bestAction.impactBasis || "doložený"}):</strong>
-              {bestAction.concreteImpact || bestAction.selfBenefit}
-            </p>
-            <div class="rec-partner-line">
-              <span
-                >{bestAction.registrationRequired
-                  ? "Krátká registrace u partnera"
-                  : "Bez registrace na našem webu"}</span
-              >
-              <span>·</span>
-              <span>Aktivita probíhá u <strong>{bestAction.org}</strong></span>
-            </div>
-          </div>
-
-          {#if bestAction.steps?.length}
-            <details class="how-toggle">
-              <summary
-                >Jak se zapojit ({bestAction.steps.length}
-                {bestAction.steps.length === 1
-                  ? "krok"
-                  : bestAction.steps.length < 5
-                    ? "kroky"
-                    : "kroků"}) a řetězec dopadu</summary
-              >
-              <ol class="clean-steps">
-                {#each bestAction.steps as step}
-                  <li>{step}</li>
-                {/each}
-              </ol>
-
-              {#if bestAction.impactChain}
-                <div class="rec-impact-chain">
-                  <span
-                    ><strong>Aktivita:</strong>
-                    {bestAction.impactChain.activity}</span
-                  >
-                  <span class="chain-sep">→</span>
-                  <span
-                    ><strong>Výsledek:</strong>
-                    {bestAction.impactChain.immediateOutput}</span
-                  >
-                  <span class="chain-sep">→</span>
-                  <span
-                    ><strong>Skutečný dopad:</strong>
-                    {bestAction.impactChain.realImpact}</span
-                  >
-                </div>
-              {/if}
-            </details>
-          {/if}
-
-          {#if showGuidedEffect && !guidedReturnAction}
-            <div
-              class="card-effect-stage"
-              data-scene={getActionEffectMeta(bestAction, guidedEffectMetric).scene}
-            >
-              <div class="card-effect-head">
-                <span class="impact-payoff-badge">
-                  {getActionEffectMeta(bestAction, guidedEffectMetric).badge}
-                </span>
-                <div class="card-effect-controls">
-                  <button
-                    type="button"
-                    class="effect-spark-btn"
-                    class:active={guidedSparkBoosted}
-                    aria-pressed={guidedSparkBoosted}
-                    on:click={triggerGuidedEffectSpark}
-                    title="Spustit vlnu dopadu na plátně"
-                  >
-                    ✨ Impuls
-                  </button>
-                  <button
-                    type="button"
-                    class="sound-mute-btn"
-                    on:click={handleToggleSound}
-                    aria-pressed={soundMuted}
-                    aria-label={soundMuted ? "Zapnout jemné zvuky" : "Ztlumit zvuky"}
-                    title={soundMuted ? "Zapnout jemné zvuky" : "Ztlumit zvuky"}
-                  >
-                    {soundMuted ? "🔇" : "🔊"}
-                  </button>
-                </div>
-              </div>
-              <canvas
-                bind:this={guidedCanvasNode}
-                class="impact-payoff-canvas"
-                width="320"
-                height="118"
-                aria-label="Fyzikální vizualizace dopadu dobrého skutku"
-                use:impactCanvas={{
-                  action: bestAction,
-                  climax: false,
-                  onProgress: (v) => {
-                    guidedEffectMetric = v;
-                  },
-                }}
-              ></canvas>
-            </div>
-          {/if}
-
-          <div class="cta-row">
-            <a
-              class="btn-gold-action"
-              data-molly-guide="true"
-              href={bestAction.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              use:holdSpark={{ id: bestAction.id, surface: "guided_best" }}
-              on:click={() => handleStartGuidedAction(bestAction, "guided_best")}
-            >
-              <span>Začít pomáhat</span>
-              <span>↗</span>
-            </a>
-
+          <div class="rec-top-actions">
             <button
               type="button"
-              class="btn-done-action"
-              class:initiated={isBestStarted}
-              on:click={() =>
-                recordSmallWin({
-                  id: bestAction.id,
-                  title: bestAction.title,
-                  surface: "guided",
-                })}
+              class="btn-cycle-inline"
+              on:click={cycleRecommendation}
             >
-              {isBestStarted ? "✓ Dokončeno" : "✓ Hotovo"}
+              ↻ Jiný nápad
             </button>
           </div>
 
-          <div class="guided-pulse-row">
-            <div class="ambient-pulse-pill" role="status" aria-live="off">
-              <span class="pulse-dot-live" aria-hidden="true"></span>
-              <span class="pulse-msg-text">{ambientPulseText}</span>
-            </div>
-          </div>
-
-          <div class="rec-verify-footer">
-            <span>
-              Ověřeno: <strong>{bestAction.verifiedLabel}</strong>
-              · Zdroj:
-              <a
-                href={bestAction.sourceUrl || bestAction.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="rec-source-link"
-              >
-                {bestAction.org} ↗
-              </a>
-            </span>
-            <div class="rec-footer-btns">
-              <button
-                type="button"
-                class="rec-broken-btn"
-                on:click={() => shareGuidedDirectLink(bestAction)}
-              >
-                {copiedDirectLink ? "✓ Odkaz zkopírován" : "🔗 Sdílet odkaz"}
-              </button>
-              <button
-                type="button"
-                class="rec-broken-btn"
-                on:click={() =>
-                  openBrokenLinkReport({
-                    id: bestAction.id,
-                    title: cleanTitle(bestAction.title),
-                    org: bestAction.org,
-                    url: bestAction.url,
-                  })}
-              >
-                Nahlásit chybu
-              </button>
-            </div>
-          </div>
+          <ActionCard
+            action={bestAction}
+            variant="instant"
+            isStarted={isBestStarted}
+            isCompleted={isDone(bestAction.id)}
+            partnerReturnPromptVisible={!!guidedReturnAction}
+            showEffectPreview={showGuidedEffect}
+            soundMuted={soundMuted}
+            ambientPulse={ambientPulse}
+            copiedDirectLink={copiedDirectLink}
+            onStart={() => handleStartGuidedAction(bestAction, "guided_best")}
+            onComplete={(action) => {
+              const done = guidedReturnAction || action;
+              guidedReturnAction = null;
+              recordSmallWin({
+                id: done.id,
+                title: done.title,
+                surface: "guided",
+              });
+            }}
+            onDismissReturn={() => (guidedReturnAction = null)}
+            onShare={() => shareGuidedDirectLink(bestAction)}
+            onReportBroken={() =>
+              openBrokenLinkReport({
+                id: bestAction.id,
+                title: cleanTitle(bestAction.title),
+                org: bestAction.org,
+                url: bestAction.url,
+              })}
+            onToggleSound={handleToggleSound}
+          />
         </div>
       {/if}
 
@@ -1650,118 +1427,12 @@
     color: #fde68a;
   }
 
-  .rec-quick-tags {
-    font-weight: 800;
-    color: #0d2e20;
-  }
-
-  .rec-evidence-pill {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.14rem 0.52rem;
-    border-radius: 999px;
-    font-weight: 700;
-    font-size: 0.75rem;
-    background: #ecfdf5;
-    color: #047857;
-  }
-
-  .rec-evidence-pill.tier-C {
-    background: #f8fafc;
-    color: #334155;
-  }
-
-  .rec-impact-block {
-    margin: 0 0 1rem;
-    padding-top: 0.55rem;
-    border-top: 1px solid rgba(22, 82, 56, 0.08);
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .rec-partner-line {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    flex-wrap: wrap;
-    font-size: 0.78rem;
-    color: var(--text-muted);
-  }
-
-  .rec-impact-chain {
-    margin: 0.6rem 0 0;
-    padding-top: 0.55rem;
-    border-top: 1px dashed rgba(22, 82, 56, 0.14);
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    flex-wrap: wrap;
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-  }
-
-  .chain-sep {
-    color: var(--emerald-600);
-    font-weight: 800;
-  }
-
-  .rec-verify-footer {
-    margin-top: 0.85rem;
-    padding-top: 0.65rem;
-    border-top: 1px solid rgba(22, 82, 56, 0.08);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    font-size: 0.76rem;
-    color: var(--text-muted);
-  }
-
   .rec-top-actions {
     display: flex;
     align-items: center;
     gap: 0.4rem;
     flex-wrap: wrap;
-  }
-
-  .guided-pulse-row {
-    margin-top: 0.65rem;
-  }
-
-  .rec-footer-btns {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    flex-wrap: wrap;
-  }
-
-  .rec-source-link {
-    color: var(--forest-800);
-    font-weight: 700;
-    text-decoration: none;
-  }
-
-  .rec-source-link:hover {
-    color: var(--emerald-600);
-    text-decoration: underline;
-  }
-
-  .rec-broken-btn {
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    font-family: var(--font-sans);
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-decoration: underline;
-    cursor: pointer;
-    padding: 0;
-  }
-
-  .rec-broken-btn:hover {
-    color: #b45309;
+    margin-bottom: 0.65rem;
   }
 
   .alt-impact-note {
@@ -1871,29 +1542,6 @@
     transition: box-shadow 0.25s ease;
   }
 
-  .rec-top-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    margin-bottom: 0.65rem;
-  }
-
-  .rec-meta-line {
-    display: flex;
-    align-items: center;
-    gap: 0.42rem;
-    flex-wrap: wrap;
-    font-size: 0.82rem;
-    color: var(--text-muted);
-  }
-
-  .done-inline {
-    color: #047857;
-    font-weight: 700;
-  }
-
   .btn-cycle-inline {
     border: none;
     background: transparent;
@@ -1909,119 +1557,6 @@
   .btn-cycle-inline:hover {
     background: rgba(16, 185, 129, 0.09);
     color: var(--forest-850);
-  }
-
-  .rec-title {
-    margin: 0 0 0.55rem;
-    font-size: clamp(1.35rem, 2.3vw, 1.7rem);
-    font-weight: 800;
-    color: #0b2419;
-    line-height: 1.22;
-    letter-spacing: -0.02em;
-  }
-
-  .rec-desc {
-    font-size: 0.96rem;
-    line-height: 1.62;
-    color: var(--text-secondary);
-    margin: 0 0 0.95rem;
-  }
-
-  .rec-impact-line {
-    margin: 0 0 0.3rem;
-    padding-left: 0.85rem;
-    border-left: 2.5px solid #10b981;
-    font-size: 0.88rem;
-    line-height: 1.52;
-    color: #164230;
-    font-weight: 600;
-  }
-
-  .how-toggle {
-    margin: 0 0 1.15rem 0;
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-  }
-
-  .how-toggle summary {
-    cursor: pointer;
-    font-weight: 700;
-    color: var(--forest-800);
-    list-style: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-  }
-
-  .how-toggle summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .how-toggle summary::before {
-    content: "▸";
-    color: var(--emerald-600);
-    transition: transform 0.18s ease;
-  }
-
-  .how-toggle[open] summary::before {
-    transform: rotate(90deg);
-  }
-
-  .clean-steps {
-    margin: 0.55rem 0 0;
-    padding-left: 1.2rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    font-size: 0.86rem;
-    color: var(--text-secondary);
-    line-height: 1.5;
-  }
-
-  .cta-row {
-    display: flex;
-    gap: 0.6rem;
-    flex-wrap: wrap;
-  }
-
-  .btn-gold-action {
-    flex: 1;
-    min-width: 160px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.86rem 1.25rem;
-    border-radius: 14px;
-    background: linear-gradient(135deg, #0f3626 0%, #17523a 100%);
-    color: #ffffff;
-    font-weight: 700;
-    font-size: 0.92rem;
-    text-decoration: none;
-    box-shadow: 0 10px 22px -6px rgba(15, 54, 38, 0.35);
-    transition: transform 0.18s ease;
-  }
-
-  .btn-gold-action:hover {
-    transform: translateY(-2px);
-  }
-
-  .btn-done-action {
-    padding: 0.86rem 1.1rem;
-    border-radius: 14px;
-    border: 1px solid rgba(5, 150, 105, 0.28);
-    background: #eef7f1;
-    color: #065f46;
-    font-family: var(--font-sans);
-    font-weight: 700;
-    font-size: 0.88rem;
-    cursor: pointer;
-    transition: all 0.16s ease;
-  }
-
-  .btn-done-action:hover {
-    background: #059669;
-    color: #ffffff;
   }
 
   /* ALTERNATIVES */
@@ -2406,54 +1941,8 @@
       font-size: 0.72rem;
     }
 
-    .rec-title {
-      font-size: 1.08rem;
-      margin-bottom: 0.28rem;
-    }
-
-    .rec-desc {
-      font-size: 0.8rem;
-      line-height: 1.38;
-      margin-bottom: 0.45rem;
-      display: -webkit-box;
-      line-clamp: 2;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    .rec-impact-block {
-      margin-bottom: 0.45rem;
-    }
-
-    .rec-impact-line {
-      font-size: 0.76rem;
-      line-height: 1.35;
-      margin-bottom: 0.18rem;
-    }
-
-    .rec-partner-line {
-      font-size: 0.7rem;
-    }
-
-    .how-toggle {
-      margin-bottom: 0.5rem;
-      font-size: 0.76rem;
-    }
-
-    .card-effect-stage {
-      padding: 0.36rem 0.5rem;
-      margin-bottom: 0.5rem;
-    }
-
     .highlight-card :global(.impact-payoff-canvas) {
       height: 54px;
-    }
-
-    .btn-gold-action,
-    .btn-done-action {
-      padding: 0.62rem 0.9rem;
-      font-size: 0.84rem;
     }
 
     .mobile-guided-preview-bar {

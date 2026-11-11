@@ -1,24 +1,24 @@
 <script>
-  import { onMount } from 'svelte';
-  import { page } from '$app/stores';
-  import { inject } from '@vercel/analytics';
-  import { injectSpeedInsights } from '@vercel/speed-insights/sveltekit';
-  import ImmediateHelp from '../components/ImmediateHelp.svelte';
-  import SmallWinCelebration from '../components/SmallWinCelebration.svelte';
-  import FeedbackModal from '../components/FeedbackModal.svelte';
-  import MollyCompanion from '../components/MollyCompanion.svelte';
-  import { openFeedbackModal, toggleCrisisModal } from '$lib/utils.js';
-  import '../styles/czech-theme.css';
+  import { onMount } from "svelte";
+  import { page } from "$app/stores";
+  import { inject } from "@vercel/analytics";
+  import { injectSpeedInsights } from "@vercel/speed-insights/sveltekit";
+  import ImmediateHelp from "../components/ImmediateHelp.svelte";
+  import SmallWinCelebration from "../components/SmallWinCelebration.svelte";
+  import FeedbackModal from "../components/FeedbackModal.svelte";
+  import { openFeedbackModal, toggleCrisisModal } from "$lib/utils.js";
+  import "../styles/czech-theme.css";
 
   const siteMeta = {
-    title: 'Akcelerátor altruismu — Pomáháme lidem pomáhat',
+    title: "Akcelerátor altruismu — Pomáháme lidem pomáhat",
     description:
-      'Praktický český akcelerátor dobrých skutků v okolí i z domova. Pomáháme lidem pomáhat: vyber si jeden lehký, ověřený krok pro lidi, zvířata nebo přírodu za pár minut.',
-    keywords: 'altruismus, pomoc, dobrovolnictví, mapa pomoci, neziskovky v okolí, dobré skutky'
+      "Praktický český akcelerátor dobrých skutků v okolí i z domova. Pomáháme lidem pomáhat: vyber si jeden lehký, ověřený krok pro lidi, zvířata nebo přírodu za pár minut.",
+    keywords:
+      "altruismus, pomoc, dobrovolnictví, mapa pomoci, neziskovky v okolí, dobré skutky",
   };
 
   $: pathname = $page.url.pathname;
-  $: originUrl = $page.url.origin || 'https://akcelerator-altruismu.cz';
+  $: originUrl = $page.url.origin || "https://akcelerator-altruismu.cz";
   $: canonicalUrl = `${originUrl}${pathname}`;
   $: ogImageUrl = `${originUrl}/og-image-czech.jpg`;
   let hydrated = false;
@@ -65,7 +65,7 @@
   />
 </svelte:head>
 
-<div class="app-shell" data-hydrated={hydrated ? 'true' : undefined}>
+<div class="app-shell" data-hydrated={hydrated ? "true" : undefined}>
   <header class="top-nav">
     <div class="nav-capsule">
       <a href="/" class="brand">
@@ -80,7 +80,14 @@
             />
             <circle cx="19" cy="5" r="2" fill="#FBBF24" />
             <defs>
-              <linearGradient id="brandGrad" x1="4" y1="4" x2="20" y2="21" gradientUnits="userSpaceOnUse">
+              <linearGradient
+                id="brandGrad"
+                x1="4"
+                y1="4"
+                x2="20"
+                y2="21"
+                gradientUnits="userSpaceOnUse"
+              >
                 <stop stop-color="#34D399" />
                 <stop offset="1" stop-color="#FBBF24" />
               </linearGradient>
@@ -88,34 +95,135 @@
           </svg>
         </span>
         <span class="brand-copy">
-          <span class="brand-text">Akcelerátor <span class="brand-accent">altruismu</span></span>
+          <span class="brand-text"
+            >Akcelerátor <span class="brand-accent">altruismu</span></span
+          >
           <span class="brand-sub brand-claim">Pomáháme lidem pomáhat</span>
         </span>
       </a>
 
+      <button
+        type="button"
+        class="nav-crisis-btn"
+        on:click={toggleCrisisModal}
+        aria-label="Krizová podpora 24/7"
+        title="Potřebuješ oporu? Linky důvěry 116 111 / 116 123"
+      >
+        <span aria-hidden="true">🛡️</span>
+      </button>
+
       <nav class="nav-links" aria-label="Hlavní navigace">
-        <a href="/" class="nav-pill" class:active={pathname === '/'}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <a href="/" class="nav-pill" class:active={pathname === "/"}>
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            ><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg
+          >
           <span>Rychlý start</span>
         </a>
-        <a href="/app/guided" class="nav-pill" class:active={pathname.startsWith('/app/guided')}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+        <a
+          href="/app/guided"
+          class="nav-pill"
+          class:active={pathname.startsWith("/app/guided")}
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            ><circle cx="12" cy="12" r="10" /><polygon
+              points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"
+            /></svg
+          >
           <span>Průvodce</span>
         </a>
-        <a href="/app/online" class="nav-pill" class:active={pathname.startsWith('/app/online')}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        <a
+          href="/app/online"
+          class="nav-pill"
+          class:active={pathname.startsWith("/app/online")}
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            ><path
+              d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
+            /></svg
+          >
           <span>Drobné skutky</span>
         </a>
-        <a href="/near" class="nav-pill" class:active={pathname.startsWith('/near')}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        <a
+          href="/near"
+          class="nav-pill"
+          class:active={pathname.startsWith("/near")}
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            ><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle
+              cx="12"
+              cy="10"
+              r="3"
+            /></svg
+          >
           <span>Mapa v okolí</span>
         </a>
-        <a href="/svet" class="nav-pill world-pill" class:active={pathname.startsWith('/svet')}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3L12 3z"/></svg>
+        <a
+          href="/svet"
+          class="nav-pill world-pill"
+          class:active={pathname.startsWith("/svet")}
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            ><path
+              d="M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3L12 3z"
+            /></svg
+          >
           <span>Krajina dobra</span>
         </a>
-        <a href="/submit" class="nav-pill add-tip" class:active={pathname.startsWith('/submit')}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        <a
+          href="/submit"
+          class="nav-pill add-tip"
+          class:active={pathname.startsWith("/submit")}
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"><path d="M12 5v14M5 12h14" /></svg
+          >
           <span>Přidat tip</span>
         </a>
       </nav>
@@ -132,10 +240,13 @@
       <div class="footer-col">
         <div class="footer-brand">
           <span class="footer-dot"></span>
-          Akcelerátor altruismu · <span class="footer-subbrand">Pomáháme lidem pomáhat</span>
+          Akcelerátor altruismu ·
+          <span class="footer-subbrand">Pomáháme lidem pomáhat</span>
         </div>
         <p class="footer-desc">
-          Místo, které lidem usnadňuje přejít od dobrého úmyslu ke skutečné pomoci — druhým, zvířatům i přírodě kolem nás. Vyber si drobný, ověřený krok podle toho, kolik máš zrovna dnes času a sil.
+          Místo, které lidem usnadňuje přejít od dobrého úmyslu ke skutečné
+          pomoci — druhým, zvířatům i přírodě kolem nás. Vyber si drobný,
+          ověřený krok podle toho, kolik máš zrovna dnes času a sil.
         </p>
         <div class="footer-trust">
           <span>Zdarma a bez účtu</span>
@@ -156,8 +267,16 @@
           <a href="/near">Mapa pomoci v okolí</a>
           <a href="/submit">Přidat místní organizaci nebo akci</a>
         </div>
-        <div class="footer-calm-actions" aria-label="Rychlá opora a zpětná vazba">
-          <a href="/submit" class="fc-btn" class:active={pathname.startsWith('/submit')} aria-label="Přidat tip">
+        <div
+          class="footer-calm-actions"
+          aria-label="Rychlá opora a zpětná vazba"
+        >
+          <a
+            href="/submit"
+            class="fc-btn"
+            class:active={pathname.startsWith("/submit")}
+            aria-label="Přidat tip"
+          >
             ➕ Přidat tip
           </a>
           <button
@@ -182,23 +301,31 @@
   </footer>
 
   <nav class="mobile-bottom-nav" aria-label="Mobilní navigace">
-    <a href="/" class="mb-tab" class:active={pathname === '/'}>
+    <a href="/" class="mb-tab" class:active={pathname === "/"}>
       <span class="mb-icon" aria-hidden="true">⚡</span>
       <span class="mb-label">Dnes</span>
     </a>
-    <a href="/app/online" class="mb-tab" class:active={pathname.startsWith('/app/online')}>
+    <a
+      href="/app/online"
+      class="mb-tab"
+      class:active={pathname.startsWith("/app/online")}
+    >
       <span class="mb-icon" aria-hidden="true">⏱️</span>
       <span class="mb-label">Skutky</span>
     </a>
-    <a href="/near" class="mb-tab" class:active={pathname.startsWith('/near')}>
+    <a href="/near" class="mb-tab" class:active={pathname.startsWith("/near")}>
       <span class="mb-icon" aria-hidden="true">📍</span>
       <span class="mb-label">V okolí</span>
     </a>
-    <a href="/svet" class="mb-tab" class:active={pathname.startsWith('/svet')}>
+    <a href="/svet" class="mb-tab" class:active={pathname.startsWith("/svet")}>
       <span class="mb-icon" aria-hidden="true">✨</span>
       <span class="mb-label">Krajina</span>
     </a>
-    <a href="/app/guided" class="mb-tab" class:active={pathname.startsWith('/app/guided')}>
+    <a
+      href="/app/guided"
+      class="mb-tab"
+      class:active={pathname.startsWith("/app/guided")}
+    >
       <span class="mb-icon" aria-hidden="true">🧭</span>
       <span class="mb-label">Průvodce</span>
     </a>
@@ -208,7 +335,6 @@
 <ImmediateHelp />
 <SmallWinCelebration />
 <FeedbackModal />
-<MollyCompanion />
 
 <style>
   .app-shell {
@@ -223,8 +349,7 @@
     top: 0;
     z-index: 100;
     padding: max(0.75rem, env(safe-area-inset-top, 0px))
-      max(1rem, env(safe-area-inset-right, 0px))
-      0.35rem
+      max(1rem, env(safe-area-inset-right, 0px)) 0.35rem
       max(1rem, env(safe-area-inset-left, 0px));
     pointer-events: none;
   }
@@ -260,11 +385,38 @@
     letter-spacing: -0.02em;
   }
 
+  .nav-crisis-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0.4rem;
+    border-radius: 999px;
+    border: 1px solid rgba(217, 119, 6, 0.28);
+    background: rgba(254, 243, 199, 0.65);
+    color: #92400e;
+    font-size: 1.15rem;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: all 0.18s ease;
+  }
+
+  .nav-crisis-btn:hover {
+    background: rgba(254, 243, 199, 0.95);
+    border-color: rgba(217, 119, 6, 0.45);
+    transform: scale(1.05);
+  }
+
   .brand-mark {
     width: 34px;
     height: 34px;
     border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, rgba(16, 185, 129, 0.2), rgba(251, 191, 36, 0.16));
+    background: radial-gradient(
+      circle at 30% 30%,
+      rgba(16, 185, 129, 0.2),
+      rgba(251, 191, 36, 0.16)
+    );
     border: 1px solid rgba(5, 150, 105, 0.28);
     display: inline-flex;
     align-items: center;
@@ -371,7 +523,11 @@
     right: 10%;
     width: 420px;
     height: 240px;
-    background: radial-gradient(circle, rgba(254, 243, 199, 0.55) 0%, transparent 70%);
+    background: radial-gradient(
+      circle,
+      rgba(254, 243, 199, 0.55) 0%,
+      transparent 70%
+    );
     pointer-events: none;
   }
 
@@ -450,7 +606,9 @@
     font-weight: 600;
     font-size: 0.92rem;
     text-decoration: none;
-    transition: color 0.15s ease, transform 0.15s ease;
+    transition:
+      color 0.15s ease,
+      transform 0.15s ease;
   }
 
   .footer-links a:hover {
@@ -550,7 +708,11 @@
     .nav-pill.world-pill {
       flex-shrink: 0;
       font-weight: 700;
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.14) 0%, rgba(245, 158, 11, 0.16) 100%);
+      background: linear-gradient(
+        135deg,
+        rgba(16, 185, 129, 0.14) 0%,
+        rgba(245, 158, 11, 0.16) 100%
+      );
       border-color: rgba(16, 185, 129, 0.32);
       color: #065f46;
     }
@@ -584,8 +746,7 @@
 
     .top-nav {
       padding: max(0.3rem, env(safe-area-inset-top, 0px))
-        max(0.65rem, env(safe-area-inset-right, 0px))
-        0.2rem
+        max(0.65rem, env(safe-area-inset-right, 0px)) 0.2rem
         max(0.65rem, env(safe-area-inset-left, 0px));
     }
 
@@ -593,7 +754,7 @@
       padding: 0.36rem 0.85rem;
       border-radius: 999px;
       flex-wrap: nowrap;
-      justify-content: center;
+      justify-content: space-between;
       gap: 0.4rem;
       max-width: 100%;
       box-sizing: border-box;
@@ -667,7 +828,9 @@
       font-weight: 600;
       padding: 0.25rem 0.15rem;
       border-top: 2px solid transparent;
-      transition: color 0.15s ease, background 0.15s ease;
+      transition:
+        color 0.15s ease,
+        background 0.15s ease;
     }
 
     .mb-icon {
@@ -684,7 +847,11 @@
       color: #064e3b;
       font-weight: 800;
       border-top-color: #059669;
-      background: linear-gradient(180deg, rgba(16, 185, 129, 0.12) 0%, transparent 100%);
+      background: linear-gradient(
+        180deg,
+        rgba(16, 185, 129, 0.12) 0%,
+        transparent 100%
+      );
     }
 
     .site-footer {

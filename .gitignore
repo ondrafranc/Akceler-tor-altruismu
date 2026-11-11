@@ -17,6 +17,8 @@ __pycache__/
 # Env files
 .env
 .env.*
+!.env.example
+!akcelerator-landing-page/.env.example
 streamlit-app/.env
 akcelerator-landing-page/.env
 
@@ -25,7 +27,8 @@ akcelerator-landing-page/.env
 Thumbs.db
 
 
-# Todo2 - AI-powered task management directories
+# AI / Subagent scratch directories
+.agents/
 .cursor/rules/todo2-overview.mdc
 .cursor/rules/todo2.mdc
 .cursor/mcp.json

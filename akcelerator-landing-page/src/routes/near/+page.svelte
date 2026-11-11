@@ -1,7 +1,6 @@
 <script>
   import { onMount, tick } from 'svelte';
   import { replaceState } from '$app/navigation';
-  import 'leaflet/dist/leaflet.css';
   import {
     trackEvent,
     trackFunnel,
@@ -1182,6 +1181,7 @@
       places = getInstantCurated(centerLat, centerLon, ALL_KINDS);
 
       try {
+        await import('leaflet/dist/leaflet.css');
         const mod = await import('leaflet');
         if (destroyed || !mapEl) return;
         leaflet = mod.default || mod;
@@ -2627,15 +2627,15 @@
 
   @media (max-width: 680px) {
     .near-page {
-      padding: 0.2rem 0.55rem 1.8rem;
+      padding: 0.1rem 0.55rem 1.8rem;
       overflow-x: hidden;
       width: 100%;
       box-sizing: border-box;
     }
 
     .subpage-hero.near-header {
-      padding: 0.42rem 0.72rem;
-      margin-bottom: 0.3rem;
+      padding: 0.35rem 0.65rem;
+      margin-bottom: 0.22rem;
       border-radius: 14px;
     }
 
@@ -2651,8 +2651,8 @@
     }
 
     .controls-card {
-      padding: 0.42rem 0.55rem;
-      margin-bottom: 0.35rem;
+      padding: 0.36rem 0.5rem;
+      margin-bottom: 0.25rem;
       border-radius: 14px;
       max-width: 100%;
       box-sizing: border-box;

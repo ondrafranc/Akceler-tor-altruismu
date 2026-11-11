@@ -25,6 +25,7 @@
     getActionEffectMeta,
     startHoldSpark,
     playPayoffAsmr,
+    playCelebrationChord,
     savePendingPartnerReturn,
     consumePendingPartnerReturn,
     getPendingPartnerReturnRemainingMs,
@@ -43,6 +44,7 @@
   import HopeCarousel from "../lib/features/home/HopeCarousel.svelte";
   import PortalsDrawer from "../lib/features/home/PortalsDrawer.svelte";
   import ActionCard from "../lib/features/actions/components/ActionCard.svelte";
+  import SwipeDeck from "../lib/features/actions/components/SwipeDeck.svelte";
 
   const HOME_MODES = {
     couch: {
@@ -208,7 +210,7 @@
     const handleHashChange = () => applyUrlDeepLink(undefined, true);
 
     const triggerPartnerReturnIfReady = () => {
-      if (partnerReturnPromptVisible || justCompleted) return;
+      if (justCompleted) return;
       if (returnDelayTimer) {
         clearTimeout(returnDelayTimer);
         returnDelayTimer = null;
@@ -216,13 +218,14 @@
       const elapsedMem = awaitingPartnerReturn
         ? Date.now() - partnerLeaveTimestamp
         : 0;
-      const persisted = consumePendingPartnerReturn(3000);
-      if (elapsedMem >= 3000 || persisted) {
+      const persisted = consumePendingPartnerReturn(0);
+      if (persisted || awaitingPartnerReturn) {
         if (awaitingPartnerReturn && !persisted) {
           consumePendingPartnerReturn(0);
         }
+        let matched = null;
         if (persisted?.id) {
-          const matched = resolveActionFromParam(persisted.id);
+          matched = resolveActionFromParam(persisted.id);
           if (matched) {
             energyMode = inferEnergyModeForAction(matched);
             pinnedActionId = matched.id;
@@ -230,27 +233,28 @@
           }
         }
         awaitingPartnerReturn = false;
-        partnerReturnPromptVisible = true;
+        partnerReturnPromptVisible = false;
+        justCompleted = true;
         const elapsed = persisted?.elapsedMs || elapsedMem;
         try {
           if (typeof navigator !== "undefined" && navigator.vibrate) {
             navigator.vibrate(40);
           }
         } catch {}
-        trackEvent("aa_partner_return_prompt", {
+        playCelebrationChord();
+        const finishedAction = matched || currentQuickAction;
+        if (finishedAction) {
+          recordSmallWin({
+            id: finishedAction.id,
+            title: finishedAction.title,
+            surface: "home_instant",
+            silent: true,
+          });
+        }
+        trackEvent("aa_partner_return_celebration", {
           id: persisted?.id || currentQuickAction?.id || lastQuickActionId,
           elapsedMs: elapsed,
         });
-      } else {
-        const remPersisted = getPendingPartnerReturnRemainingMs(3000);
-        const remMem =
-          awaitingPartnerReturn && elapsedMem > 0
-            ? Math.max(0, 3000 - elapsedMem)
-            : 0;
-        const rem = Math.max(remPersisted, remMem);
-        if (rem > 0) {
-          returnDelayTimer = setTimeout(triggerPartnerReturnIfReady, rem + 30);
-        }
       }
     };
 
@@ -359,6 +363,11 @@
     : null;
   $: currentQuickAction =
     pinnedAction || (quickPool.length ? quickPool[0] : null);
+  $: quickDeckActions = pinnedAction
+    ? [pinnedAction, ...quickPool.filter((a) => a.id !== pinnedAction.id)]
+    : quickPool.length > 0
+      ? quickPool
+      : (MICRO_ACTIONS || []).slice(0, 5);
   $: if (currentQuickAction?.id) {
     lastQuickActionId = currentQuickAction.id;
   }
@@ -407,6 +416,24 @@
     });
     trackFunnel("recommendation_shown", {
       surface: "home_instant",
+      mode: energyMode,
+      index: suggestionIndex,
+    });
+  }
+
+  function prevQuickIdea() {
+    handlePrimaryPointerEnd(false);
+    pinnedActionId = "";
+    awaitingPartnerReturn = false;
+    partnerReturnPromptVisible = false;
+    justCompleted = false;
+    excludeQuickId = lastQuickActionId;
+    if (suggestionIndex > 0) {
+      suggestionIndex -= 1;
+    } else if (quickDeckActions.length > 0) {
+      suggestionIndex = quickDeckActions.length - 1;
+    }
+    trackEvent("aa_home_prev_idea", {
       mode: energyMode,
       index: suggestionIndex,
     });
@@ -468,6 +495,12 @@
     justCompleted = true;
     awaitingPartnerReturn = false;
     partnerReturnPromptVisible = false;
+    try {
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate(40);
+      }
+    } catch {}
+    playCelebrationChord();
     recordSmallWin({
       id: action.id,
       title: action.title,
@@ -593,8 +626,9 @@
       </div>
 
       {#if currentQuickAction}
-        <ActionCard
-          action={currentQuickAction}
+        <SwipeDeck
+          actions={quickDeckActions}
+          currentIndex={suggestionIndex}
           isStarted={isCurrentStarted}
           {justCompleted}
           {partnerReturnPromptVisible}
@@ -624,6 +658,10 @@
             });
           }}
           onNextIdea={nextQuickIdea}
+          onPrevIdea={prevQuickIdea}
+          onCloseSession={() => {
+            trackEvent("aa_home_session_closed", {});
+          }}
         />
       {/if}
       </div>
@@ -699,6 +737,7 @@
   .cycle-link {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.35rem;
     border: none;
     background: transparent;
@@ -707,7 +746,10 @@
     font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
-    padding: 0.2rem 0.4rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.5rem 0.65rem;
+    box-sizing: border-box;
     border-radius: 8px;
     transition:
       background 0.16s ease,
@@ -732,7 +774,8 @@
   .energy-tab {
     border: none;
     border-radius: 999px;
-    padding: 0.5rem 0.35rem;
+    min-height: 44px;
+    padding: 0.5rem 0.5rem;
     background: transparent;
     color: var(--text-secondary);
     font-family: var(--font-sans);
@@ -740,6 +783,11 @@
     font-size: 0.82rem;
     cursor: pointer;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    box-sizing: border-box;
     transition: all 0.2s var(--ease-gentle);
   }
 
@@ -758,26 +806,28 @@
       min-width: 0;
       max-width: 100%;
       box-sizing: border-box;
-      padding: 1.15rem 1.1rem;
+      padding: 0.58rem 0.78rem 0.72rem;
       border-radius: 24px;
-      margin-top: 0.35rem;
-      scroll-margin-top: 1.5rem;
+      margin-top: 0;
+      scroll-margin-top: 0.5rem;
       box-shadow:
         0 24px 48px -12px rgba(3, 12, 8, 0.52),
         0 0 0 1px rgba(255, 255, 255, 0.75);
     }
 
     .studio-head {
-      margin-bottom: 0.5rem;
-      padding-bottom: 0.25rem;
+      margin-bottom: 0.18rem;
+      padding-bottom: 0;
     }
 
     .studio-label {
-      font-size: 0.82rem;
+      font-size: 0.8rem;
     }
 
     .cycle-link {
-      padding: 0.25rem 0.52rem;
+      min-height: 44px;
+      min-width: 44px;
+      padding: 0.45rem 0.55rem;
       font-size: 0.78rem;
     }
 
@@ -791,9 +841,9 @@
       min-width: 0;
       max-width: 100%;
       box-sizing: border-box;
-      gap: 0.25rem;
-      padding: 0.25rem;
-      margin-bottom: 0.75rem;
+      gap: 0.16rem;
+      padding: 0.2rem;
+      margin-bottom: 0.32rem;
       border-radius: 999px;
       background: #eef3ef;
       width: 100%;
@@ -805,17 +855,17 @@
 
     .energy-tab {
       min-height: 44px;
-      padding: 0.35rem 0.55rem;
-      font-size: 0.78rem;
+      padding: 0.32rem 0.32rem;
+      font-size: 0.7rem;
       font-weight: 700;
       white-space: nowrap;
-      flex: 1 1 0;
+      flex: 1 1 auto;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       text-align: center;
       border-radius: 999px;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.015em;
     }
   }
 </style>

@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import crypto from 'node:crypto';
 import { getServerSupabase, withTimeout } from '$lib/server/supabase.js';
 import {
   safeText,
@@ -112,7 +113,9 @@ export async function POST({ request, url, getClientAddress }) {
   }
 
   try {
+    const id = crypto.randomUUID();
     const row = {
+      id,
       message: textValue,
       category: categoryValue,
       page_url: pageUrl,
@@ -121,13 +124,13 @@ export async function POST({ request, url, getClientAddress }) {
       status: 'new'
     };
 
-    const { data, error } = await withTimeout(
-      supabase.from('feedback').insert([row]).select('id, created_at').single(),
+    const { error } = await withTimeout(
+      supabase.from('feedback').insert([row]),
       2800,
       'Supabase feedback insert timeout'
     );
 
-    if (error || !data) {
+    if (error) {
       return json(
         {
           success: false,
@@ -140,8 +143,8 @@ export async function POST({ request, url, getClientAddress }) {
     return json({
       success: true,
       message: 'Zpětná vazba byla uložena.',
-      id: data.id,
-      data: [data]
+      id,
+      data: [{ id, created_at: new Date().toISOString() }]
     });
   } catch {
     return json(

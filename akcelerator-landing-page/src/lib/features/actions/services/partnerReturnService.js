@@ -55,29 +55,38 @@ export function readPendingPartnerRecord() {
 
 /**
  * If a pending partner return exists and is younger than `minDelayMs`,
- * returns the remaining milliseconds to wait so the caller can schedule a timer (M25 / AUDIT #35).
- * @param {number} [minDelayMs=3000]
+ * returns the remaining milliseconds to wait so the caller can schedule a timer.
+ * Note: Under Phase 3 zero-delay specification, minDelayMs defaults to 0 (no artificial wait).
+ * @param {number} [minDelayMs=0]
  * @returns {number} 0 if none or already eligible/expired
  */
-export function getPendingPartnerReturnRemainingMs(minDelayMs = 3e3) {
+export function getPendingPartnerReturnRemainingMs(minDelayMs = 0) {
   const r = readPendingPartnerRecord();
   if (!r || r.consumed || !r.ts) return 0;
   const dt = Date.now() - r.ts;
-  if (dt >= 0 && dt < minDelayMs) {
+  if (minDelayMs > 0 && dt >= 0 && dt < minDelayMs) {
     return Math.max(50, minDelayMs - dt + 30);
   }
   return 0;
 }
 
 /**
- * Consumes the pending partner return if elapsed time is between minDelay and 30 minutes.
- * @param {number} [m=3000] Minimum elapsed milliseconds
+ * Consumes the pending partner return immediately without artificial delay (between 0 and 30 minutes).
+ * @param {number} [m=0] Minimum elapsed milliseconds (defaults to 0 for instant celebration)
  * @returns {any | null} Consumed record with elapsedMs, or null if ineligible
  */
-export function consumePendingPartnerReturn(m = 3e3) {
+export function consumePendingPartnerReturn(m = 0) {
   const r = readPendingPartnerRecord();
   const dt = r ? Date.now() - (r.ts || 0) : 0;
   if (!r || r.consumed || dt < m || dt > 18e5) return null;
   sync({ ...r, consumed: 1 });
   return { ...r, consumed: true, elapsedMs: dt };
+}
+
+/**
+ * Checks and immediately consumes any pending partner return upon tab/window focus.
+ * @returns {any | null}
+ */
+export function checkImmediatePartnerReturn() {
+  return consumePendingPartnerReturn(0);
 }

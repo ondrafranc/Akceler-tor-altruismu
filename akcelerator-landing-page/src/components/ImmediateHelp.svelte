@@ -1,46 +1,46 @@
 <script>
-  import { onMount } from 'svelte';
-  import { isCrisisOpen, toggleCrisisModal } from '../lib/utils.js';
+  import { onMount } from "svelte";
+  import { isCrisisOpen, toggleCrisisModal } from "../lib/utils.js";
 
   onMount(() => {
     const handleToggle = () => {
       toggleCrisisModal();
     };
-    window.addEventListener('akcelerator:toggle-crisis', handleToggle);
+    window.addEventListener("akcelerator:toggle-crisis", handleToggle);
     return () => {
-      window.removeEventListener('akcelerator:toggle-crisis', handleToggle);
+      window.removeEventListener("akcelerator:toggle-crisis", handleToggle);
     };
   });
 
   const resources = [
     {
-      name: 'Linka bezpečí (děti a studenti do 26 let)',
-      phone: '116 111',
-      phoneRaw: '116111',
-      url: 'https://www.linkabezpeci.cz',
-      available: '24/7 zdarma, anonymně (i chat)'
+      name: "Linka bezpečí (děti a studenti do 26 let)",
+      phone: "116 111",
+      phoneRaw: "116111",
+      url: "https://www.linkabezpeci.cz",
+      available: "24/7 zdarma, anonymně (i chat)",
     },
     {
-      name: 'Linka první psychické pomoci (dospělí)',
-      phone: '116 123',
-      phoneRaw: '116123',
-      url: 'https://cesta-z-krize.cz',
-      available: '24/7 zdarma, anonymně'
+      name: "Linka první psychické pomoci (dospělí)",
+      phone: "116 123",
+      phoneRaw: "116123",
+      url: "https://cesta-z-krize.cz",
+      available: "24/7 zdarma, anonymně",
     },
     {
-      name: 'Opatruj.se & Nevypusť duši',
-      phone: '',
-      phoneRaw: '',
-      url: 'https://opatruj.se',
-      available: 'Praktická první pomoc pro duševní zdraví'
+      name: "Opatruj.se & Nevypusť duši",
+      phone: "",
+      phoneRaw: "",
+      url: "https://opatruj.se",
+      available: "Praktická první pomoc pro duševní zdraví",
     },
     {
-      name: 'Centrum krizové intervence Bohnice',
-      phone: '284 016 666',
-      phoneRaw: '+420284016666',
-      url: 'https://bohnice.cz/krizova-pomoc/',
-      available: '24/7 (Praha i celá ČR)'
-    }
+      name: "Centrum krizové intervence Bohnice",
+      phone: "284 016 666",
+      phoneRaw: "+420284016666",
+      url: "https://bohnice.cz/krizova-pomoc/",
+      available: "24/7 (Praha i celá ČR)",
+    },
   ];
 
   function toggleHelp() {
@@ -50,13 +50,25 @@
 
 <div class="crisis-widget" class:expanded={$isCrisisOpen}>
   {#if $isCrisisOpen}
-    <div class="crisis-panel" role="dialog" aria-label="Krizová podpora a linky důvěry">
+    <div
+      class="crisis-panel"
+      role="dialog"
+      aria-label="Krizová podpora a linky důvěry"
+    >
       <div class="panel-head">
         <div>
           <strong>🆘 Potřebuješ teď oporu ty?</strong>
-          <div class="panel-sub">Na to, co prožíváš, nemusíš zůstat bez podpory. Tyto služby jsou tu pro tebe zdarma a anonymně:</div>
+          <div class="panel-sub">
+            Na to, co prožíváš, nemusíš zůstat bez podpory. Tyto služby jsou tu
+            pro tebe zdarma a anonymně:
+          </div>
         </div>
-        <button type="button" class="close-btn" on:click={toggleHelp} aria-label="Skrýt krizové kontakty">
+        <button
+          type="button"
+          class="close-btn"
+          on:click={toggleHelp}
+          aria-label="Skrýt krizové kontakty"
+        >
           ✕
         </button>
       </div>
@@ -73,7 +85,12 @@
                 <a href={`tel:${r.phoneRaw}`} class="res-phone">📞 {r.phone}</a>
               {/if}
               {#if r.url}
-                <a href={r.url} target="_blank" rel="noopener noreferrer" class="res-web">Web / chat →</a>
+                <a
+                  href={r.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="res-web">Web / chat →</a
+                >
               {/if}
             </div>
           </div>
@@ -81,7 +98,8 @@
       </div>
 
       <div class="emergency-foot">
-        ⚠️ V akutním ohrožení života volej <strong>155</strong> (záchranka) nebo <strong>112</strong>.
+        ⚠️ V akutním ohrožení života volej <strong>155</strong> (záchranka) nebo
+        <strong>112</strong>.
       </div>
     </div>
   {/if}
@@ -279,19 +297,7 @@
     }
 
     .crisis-mobile-fab {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      padding: 0.32rem 0.65rem;
-      border-radius: 999px;
-      border: 1px solid rgba(217, 119, 6, 0.32);
-      background: rgba(254, 255, 253, 0.96);
-      color: #143324;
-      font-family: var(--font-sans);
-      font-weight: 700;
-      font-size: 0.72rem;
-      cursor: pointer;
-      box-shadow: 0 6px 16px rgba(12, 38, 26, 0.16);
+      display: none !important;
     }
 
     .crisis-panel {

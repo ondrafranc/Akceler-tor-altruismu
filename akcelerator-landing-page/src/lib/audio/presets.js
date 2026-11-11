@@ -33,6 +33,28 @@ export function playSanctuaryChime(freq = 528, dur = 1.4, wave = 'sine', delay =
 }
 
 /**
+ * Warm harmonic synthesized chord (F4 / A4 / C5 / E5) for in-situ celebratory reward.
+ * Generates an organic, rich harmonic sound using Web Audio API nodes without external audio files.
+ */
+export function playCelebrationChord() {
+  if (isSoundMuted()) return;
+  const c = getAudioContext();
+  if (!c) return;
+  try {
+    if (c.state === 'suspended') {
+      c.resume().catch(() => {});
+    }
+    const notes = [
+      { freq: 349.23, type: /** @type {OscillatorType} */ ('sine'), delay: 0.0, dur: 0.85, gain: 0.035 },    // F4
+      { freq: 440.00, type: /** @type {OscillatorType} */ ('triangle'), delay: 0.03, dur: 0.80, gain: 0.028 },// A4
+      { freq: 523.25, type: /** @type {OscillatorType} */ ('sine'), delay: 0.06, dur: 0.75, gain: 0.024 },    // C5
+      { freq: 659.25, type: /** @type {OscillatorType} */ ('triangle'), delay: 0.09, dur: 0.70, gain: 0.018 } // E5
+    ];
+    notes.forEach((n) => tone(n.freq, n.dur, n.type, n.delay, n.gain));
+  } catch {}
+}
+
+/**
  * Hřejivé procedurální předení želvovinové kočky Molly (27 Hz -> 31 Hz AM modulace 4.2 Hz + nízkopropustný filtr 145 Hz).
  * @param {number} [dur=1.1]
  * @param {number} [intensity=0.8]

@@ -26,6 +26,7 @@ import {
 
 import {
   playSanctuaryChime,
+  playCelebrationChord,
   playMollyPurr,
   playMollyCrunch,
   playMollyMeow,
@@ -42,6 +43,7 @@ import {
   ensureSharedOrientation,
   getSharedOrientationGx,
   sharedOrientationGx,
+  safeVibrate,
   safeVibrate as vib
 } from './core/device.js';
 
@@ -49,7 +51,8 @@ import {
   savePendingPartnerReturn,
   readPendingPartnerRecord,
   getPendingPartnerReturnRemainingMs,
-  consumePendingPartnerReturn
+  consumePendingPartnerReturn,
+  checkImmediatePartnerReturn
 } from './features/actions/services/partnerReturnService.js';
 
 import {
@@ -67,6 +70,7 @@ export {
   tone,
   noiseBurst,
   playSanctuaryChime,
+  playCelebrationChord,
   playMollyPurr,
   playMollyCrunch,
   playMollyMeow,
@@ -78,9 +82,11 @@ export {
   frameStep,
   ensureSharedOrientation,
   getSharedOrientationGx,
+  safeVibrate,
   savePendingPartnerReturn,
   getPendingPartnerReturnRemainingMs,
   consumePendingPartnerReturn,
+  checkImmediatePartnerReturn,
   fetchAmbientPulse,
   describeAmbientPulse
 };

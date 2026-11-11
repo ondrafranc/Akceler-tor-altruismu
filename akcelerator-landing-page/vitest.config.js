@@ -12,7 +12,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      $lib: path.resolve(__dirname, './src/lib')
+      $lib: path.resolve(__dirname, './src/lib'),
+      '$env/dynamic/private': path.resolve(__dirname, './tests/mocks/env-private.js'),
+      '$env/dynamic/public': path.resolve(__dirname, './tests/mocks/env-public.js')
     }
   }
 });

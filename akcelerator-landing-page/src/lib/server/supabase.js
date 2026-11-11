@@ -6,10 +6,13 @@ import crypto from 'node:crypto';
 /** @type {import('@supabase/supabase-js').SupabaseClient | null} */
 let cachedServerClient = null;
 let cachedKeySignature = '';
+/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
+let cachedAdminClient = null;
+let cachedAdminSignature = '';
 
 /**
- * Resolves the Supabase URL and private Service Role Key from environment variables.
- * Supports both SvelteKit standard names and Vercel-Supabase integration names.
+ * Resolves the Supabase URL and keys from environment variables.
+ * Defaults effectiveKey to anonKey with active RLS.
  */
 export function resolveSupabaseConfig() {
   const url = (
@@ -38,8 +41,8 @@ export function resolveSupabaseConfig() {
     url,
     serviceKey,
     anonKey,
-    effectiveKey: serviceKey || anonKey,
-    usingServiceRole: Boolean(serviceKey)
+    effectiveKey: anonKey,
+    usingServiceRole: false
   };
 }
 
@@ -57,19 +60,20 @@ async function fetchWithTimeout(input, init = {}) {
 }
 
 /**
- * Returns a module-level singleton Supabase client authenticated with SUPABASE_SERVICE_ROLE_KEY.
+ * Returns a module-level singleton Supabase client authenticated with PUBLIC_SUPABASE_ANON_KEY with active RLS.
+ * Client queries strictly use anonKey or fail, never escalating to superuser.
  * @returns {import('@supabase/supabase-js').SupabaseClient | null}
  */
 export function getServerSupabase() {
-  const { url, effectiveKey } = resolveSupabaseConfig();
-  if (!url || !effectiveKey) return null;
+  const { url, anonKey } = resolveSupabaseConfig();
+  if (!url || !anonKey) return null;
 
-  const sig = `${url}::${effectiveKey.slice(0, 16)}`;
+  const sig = `${url}::anon::${anonKey.slice(0, 16)}`;
   if (cachedServerClient && cachedKeySignature === sig) {
     return cachedServerClient;
   }
 
-  cachedServerClient = createClient(url, effectiveKey, {
+  cachedServerClient = createClient(url, anonKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
@@ -81,6 +85,35 @@ export function getServerSupabase() {
   });
   cachedKeySignature = sig;
   return cachedServerClient;
+}
+
+/**
+ * Returns a privileged Supabase client authenticated with SUPABASE_SERVICE_ROLE_KEY.
+ * Reserved strictly for verified server-side administrative tasks (e.g. verified moderation PATCH).
+ * Never exposed to anonymous public endpoints.
+ * @returns {import('@supabase/supabase-js').SupabaseClient | null}
+ */
+export function getAdminSupabase() {
+  const { url, serviceKey } = resolveSupabaseConfig();
+  if (!url || !serviceKey) return null;
+
+  const sig = `${url}::admin::${serviceKey.slice(0, 16)}`;
+  if (cachedAdminClient && cachedAdminSignature === sig) {
+    return cachedAdminClient;
+  }
+
+  cachedAdminClient = createClient(url, serviceKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false
+    },
+    global: {
+      fetch: fetchWithTimeout
+    }
+  });
+  cachedAdminSignature = sig;
+  return cachedAdminClient;
 }
 
 /**

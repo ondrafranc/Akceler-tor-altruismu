@@ -121,10 +121,10 @@ test('pulse API (JSON + SSE), edge Cache-Control headers, and unverified submiss
   const sseText = await pulseSseRes.text();
   expect(sseText).toContain('event: pulse');
 
-  // 3. Public HTML GET response has safe no-store Cache-Control header (preventing shared CSP nonce caching) & /api/feedback works
+  // 3. Public HTML GET response has Edge CDN Cache-Control header & /api/feedback works
   const homeRes = await request.get(baseURL! + '/');
   expect(homeRes.status()).toBe(200);
-  expect(homeRes.headers()['cache-control']).toContain('no-store');
+  expect(homeRes.headers()['cache-control']).toContain('s-maxage=3600');
 
   const fbAliasRes = await request.post(baseURL! + '/api/feedback', {
     data: { feedback_text: 'Skvělý nový mobilní zen režim!', rating: 5 }

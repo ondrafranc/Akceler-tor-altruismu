@@ -4,12 +4,14 @@
     impactCanvas,
     triggerCanvasBurst,
     playPayoffAsmr,
-    startHoldSpark,
-    describeAmbientPulse
+    describeAmbientPulse,
+    playCelebrationChord,
+    safeVibrate
   } from '../../../../lib/sensoryEngine.js';
   import { trackEvent, openBrokenLinkReport } from '../../../../lib/analytics.js';
   import { notifyMollySpark } from '../../../../lib/mollyStore.js';
-  import { cleanTitle } from '../../../../lib/utils.js';
+  import { cleanTitle, stripLeadingEmoji } from '../../../../lib/utils.js';
+  import { VALUES } from '../../../data/values.js';
   import EvidenceBadge from './EvidenceBadge.svelte';
 
   export let action = null;
@@ -24,6 +26,8 @@
   export let savedValues = [];
   export let usePersonalValues = false;
   export let variant = 'instant'; // 'instant' | 'directory' | 'compact'
+  export let spotlight = false;
+  export let className = '';
 
   export let onStart = null;
   export let onComplete = null;
@@ -32,29 +36,32 @@
   export let onToggleSound = null;
   export let onTogglePersonalValues = null;
   export let onNextIdea = null;
+  export let onDismissReturn = null;
+  export let onCloseSession = null;
 
   let kibbleGrams = 0;
   let sparkBoosted = false;
   let cardCanvasNode = null;
-  let stopHoldSpark = null;
+  let lastCelebratedActionId = null;
+
+  $: if (justCompleted && action && action.id !== lastCelebratedActionId) {
+    lastCelebratedActionId = action.id;
+    try {
+      safeVibrate(40);
+      playCelebrationChord();
+    } catch {}
+  }
 
   function handleWeightUpdate(g) {
     kibbleGrams = g;
   }
 
-  function handlePrimaryPointerDown(e) {
-    if (e.button && e.button !== 0) return;
-    if (stopHoldSpark) stopHoldSpark(false);
-    stopHoldSpark = startHoldSpark(e.currentTarget, () => {
-      trackEvent('aa_hold_spark_ready', { id: action?.id });
-    });
-  }
-
-  function handlePrimaryPointerEnd(released = false) {
-    if (stopHoldSpark) {
-      stopHoldSpark(released);
-      stopHoldSpark = null;
-    }
+  function getSavedValueLabels(ids) {
+    if (!ids || !ids.length) return '';
+    return VALUES.filter((v) => ids.includes(v.key || v.id))
+      .map((v) => stripLeadingEmoji(v.label))
+      .slice(0, 2)
+      .join(', ');
   }
 
   function triggerEffectSpark() {
@@ -77,23 +84,31 @@
   $: effectMeta = action ? getActionEffectMeta(action, kibbleGrams) : null;
   $: ambientPulseText = describeAmbientPulse(ambientPulse, { inCard: true, actionId: action?.id });
   $: actionTitle = action ? cleanTitle(action.title) : '';
-  $: svetHref = action
-    ? `/svet?ritual=lantern&seed=${encodeURIComponent(action.id)}&title=${encodeURIComponent(actionTitle)}`
-    : '/svet';
-  $: svetClimaxHref = action
-    ? `/svet?just_lit=1&ritual=lantern&seed=${encodeURIComponent(action.id)}&title=${encodeURIComponent(actionTitle)}`
-    : '/svet';
 </script>
 
 {#if action}
-  <div class="action-card instant-body" class:is-done={isCompleted}>
+  <article
+    id={action ? `online-card-${action.id}` : undefined}
+    class="action-card card instant-body {className}"
+    class:directory-card={variant === 'directory'}
+    class:spotlight
+    class:done-card={isCompleted}
+    class:is-done={isCompleted}
+  >
     <!-- 1. Standardizovaná hlavička: Čas · Cena · Režim + Třída důkazů A/B/C -->
-    <div class="action-meta-line">
-      <span class="quick-tags-pill">
+    <div class="action-meta-line card-meta-top">
+      <span class="quick-tags-pill quick-tags-inline">
         {action.quickTagsLabel || '2 min · Zdarma · Online'}
       </span>
       <span class="meta-sep">·</span>
-      <EvidenceBadge tier={action.impactEvidence || 'B'} />
+      <EvidenceBadge
+        tier={action.impactEvidence || 'B'}
+        variant={variant === 'directory' ? 'card' : 'pill'}
+        className="card-evidence-badge rec-evidence-pill evidence-pill"
+      />
+      {#if isCompleted}
+        <span class="done-dot done-inline">· ✓ Splněno</span>
+      {/if}
       {#if savedValues && savedValues.length > 0 && onTogglePersonalValues}
         <button
           type="button"
@@ -102,24 +117,24 @@
           on:click={onTogglePersonalValues}
           title="Přizpůsobit podle témat vybraných v průvodci"
         >
-          {usePersonalValues ? '✦ Tvoje témata' : '🎯 Moje témata'}
+          {usePersonalValues ? `✦ Tvoje témata (${getSavedValueLabels(savedValues)})` : '🎯 Moje témata'}
         </button>
       {/if}
     </div>
 
     <!-- 2. Název příležitosti -->
-    <h2 class="action-title">{actionTitle}</h2>
+    <h2 class="action-title card-title rec-title">{actionTitle}</h2>
 
     <!-- 3. Jasné vysvětlení jednoho konkrétního skutku -->
-    <p class="action-desc">{action.desc}</p>
+    <p class="action-desc card-desc rec-desc">{action.desc}</p>
 
     <!-- 4. Přínos + Partner & Bez registrace -->
-    <div class="action-impact-summary">
-      <div class="impact-benefit-line">
+    <div class="action-impact-summary card-impact-box rec-impact-block">
+      <div class="impact-benefit-line card-benefit-line rec-impact-line">
         <strong>Přínos ({action.impactBasis || 'doložený'}):</strong>
-        <span>{action.concreteImpact}</span>
+        <span>{action.concreteImpact || action.selfBenefit}</span>
       </div>
-      <div class="partner-trust-line">
+      <div class="partner-trust-line card-partner-line rec-partner-line">
         <span>
           {action.registrationRequired
             ? 'Krátká registrace u partnera'
@@ -130,82 +145,37 @@
       </div>
     </div>
 
-    <details class="how-toggle">
-      <summary>ℹ️ Jak se zapojit a podrobnosti</summary>
+    <!-- 5. Sekundární metadata výhradně v rozbalovacím detailu -->
+    <details class="how-toggle steps-inline">
+      <summary>ℹ️ Jak to funguje ({action.steps?.length ? `${action.steps.length} ${action.steps.length === 1 ? 'krok' : action.steps.length < 5 ? 'kroky' : 'kroků'}` : 'důkazy a partner'})</summary>
       {#if action.steps?.length}
-        <ol class="how-steps">
+        <ol class="how-steps clean-steps">
           {#each action.steps as step}
             <li>{step}</li>
           {/each}
         </ol>
       {/if}
       {#if action.impactChain}
-        <div class="impact-chain-row">
+        <div class="impact-chain-row rec-impact-chain card-chain-line">
           <span><strong>Aktivita:</strong> {action.impactChain.activity}</span>
-          <span class="chain-arrow">→</span>
+          <span class="chain-arrow chain-sep">→</span>
           <span><strong>Výsledek:</strong> {action.impactChain.immediateOutput}</span>
-          <span class="chain-arrow">→</span>
+          <span class="chain-arrow chain-sep">→</span>
           <span><strong>Skutečný dopad:</strong> {action.impactChain.realImpact}</span>
         </div>
       {/if}
-      <div class="mobile-details-extra">
-        <div class="mde-row">
-          <EvidenceBadge tier={action.impactEvidence || 'B'} className="mde-evidence-pill" />
-          <span class="mde-partner">
-            Partner: <strong>{action.org}</strong> ({action.registrationRequired ? 'krátká registrace' : 'bez registrace'})
-          </span>
-        </div>
-        <div class="mde-impact">
-          <strong>Přínos ({action.impactBasis || 'doložený'}):</strong>
-          {action.concreteImpact}
-        </div>
-        <div class="mde-verify">
-          <span>
-            Ověřeno: <strong>{action.verifiedLabel}</strong> · Zdroj:
-            <a
-              href={action.sourceUrl || action.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="verify-source-link"
-            >
-              {action.org} ↗
-            </a>
-          </span>
-          <div class="verify-footer-actions">
-            {#if onShare}
-              <button
-                type="button"
-                class="mde-share-btn"
-                on:click={() => onShare(action)}
-              >
-                {copiedDirectLink ? '✓ Odkaz zkopírován' : '🔗 Zkopírovat přímý odkaz na tento skutek'}
-              </button>
-            {/if}
-            <button
-              type="button"
-              class="mde-broken-btn"
-              on:click={() => {
-                if (onReportBroken) onReportBroken(action);
-                else openBrokenLinkReport({ id: action.id, title: actionTitle, org: action.org, url: action.url });
-              }}
-            >
-              Nahlásit chybu
-            </button>
-          </div>
-        </div>
-      </div>
     </details>
 
-    <!-- 5. Dokončení nebo návrat z partnera -->
+    <!-- 5. In-situ oslava a odměna po dokončení nebo návratu od partnera -->
     {#if justCompleted}
       <div
-        class="celebration-card inline-celebration-card"
+        class="celebration-card inline-celebration-card in-situ-celebration"
         role="status"
         aria-live="polite"
         data-scene={effectMeta?.scene || 'default'}
       >
         <div class="inline-celebration-head">
-          <span class="kicker">Klidné poděkování · světlo čeká v Krajině dobra</span>
+          <span class="kicker celebration-kicker">🎉 Skvělá práce! Dobrý skutek je hotový</span>
           {#if effectMeta?.badge}
             <span class="impact-payoff-badge">{effectMeta.badge}</span>
           {/if}
@@ -218,18 +188,26 @@
           use:impactCanvas={{ action, climax: true, onWeightUpdate: handleWeightUpdate }}
           aria-label="Fyzikální vizualizace dopadu dobrého skutku"
         ></canvas>
-        <div class="molly-celebration-note">
-          🐾 Molly ti děkuje za dobrý skutek: <strong>{effectMeta?.mollyTreat?.name || 'lososová granulka'}</strong>
+        <div class="in-situ-affirmation">
+          ✨ <strong>Dnes už tvůj dobrý skutek pomáhá.</strong> Můžeš pokračovat dalším drobným skutkem, nebo dnešní seanci s klidem uzavřít.
         </div>
-        <div class="return-dopamine-actions">
-          <a href={svetClimaxHref} class="return-dopamine-btn btn-world">
-            ✨ Rozsvítit tenhle skutek v Krajině&nbsp;dobra&nbsp;→
-          </a>
+        <div class="return-dopamine-actions in-situ-actions">
+          {#if onCloseSession}
+            <button
+              type="button"
+              class="return-dopamine-btn btn-session-close"
+              on:click={onCloseSession}
+              aria-label="Uzavřít dnešní seanci"
+            >
+              🌿 Pro dnešek hotovo
+            </button>
+          {/if}
           {#if onNextIdea}
             <button
               type="button"
-              class="return-dopamine-svet-link inline-celebration-next"
+              class="return-dopamine-btn btn-next-deed inline-celebration-next"
               on:click={onNextIdea}
+              aria-label="Ukázat další doporučený skutek"
             >
               Další dobrý skutek →
             </button>
@@ -238,14 +216,14 @@
       </div>
     {:else if partnerReturnPromptVisible}
       <div
-        class="return-dopamine-strip"
+        class="return-dopamine-strip in-situ-strip"
         role="status"
         aria-live="polite"
         data-scene={effectMeta?.scene || 'default'}
       >
-        <div class="inline-celebration-head">
-          <div class="return-dopamine-text">
-            ✨ <strong>Vítej zpět! Povedlo se?</strong> Potvrď svůj dobrý skutek a rozsviť lucernu v Krajině dobra.
+        <div class="inline-celebration-head return-dopamine-head">
+          <div class="return-dopamine-text return-dopamine-title">
+            ✨ <strong>Vítej zpět!</strong> Povedlo se ti dokončit skutek u partnera?
           </div>
           {#if effectMeta?.badge}
             <span class="impact-payoff-badge">{effectMeta.badge}</span>
@@ -258,41 +236,52 @@
           use:impactCanvas={{ action, climax: true, onWeightUpdate: handleWeightUpdate }}
           aria-label="Fyzikální vizualizace dopadu dobrého skutku"
         ></canvas>
-        <div class="molly-celebration-note">
-          🐾 Za každý dokončený krok čeká na Molly odměna: <strong>{effectMeta?.mollyTreat?.name || 'lososová granulka'}</strong>
+        <div class="in-situ-affirmation">
+          🌿 Každý drobný krok má skutečný význam.
         </div>
-        <div class="return-dopamine-actions">
+        <div class="return-dopamine-actions in-situ-actions">
           <button
             type="button"
-            class="return-dopamine-btn"
+            class="return-dopamine-btn btn-return-complete"
             on:click={() => onComplete && onComplete(action)}
           >
-            ✨ Hotovo – rozsvítit stopu
+            ✓ Ano, mám hotovo
           </button>
-          <a href={svetHref} class="return-dopamine-svet-link">
-            Do Krajiny dobra →
-          </a>
+          {#if onCloseSession}
+            <button
+              type="button"
+              class="btn-session-close return-dopamine-svet-link"
+              on:click={onCloseSession}
+            >
+              🌿 Pro dnešek hotovo
+            </button>
+          {:else if onDismissReturn}
+            <button
+              type="button"
+              class="btn-return-dismiss return-dopamine-svet-link"
+              on:click={onDismissReturn}
+            >
+              Později
+            </button>
+          {/if}
         </div>
       </div>
     {/if}
 
     {#if !justCompleted}
-      <div class="instant-actions">
+      <div class="instant-actions actions-row cta-row">
         <a
           href={action.url}
           target="_blank"
           rel="noopener noreferrer"
-          class="btn-studio-primary"
+          class="btn-studio-primary btn-gold-action cta primary"
           data-hold-spark="true"
           data-molly-guide="true"
-          on:pointerdown={handlePrimaryPointerDown}
-          on:pointerup={() => handlePrimaryPointerEnd(true)}
-          on:pointerleave={() => handlePrimaryPointerEnd(false)}
-          on:pointercancel={() => handlePrimaryPointerEnd(false)}
           on:click={() => onStart && onStart(action)}
         >
-          <span>Začít pomáhat</span>
+          <span>{action.id === 'zvirata_utulek_online' ? '🐾 Nakrmit útulek teď' : (action.cta || 'Začít pomáhat')}</span>
           <svg
+            class="cta-arrow-icon"
             width="15"
             height="15"
             viewBox="0 0 24 24"
@@ -309,7 +298,7 @@
         {#if !partnerReturnPromptVisible}
           <button
             type="button"
-            class="btn-studio-done done-btn"
+            class="btn-studio-done btn-done-action cta secondary done-btn"
             class:initiated={isStarted}
             on:click={() => onComplete && onComplete(action)}
           >
@@ -325,7 +314,7 @@
             >
               <polyline points="20 6 9 17 4 12" />
             </svg>
-            <span>{isStarted ? 'Dokončeno' : 'Už mám hotovo'}</span>
+            <span>{isStarted ? 'Dokončeno' : (action.doneCta || 'Už mám hotovo')}</span>
           </button>
         {/if}
       </div>
@@ -378,29 +367,28 @@
     {/if}
 
     <div class="ambient-pulse-pill" role="status" aria-live="off">
-      <span class="ambient-pulse-wave" aria-hidden="true"></span>
+      <span class="ambient-pulse-wave pulse-dot-live" aria-hidden="true"></span>
       <span class="ambient-pulse-dot" aria-hidden="true"></span>
-      <span class="ambient-pulse-text">{ambientPulseText}</span>
+      <span class="ambient-pulse-text pulse-msg-text">{ambientPulseText}</span>
     </div>
 
-    <!-- 6. Transparentní patička ověření + přímý odkaz + nahlášení chyby -->
-    <div class="action-verify-footer">
+    <div class="action-verify-footer card-verify-footer rec-verify-footer">
       <span class="verify-meta">
         Ověřeno: <strong>{action.verifiedLabel}</strong> · Zdroj:
         <a
           href={action.sourceUrl || action.url}
           target="_blank"
           rel="noopener noreferrer"
-          class="verify-source-link"
+          class="verify-source-link card-source-link rec-source-link"
         >
           {action.org} ↗
         </a>
       </span>
-      <div class="verify-footer-actions">
+      <div class="verify-footer-actions card-footer-actions rec-footer-btns">
         {#if onShare}
           <button
             type="button"
-            class="direct-link-share-btn"
+            class="direct-link-share-btn mde-share-btn card-broken-btn rec-broken-btn"
             on:click={() => onShare(action)}
             title="Zkopírovat přímý odkaz na tento skutek pro sdílení v diskuzi nebo zprávě"
           >
@@ -409,7 +397,7 @@
         {/if}
         <button
           type="button"
-          class="broken-link-btn"
+          class="broken-link-btn mde-broken-btn card-broken-btn rec-broken-btn"
           on:click={() => {
             if (onReportBroken) onReportBroken(action);
             else openBrokenLinkReport({ id: action.id, title: actionTitle, org: action.org, url: action.url });
@@ -419,7 +407,7 @@
         </button>
       </div>
     </div>
-  </div>
+  </article>
 {/if}
 
 <style>
@@ -459,9 +447,14 @@
     background: rgba(236, 253, 245, 0.8);
     color: #065f46;
     font-family: var(--font-sans);
-    font-size: 0.72rem;
+    font-size: 0.76rem;
     font-weight: 700;
-    padding: 0.14rem 0.5rem;
+    min-height: 44px;
+    padding: 0.35rem 0.65rem;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 999px;
     cursor: pointer;
     transition: all 0.16s ease;
@@ -537,6 +530,9 @@
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
+    min-height: 44px;
+    padding: 0.4rem 0.2rem;
+    box-sizing: border-box;
   }
 
   .how-toggle summary::-webkit-details-marker {
@@ -580,8 +576,64 @@
     font-weight: 800;
   }
 
+  .how-details-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.65rem;
+    padding-top: 0.55rem;
+    border-top: 1px dashed rgba(22, 82, 56, 0.18);
+    font-size: 0.8rem;
+    line-height: 1.42;
+  }
+
   .mobile-details-extra {
-    display: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .action-verify-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-top: 0.4rem;
+    padding-top: 0.4rem;
+    border-top: 1px dashed rgba(22, 66, 48, 0.12);
+    font-size: 0.75rem;
+    color: var(--text-muted, #6b7280);
+  }
+
+  .verify-footer-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .direct-link-share-btn,
+  .mde-share-btn {
+    border: none;
+    background: transparent;
+    color: var(--emerald-600, #059669);
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+  }
+
+  .broken-link-btn,
+  .mde-broken-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-muted, #6b7280);
+    font-family: var(--font-sans);
+    font-size: 0.74rem;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
   }
 
   .instant-actions {
@@ -783,22 +835,24 @@
     color: #a7f3d0;
   }
 
+  .in-situ-affirmation,
   .molly-celebration-note {
-    font-size: 0.78rem;
-    color: #fef3c7;
-    background: rgba(245, 158, 11, 0.14);
-    border: 1px solid rgba(251, 191, 36, 0.32);
+    font-size: 0.82rem;
+    color: #e6f5ec;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(52, 211, 153, 0.28);
     border-radius: 10px;
-    padding: 0.34rem 0.65rem;
-    margin: 0.35rem 0;
-    line-height: 1.35;
+    padding: 0.45rem 0.75rem;
+    margin: 0.45rem 0;
+    line-height: 1.4;
   }
 
   .return-dopamine-actions {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.65rem;
     flex-wrap: wrap;
+    margin-top: 0.5rem;
   }
 
   .return-dopamine-btn {
@@ -807,28 +861,61 @@
     background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
     color: #062015;
     font-family: inherit;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 800;
-    padding: 0.42rem 0.78rem;
+    padding: 0.5rem 1rem;
     border-radius: 999px;
     cursor: pointer;
     text-decoration: none;
     box-shadow: 0 4px 12px rgba(245, 158, 11, 0.28);
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+
+  .btn-session-close {
+    border: 1px solid rgba(52, 211, 153, 0.38);
+    background: rgba(6, 78, 59, 0.45);
+    color: #a7f3d0;
+    box-shadow: 0 2px 8px rgba(6, 78, 59, 0.25);
+  }
+
+  .btn-session-close:hover {
+    background: rgba(6, 78, 59, 0.7);
+    border-color: rgba(52, 211, 153, 0.6);
+  }
+
+  .btn-next-deed {
+    border: 1px solid rgba(251, 191, 36, 0.5);
   }
 
   .return-dopamine-svet-link {
     color: #fde68a;
-    font-size: 0.78rem;
+    font-size: 0.82rem;
     font-weight: 800;
     text-decoration: underline;
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0.4rem 0.6rem;
   }
 
   .inline-celebration-next {
-    appearance: none;
-    background: none;
-    border: none;
-    padding: 0;
+    border: 1px solid rgba(251, 191, 36, 0.65);
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    color: #062015;
+    padding: 0.5rem 1rem;
     font-family: inherit;
+    font-weight: 800;
     cursor: pointer;
   }
 
@@ -931,13 +1018,14 @@
   }
 
   @media (min-width: 681px) {
+    .instant-body > .instant-actions {
+      order: 4;
+      margin-bottom: 0.35rem;
+    }
     .instant-body > .card-effect-stage,
     .instant-body > :global(.card-effect-stage) {
-      order: 4;
-      margin: 0.15rem 0 0.6rem;
-    }
-    .instant-body > .instant-actions {
       order: 5;
+      margin: 0.2rem 0 0.45rem;
     }
     .instant-body > .ambient-pulse-pill {
       order: 6;
@@ -947,14 +1035,28 @@
     }
   }
 
-  @media (max-width: 1024px) {
-    .action-meta-line > .meta-sep,
-    .action-meta-line > :global(.evidence-pill),
-    .instant-body > .action-impact-summary,
-    .instant-body > .action-verify-footer {
-      display: none !important;
-    }
+  .card {
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(22, 66, 48, 0.09);
+    border-radius: 22px;
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
+    padding: 0.88rem 1.08rem;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.24s var(--ease-gentle, ease), box-shadow 0.24s var(--ease-gentle, ease);
+  }
 
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+  }
+
+  .card.spotlight {
+    border: 1.5px solid #f59e0b;
+    box-shadow: 0 0 0 4px rgba(253, 230, 138, 0.4), var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+  }
+
+  @media (max-width: 1024px) {
     .mobile-details-extra {
       display: flex;
       flex-direction: column;
@@ -983,6 +1085,10 @@
   }
 
   @media (max-width: 680px) {
+    .card {
+      padding: 0.65rem 0.85rem;
+    }
+
     .instant-body {
       gap: 0.32rem;
     }
@@ -991,15 +1097,7 @@
       font-size: 0.68rem;
       gap: 0.24rem;
       margin-bottom: 0.2rem;
-      flex-wrap: nowrap;
-      justify-content: space-between;
-    }
-
-    .action-meta-line > .meta-sep,
-    .action-meta-line > :global(.evidence-pill),
-    .instant-body > .action-impact-summary,
-    .instant-body > .action-verify-footer {
-      display: none !important;
+      flex-wrap: wrap;
     }
 
     .quick-tags-pill {
@@ -1016,22 +1114,18 @@
     }
 
     .personal-values-pill {
-      padding: 0.12rem 0.42rem;
-      font-size: 0.66rem;
+      min-height: 44px;
+      padding: 0.35rem 0.65rem;
+      font-size: 0.72rem;
       flex-shrink: 0;
       margin-left: auto;
+      box-sizing: border-box;
     }
 
     .action-title {
-      font-size: 1.12rem;
-      line-height: 1.22;
-      margin: 0.06rem 0 0.24rem 0;
-    }
-
-    .action-desc {
-      font-size: 0.84rem;
-      line-height: 1.38;
-      margin: 0 0 0.38rem 0;
+      font-size: 1.05rem;
+      line-height: 1.18;
+      margin: 0.04rem 0 0.18rem 0;
       display: -webkit-box;
       line-clamp: 2;
       -webkit-line-clamp: 2;
@@ -1039,14 +1133,40 @@
       overflow: hidden;
     }
 
+    .action-desc {
+      font-size: 0.8rem;
+      line-height: 1.32;
+      margin: 0 0 0.18rem 0;
+      display: -webkit-box;
+      line-clamp: 2;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .action-impact-summary {
+      margin: 0 0 0.16rem 0;
+      padding-top: 0.3rem;
+      gap: 0.14rem;
+      font-size: 0.77rem;
+      line-height: 1.32;
+    }
+
+    .partner-trust-line {
+      font-size: 0.73rem;
+    }
+
     .how-toggle {
-      margin: 0 0 0.45rem 0;
-      padding: 0.32rem 0.5rem;
+      margin: 0 0 0.12rem 0;
+      padding: 0 0.25rem;
       border-radius: 12px;
     }
 
     .how-toggle summary {
-      font-size: 0.76rem;
+      font-size: 0.78rem;
+      min-height: 44px;
+      padding: 0.4rem 0.2rem;
+      box-sizing: border-box;
     }
 
     .card-effect-stage {
@@ -1086,15 +1206,18 @@
     .btn-studio-primary {
       width: 100%;
       box-sizing: border-box;
-      min-height: 46px;
-      padding: 0.68rem 0.9rem;
-      font-size: 0.9rem;
+      min-height: 52px;
+      padding: 0.75rem 1rem;
+      font-size: 0.95rem;
       border-radius: 14px;
     }
 
     .btn-studio-done {
       width: 100%;
       box-sizing: border-box;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
       justify-content: center;
       padding: 0.44rem 0.68rem;
       font-size: 0.78rem;

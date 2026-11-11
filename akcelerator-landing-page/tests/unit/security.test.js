@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import {
   safeText,
   toFiniteNumber,
@@ -10,7 +10,9 @@ import {
   sanitizeEmail,
   sanitizePhone,
   checkRateLimit,
-  isSubmissionTooFast
+  isSubmissionTooFast,
+  safeCompareTokens,
+  isAuthorizedTestBypass
 } from '$lib/security.js';
 
 describe('security: text & number sanitization', () => {
@@ -186,5 +188,98 @@ describe('security: anti-bot timing token (isSubmissionTooFast)', () => {
     expect(isSubmissionTooFast({})).toBe(false);
     expect(isSubmissionTooFast(null)).toBe(false);
     expect(isSubmissionTooFast({ elapsed_ms: 'invalid' })).toBe(false);
+  });
+});
+
+describe('security: constant-time token comparison (safeCompareTokens)', () => {
+  it('returns true for identical string tokens', () => {
+    expect(safeCompareTokens('super-secret-123', 'super-secret-123')).toBe(true);
+    expect(safeCompareTokens('a'.repeat(64), 'a'.repeat(64))).toBe(true);
+  });
+
+  it('returns false for different tokens', () => {
+    expect(safeCompareTokens('token-a', 'token-b')).toBe(false);
+    expect(safeCompareTokens('super-secret-123', 'super-secret-124')).toBe(false);
+  });
+
+  it('returns false safely for different lengths without throwing', () => {
+    expect(safeCompareTokens('short', 'much-longer-token-secret')).toBe(false);
+    expect(safeCompareTokens('longer', 'short')).toBe(false);
+  });
+
+  it('returns false safely for non-strings, null, undefined or empty strings', () => {
+    expect(safeCompareTokens('', '')).toBe(false);
+    expect(safeCompareTokens('secret', '')).toBe(false);
+    expect(safeCompareTokens('', 'secret')).toBe(false);
+    expect(safeCompareTokens(null, 'secret')).toBe(false);
+    expect(safeCompareTokens('secret', undefined)).toBe(false);
+    expect(safeCompareTokens(12345, 12345)).toBe(false);
+    expect(safeCompareTokens({}, {})).toBe(false);
+  });
+});
+
+describe('security: test bypass authorization (isAuthorizedTestBypass)', () => {
+  const origEnv = process.env.TEST_BYPASS_SECRET;
+  const origNodeEnv = process.env.NODE_ENV;
+  const origVercelEnv = process.env.VERCEL_ENV;
+
+  afterEach(() => {
+    process.env.TEST_BYPASS_SECRET = origEnv;
+    process.env.NODE_ENV = origNodeEnv;
+    process.env.VERCEL_ENV = origVercelEnv;
+  });
+
+  it('strictly rejects when TEST_BYPASS_SECRET is not configured', () => {
+    delete process.env.TEST_BYPASS_SECRET;
+    delete process.env.VERCEL_ENV;
+    process.env.NODE_ENV = 'development';
+
+    const reqOldFallback = new Request('http://localhost', {
+      headers: { 'x-test-bypass-secret': 'akcelerator-dev-test' }
+    });
+    expect(isAuthorizedTestBypass(reqOldFallback)).toBe(false);
+
+    const reqRandom = new Request('http://localhost', {
+      headers: { 'x-test-bypass-secret': 'some-random-key' }
+    });
+    expect(isAuthorizedTestBypass(reqRandom)).toBe(false);
+  });
+
+  it('strictly rejects when TEST_BYPASS_SECRET is empty string', () => {
+    process.env.TEST_BYPASS_SECRET = '   ';
+    delete process.env.VERCEL_ENV;
+    process.env.NODE_ENV = 'development';
+
+    const req = new Request('http://localhost', {
+      headers: { 'x-test-bypass-secret': 'akcelerator-dev-test' }
+    });
+    expect(isAuthorizedTestBypass(req)).toBe(false);
+  });
+
+  it('authorizes valid secret in non-production environment', () => {
+    process.env.TEST_BYPASS_SECRET = 'correct-e2e-secret-xyz';
+    delete process.env.VERCEL_ENV;
+    process.env.NODE_ENV = 'development';
+
+    const reqValid = new Request('http://localhost', {
+      headers: { 'x-test-bypass-secret': 'correct-e2e-secret-xyz' }
+    });
+    expect(isAuthorizedTestBypass(reqValid)).toBe(true);
+
+    const reqInvalid = new Request('http://localhost', {
+      headers: { 'x-test-bypass-secret': 'wrong-secret' }
+    });
+    expect(isAuthorizedTestBypass(reqInvalid)).toBe(false);
+  });
+
+  it('always rejects in production even if secret matches', () => {
+    process.env.TEST_BYPASS_SECRET = 'correct-e2e-secret-xyz';
+    process.env.NODE_ENV = 'production';
+    process.env.VERCEL_ENV = 'production';
+
+    const reqValid = new Request('http://localhost', {
+      headers: { 'x-test-bypass-secret': 'correct-e2e-secret-xyz' }
+    });
+    expect(isAuthorizedTestBypass(reqValid)).toBe(false);
   });
 });

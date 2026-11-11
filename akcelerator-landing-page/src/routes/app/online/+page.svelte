@@ -30,6 +30,7 @@
   } from '../../../lib/sensoryEngine.js';
   import { notifyMollySpark } from '../../../lib/mollyStore.js';
   import { cleanTitle, cleanMeta, safeGetItem } from '../../../lib/utils.js';
+  import ActionCard from '$lib/features/actions/components/ActionCard.svelte';
 
   let activeFilter = 'all';
   let searchQuery = '';
@@ -375,177 +376,32 @@
   {:else}
     <div class="grid">
       {#each visibleActions as o, oi (o.id)}
-        <article
-          id={`online-card-${o.id}`}
-          class="card"
-          class:spotlight={spotlightId === o.id}
-          class:done-card={isCompleted(o.id)}
-        >
-          <!-- 1. Standardizované štítky: Čas · Cena · Režim + Důkazy A/B/C -->
-          <div class="card-meta-top">
-            <span class="quick-tags-inline">{o.quickTagsLabel || cleanMeta(o.metaLabel)}</span>
-            <span>·</span>
-            <span
-              class="card-evidence-badge tier-{o.impactEvidence || 'B'}"
-              title={EVIDENCE_TIERS[o.impactEvidence || 'B']?.desc}
-            >
-              Důkazy {o.impactEvidence || 'B'} · {EVIDENCE_TIERS[o.impactEvidence || 'B']?.shortLabel}
-            </span>
-            {#if isCompleted(o.id)}
-              <span class="done-dot">✓ Splněno</span>
-            {/if}
-          </div>
-
-          <!-- 2. Název a popis -->
-          <h2 class="card-title">{cleanTitle(o.title)}</h2>
-          <p class="card-desc">{o.desc}</p>
-
-          <!-- 3. Přínos + Partner & Bez registrace -->
-          <div class="card-impact-box">
-            <div class="card-benefit-line">
-              <strong>Přínos ({o.impactBasis || 'doložený'}):</strong>
-              <span>{o.concreteImpact}</span>
-            </div>
-            <div class="card-partner-line">
-              <span>{o.registrationRequired ? 'Krátká registrace u partnera' : 'Bez registrace na našem webu'}</span>
-              <span>·</span>
-              <span>Aktivita probíhá u <strong>{o.org}</strong></span>
-            </div>
-          </div>
-
-          {#if o.steps?.length}
-            <details class="steps-inline">
-              <summary>Jak se zapojit ({o.steps.length} {o.steps.length === 1 ? 'krok' : o.steps.length < 5 ? 'kroky' : 'kroků'}) a dopad</summary>
-              <ol>
-                {#each o.steps as step}
-                  <li>{step}</li>
-                {/each}
-              </ol>
-              {#if o.impactChain}
-                <div class="card-chain-line">
-                  <span><strong>Aktivita:</strong> {o.impactChain.activity}</span> →
-                  <span><strong>Výsledek:</strong> {o.impactChain.immediateOutput}</span> →
-                  <span><strong>Dopad:</strong> {o.impactChain.realImpact}</span>
-                </div>
-              {/if}
-            </details>
-          {/if}
-
-          <!-- 4. Akční tlačítka (čisté 2 akce bez přeplácání) -->
-          <div class="actions-row">
-            <a
-              class="cta primary"
-              data-molly-guide={oi === 0 ? 'true' : undefined}
-              href={o.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              use:holdSpark={{ id: o.id, surface: 'online' }}
-              on:click={() => handleStartOnlineAction(o)}
-            >
-              Začít pomáhat ↗
-            </a>
-            <button
-              type="button"
-              class="cta secondary"
-              class:initiated={Array.isArray($startedActionIds) && $startedActionIds.includes(o.id)}
-              on:click={() =>
-                recordSmallWin({
-                  id: o.id,
-                  title: o.title,
-                  surface: 'online'
-                })}
-            >
-              {Array.isArray($startedActionIds) && $startedActionIds.includes(o.id) ? '✓ Dokončeno' : '✓ Hotovo'}
-            </button>
-          </div>
-
-          {#if oi === 0}
-            <div
-              class="card-effect-stage"
-              data-scene={getActionEffectMeta(o, cardMetrics[o.id] || 0).scene}
-            >
-              <div class="card-effect-head">
-                <span class="impact-payoff-badge">
-                  {getActionEffectMeta(o, cardMetrics[o.id] || 0).badge}
-                </span>
-                <div class="card-effect-controls">
-                  <button
-                    type="button"
-                    class="effect-spark-btn"
-                    class:active={activeEffectCardId === o.id}
-                    title="Spustit vlnu dopadu na plátně"
-                    aria-label="Vyzkoušet interaktivní fyzikální a zvukový efekt aktivity"
-                    aria-pressed={activeEffectCardId === o.id}
-                    on:click={(e) => toggleCardEffect(o, e)}
-                  >
-                    ✨ Impuls
-                  </button>
-                  <button
-                    type="button"
-                    class="sound-mute-btn"
-                    on:click={handleToggleSound}
-                    aria-pressed={soundMuted}
-                    aria-label={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
-                    title={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
-                  >
-                    {soundMuted ? '🔇' : '🔊'}
-                  </button>
-                </div>
-              </div>
-              <canvas
-                class="impact-payoff-canvas"
-                width="320"
-                height="118"
-                aria-label="Fyzikální vizualizace dopadu dobrého skutku"
-                use:impactCanvas={{
-                  action: o,
-                  climax: false,
-                  onProgress: (v) => {
-                    cardMetrics = { ...cardMetrics, [o.id]: v };
-                  }
-                }}
-              ></canvas>
-            </div>
-          {/if}
-
-          <!-- 5. Patička ověření + Sdílení + Nahlásit nefunkční odkaz -->
-          <div class="card-verify-footer">
-            <span>
-              Ověřeno: <strong>{o.verifiedLabel}</strong> · Zdroj:
-              <a
-                href={o.sourceUrl || o.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="card-source-link"
-              >
-                {o.org} ↗
-              </a>
-            </span>
-            <span class="card-footer-actions">
-              <button
-                type="button"
-                class="card-broken-btn"
-                on:click={() => shareAction(o)}
-              >
-                {copiedId === o.id ? '✓ Odkaz zkopírován' : '🔗 Sdílet'}
-              </button>
-              ·
-              <button
-                type="button"
-                class="card-broken-btn"
-                on:click={() =>
-                  openBrokenLinkReport({
-                    id: o.id,
-                    title: cleanTitle(o.title),
-                    org: o.org,
-                    url: o.url
-                  })}
-              >
-                Nahlásit chybu
-              </button>
-            </span>
-          </div>
-        </article>
+        <ActionCard
+          action={o}
+          variant="directory"
+          spotlight={spotlightId === o.id}
+          isStarted={Array.isArray($startedActionIds) && $startedActionIds.includes(o.id)}
+          isCompleted={isCompleted(o.id)}
+          showEffectPreview={oi === 0}
+          soundMuted={soundMuted}
+          copiedDirectLink={copiedId === o.id}
+          onStart={(action) => handleStartOnlineAction(action)}
+          onComplete={(action) =>
+            recordSmallWin({
+              id: action.id,
+              title: action.title,
+              surface: 'online'
+            })}
+          onShare={(action) => shareAction(action)}
+          onReportBroken={(action) =>
+            openBrokenLinkReport({
+              id: action.id,
+              title: cleanTitle(action.title),
+              org: action.org,
+              url: action.url
+            })}
+          onToggleSound={handleToggleSound}
+        />
       {/each}
     </div>
 
@@ -737,139 +593,6 @@
     gap: 1.2rem;
   }
 
-  .card {
-    background: rgba(255, 255, 255, 0.96);
-    border: 1px solid rgba(22, 66, 48, 0.09);
-    border-radius: 22px;
-    box-shadow: var(--shadow-sm);
-    padding: 0.88rem 1.08rem;
-    display: flex;
-    flex-direction: column;
-    transition: transform 0.24s var(--ease-gentle), box-shadow 0.24s var(--ease-gentle);
-  }
-
-  .card-effect-stage :global(.impact-payoff-canvas) {
-    height: 76px;
-  }
-
-  .card:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-md);
-  }
-
-  .card.spotlight {
-    border: 1.5px solid #f59e0b;
-    box-shadow: 0 0 0 4px rgba(253, 230, 138, 0.4), var(--shadow-md);
-  }
-
-  .card-meta-top {
-    display: flex;
-    align-items: center;
-    gap: 0.38rem;
-    flex-wrap: wrap;
-    font-size: 0.76rem;
-    color: var(--text-muted);
-    margin-bottom: 0.5rem;
-  }
-
-  .topic-label {
-    font-weight: 700;
-    color: var(--text-secondary);
-  }
-
-  .quick-tags-inline {
-    font-weight: 800;
-    color: var(--forest-850);
-  }
-
-  .card-evidence-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.1rem 0.45rem;
-    border-radius: 999px;
-    font-weight: 700;
-    font-size: 0.72rem;
-    background: #ecfdf5;
-    color: #047857;
-  }
-
-  .card-evidence-badge.tier-C {
-    background: #f8fafc;
-    color: #334155;
-  }
-
-  .card-impact-box {
-    margin: 0 0 0.45rem;
-    padding-top: 0.35rem;
-    border-top: 1px solid rgba(22, 66, 48, 0.08);
-    display: flex;
-    flex-direction: column;
-    gap: 0.16rem;
-    font-size: 0.76rem;
-    line-height: 1.38;
-  }
-
-  .card-benefit-line strong {
-    color: #047857;
-  }
-
-  .card-partner-line {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    flex-wrap: wrap;
-    font-size: 0.74rem;
-    color: var(--text-muted);
-  }
-
-  .card-chain-line {
-    margin-top: 0.45rem;
-    padding-top: 0.4rem;
-    border-top: 1px dashed rgba(22, 66, 48, 0.12);
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-  }
-
-  .card-verify-footer {
-    margin-top: 0.7rem;
-    padding-top: 0.55rem;
-    border-top: 1px solid rgba(22, 66, 48, 0.08);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.4rem;
-    flex-wrap: wrap;
-    font-size: 0.72rem;
-    color: var(--text-muted);
-  }
-
-  .card-source-link {
-    color: var(--forest-800);
-    font-weight: 700;
-    text-decoration: none;
-  }
-
-  .card-source-link:hover {
-    color: var(--emerald-600);
-    text-decoration: underline;
-  }
-
-  .card-broken-btn {
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    font-family: var(--font-sans);
-    font-size: 0.72rem;
-    font-weight: 600;
-    text-decoration: underline;
-    cursor: pointer;
-    padding: 0;
-  }
-
-  .card-broken-btn:hover {
-    color: #b45309;
-  }
-
   .online-methodology-drawer {
     margin-top: 1.25rem;
   }
@@ -910,131 +633,6 @@
     text-decoration: underline;
   }
 
-  .done-dot {
-    color: #047857;
-    font-weight: 700;
-    white-space: nowrap;
-    padding: 0.05rem 0.45rem;
-    border-radius: 999px;
-    background: rgba(16, 185, 129, 0.1);
-  }
-
-  .card-title {
-    margin: 0 0 0.25rem;
-    font-weight: 800;
-    color: var(--text-primary);
-    font-size: 1.15rem;
-    line-height: 1.28;
-    letter-spacing: -0.015em;
-  }
-
-  .org-name {
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: var(--emerald-600);
-    margin-bottom: 0.32rem;
-  }
-
-  .card-desc {
-    margin: 0 0 0.48rem;
-    color: var(--text-secondary);
-    line-height: 1.44;
-    flex: 1;
-    font-size: 0.84rem;
-    display: -webkit-box;
-    line-clamp: 2;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .steps-inline {
-    font-size: 0.78rem;
-    color: var(--text-secondary);
-    margin-bottom: 0.5rem;
-  }
-
-  .steps-inline summary {
-    cursor: pointer;
-    font-weight: 700;
-    color: var(--forest-800);
-    list-style: none;
-  }
-
-  .steps-inline summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .steps-inline summary::before {
-    content: '▸ ';
-    color: var(--emerald-600);
-  }
-
-  .steps-inline[open] summary::before {
-    content: '▾ ';
-  }
-
-  .steps-inline ol {
-    margin: 0.45rem 0 0 1.15rem;
-    padding: 0;
-    line-height: 1.5;
-  }
-
-  .actions-row {
-    display: flex;
-    gap: 0.45rem;
-    align-items: center;
-    margin-top: auto;
-  }
-
-  .cta {
-    border-radius: 12px;
-    padding: 0.68rem 0.9rem;
-    font-family: inherit;
-    font-size: 0.84rem;
-    font-weight: 700;
-    text-decoration: none;
-    cursor: pointer;
-    border: 1px solid transparent;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.16s ease;
-  }
-
-  .cta.primary {
-    flex: 1;
-    background: var(--forest-850);
-    color: #ffffff;
-  }
-
-  .cta.primary:hover {
-    background: var(--czech-forest);
-  }
-
-  .cta.secondary {
-    background: #eef7f1;
-    color: #065f46;
-    border-color: rgba(5, 150, 105, 0.24);
-  }
-
-  .cta.secondary:hover {
-    background: #059669;
-    color: #ffffff;
-  }
-
-  .cta.share-btn {
-    background: transparent;
-    color: var(--text-muted);
-    border-color: rgba(22, 66, 48, 0.1);
-    padding: 0.68rem 0.72rem;
-  }
-
-  .cta.share-btn:hover {
-    background: #f5f9f6;
-    color: var(--text-primary);
-  }
-
   .link-show-all {
     border: none;
     background: transparent;
@@ -1047,24 +645,20 @@
     padding: 0 0.25rem;
   }
 
+  :global(.grid .card .cta),
+  :global(.grid .card .btn-studio-done),
+  :global(.grid .card .btn-studio-primary),
+  .cta {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+
   @media (max-width: 980px) {
     .grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  @media (min-width: 681px) and (max-width: 980px) {
-    .grid > .card:last-child:nth-child(odd) {
-      grid-column: 1 / -1;
-      width: 100%;
-      max-width: calc(50% - 0.6rem);
-      justify-self: center;
-    }
-  }
-
-  @media (max-width: 640px) {
-    .grid {
-      grid-template-columns: 1fr;
     }
   }
 
@@ -1163,76 +757,6 @@
       box-sizing: border-box;
     }
 
-    .card {
-      padding: 0.88rem 0.88rem;
-      border-radius: 16px;
-      width: 100%;
-      max-width: 100%;
-      min-width: 0;
-      box-sizing: border-box;
-      overflow-wrap: break-word;
-      word-break: break-word;
-    }
-
-    .card-effect-stage :global(.impact-payoff-canvas) {
-      height: 66px;
-    }
-
-    .card-meta-top {
-      font-size: 0.71rem;
-      margin-bottom: 0.28rem;
-    }
-
-    .card-title {
-      font-size: 1.04rem;
-      line-height: 1.22;
-      margin: 0 0 0.25rem;
-    }
-
-    .card-desc {
-      font-size: 0.82rem;
-      line-height: 1.38;
-      margin: 0 0 0.58rem;
-      display: -webkit-box;
-      line-clamp: 2;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    .card-impact-box {
-      padding: 0.48rem 0.6rem;
-      margin-bottom: 0.55rem;
-      font-size: 0.78rem;
-      gap: 0.16rem;
-    }
-
-    .steps-inline {
-      margin-bottom: 0.55rem;
-      font-size: 0.76rem;
-    }
-
-    .actions-row {
-      gap: 0.45rem;
-      padding-top: 0.15rem;
-    }
-
-    .cta {
-      padding: 0.62rem 0.88rem;
-      font-size: 0.82rem;
-      min-height: 44px;
-      box-sizing: border-box;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .card-verify-footer {
-      margin-top: 0.55rem;
-      padding-top: 0.44rem;
-      font-size: 0.68rem;
-    }
-
     .online-methodology-drawer {
       max-width: 100%;
       box-sizing: border-box;
@@ -1248,6 +772,17 @@
       box-sizing: border-box;
       white-space: normal;
       text-align: center;
+    }
+
+    :global(.grid .card .cta),
+    :global(.grid .card .btn-studio-done),
+    :global(.grid .card .btn-studio-primary),
+    .cta {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
     }
   }
 </style>

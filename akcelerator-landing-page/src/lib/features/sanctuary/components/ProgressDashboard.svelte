@@ -7,7 +7,6 @@
     restoreProgressFromBackupCode
   } from '../../../progress.js';
   import { MICRO_ACTIONS } from '../../../data/czech-actions.js';
-  import { renderStoryCardPng } from '../../../storyCard.js';
   import { cleanTitle, isInAppBrowser } from '../../../utils.js';
   import { trackEvent } from '../../../analytics.js';
 
@@ -34,6 +33,7 @@
     if (typeof window === 'undefined') return;
     storyBusy = true;
     try {
+      const { renderStoryCardPng } = await import('../../../storyCard.js');
       const skyStars = (activeLights || [])
         .filter((l) => l.zone === 'sky')
         .slice(0, 16)

@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 /**
  * Shared input sanitization, URL/contact validation, bounded caching,
  * rate limiting, CSRF/Origin validation, bounded stream body parsing,
@@ -96,9 +98,9 @@ export function haversineKm(lat1, lon1, lat2, lon2) {
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
 }
 
@@ -316,7 +318,7 @@ export async function readJsonBodyBounded(request, maxBytes = 32_768) {
         if (totalBytes > maxBytes) {
           try {
             await reader.cancel();
-          } catch {}
+          } catch { }
           return { ok: false, status: 413, error: 'Odeslaná data jsou příliš velká.' };
         }
         chunks.push(value);
@@ -399,7 +401,23 @@ export function isSubmissionTooFast(body) {
 }
 
 /**
+ * Compares two secret tokens in constant time using SHA-256 digests and crypto.timingSafeEqual.
+ * Safe against length leaks and timing attacks.
+ * @param {unknown} a
+ * @param {unknown} b
+ * @returns {boolean}
+ */
+export function safeCompareTokens(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  if (!a || !b) return false;
+  const hashA = crypto.createHash('sha256').update(a).digest();
+  const hashB = crypto.createHash('sha256').update(b).digest();
+  return crypto.timingSafeEqual(hashA, hashB);
+}
+
+/**
  * Checks whether a request carries a valid non-production test bypass secret (H9 / AUDIT #10).
+ * Never permits access if TEST_BYPASS_SECRET is unset or empty.
  * @param {Request} request
  * @returns {boolean}
  */
@@ -407,7 +425,13 @@ export function isAuthorizedTestBypass(request) {
   if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production' && process.env?.VERCEL_ENV === 'production') {
     return false;
   }
+  const expected = typeof process !== 'undefined' ? process.env?.TEST_BYPASS_SECRET : undefined;
+  if (!expected || typeof expected !== 'string' || expected.trim().length === 0) {
+    return false;
+  }
   const headerSecret = request.headers.get('x-test-bypass-secret');
-  const expected = (typeof process !== 'undefined' && process.env?.TEST_BYPASS_SECRET) || 'akcelerator-dev-test';
-  return Boolean(headerSecret && headerSecret === expected);
+  if (!headerSecret || typeof headerSecret !== 'string') {
+    return false;
+  }
+  return safeCompareTokens(headerSecret.trim(), expected.trim());
 }
