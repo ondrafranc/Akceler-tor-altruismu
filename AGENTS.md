@@ -13,6 +13,9 @@ Každá obrazovka, text i technické rozhodnutí slouží jedinému cíli: **oka
 3. **Odměna výhradně PO skutečné akci**:
    - Nikdy nezobrazuj tlačítko „Mám hotovo“ ani dopaminové minihry/vizualizace dříve, než uživatel skutečně spustil akci u partnera.
    - Odměna proběhne okamžitě in-situ přímo na kartě po návratu z akce, bez nuceného přesměrovávání na jiné trasy (`/svet`).
+4. **Patronka Molly a čistá desktopová mřížka**:
+   - Želvovinová kočka Molly (`MollyCompanion.svelte`) je klíčový a oblíbený prvek napříč všemi záložkami (s plynulým předáním scéně u jezera na `/svet`). Její plátno má vždy `pointer-events: none` a měření překážek probíhá výhradně mimo `requestAnimationFrame`.
+   - Do horní navigační kapsle (`.nav-capsule`) nevkládej rušivé ikony krizového štítu (`🛡️`); krizová opora zůstává diskrétně v pilulce/patičce. Na desktopu musí mít `.nav-capsule`, `.hero-inner` i `.content-wrap` sjednocenou šířku (`max-width: 1140px; box-sizing: border-box`) a zarovnání horní hrany (`align-items: start`).
 
 ## 2. Architektonické a bezpečnostní invarianty
 1. **Žádné duplicitní katalogy ani forwarder záplaty**:

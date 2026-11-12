@@ -118,7 +118,7 @@
   .hero-stage {
     position: relative;
     margin-top: -5.4rem;
-    padding: 8.2rem 1.25rem 6rem;
+    padding: 7.35rem 1.25rem 5.5rem;
     background: radial-gradient(
         90% 88% at 78% 24%,
         rgba(28, 108, 73, 0.82) 0%,
@@ -204,18 +204,21 @@
   .hero-inner {
     position: relative;
     z-index: 2;
+    width: 100%;
     max-width: 1140px;
+    box-sizing: border-box;
     margin: 0 auto;
     display: grid;
     grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
     gap: 2.8rem;
-    align-items: center;
+    align-items: start;
   }
 
   .hero-copy {
     min-width: 0;
     max-width: 100%;
     box-sizing: border-box;
+    padding-top: 1.15rem;
   }
 
   .hero-overline {
@@ -355,6 +358,10 @@
       grid-template-columns: minmax(0, 1fr);
       gap: 2rem;
     }
+
+    .hero-copy {
+      padding-top: 0;
+    }
   }
 
   @media (max-width: 680px) {
@@ -384,8 +391,8 @@
     }
 
     .hero-stage {
-      margin-top: -3.6rem;
-      padding: 1.8rem 0.75rem 1.25rem;
+      margin-top: -3.2rem;
+      padding: 3.35rem 0.75rem 1.25rem;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;

@@ -6,6 +6,7 @@
   import ImmediateHelp from "../components/ImmediateHelp.svelte";
   import SmallWinCelebration from "../components/SmallWinCelebration.svelte";
   import FeedbackModal from "../components/FeedbackModal.svelte";
+  import MollyCompanion from "../components/MollyCompanion.svelte";
   import { openFeedbackModal, toggleCrisisModal } from "$lib/utils.js";
   import "../styles/czech-theme.css";
 
@@ -101,16 +102,6 @@
           <span class="brand-sub brand-claim">Pomáháme lidem pomáhat</span>
         </span>
       </a>
-
-      <button
-        type="button"
-        class="nav-crisis-btn"
-        on:click={toggleCrisisModal}
-        aria-label="Krizová podpora 24/7"
-        title="Potřebuješ oporu? Linky důvěry 116 111 / 116 123"
-      >
-        <span aria-hidden="true">🛡️</span>
-      </button>
 
       <nav class="nav-links" aria-label="Hlavní navigace">
         <a href="/" class="nav-pill" class:active={pathname === "/"}>
@@ -335,6 +326,7 @@
 <ImmediateHelp />
 <SmallWinCelebration />
 <FeedbackModal />
+<MollyCompanion />
 
 <style>
   .app-shell {
@@ -348,15 +340,17 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    padding: max(0.75rem, env(safe-area-inset-top, 0px))
-      max(1rem, env(safe-area-inset-right, 0px)) 0.35rem
-      max(1rem, env(safe-area-inset-left, 0px));
+    padding: max(0.8rem, env(safe-area-inset-top, 0px))
+      max(1.25rem, env(safe-area-inset-right, 0px)) 0.35rem
+      max(1.25rem, env(safe-area-inset-left, 0px));
     pointer-events: none;
   }
 
   .nav-capsule {
     pointer-events: auto;
-    max-width: 1180px;
+    width: 100%;
+    max-width: 1140px;
+    box-sizing: border-box;
     margin: 0 auto;
     padding: 0.5rem 0.7rem 0.5rem 0.85rem;
     border-radius: 999px;
@@ -383,29 +377,6 @@
     font-weight: 800;
     font-size: 1.02rem;
     letter-spacing: -0.02em;
-  }
-
-  .nav-crisis-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 44px;
-    min-height: 44px;
-    padding: 0.4rem;
-    border-radius: 999px;
-    border: 1px solid rgba(217, 119, 6, 0.28);
-    background: rgba(254, 243, 199, 0.65);
-    color: #92400e;
-    font-size: 1.15rem;
-    cursor: pointer;
-    box-sizing: border-box;
-    transition: all 0.18s ease;
-  }
-
-  .nav-crisis-btn:hover {
-    background: rgba(254, 243, 199, 0.95);
-    border-color: rgba(217, 119, 6, 0.45);
-    transform: scale(1.05);
   }
 
   .brand-mark {
@@ -533,7 +504,9 @@
 
   .footer-inner {
     position: relative;
-    max-width: 1160px;
+    width: 100%;
+    max-width: 1140px;
+    box-sizing: border-box;
     margin: 0 auto;
     display: flex;
     justify-content: space-between;

@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import { safeText, haversineKm } from './security.js';
+import { safeText, haversineKm } from './validation.js';
 
 export { safeText, haversineKm };
 

@@ -3,7 +3,7 @@
   import { CZECH_CITIES } from '../../lib/data/czech-actions.js';
   import { recordSmallWin } from '../../lib/progress.js';
   import { trackEvent } from '../../lib/analytics.js';
-  import { safeText } from '../../lib/security.js';
+  import { safeText } from '../../lib/validation.js';
   import { firstText, safeGetItem, safeSetItem, safeRemoveItem } from '../../lib/utils.js';
 
   const DRAFT_KEY = 'aa_submit_draft_v1';

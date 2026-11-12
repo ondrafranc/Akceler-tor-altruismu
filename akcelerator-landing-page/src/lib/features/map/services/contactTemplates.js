@@ -3,7 +3,7 @@
  * Snižuje psychologickou bariéru a úzkost z prvního oslovení ("Co jim mám napsat?").
  */
 
-import { sanitizeEmail } from '../../../security.js';
+import { sanitizeEmail } from '../../../validation.js';
 
 /**
  * Vytvoří přirozenou, nezávaznou šablonu prvního kontaktu (e-mail / zpráva) pro místo na mapě.

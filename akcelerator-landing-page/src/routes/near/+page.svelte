@@ -16,7 +16,7 @@
     buildFirstContactTemplate
   } from '../../lib/data/czech-actions.js';
   import { recordSmallWin } from '../../lib/progress.js';
-  import { haversineKm, sanitizeHttpUrl as normalizeUrl, safeText } from '../../lib/security.js';
+  import { haversineKm, sanitizeHttpUrl as normalizeUrl, safeText } from '../../lib/validation.js';
   import {
     isSoundMuted,
     toggleSoundMuted,

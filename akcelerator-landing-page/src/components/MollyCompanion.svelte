@@ -445,20 +445,64 @@
     return 1;
   }
 
-  /** Svislá „chodníková“ linie, po které Molly chodí (na mobilu sedí přímo na horní hraně spodní navigace). */
-  function groundLine(vw, vh) {
+  let layoutMetricsCache = {
+    ts: 0,
+    vw: 0,
+    vh: 0,
+    groundY: 0,
+    dock: null,
+    crisis: null
+  };
+
+  function invalidateLayoutCache() {
+    layoutMetricsCache.ts = 0;
+  }
+
+  function ensureLayoutMetrics(vw, vh) {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (
+      layoutMetricsCache.ts > 0 &&
+      now - layoutMetricsCache.ts < 500 &&
+      layoutMetricsCache.vw === vw &&
+      layoutMetricsCache.vh === vh
+    ) {
+      return layoutMetricsCache;
+    }
+    const dEl = document.querySelector('.molly-pelisek-dock');
+    const dR = dEl?.getBoundingClientRect();
+    const dock = dR && dR.width > 0 ? dR : null;
+
+    let crisis = null;
+    const cEls = document.querySelectorAll('.crisis-widget > button, .crisis-mobile-fab');
+    for (const el of cEls) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) {
+        crisis = r;
+        break;
+      }
+    }
+
+    let groundY;
     if (vw <= MOBILE_MAX_W) {
       const nav = document.querySelector('.mobile-bottom-nav');
       const top = nav ? nav.getBoundingClientRect().top : 0;
-      return Math.round(top > vh * 0.5 ? top - 2 : vh - 60);
+      groundY = Math.round(top > vh * 0.5 ? top - 2 : vh - 60);
+    } else {
+      groundY = vh <= 620 ? vh - 12 : vh - 18;
     }
-    return vh <= 620 ? vh - 12 : vh - 18;
+
+    layoutMetricsCache = { ts: now, vw, vh, groundY, dock, crisis };
+    return layoutMetricsCache;
+  }
+
+  /** Svislá „chodníková“ linie, po které Molly chodí (na mobilu sedí přímo na horní hraně spodní navigace). */
+  function groundLine(vw, vh) {
+    return ensureLayoutMetrics(vw, vh).groundY;
   }
 
   function dockRect() {
-    const el = document.querySelector('.molly-pelisek-dock');
-    const r = el?.getBoundingClientRect();
-    return r && r.width > 0 ? r : null;
+    const { vw, vh } = viewportSize();
+    return ensureLayoutMetrics(vw, vh).dock;
   }
 
   function roamRange(vw) {
@@ -557,15 +601,18 @@
       if (el.closest('.mobile-bottom-nav, .navbar, .top-nav')) continue;
       const closedDetails = el.closest('details:not([open])');
       if (closedDetails && !el.closest('summary')) continue;
-      if (typeof el.checkVisibility === 'function' && !el.checkVisibility()) continue;
+      if (typeof el.checkVisibility === 'function') {
+        if (!el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
+      } else {
+        const cs = getComputedStyle(el);
+        if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) < 0.05) continue;
+      }
       const r = el.getBoundingClientRect();
       if (r.width < 2 || r.height < 2) continue;
       const visTop = fullViewport ? Math.max(r.top, topNavBottom) : r.top;
       const visBottom = fullViewport ? Math.min(r.bottom, bottomNavTop) : r.bottom;
       if (visBottom - visTop < 2) continue;
       if (visBottom < zoneTop || visTop > vh || r.right < 0 || r.left > vw) continue;
-      const cs = getComputedStyle(el);
-      if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) < 0.05) continue;
       const isHeading = /^H[1-4]$/.test(el.tagName);
       out.push({
         l: r.left - pad,
@@ -612,12 +659,8 @@
   }
 
   function crisisRect() {
-    const els = document.querySelectorAll('.crisis-widget > button, .crisis-mobile-fab');
-    for (const el of els) {
-      const r = el.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0) return r;
-    }
-    return null;
+    const { vw, vh } = viewportSize();
+    return ensureLayoutMetrics(vw, vh).crisis;
   }
 
   function overlapArea(a, b) {
@@ -1418,6 +1461,7 @@
 
   function handleWindowResize() {
     if (typeof window === 'undefined') return;
+    invalidateLayoutCache();
     const { vw, vh } = viewportSize();
     const { minX, maxX } = roamRange(vw);
     perchedOnLedge = false;
@@ -1484,6 +1528,7 @@
     if (relocateTimer) clearTimeout(relocateTimer);
     relocateTimer = setTimeout(() => {
       relocateTimer = null;
+      invalidateLayoutCache();
       const moving = relocateToFreeSpot(Boolean(activeWhisper && bubbleW));
       if (activeWhisper && bubbleW) {
         updateBubbleAnchorMode(targetX);
@@ -1769,6 +1814,7 @@
     clearDeferredGuide();
     pendingTip = null;
     atHome = path === '/svet' || path.startsWith('/svet/');
+    invalidateLayoutCache();
     if (!atHome && typeof window !== 'undefined') {
       snapMollyToFreeSpot();
       scheduleLayoutSettleSnap();

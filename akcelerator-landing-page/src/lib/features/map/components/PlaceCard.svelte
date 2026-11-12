@@ -1,6 +1,6 @@
 <script>
   import { buildFirstContactTemplate } from '../../../data/czech-actions.js';
-  import { sanitizeHttpUrl as normalizeUrl } from '../../../security.js';
+  import { sanitizeHttpUrl as normalizeUrl } from '../../../validation.js';
   import {
     getActionEffectMeta,
     impactCanvas,

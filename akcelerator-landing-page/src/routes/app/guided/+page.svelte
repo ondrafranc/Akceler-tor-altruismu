@@ -33,7 +33,7 @@
     describeAmbientPulse,
   } from "../../../lib/sensoryEngine.js";
   import { notifyMollySpark } from "../../../lib/mollyStore.js";
-  import { haversineKm } from "../../../lib/security.js";
+  import { haversineKm } from "../../../lib/validation.js";
   import {
     cleanTitle,
     cleanMeta,
