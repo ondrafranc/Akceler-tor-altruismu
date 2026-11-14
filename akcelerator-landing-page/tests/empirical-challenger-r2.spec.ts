@@ -144,8 +144,10 @@ test.describe('Empirical Challenger R2 — Delayed Gratification & Anti-Spam Imm
   test('EC-4: Exact deed unlock and single-feed consumption semantics', async ({ page }) => {
     const companion = page.locator('.molly-companion-layer');
 
-    // 1. Trigger instant deed
+    // 1. Start and complete instant deed (Delayed Gratification #1.3)
     const doneBtn = page.locator('.instant-card .btn-studio-done');
+    await expect(doneBtn).toHaveCount(0);
+    await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
     await expect(doneBtn).toBeVisible();
     await doneBtn.click();
     await page.waitForTimeout(500);

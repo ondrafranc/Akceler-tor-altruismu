@@ -10,6 +10,29 @@ const win = () => typeof window !== 'undefined';
 
 /** @type {AudioContext | null} */
 let ac = null;
+let hasUserGesture = false;
+
+if (win()) {
+  const onGesture = () => {
+    hasUserGesture = true;
+    if (ac && ac.state === 'suspended') {
+      ac.resume().catch(() => {});
+    }
+  };
+  ['pointerdown', 'touchstart', 'keydown', 'click'].forEach((evt) => {
+    window.addEventListener(evt, onGesture, { capture: true, once: true, passive: true });
+  });
+}
+
+/**
+ * Explicitly marks that a user interaction has occurred and unlocks audio.
+ */
+export function markUserGesture() {
+  hasUserGesture = true;
+  if (ac && ac.state === 'suspended') {
+    ac.resume().catch(() => {});
+  }
+}
 
 /**
  * Checks whether global app sounds are muted by user preference.
@@ -19,11 +42,11 @@ export const isSoundMuted = () => win() && safeGetItem(MK, 'local') === '1';
 
 /**
  * Resolves or creates the AudioContext singleton and attempts unlock if suspended.
- * Returns null in SSR or when sound is muted.
+ * Returns null in SSR, when sound is muted, or before an explicit user gesture.
  * @returns {AudioContext | null}
  */
 export function getAudioContext() {
-  if (!win() || isSoundMuted()) return null;
+  if (!win() || isSoundMuted() || !hasUserGesture) return null;
   try {
     const AudioCtx = /** @type {any} */ (window).AudioContext || /** @type {any} */ (window).webkitAudioContext;
     if (!AudioCtx) return null;
@@ -56,6 +79,7 @@ export function registerUnmuteFeedbackHook(hook) {
  * @returns {boolean} true if now muted, false if now unmuted
  */
 export const toggleSoundMuted = () => {
+  markUserGesture();
   const n = !isSoundMuted();
   safeSetItem(MK, n ? '1' : '0', 'local');
   if (!n && unmuteFeedbackHook) {

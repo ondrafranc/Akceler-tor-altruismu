@@ -137,13 +137,14 @@ test.describe('Tier 1: Feature Coverage', () => {
       await page.goto('/');
       const cta = page.locator('.instant-card .btn-studio-primary');
       await expect(cta).toBeVisible();
-      await expect(cta).toContainText('Začít pomáhat');
+      await expect(cta).toContainText(/Nakrmit útulek teď|Začít pomáhat/);
       await expect(cta).toHaveAttribute('target', '_blank');
       await expect(cta).toHaveAttribute('rel', /noopener/);
     });
 
-    test('F2-5: Clicking Hotovo (.btn-studio-done) reveals celebration card with Molly treat note', async ({ page }) => {
+    test('F2-5: Clicking Hotovo (.btn-studio-done) after starting action reveals celebration card with Molly treat note', async ({ page }) => {
       await page.goto('/');
+      await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
       await page.locator('.instant-card .btn-studio-done').click();
       const note = page.locator('.instant-card .molly-celebration-note');
       await expect(note).toBeVisible();
@@ -475,6 +476,7 @@ test.describe('Tier 1: Feature Coverage', () => {
 
     test('F9-3: Molly treat catalog does not expose arcade +1 prefixes in user-facing celebration notes', async ({ page }) => {
       await page.goto('/');
+      await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
       await page.locator('.instant-card .btn-studio-done').click();
       const note = page.locator('.instant-card .molly-celebration-note');
       await expect(note).toBeVisible();
@@ -527,6 +529,7 @@ test.describe('Tier 1: Feature Coverage', () => {
 
     test('F10-3: Action celebration note strictly preserves the name Molly', async ({ page }) => {
       await page.goto('/');
+      await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
       await page.locator('.instant-card .btn-studio-done').click();
       const note = page.locator('.instant-card .molly-celebration-note');
       await expect(note).toContainText('Molly');
@@ -631,9 +634,11 @@ test.describe('Tier 2: Boundary & Corner Cases', () => {
 
     test('F2-B5: Completing action multiple times maintains valid state and celebration note', async ({ page }) => {
       await page.goto('/');
+      await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
       await page.locator('.instant-card .btn-studio-done').click();
       await expect(page.locator('.instant-card .molly-celebration-note')).toBeVisible();
       await page.locator('.inline-celebration-next').click();
+      await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
       await page.locator('.instant-card .btn-studio-done').click();
       await expect(page.locator('.instant-card .molly-celebration-note')).toBeVisible();
     });
@@ -914,6 +919,7 @@ test.describe('Tier 2: Boundary & Corner Cases', () => {
 
     test('F8-B5: Navigating between multiple routes retains cumulative treat count', async ({ page }) => {
       await page.goto('/');
+      await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
       await page.locator('.instant-card .btn-studio-done').click();
       const av1 = Number(await page.locator('.molly-companion-layer').getAttribute('data-molly-available-treats'));
       expect(av1).toBeGreaterThanOrEqual(1);
@@ -955,6 +961,7 @@ test.describe('Tier 2: Boundary & Corner Cases', () => {
 
     test('F9-B2: Action celebration note renders valid treat without undefined strings', async ({ page }) => {
       await page.goto('/');
+      await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
       await page.locator('.instant-card .btn-studio-done').click();
       const noteText = await page.locator('.instant-card .molly-celebration-note').innerText();
       expect(noteText).not.toContain('undefined');
@@ -981,6 +988,7 @@ test.describe('Tier 2: Boundary & Corner Cases', () => {
 
     test('F9-B5: Celebration note text remains warm and encouraging across repeated actions', async ({ page }) => {
       await page.goto('/');
+      await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
       await page.locator('.instant-card .btn-studio-done').click();
       await expect(page.locator('.instant-card .molly-celebration-note')).toContainText('Molly');
     });
@@ -1042,12 +1050,13 @@ test.describe('Tier 3: Cross-Feature Combinations', () => {
   test('T3-1: Deed completion on Home (F2) unlocks treat (F8) and creates celebration link to Krajina dobra (F5)', async ({ page }) => {
     await page.goto('/');
     const beforeAvail = Number((await page.locator('.molly-companion-layer').getAttribute('data-molly-available-treats')) || '0');
+    await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
     await page.locator('.instant-card .btn-studio-done').click();
     await expect(page.locator('.instant-card .molly-celebration-note')).toContainText('Molly');
     const afterAvail = Number((await page.locator('.molly-companion-layer').getAttribute('data-molly-available-treats')) || '0');
     expect(afterAvail, 'Deed completion unlocks an earned treat').toBeGreaterThan(beforeAvail);
 
-    const worldLink = page.locator('.return-dopamine-actions a[href*="/svet"]');
+    const worldLink = page.locator('.instant-card a[href*="/svet"]').first();
     await expect(worldLink).toBeVisible();
     await worldLink.click();
     await expect(page.locator('canvas.sanctuary-canvas')).toBeVisible();
@@ -1143,7 +1152,7 @@ test.describe('Tier 4: Real-World Application Scenarios', () => {
     // 5. Check primary CTA button
     const cta = card.locator('.btn-studio-primary');
     await expect(cta).toBeVisible();
-    await expect(cta).toContainText('Začít pomáhat');
+    await expect(cta).toContainText(/Nakrmit útulek teď|Začít pomáhat/);
   });
 
   test('Scenario 2: Mobile user finds deed via Guided Help without 40-button overload (F3, F9) [390x844]', async ({ page }) => {
@@ -1227,14 +1236,15 @@ test.describe('Tier 4: Real-World Application Scenarios', () => {
     // 1. Start on home, verify welcoming tone
     await expect(page.locator('.hero-title')).toContainText('Pomáhat může být lehké');
 
-    // 2. Complete instant deed
+    // 2. Start & complete instant deed
+    await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
     await page.locator('.instant-card .btn-studio-done').click();
     const note = page.locator('.instant-card .molly-celebration-note');
     await expect(note).toBeVisible();
     await expect(note).toContainText('Molly');
 
-    // 3. Follow celebration link to Krajina dobra
-    const worldLink = page.locator('.return-dopamine-actions a[href*="/svet"]');
+    // 3. Follow optional inline link to Krajina dobra
+    const worldLink = page.locator('.instant-card a[href*="/svet"]').first();
     await expect(worldLink).toBeVisible();
     await worldLink.click();
 

@@ -1,4 +1,5 @@
 <script>
+  import { onDestroy } from 'svelte';
   import {
     getActionEffectMeta,
     impactCanvas,
@@ -6,7 +7,8 @@
     playPayoffAsmr,
     describeAmbientPulse,
     playCelebrationChord,
-    safeVibrate
+    safeVibrate,
+    startHoldSpark
   } from '../../../../lib/sensoryEngine.js';
   import { trackEvent, openBrokenLinkReport } from '../../../../lib/analytics.js';
   import { notifyMollySpark } from '../../../../lib/mollyStore.js';
@@ -21,7 +23,7 @@
   export let partnerReturnPromptVisible = false;
   export let ambientPulse = null;
   export let soundMuted = false;
-  export let showEffectPreview = true;
+  export let showEffectPreview = false;
   export let copiedDirectLink = false;
   export let savedValues = [];
   export let usePersonalValues = false;
@@ -42,7 +44,37 @@
   let kibbleGrams = 0;
   let sparkBoosted = false;
   let cardCanvasNode = null;
+  let primaryBtnNode = null;
+  let stopHoldSpark = null;
+  let lastHoldActionId = null;
   let lastCelebratedActionId = null;
+
+  function endHoldSpark(released = false) {
+    if (stopHoldSpark) {
+      stopHoldSpark(released);
+      stopHoldSpark = null;
+    } else if (primaryBtnNode) {
+      primaryBtnNode.style.setProperty('--spark-charge', '0');
+      primaryBtnNode.classList.remove('spark-ready');
+    }
+  }
+
+  function handlePrimaryPointerDown(e) {
+    if (e.button && e.button !== 0) return;
+    endHoldSpark(false);
+    stopHoldSpark = startHoldSpark(e.currentTarget, () => {
+      trackEvent('aa_hold_spark_ready', { id: action?.id, surface: variant });
+    });
+  }
+
+  $: if (action?.id !== lastHoldActionId) {
+    lastHoldActionId = action?.id || null;
+    endHoldSpark(false);
+  }
+
+  onDestroy(() => {
+    endHoldSpark(false);
+  });
 
   $: if (justCompleted && action && action.id !== lastCelebratedActionId) {
     lastCelebratedActionId = action.id;
@@ -81,7 +113,9 @@
     });
   }
 
-  $: effectMeta = action ? getActionEffectMeta(action, kibbleGrams) : null;
+  $: effectMeta = action
+    ? getActionEffectMeta(action, kibbleGrams, { isReturnStrip: partnerReturnPromptVisible })
+    : null;
   $: ambientPulseText = describeAmbientPulse(ambientPulse, { inCard: true, actionId: action?.id });
   $: actionTitle = action ? cleanTitle(action.title) : '';
 </script>
@@ -95,17 +129,11 @@
     class:done-card={isCompleted}
     class:is-done={isCompleted}
   >
-    <!-- 1. Standardizovaná hlavička: Čas · Cena · Režim + Třída důkazů A/B/C -->
+    <!-- 1. Standardizovaná hlavička: Čas · Cena · Režim -->
     <div class="action-meta-line card-meta-top">
       <span class="quick-tags-pill quick-tags-inline">
         {action.quickTagsLabel || '2 min · Zdarma · Online'}
       </span>
-      <span class="meta-sep">·</span>
-      <EvidenceBadge
-        tier={action.impactEvidence || 'B'}
-        variant={variant === 'directory' ? 'card' : 'pill'}
-        className="card-evidence-badge rec-evidence-pill evidence-pill"
-      />
       {#if isCompleted}
         <span class="done-dot done-inline">· ✓ Splněno</span>
       {/if}
@@ -128,42 +156,91 @@
     <!-- 3. Jasné vysvětlení jednoho konkrétního skutku -->
     <p class="action-desc card-desc rec-desc">{action.desc}</p>
 
-    <!-- 4. Přínos + Partner & Bez registrace -->
+    <!-- 4. Přínos -->
     <div class="action-impact-summary card-impact-box rec-impact-block">
       <div class="impact-benefit-line card-benefit-line rec-impact-line">
         <strong>Přínos ({action.impactBasis || 'doložený'}):</strong>
         <span>{action.concreteImpact || action.selfBenefit}</span>
-      </div>
-      <div class="partner-trust-line card-partner-line rec-partner-line">
-        <span>
-          {action.registrationRequired
-            ? 'Krátká registrace u partnera'
-            : 'Bez registrace na našem webu'}
-        </span>
-        <span>·</span>
-        <span>Aktivita probíhá u <strong>{action.org}</strong></span>
       </div>
     </div>
 
     <!-- 5. Sekundární metadata výhradně v rozbalovacím detailu -->
     <details class="how-toggle steps-inline">
       <summary>ℹ️ Jak to funguje ({action.steps?.length ? `${action.steps.length} ${action.steps.length === 1 ? 'krok' : action.steps.length < 5 ? 'kroky' : 'kroků'}` : 'důkazy a partner'})</summary>
-      {#if action.steps?.length}
-        <ol class="how-steps clean-steps">
-          {#each action.steps as step}
-            <li>{step}</li>
-          {/each}
-        </ol>
-      {/if}
-      {#if action.impactChain}
-        <div class="impact-chain-row rec-impact-chain card-chain-line">
-          <span><strong>Aktivita:</strong> {action.impactChain.activity}</span>
-          <span class="chain-arrow chain-sep">→</span>
-          <span><strong>Výsledek:</strong> {action.impactChain.immediateOutput}</span>
-          <span class="chain-arrow chain-sep">→</span>
-          <span><strong>Skutečný dopad:</strong> {action.impactChain.realImpact}</span>
+      <div class="how-details-content">
+        <div class="detail-evidence-line" style="margin-bottom: 0.6rem;">
+          <EvidenceBadge
+            tier={action.impactEvidence || 'B'}
+            variant={variant === 'directory' ? 'card' : 'pill'}
+            className="card-evidence-badge rec-evidence-pill evidence-pill"
+          />
         </div>
-      {/if}
+        <div class="partner-trust-line card-partner-line rec-partner-line" style="margin-bottom: 0.6rem;">
+          <span>
+            {action.registrationRequired
+              ? 'Krátká registrace u partnera'
+              : 'Bez registrace na našem webu'}
+          </span>
+          <span>·</span>
+          <span>Aktivita probíhá u <strong>{action.org}</strong></span>
+        </div>
+        {#if action.steps?.length}
+          <ol class="how-steps clean-steps">
+            {#each action.steps as step}
+              <li>{step}</li>
+            {/each}
+          </ol>
+        {/if}
+        {#if action.impactChain}
+          <div class="impact-chain-row rec-impact-chain card-chain-line">
+            <span><strong>Aktivita:</strong> {action.impactChain.activity}</span>
+            <span class="chain-arrow chain-sep">→</span>
+            <span><strong>Výsledek:</strong> {action.impactChain.immediateOutput}</span>
+            <span class="chain-arrow chain-sep">→</span>
+            <span><strong>Skutečný dopad:</strong> {action.impactChain.realImpact}</span>
+          </div>
+        {/if}
+        <div class="mobile-details-extra">
+          <div class="mde-row">
+            <strong>Přínos ({action.impactBasis || 'doložený'}):</strong>
+            <span>{action.concreteImpact || action.selfBenefit}</span>
+          </div>
+          <div class="mde-verify">
+            <span>
+              Ověřeno: <strong>{action.verifiedLabel}</strong> · Zdroj:
+              <a
+                href={action.sourceUrl || action.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="verify-source-link"
+              >
+                {action.org} ↗
+              </a>
+            </span>
+            <div class="mde-row">
+              {#if onShare}
+                <button
+                  type="button"
+                  class="mde-share-btn"
+                  on:click={() => onShare(action)}
+                >
+                  {copiedDirectLink ? '✓ Odkaz zkopírován' : '🔗 Sdílet odkaz'}
+                </button>
+              {/if}
+              <button
+                type="button"
+                class="mde-broken-btn"
+                on:click={() => {
+                  if (onReportBroken) onReportBroken(action);
+                  else openBrokenLinkReport({ id: action.id, title: actionTitle, org: action.org, url: action.url });
+                }}
+              >
+                Nahlásit chybu
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </details>
 
     <!-- 5. In-situ oslava a odměna po dokončení nebo návratu od partnera -->
@@ -190,6 +267,9 @@
         ></canvas>
         <div class="in-situ-affirmation">
           ✨ <strong>Dnes už tvůj dobrý skutek pomáhá.</strong> Můžeš pokračovat dalším drobným skutkem, nebo dnešní seanci s klidem uzavřít.
+        </div>
+        <div class="molly-celebration-note">
+          🐾 <strong>Molly má radost!</strong> V <a href="/svet" class="molly-svet-inline-link">Krajině dobra</a> na ni za tvůj skutek čeká zasloužený pamlsek.
         </div>
         <div class="return-dopamine-actions in-situ-actions">
           {#if onCloseSession}
@@ -225,8 +305,8 @@
           <div class="return-dopamine-text return-dopamine-title">
             ✨ <strong>Vítej zpět!</strong> Povedlo se ti dokončit skutek u partnera?
           </div>
-          {#if effectMeta?.badge}
-            <span class="impact-payoff-badge">{effectMeta.badge}</span>
+          {#if effectMeta?.returnBadge || effectMeta?.badge}
+            <span class="impact-payoff-badge">{effectMeta.returnBadge || effectMeta.badge}</span>
           {/if}
         </div>
         <canvas
@@ -271,13 +351,21 @@
     {#if !justCompleted}
       <div class="instant-actions actions-row cta-row">
         <a
+          bind:this={primaryBtnNode}
           href={action.url}
           target="_blank"
           rel="noopener noreferrer"
           class="btn-studio-primary btn-gold-action cta primary"
           data-hold-spark="true"
           data-molly-guide="true"
-          on:click={() => onStart && onStart(action)}
+          on:pointerdown={handlePrimaryPointerDown}
+          on:pointerup={() => endHoldSpark(true)}
+          on:pointerleave={() => endHoldSpark(false)}
+          on:pointercancel={() => endHoldSpark(false)}
+          on:click={() => {
+            endHoldSpark(true);
+            if (onStart) onStart(action);
+          }}
         >
           <span>{action.id === 'zvirata_utulek_online' ? '🐾 Nakrmit útulek teď' : (action.cta || 'Začít pomáhat')}</span>
           <svg
@@ -295,7 +383,7 @@
           </svg>
         </a>
 
-        {#if !partnerReturnPromptVisible}
+        {#if isStarted && !partnerReturnPromptVisible}
           <button
             type="button"
             class="btn-studio-done btn-done-action cta secondary done-btn"
@@ -314,12 +402,12 @@
             >
               <polyline points="20 6 9 17 4 12" />
             </svg>
-            <span>{isStarted ? 'Dokončeno' : (action.doneCta || 'Už mám hotovo')}</span>
+            <span>{action.doneCta || 'Dokončeno'}</span>
           </button>
         {/if}
       </div>
 
-      {#if showEffectPreview && !partnerReturnPromptVisible}
+      {#if isStarted && !partnerReturnPromptVisible}
         <div
           class="card-effect-stage"
           data-scene={effectMeta?.scene || 'default'}
@@ -587,11 +675,6 @@
     line-height: 1.42;
   }
 
-  .mobile-details-extra {
-    display: flex;
-    flex-direction: column;
-  }
-
   .action-verify-footer {
     display: flex;
     flex-direction: column;
@@ -749,7 +832,10 @@
     align-items: center;
     justify-content: center;
     gap: 0.24rem;
-    padding: 0.22rem 0.52rem;
+    padding: 0.45rem 0.8rem;
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
     border-radius: 999px;
     border: 1px solid rgba(52, 211, 153, 0.38);
     background: rgba(5, 20, 14, 0.74);
@@ -845,6 +931,13 @@
     padding: 0.45rem 0.75rem;
     margin: 0.45rem 0;
     line-height: 1.4;
+  }
+
+  .molly-svet-inline-link {
+    color: #fde68a;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
 
   .return-dopamine-actions {
@@ -1056,7 +1149,16 @@
     box-shadow: 0 0 0 4px rgba(253, 230, 138, 0.4), var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
   }
 
+  .mobile-details-extra {
+    display: none;
+  }
+
   @media (max-width: 1024px) {
+    .instant-body:not(.directory-card) > .action-impact-summary,
+    .instant-body:not(.directory-card) > .action-verify-footer {
+      display: none;
+    }
+
     .mobile-details-extra {
       display: flex;
       flex-direction: column;
@@ -1071,8 +1173,17 @@
     .mde-row {
       display: flex;
       align-items: center;
-      gap: 0.38rem;
+      gap: 0.5rem;
       flex-wrap: wrap;
+    }
+
+    .mde-share-btn,
+    .mde-broken-btn {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.35rem;
+      box-sizing: border-box;
     }
 
     .mde-verify {
@@ -1192,8 +1303,10 @@
 
     .effect-spark-btn,
     .sound-mute-btn {
-      font-size: 0.65rem;
-      padding: 0.14rem 0.38rem;
+      font-size: 0.68rem;
+      min-height: 44px;
+      min-width: 44px;
+      padding: 0.25rem 0.55rem;
     }
 
     .instant-actions {
@@ -1227,8 +1340,22 @@
 
     .ambient-pulse-pill {
       margin-top: 0.35rem;
-      padding: 0.26rem 0.52rem;
+      padding: 0.22rem 0.1rem;
       font-size: 0.69rem;
+      align-items: flex-start;
+    }
+
+    .ambient-pulse-dot {
+      margin-top: 0.28rem;
+    }
+
+    .ambient-pulse-text {
+      white-space: normal;
+      display: -webkit-box;
+      line-clamp: 2;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
   }
 </style>

@@ -183,8 +183,10 @@ test.describe('R2: Delayed Gratification (Molly Treat Economics)', () => {
     const initialAvailable = Number((await companion.getAttribute('data-molly-available-treats')) || '0');
     const initialTreats = Number((await companion.getAttribute('data-molly-treats')) || '0');
 
-    // Complete instant deed
+    // Initiate action first (Delayed Gratification #1.3: Hotovo appears only after starting deed)
     const doneBtn = page.locator('.instant-card .btn-studio-done');
+    await expect(doneBtn).toHaveCount(0);
+    await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
     await expect(doneBtn).toBeVisible();
     await doneBtn.click();
     await page.waitForTimeout(500);
@@ -198,8 +200,8 @@ test.describe('R2: Delayed Gratification (Molly Treat Economics)', () => {
     const availableAfterDeed = Number((await companion.getAttribute('data-molly-available-treats')) || '0');
     expect(availableAfterDeed, 'Completing an altruistic deed must unlock an available treat for Molly').toBe(initialAvailable + 1);
 
-    // Follow celebration link to Krajina dobra to feed Molly the earned treat
-    const svetLink = page.locator('.return-dopamine-actions a[href*="/svet"]').first();
+    // Follow optional inline link to Krajina dobra to feed Molly the earned treat
+    const svetLink = page.locator('.instant-card a[href*="/svet"]').first();
     await expect(svetLink).toBeVisible();
     await svetLink.click();
     await gotoHydrated(page, '/svet');
@@ -268,6 +270,10 @@ test.describe('R2: Delayed Gratification (Molly Treat Economics)', () => {
     await gotoHydrated(page, '/app/online');
     const companion = page.locator('.molly-companion-layer');
     const initialAvailable = Number((await companion.getAttribute('data-molly-available-treats')) || '0');
+
+    const primaryBtn = page.locator('.grid .card .actions-row .cta.primary').first();
+    await expect(primaryBtn).toBeVisible();
+    await primaryBtn.dispatchEvent('click');
 
     const doneBtn = page.locator('.grid .card .actions-row .cta.secondary').first();
     await expect(doneBtn).toBeVisible();

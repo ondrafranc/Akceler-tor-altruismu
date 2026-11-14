@@ -50,6 +50,9 @@
   <meta property="og:locale" content="cs_CZ" />
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="alternate icon" type="image/png" href="/favicon-czech.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon-czech.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
   <link
     rel="preload"
     href="/fonts/plus-jakarta-sans-var-latin-ext.woff2"
@@ -103,7 +106,7 @@
         </span>
       </a>
 
-      <nav class="nav-links" aria-label="Hlavní navigace">
+      <nav class="nav-links" aria-label="Hlavní navigace" data-sveltekit-preload-data="tap">
         <a href="/" class="nav-pill" class:active={pathname === "/"}>
           <svg
             width="15"
@@ -291,7 +294,7 @@
     </div>
   </footer>
 
-  <nav class="mobile-bottom-nav" aria-label="Mobilní navigace">
+  <nav class="mobile-bottom-nav" aria-label="Mobilní navigace" data-sveltekit-preload-data="tap">
     <a href="/" class="mb-tab" class:active={pathname === "/"}>
       <span class="mb-icon" aria-hidden="true">⚡</span>
       <span class="mb-label">Dnes</span>
@@ -724,7 +727,8 @@
     }
 
     .nav-capsule {
-      padding: 0.36rem 0.85rem;
+      min-height: 44px;
+      padding: 0.28rem 6.5rem 0.28rem 0.78rem;
       border-radius: 999px;
       flex-wrap: nowrap;
       justify-content: space-between;

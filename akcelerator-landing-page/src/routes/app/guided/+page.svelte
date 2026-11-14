@@ -1810,15 +1810,15 @@
     .compass-shell.compass-foundations {
       order: 1;
     }
-    .mobile-guided-preview-bar {
+    .compass-shell.adaptive-step-block {
       order: 2;
     }
-    .plan-section {
+    .mobile-guided-preview-bar {
       order: 3;
-      position: static;
     }
-    .compass-shell.adaptive-step-block {
+    .plan-section {
       order: 4;
+      position: static;
     }
     .alts-drawer .alts-grid,
     .local-grid {
@@ -1887,9 +1887,11 @@
     }
 
     .situation-card {
-      padding: 0.4rem 0.5rem;
+      min-height: 44px;
+      padding: 0.36rem 0.5rem;
       border-radius: 12px;
       gap: 0.35rem;
+      box-sizing: border-box;
     }
 
     .situation-card:last-child {
@@ -1914,7 +1916,8 @@
       margin: 0.42rem 0;
     }
 
-    .compass-foundations .topic-pills {
+    .compass-foundations .topic-pills,
+    .adaptive-step-block .topic-pills {
       display: flex;
       flex-wrap: nowrap;
       overflow-x: auto;
@@ -1926,7 +1929,8 @@
       -webkit-mask-image: linear-gradient(to right, black 0%, black calc(100% - 24px), transparent 100%);
     }
 
-    .compass-foundations .topic-pills::-webkit-scrollbar {
+    .compass-foundations .topic-pills::-webkit-scrollbar,
+    .adaptive-step-block .topic-pills::-webkit-scrollbar {
       display: none;
     }
 
@@ -1937,8 +1941,13 @@
     .topic-pill {
       flex: 0 0 auto;
       white-space: nowrap;
-      padding: 0.28rem 0.56rem;
-      font-size: 0.72rem;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.35rem 0.65rem;
+      font-size: 0.74rem;
+      box-sizing: border-box;
     }
 
     .highlight-card :global(.impact-payoff-canvas) {
@@ -1953,7 +1962,7 @@
       min-width: 0;
       max-width: 100%;
       box-sizing: border-box;
-      padding: 0.44rem 0.7rem;
+      padding: 0.35rem 0.65rem;
       border-radius: 14px;
       background: rgba(15, 48, 34, 0.95);
       backdrop-filter: blur(12px);
@@ -1977,7 +1986,11 @@
       appearance: none;
       border: none;
       border-radius: 999px;
-      padding: 0.36rem 0.68rem;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.36rem 0.75rem;
       background: linear-gradient(135deg, #fde68a 0%, #6ee7b7 100%);
       color: #062015;
       font-family: inherit;
@@ -1986,6 +1999,7 @@
       cursor: pointer;
       white-space: nowrap;
       flex-shrink: 0;
+      box-sizing: border-box;
     }
   }
 </style>

@@ -16,6 +16,7 @@
   export let activeEffectPlaceId = null;
   export let openTemplateId = null;
   export let copiedTemplateId = null;
+  export let copiedPlaceLinkId = null;
   export let placeMetric = 0;
 
   export let onMouseEnter = null;
@@ -207,64 +208,68 @@
         </button>
       {/if}
 
-      <button
-        type="button"
-        class="pc-btn done"
-        class:initiated={isStarted}
-        on:click={() => onDone && onDone(p)}
-      >
-        {isStarted ? '✓ Dokončeno' : '✓ Hotovo'}
-      </button>
+      {#if isStarted}
+        <button
+          type="button"
+          class="pc-btn done"
+          class:initiated={isStarted}
+          on:click={() => onDone && onDone(p)}
+        >
+          ✓ Dokončeno
+        </button>
+      {/if}
     </div>
 
-    <div
-      class="card-effect-stage"
-      data-scene={effectMeta?.scene || 'default'}
-    >
-      <div class="card-effect-head">
-        <span class="impact-payoff-badge">
-          {effectMeta?.badge || ''}
-        </span>
-        <div class="card-effect-controls">
-          <button
-            type="button"
-            class="effect-spark-btn"
-            class:active={activeEffectPlaceId === p.id}
-            aria-pressed={activeEffectPlaceId === p.id}
-            aria-label="Vyzkoušet interaktivní fyzikální a zvukový efekt místa"
-            title="Spustit vlnu dopadu na plátně"
-            on:click={(e) => onToggleEffect && onToggleEffect(p, e)}
-          >
-            ✨ Impuls
-          </button>
-          {#if onToggleSound}
+    {#if isStarted}
+      <div
+        class="card-effect-stage"
+        data-scene={effectMeta?.scene || 'default'}
+      >
+        <div class="card-effect-head">
+          <span class="impact-payoff-badge">
+            {effectMeta?.badge || ''}
+          </span>
+          <div class="card-effect-controls">
             <button
               type="button"
-              class="sound-mute-btn"
-              on:click={onToggleSound}
-              aria-pressed={soundMuted}
-              aria-label={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
-              title={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
+              class="effect-spark-btn"
+              class:active={activeEffectPlaceId === p.id}
+              aria-pressed={activeEffectPlaceId === p.id}
+              aria-label="Vyzkoušet interaktivní fyzikální a zvukový efekt místa"
+              title="Spustit vlnu dopadu na plátně"
+              on:click={(e) => onToggleEffect && onToggleEffect(p, e)}
             >
-              {soundMuted ? '🔇' : '🔊'}
+              ✨ Impuls
             </button>
-          {/if}
+            {#if onToggleSound}
+              <button
+                type="button"
+                class="sound-mute-btn"
+                on:click={onToggleSound}
+                aria-pressed={soundMuted}
+                aria-label={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
+                title={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
+              >
+                {soundMuted ? '🔇' : '🔊'}
+              </button>
+            {/if}
+          </div>
         </div>
+        <canvas
+          class="impact-payoff-canvas"
+          width="320"
+          height="68"
+          aria-label="Fyzikální vizualizace dopadu dobrého skutku"
+          use:impactCanvas={{
+            action: placeAction,
+            climax: false,
+            onProgress: (v) => {
+              placeMetric = v;
+            }
+          }}
+        ></canvas>
       </div>
-      <canvas
-        class="impact-payoff-canvas"
-        width="320"
-        height="68"
-        aria-label="Fyzikální vizualizace dopadu dobrého skutku"
-        use:impactCanvas={{
-          action: placeAction,
-          climax: false,
-          onProgress: (v) => {
-            placeMetric = v;
-          }
-        }}
-      ></canvas>
-    </div>
+    {/if}
 
     {#if openTemplateId === p.id && !selfService && tpl}
       <div class="template-drawer">
@@ -335,7 +340,7 @@
             class="pc-report-btn pc-share-btn"
             on:click={() => onShare(p)}
           >
-            🔗 Sdílet místo
+            {copiedPlaceLinkId === p.id ? '✓ Odkaz zkopírován' : '🔗 Sdílet místo'}
           </button>
         {/if}
       </span>
@@ -550,7 +555,13 @@
     border: 1px solid rgba(16, 185, 129, 0.25);
     background: #ffffff;
     border-radius: 999px;
-    padding: 0.15rem 0.45rem;
+    padding: 0.4rem 0.75rem;
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     font-size: 0.68rem;
     font-weight: 600;
     cursor: pointer;

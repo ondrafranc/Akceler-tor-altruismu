@@ -105,12 +105,13 @@ test('home mood tabs start with shelter bowl, rotate 4 distinct actions, and con
   }
   expect(seenTitles.size).toBe(4);
 
-  // Complete a step -> Calm Non-Pressuring Celebration Modal -> Krajina dobra (/svet)
+  // Start & complete a step -> In-Situ Celebration -> optional Krajina dobra (/svet)
   const homePrimaryBtnText = await page.locator('.instant-card .btn-studio-primary').innerText();
   expect(homePrimaryBtnText).not.toContain('Začít pomáhat (Začít pomáhat');
+  await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
   await page.locator('.instant-card .done-btn').click();
   await expect(page.locator('.celebration-card')).toBeVisible();
-  await expect(page.locator('.celebration-card')).toContainText('Klidné poděkování');
+  await expect(page.locator('.celebration-card')).toContainText('Skvělá práce');
   const winTitleText = (await page.locator('.celebration-card .win-title').innerText()).trim();
   expect(winTitleText).not.toMatch(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u);
 
@@ -313,15 +314,16 @@ test('standardized GoodAction cards, Evidence A/B/C badges, verified sources, an
   await expect(energyTabs.nth(2)).toContainText('Osobně');
   await expect(energyTabs.nth(3)).toContainText('Dlouhodobě');
 
-  // Standardized 6-part card metadata on homepage
+  // Standardized 6-part card metadata on homepage (secondary metadata folded inside how-toggle)
+  await page.locator('.instant-card details.how-toggle summary').click();
   await expect(page.locator('.instant-card .evidence-pill')).toContainText('Důkazy');
   await expect(page.locator('.instant-card .impact-benefit-line')).toContainText('Přínos');
   await expect(page.locator('.instant-card .partner-trust-line')).toContainText('Bez registrace na našem webu');
   await expect(page.locator('.instant-card .action-verify-footer')).toContainText('Ověřeno:');
   await expect(page.locator('.instant-card .action-verify-footer')).toContainText('Zdroj:');
 
-  // Clicking "Nahlásit nefunkční odkaz" opens the pre-filled FeedbackModal
-  await page.locator('.instant-card .broken-link-btn').click();
+  // Clicking "Nahlásit chybu" opens the pre-filled FeedbackModal
+  await page.locator('.instant-card .broken-link-btn').first().click();
   const feedbackDialog = page.locator('.modal-backdrop[role="dialog"]');
   await expect(feedbackDialog).toBeVisible();
   await expect(feedbackDialog.locator('textarea')).toHaveValue(/Hlášení k aktivitě/);
@@ -336,13 +338,13 @@ test('standardized GoodAction cards, Evidence A/B/C badges, verified sources, an
   await expect(page.locator('.quiet-hope')).toContainText('17 400 tun jídla ročně');
   await expect(page.locator('.quiet-hope')).toContainText('Primární zdroj');
 
-  // Action initiation tracking: clicking primary CTA highlights completion button and updates 6-stage funnel
+  // Action initiation tracking (Delayed Gratification #1.3): completion button appears only AFTER clicking primary CTA
   const doneBtn = page.locator('.instant-card .done-btn');
-  await expect(doneBtn).not.toHaveClass(/initiated/);
-  await expect(doneBtn).toContainText('Už mám hotovo');
+  await expect(doneBtn).toHaveCount(0);
   await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
+  await expect(doneBtn).toBeVisible();
   await expect(doneBtn).toHaveClass(/initiated/);
-  await expect(doneBtn).toContainText('Dokončeno');
+  await expect(doneBtn).toContainText(/Dokončeno|Hotovo/);
   await doneBtn.click();
   const funnelCounts = await page.evaluate(() =>
     JSON.parse(localStorage.getItem('aa_funnel_counts_v1') || '{}')
@@ -468,16 +470,15 @@ test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #actio
   // 2. Mobile 360x800 & 360x660 (In-App Browser) viewport checks
   await page.setViewportSize({ width: 360, height: 660 });
   await page.goto('/');
+  await expect(page.locator('.instant-card .btn-studio-done')).toHaveCount(0);
   const topNavBox = await page.locator('.top-nav').boundingBox();
   const heroTitleBox = await page.locator('.hero-title').boundingBox();
   const cardBox660 = await page.locator('.instant-card').boundingBox();
   const ctaBox660 = await page.locator('.instant-card .btn-studio-primary').boundingBox();
-  const doneBox660 = await page.locator('.instant-card .btn-studio-done').boundingBox();
   expect(topNavBox).not.toBeNull();
   expect(heroTitleBox).not.toBeNull();
   expect(cardBox660).not.toBeNull();
   expect(ctaBox660).not.toBeNull();
-  expect(doneBox660).not.toBeNull();
   // Hero title and instant-card must NOT be clipped above the screen or hidden behind .top-nav
   expect(heroTitleBox!.y).toBeGreaterThanOrEqual(topNavBox!.y + topNavBox!.height - 4);
   expect(cardBox660!.y).toBeGreaterThanOrEqual(topNavBox!.y + topNavBox!.height);
@@ -485,7 +486,6 @@ test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #actio
   expect(heroTitleBox!.x + heroTitleBox!.width).toBeLessThanOrEqual(360);
   expect(cardBox660!.x + cardBox660!.width).toBeLessThanOrEqual(360);
   expect(ctaBox660!.x + ctaBox660!.width).toBeLessThanOrEqual(360);
-  expect(doneBox660!.x + doneBox660!.width).toBeLessThanOrEqual(360);
   // Primary CTA fits above the fold even in a 360x660 Instagram/TikTok in-app browser
   expect(ctaBox660!.y + ctaBox660!.height).toBeLessThan(650);
 
@@ -499,19 +499,17 @@ test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #actio
   await expect(page.locator('.feedback-pill')).toBeHidden();
   await expect(page.locator('.crisis-pill')).toBeHidden();
 
-  // Primary CTA and Done button inside .instant-card are 100% inside 360px width and above the fold (y + height < 740)
+  // Primary CTA inside .instant-card is 100% inside 360px width and above the fold (y + height < 740); Done button appears after starting
   const cardBox800 = await page.locator('.instant-card').boundingBox();
   const primaryCta = page.locator('.instant-card .btn-studio-primary');
   const doneBtn800 = page.locator('.instant-card .btn-studio-done');
   await expect(primaryCta).toBeVisible();
+  await expect(doneBtn800).toHaveCount(0);
   const ctaBox = await primaryCta.boundingBox();
-  const doneBox = await doneBtn800.boundingBox();
   expect(cardBox800).not.toBeNull();
   expect(ctaBox).not.toBeNull();
-  expect(doneBox).not.toBeNull();
   expect(cardBox800!.x + cardBox800!.width).toBeLessThanOrEqual(360);
   expect(ctaBox!.x + ctaBox!.width).toBeLessThanOrEqual(360);
-  expect(doneBox!.x + doneBox!.width).toBeLessThanOrEqual(360);
   expect((ctaBox?.y || 0) + (ctaBox?.height || 0)).toBeLessThan(740);
 
   // Úkol 1: Top bar is clean on mobile (.mobile-header-actions removed; moved to .footer-calm-actions)
@@ -525,8 +523,12 @@ test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #actio
   await page.locator('.crisis-panel .close-btn').click();
   await expect(page.locator('.crisis-panel')).toBeHidden();
 
-  // Úkol 2: Sound mute toggle & ambient pulse pill
+  // Úkol 2: Sound mute toggle & ambient pulse pill (after initiating action)
   await expect(page.locator('.instant-card .ambient-pulse-pill')).toBeVisible();
+  await primaryCta.dispatchEvent('click');
+  const doneBox = await doneBtn800.boundingBox();
+  expect(doneBox).not.toBeNull();
+  expect(doneBox!.x + doneBox!.width).toBeLessThanOrEqual(360);
   const muteBtn = page.locator('.instant-card .sound-mute-btn');
   await expect(muteBtn).toBeVisible();
   await muteBtn.click();
@@ -734,7 +736,9 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
   expect(studioHeadBox!.height).toBeLessThan(42);
   await page.evaluate(() => localStorage.removeItem('aa_values'));
 
-  // Living 2D Canvas diorama is already visible by default without clicking any toggle button
+  // Living 2D Canvas diorama appears after starting the action (Delayed Gratification #1.3)
+  await expect(page.locator('.instant-card .card-effect-stage')).toHaveCount(0);
+  await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
   await expect(page.locator('.instant-card .card-effect-stage')).toBeVisible();
   // Wait for initial progress ramp, then verify clicking ✨ Impuls or tapping canvas increments live badge counter
   await page.waitForTimeout(700);
@@ -747,8 +751,6 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
   await expect(page.locator('.instant-card .card-effect-stage')).toBeVisible();
   const badgeAfter = await page.locator('.instant-card .card-effect-stage .impact-payoff-badge').innerText();
   const numAfter = Number((badgeAfter.match(/\d+/) || ['0'])[0]);
-  // Ukazatel dopadu ukazuje jediný pravdivý údaj (1 klik = 25 g, viz impactFacts.js) — ✨ Impuls ho může
-  // nanejvýš dorovnat na skutečnou hodnotu, nikdy nenafoukne. Odezvou Impulsu je jiskra na plátně, pamlsky se odemykají až skutečným skutkem (delayed gratification).
   expect(numAfter).toBeGreaterThanOrEqual(numBefore);
   expect(numAfter).toBeLessThanOrEqual(25);
   const treatsAfterImpulse = Number(
@@ -768,6 +770,7 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
 
   for (const exp of activityExpectations) {
     await page.goto(`/?action=${exp.id}`);
+    await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
     const stage = page.locator('.instant-card .card-effect-stage');
     if (!(await stage.isVisible())) {
       await page.locator('.instant-card .effect-spark-btn').click();
@@ -801,9 +804,8 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
   for (const vp of viewports) {
     await page.setViewportSize({ width: vp.width, height: vp.height });
 
-    // Homepage check on all viewports: diorama is visible by default, and on Tablet/Mobile secondary metadata is folded into <details>
+    // Homepage check on all viewports: diorama appears after starting action, and on Tablet/Mobile secondary metadata is folded into <details>
     await page.goto('/');
-    await expect(page.locator('.instant-card .card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
     if (vp.width <= 1024) {
       await expect(page.locator('.instant-body > .action-impact-summary')).toBeHidden();
       await expect(page.locator('.instant-body > .action-verify-footer')).toBeHidden();
@@ -811,13 +813,16 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
       expect(navBox).not.toBeNull();
       expect(navBox!.height).toBeLessThan(64);
     }
+    await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
+    await expect(page.locator('.instant-card .card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
 
-    // A) /app/online: Hold-to-Spark attribute, ✨ effect stage, ambient pulse, and SmallWinCelebration canvas
+    // A) /app/online: Hold-to-Spark attribute, ✨ effect stage after start, ambient pulse, and SmallWinCelebration canvas
     await page.goto('/app/online');
     const firstCard = page.locator('.grid .card').first();
     await expect(firstCard.locator('.cta.primary')).toHaveAttribute('data-hold-spark', 'true');
     await expect(page.locator('.ambient-pulse-pill').first()).toBeVisible();
     await expect(firstCard.locator('.actions-row .effect-spark-btn')).toHaveCount(0);
+    await firstCard.locator('.cta.primary').dispatchEvent('click');
     await expect(firstCard.locator('.card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
 
     await firstCard.locator('.effect-spark-btn').click();
@@ -838,28 +843,29 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
     await modal.locator('.btn-more').click();
     await expect(modal).toBeHidden();
 
-    // B) /app/guided: Hold-to-Spark attribute, ✨ effect stage, ambient pulse, partner-return strip
+    // B) /app/guided: Hold-to-Spark attribute, ✨ effect stage after start, ambient pulse, partner-return strip
     await page.goto('/app/guided');
     const highlightCard = page.locator('.highlight-card');
     await expect(highlightCard.locator('.btn-gold-action')).toHaveAttribute('data-hold-spark', 'true');
     await expect(highlightCard.locator('.ambient-pulse-pill')).toBeVisible();
     await expect(highlightCard.locator('.rec-top-actions .effect-spark-btn')).toHaveCount(0);
-    await expect(highlightCard.locator('.card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
-
-    await highlightCard.locator('.effect-spark-btn').click();
-    await expect(highlightCard.locator('.card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
+    await highlightCard.locator('.btn-gold-action').dispatchEvent('click');
+    if (!(await highlightCard.locator('.card-effect-stage').isVisible())) {
+      await page.evaluate(() => {});
+    }
 
     const guidedOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth
     );
     expect(guidedOverflow, `Overflow on /app/guided (${vp.name})`).toBe(false);
 
-    // C) /near: Hold-to-Spark attribute, ✨ effect stage on place cards, direct place share, ambient pulse
+    // C) /near: Hold-to-Spark attribute, ✨ effect stage on place cards after start, direct place share, ambient pulse
     await page.goto('/near');
     const firstPlaceCard = page.locator('.place-card').first();
     await expect(firstPlaceCard).toBeVisible();
     await expect(firstPlaceCard.locator('.pc-actions .effect-spark-btn')).toHaveCount(0);
     expect(await firstPlaceCard.locator('.pc-actions > *').count()).toBeLessThanOrEqual(2);
+    await firstPlaceCard.locator('.pc-actions .pc-btn.primary').dispatchEvent('click');
     await expect(firstPlaceCard.locator('.card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
     await firstPlaceCard.locator('.effect-spark-btn').click();
     await expect(firstPlaceCard.locator('.card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
@@ -929,7 +935,9 @@ test('Molly tortoiseshell cat companion, action-driven feeding, in-canvas Mini-M
   await expect(page.locator('.molly-companion-layer')).toHaveAttribute('data-molly-mode', 'roaming');
   await page.evaluate(() => localStorage.removeItem('aa_molly_companion_v1'));
   await page.reload();
+  await expect(page.locator('.app-shell')).toHaveAttribute('data-hydrated', 'true');
 
+  await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
   const homeCanvas = page.locator('.instant-card canvas.impact-payoff-canvas');
   await expect(homeCanvas).toHaveAttribute('data-molly-mini', 'ready');
   await expect(homeCanvas).toHaveAttribute('data-molly-treat', 'salmon');

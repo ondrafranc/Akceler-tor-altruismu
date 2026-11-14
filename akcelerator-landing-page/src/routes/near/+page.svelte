@@ -1,6 +1,6 @@
 <script>
   import { onMount, tick } from 'svelte';
-  import { replaceState } from '$app/navigation';
+  import { goto } from '$app/navigation';
   import {
     trackEvent,
     trackFunnel,
@@ -855,7 +855,7 @@
       url.searchParams.set('lon', String(Math.round(lon * 10000) / 10000));
       url.searchParams.set('r', String(radiusKm));
       url.searchParams.set('kinds', kinds.join(','));
-      replaceState(url, {});
+      goto(url, { replaceState: true, noScroll: true, keepFocus: true });
     } catch {}
   }
 
@@ -996,9 +996,12 @@
     if (mobileView === 'list') {
       mobileView = 'map';
       await tick();
-      map?.invalidateSize();
+    }
+    if (!map) {
+      await initMap();
     }
     if (!map) return;
+    map.invalidateSize();
     isProgrammaticMove = true;
     map.flyTo([p.lat, p.lon], Math.max(map.getZoom(), 15), { duration: 0.45 });
     if (isMobileOrTablet) {
@@ -1068,15 +1071,102 @@
   async function setMobileMode(mode) {
     mobileView = mode;
     await tick();
-    if (map && mode === 'map') {
-      map.invalidateSize();
+    if (mode === 'map') {
+      if (!map) {
+        await initMap();
+      }
+      map?.invalidateSize();
       fitMapToFilteredPlaces();
     }
   }
 
+  let destroyed = false;
+  let mapInitializing = false;
+  let resizeTimer = null;
+
+  async function initMap() {
+    if (map || mapInitializing || destroyed || !mapEl) return;
+    mapInitializing = true;
+    try {
+      await import('leaflet/dist/leaflet.css');
+      const mod = await import('leaflet');
+      if (destroyed || !mapEl) {
+        mapInitializing = false;
+        return;
+      }
+      leaflet = mod.default || mod;
+      await tick();
+      if (destroyed || !mapEl) {
+        mapInitializing = false;
+        return;
+      }
+
+      map = leaflet.map(mapEl, {
+        zoomControl: true,
+        scrollWheelZoom: false,
+        preferCanvas: true
+      });
+      map.on('focus', () => map?.scrollWheelZoom?.enable());
+      map.on('blur', () => map?.scrollWheelZoom?.disable());
+
+      const onMapTouchStart = (e) => {
+        if (!map || mobileView === 'map') return;
+        if (e.touches && e.touches.length === 1) {
+          map.dragging?.disable();
+          touchGestureHint = true;
+          if (touchHintTimer) clearTimeout(touchHintTimer);
+          touchHintTimer = setTimeout(() => {
+            touchGestureHint = false;
+          }, 1800);
+        } else if (e.touches && e.touches.length >= 2) {
+          map.dragging?.enable();
+          touchGestureHint = false;
+        }
+      };
+      const onMapTouchEnd = () => {
+        map?.dragging?.enable();
+      };
+      mapEl.addEventListener('touchstart', onMapTouchStart, { passive: true });
+      mapEl.addEventListener('touchend', onMapTouchEnd, { passive: true });
+
+      ensureOsmTileLayer();
+      moveMapCenter(centerLat, centerLon, 13);
+      isLoadingMap = false;
+
+      resizeTimer = setTimeout(() => {
+        map?.invalidateSize();
+        fitMapToFilteredPlaces();
+      }, 120);
+
+      map.on('moveend', () => {
+        if (!map) return;
+        if (isProgrammaticMove) {
+          isProgrammaticMove = false;
+          return;
+        }
+        const c = map.getCenter();
+        const distFromActive = haversineKm(centerLat, centerLon, c.lat, c.lng);
+        if (distFromActive >= 1.8) {
+          pannedCenter = { lat: c.lat, lon: c.lng };
+        } else {
+          pannedCenter = null;
+        }
+      });
+
+      renderMarkers();
+      fitMapToFilteredPlaces();
+    } catch {
+      if (destroyed) return;
+      isLoadingMap = false;
+      mapBootError =
+        'Interaktivní podklad se nepodařilo vykreslit, ale seznam nejbližších ověřených míst níže funguje naplno.';
+    } finally {
+      mapInitializing = false;
+    }
+  }
+
   onMount(() => {
-    let destroyed = false;
-    let resizeTimer = null;
+    destroyed = false;
     let nearReturnTimer = null;
     soundMuted = isSoundMuted();
 
@@ -1180,80 +1270,20 @@
 
       places = getInstantCurated(centerLat, centerLon, ALL_KINDS);
 
-      try {
-        await import('leaflet/dist/leaflet.css');
-        const mod = await import('leaflet');
-        if (destroyed || !mapEl) return;
-        leaflet = mod.default || mod;
+      const isDesktop = typeof window !== 'undefined' && window.innerWidth > 980;
+      if (isDesktop || mobileView === 'map') {
+        await initMap();
+      } else {
+        isLoadingMap = false;
+      }
+
+      await fetchNearby(centerLat, centerLon);
+      if (activePlaceId) {
         await tick();
-        if (destroyed || !mapEl) return;
-
-        map = leaflet.map(mapEl, {
-          zoomControl: true,
-          scrollWheelZoom: false,
-          preferCanvas: true
-        });
-        map.on('focus', () => map?.scrollWheelZoom?.enable());
-        map.on('blur', () => map?.scrollWheelZoom?.disable());
-
-        const onMapTouchStart = (e) => {
-          if (!map || mobileView === 'map') return;
-          if (e.touches && e.touches.length === 1) {
-            map.dragging?.disable();
-            touchGestureHint = true;
-            if (touchHintTimer) clearTimeout(touchHintTimer);
-            touchHintTimer = setTimeout(() => {
-              touchGestureHint = false;
-            }, 1800);
-          } else if (e.touches && e.touches.length >= 2) {
-            map.dragging?.enable();
-            touchGestureHint = false;
-          }
-        };
-        const onMapTouchEnd = () => {
-          map?.dragging?.enable();
-        };
-        mapEl.addEventListener('touchstart', onMapTouchStart, { passive: true });
-        mapEl.addEventListener('touchend', onMapTouchEnd, { passive: true });
-
-        ensureOsmTileLayer();
-        moveMapCenter(centerLat, centerLon, 13);
-        isLoadingMap = false;
-
-        resizeTimer = setTimeout(() => {
-          map?.invalidateSize();
-          fitMapToFilteredPlaces();
-        }, 120);
-
-        map.on('moveend', () => {
-          if (!map) return;
-          if (isProgrammaticMove) {
-            isProgrammaticMove = false;
-            return;
-          }
-          const c = map.getCenter();
-          const distFromActive = haversineKm(centerLat, centerLon, c.lat, c.lng);
-          if (distFromActive >= 1.8) {
-            pannedCenter = { lat: c.lat, lon: c.lng };
-          } else {
-            pannedCenter = null;
-          }
-        });
-
-        await fetchNearby(centerLat, centerLon);
-        if (activePlaceId) {
-          await tick();
-          const el = document.getElementById(`place-card-${String(activePlaceId).replace(/[^a-zA-Z0-9_-]/g, '-')}`);
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          const m = markerById.get(activePlaceId);
-          if (m) m.openPopup();
-        }
-      } catch {
-        if (destroyed) return;
-        isLoadingMap = false;
-        mapBootError =
-          'Interaktivní podklad se nepodařilo vykreslit, ale seznam nejbližších ověřených míst níže funguje naplno.';
-        await fetchNearby(centerLat, centerLon);
+        const el = document.getElementById(`place-card-${String(activePlaceId).replace(/[^a-zA-Z0-9_-]/g, '-')}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        const m = markerById.get(activePlaceId);
+        if (m) m.openPopup();
       }
     })();
 
@@ -1268,6 +1298,7 @@
       if (touchHintTimer) clearTimeout(touchHintTimer);
       if (nearbyAbortController) nearbyAbortController.abort();
       if (map) {
+        try { map.stop(); } catch {}
         map.remove();
         map = null;
       }
@@ -1640,6 +1671,7 @@
             {activeEffectPlaceId}
             {openTemplateId}
             {copiedTemplateId}
+            {copiedPlaceLinkId}
             placeMetric={placeMetrics[p.id] || 0}
             onMouseEnter={() => setHoveredPlace(p.id)}
             onMouseLeave={() => setHoveredPlace(null)}
@@ -2627,7 +2659,7 @@
 
   @media (max-width: 680px) {
     .near-page {
-      padding: 0.1rem 0.55rem 1.8rem;
+      padding: 0.1rem 0.55rem calc(5.2rem + env(safe-area-inset-bottom, 0px));
       overflow-x: hidden;
       width: 100%;
       box-sizing: border-box;
@@ -2651,8 +2683,8 @@
     }
 
     .controls-card {
-      padding: 0.36rem 0.5rem;
-      margin-bottom: 0.25rem;
+      padding: 0.34rem 0.5rem;
+      margin-bottom: 0.22rem;
       border-radius: 14px;
       max-width: 100%;
       box-sizing: border-box;
@@ -2661,7 +2693,7 @@
     .controls-top {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.35rem;
+      gap: 0.3rem;
       align-items: center;
       width: 100%;
     }
@@ -2671,7 +2703,7 @@
       flex-shrink: 0;
       padding: 0.38rem 0.58rem;
       font-size: 0.74rem;
-      min-height: 36px;
+      min-height: 44px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -2691,16 +2723,16 @@
       flex: 1;
       min-width: 0;
       padding: 0.36rem 0.5rem;
-      font-size: 0.76rem;
+      font-size: 1rem;
       border-radius: 9px;
-      min-height: 36px;
+      min-height: 44px;
       box-sizing: border-box;
     }
 
     .btn-find {
       padding: 0.36rem 0.58rem;
-      font-size: 0.75rem;
-      min-height: 36px;
+      font-size: 0.78rem;
+      min-height: 44px;
       flex-shrink: 0;
       border-radius: 9px;
       display: inline-flex;
@@ -2711,12 +2743,12 @@
 
     .city-jump-select {
       order: 3;
-      flex: 0 1 92px;
+      flex: 0 1 96px;
       min-width: 0;
-      max-width: 102px;
+      max-width: 106px;
       padding: 0.26rem 0.34rem;
-      font-size: 0.72rem;
-      min-height: 32px;
+      font-size: 1rem;
+      min-height: 44px;
       border-radius: 9px;
       box-sizing: border-box;
     }
@@ -2790,7 +2822,7 @@
       white-space: nowrap;
       padding: 0.36rem 0.65rem;
       font-size: 0.75rem;
-      min-height: 36px;
+      min-height: 44px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -2853,8 +2885,8 @@
 
     .leaflet-canvas,
     .leaflet-canvas.map-expanded {
-      height: 58dvh;
-      min-height: 340px;
+      height: min(46dvh, 320px);
+      min-height: 260px;
     }
 
     .search-area-btn {
@@ -2895,7 +2927,7 @@
     .filter-input,
     .sort-select {
       min-height: 44px;
-      font-size: 0.74rem;
+      font-size: 1rem;
       border-radius: 8px;
       padding: 0.25rem 0.45rem;
       box-sizing: border-box;
@@ -2903,11 +2935,11 @@
     }
 
     .filter-input {
-      max-width: 85px;
+      max-width: 96px;
     }
 
     .sort-select {
-      max-width: 145px;
+      max-width: 152px;
     }
 
     .source-tier-bar {
@@ -2942,7 +2974,7 @@
     }
 
     .pc-btn {
-      min-height: 40px;
+      min-height: 44px;
       padding: 0.48rem 0.75rem;
       font-size: 0.78rem;
       display: inline-flex;

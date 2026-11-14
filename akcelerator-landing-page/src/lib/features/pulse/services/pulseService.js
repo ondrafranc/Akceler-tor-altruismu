@@ -3,18 +3,29 @@
  * Fetches real-time anonymous altruistic actions completed across Czechia and formats descriptive text.
  */
 
+let cachedPulse = null;
+let cacheTimestamp = 0;
+const PULSE_CACHE_TTL_MS = 45000;
+
 /**
- * Fetches recent ambient pulse event from backend API.
+ * Fetches recent ambient pulse event from backend API with 45s in-memory TTL caching.
  * Returns null if network fails or no active pulse is available.
  * @returns {Promise<any | null>}
  */
 export async function fetchAmbientPulse() {
+  const now = Date.now();
+  if (cachedPulse && now - cacheTimestamp < PULSE_CACHE_TTL_MS) {
+    return cachedPulse;
+  }
   try {
     const r = await fetch('/api/pulse');
-    if (r.ok) return await r.json();
+    if (r.ok) {
+      cachedPulse = await r.json();
+      cacheTimestamp = now;
+      return cachedPulse;
+    }
   } catch {}
-  // Bez odpovědi serveru nic nevymýšlíme (dříve se ukazovala smyšlená věta o Brně)
-  return null;
+  return cachedPulse || null;
 }
 
 /**

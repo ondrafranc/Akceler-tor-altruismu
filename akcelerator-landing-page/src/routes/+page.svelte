@@ -110,7 +110,7 @@
   let copyLinkTimer = null;
   let soundMuted = false;
   let kibbleGrams = 0;
-  let showEffectPreview = true;
+  let showEffectPreview = false;
   let sparkBoosted = false;
   let cardCanvasNode = null;
   /** @type {any} */
@@ -181,6 +181,11 @@
           energyMode = inferEnergyModeForAction(matched);
           pinnedActionId = matched.id;
           lastQuickActionId = matched.id;
+          suggestionIndex = 0;
+          awaitingPartnerReturn = false;
+          partnerReturnPromptVisible = false;
+          justCompleted = false;
+          consumePendingPartnerReturn(0);
         }
       } else {
         pinnedActionId = "";
@@ -210,7 +215,7 @@
     const handleHashChange = () => applyUrlDeepLink(undefined, true);
 
     const triggerPartnerReturnIfReady = () => {
-      if (justCompleted) return;
+      if (justCompleted || partnerReturnPromptVisible) return;
       if (returnDelayTimer) {
         clearTimeout(returnDelayTimer);
         returnDelayTimer = null;
@@ -218,8 +223,8 @@
       const elapsedMem = awaitingPartnerReturn
         ? Date.now() - partnerLeaveTimestamp
         : 0;
-      const persisted = consumePendingPartnerReturn(0);
-      if (persisted || awaitingPartnerReturn) {
+      const persisted = consumePendingPartnerReturn(3000);
+      if (elapsedMem >= 3000 || persisted) {
         if (awaitingPartnerReturn && !persisted) {
           consumePendingPartnerReturn(0);
         }
@@ -233,25 +238,10 @@
           }
         }
         awaitingPartnerReturn = false;
-        partnerReturnPromptVisible = false;
-        justCompleted = true;
+        partnerReturnPromptVisible = true;
+        justCompleted = false;
         const elapsed = persisted?.elapsedMs || elapsedMem;
-        try {
-          if (typeof navigator !== "undefined" && navigator.vibrate) {
-            navigator.vibrate(40);
-          }
-        } catch {}
-        playCelebrationChord();
-        const finishedAction = matched || currentQuickAction;
-        if (finishedAction) {
-          recordSmallWin({
-            id: finishedAction.id,
-            title: finishedAction.title,
-            surface: "home_instant",
-            silent: true,
-          });
-        }
-        trackEvent("aa_partner_return_celebration", {
+        trackEvent("aa_partner_return_prompt_shown", {
           id: persisted?.id || currentQuickAction?.id || lastQuickActionId,
           elapsedMs: elapsed,
         });
@@ -597,7 +587,7 @@
           class:active={energyMode === "couch"}
           on:click={() => setEnergyMode("couch")}
         >
-          🛋️ Mám 2 min
+          <span class="tab-emoji" aria-hidden="true">🛋️</span><span>Mám 2 min</span>
         </button>
         <button
           type="button"
@@ -605,7 +595,7 @@
           class:active={energyMode === "focus"}
           on:click={() => setEnergyMode("focus")}
         >
-          🔬 Mám 15 min
+          <span class="tab-emoji" aria-hidden="true">🔬</span><span>Mám 15 min</span>
         </button>
         <button
           type="button"
@@ -613,7 +603,7 @@
           class:active={energyMode === "walk"}
           on:click={() => setEnergyMode("walk")}
         >
-          📍 Osobně
+          <span class="tab-emoji" aria-hidden="true">📍</span><span>Osobně</span>
         </button>
         <button
           type="button"
@@ -621,7 +611,7 @@
           class:active={energyMode === "people"}
           on:click={() => setEnergyMode("people")}
         >
-          🌱 Dlouhodobě
+          <span class="tab-emoji" aria-hidden="true">🌱</span><span>Dlouhodobě</span>
         </button>
       </div>
 
@@ -746,9 +736,8 @@
     font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
-    min-height: 44px;
-    min-width: 44px;
-    padding: 0.5rem 0.65rem;
+    min-height: 32px;
+    padding: 0.25rem 0.55rem;
     box-sizing: border-box;
     border-radius: 8px;
     transition:
@@ -776,6 +765,7 @@
     border-radius: 999px;
     min-height: 44px;
     padding: 0.5rem 0.5rem;
+    gap: 0.28rem;
     background: transparent;
     color: var(--text-secondary);
     font-family: var(--font-sans);
@@ -827,6 +817,7 @@
     .cycle-link {
       min-height: 44px;
       min-width: 44px;
+      margin: -5px -4px -5px 0;
       padding: 0.45rem 0.55rem;
       font-size: 0.78rem;
     }
@@ -855,8 +846,9 @@
 
     .energy-tab {
       min-height: 44px;
-      padding: 0.32rem 0.32rem;
-      font-size: 0.7rem;
+      padding: 0.32rem 0.3rem;
+      gap: 0.2rem;
+      font-size: 0.72rem;
       font-weight: 700;
       white-space: nowrap;
       flex: 1 1 auto;
@@ -866,6 +858,16 @@
       text-align: center;
       border-radius: 999px;
       letter-spacing: -0.015em;
+    }
+  }
+
+  @media (max-width: 440px) {
+    .energy-tab .tab-emoji {
+      display: none;
+    }
+    .energy-tab {
+      padding: 0.32rem 0.24rem;
+      font-size: 0.72rem;
     }
   }
 </style>

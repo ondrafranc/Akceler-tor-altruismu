@@ -5,6 +5,8 @@ const CACHE = `akcelerator-cache-${version}`;
 const PRECACHE_ASSETS = [
   '/manifest.webmanifest',
   '/favicon.svg',
+  '/favicon-czech.png',
+  '/apple-touch-icon-czech.png',
   '/icon-192.png',
   '/icon-512.png',
   '/offline.html'

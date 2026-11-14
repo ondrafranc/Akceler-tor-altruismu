@@ -457,7 +457,8 @@ test.describe('Challenger M3-2: Guided Help State Stress, Filter Combinations & 
       await energyTabs.nth(m).click();
       await page.waitForTimeout(100);
 
-      // Trigger completion to reveal celebration card
+      // Start action first, then trigger completion to reveal celebration card
+      await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
       const doneBtn = page.locator('.btn-studio-done').first();
       await expect(doneBtn).toBeVisible();
       await doneBtn.click();

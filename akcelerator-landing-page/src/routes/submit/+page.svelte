@@ -821,12 +821,12 @@
 
   @media (max-width: 680px) {
     .page {
-      padding: 0.3rem 0.65rem 5rem;
+      padding: 0.3rem 0.65rem calc(6.5rem + env(safe-area-inset-bottom, 0px));
     }
 
     .subpage-hero.header {
-      padding: 0.55rem 0.75rem !important;
-      margin-bottom: 0.45rem !important;
+      padding: 0.5rem 0.75rem !important;
+      margin-bottom: 0.4rem !important;
       border-radius: 16px;
     }
 
@@ -836,25 +836,96 @@
     }
 
     .title {
-      font-size: 1.15rem;
+      font-size: 1.12rem;
       line-height: 1.18;
     }
 
     .submit-layout {
-      gap: 1.15rem;
+      gap: 1.1rem;
+    }
+
+    .submit-layout > * {
+      min-width: 0;
+      max-width: 100%;
     }
 
     .card {
-      padding: 0.9rem 0.95rem;
+      padding: 0.9rem 0.92rem;
       border-radius: 18px;
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
     }
 
     .tabs {
       margin-bottom: 0.65rem;
+      max-width: 100%;
+    }
+
+    .tab {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
     }
 
     .form {
-      gap: 0.68rem;
+      gap: 0.66rem;
+      min-width: 0;
+    }
+
+    .field {
+      min-width: 0;
+    }
+
+    .loc-search input {
+      min-width: 0;
+    }
+
+    input,
+    textarea {
+      font-size: 1rem;
+      min-height: 44px;
+      padding: 0.58rem 0.78rem;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      min-height: 82px;
+    }
+
+    .loc-field > .quick-pills {
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .q-pill {
+      flex: 0 0 auto;
+      white-space: nowrap;
+      min-height: 44px;
+      padding: 0.4rem 0.75rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+
+    .btn,
+    .submit-btn {
+      min-height: 48px;
+      width: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+
+    .loc-search .btn.secondary {
+      width: auto;
+      min-height: 44px;
     }
   }
 </style>

@@ -664,15 +664,15 @@
 
   @media (max-width: 680px) {
     .page {
-      padding: 0.35rem 0.65rem 2.2rem;
+      padding: 0.35rem 0.65rem calc(5.2rem + env(safe-area-inset-bottom, 0px));
       overflow-x: hidden;
       width: 100%;
       box-sizing: border-box;
     }
 
     .subpage-hero.header {
-      padding: 0.82rem 0.8rem 0.75rem;
-      margin-bottom: 0.55rem;
+      padding: 0.7rem 0.8rem 0.65rem;
+      margin-bottom: 0.45rem;
       border-radius: 18px;
     }
 
@@ -682,13 +682,13 @@
     }
 
     .header .title {
-      font-size: 1.2rem;
+      font-size: 1.18rem;
       line-height: 1.18;
       margin: 0;
     }
 
     .hero-tools-row {
-      margin-top: 0.5rem;
+      margin-top: 0.45rem;
       gap: 0.35rem;
       flex-wrap: nowrap;
     }
@@ -699,17 +699,24 @@
     }
 
     .search-wrap input {
-      padding: 0.42rem 0.65rem;
-      font-size: 0.78rem;
-      border-radius: 10px;
+      min-height: 44px;
+      padding: 0.45rem 0.72rem;
+      font-size: 1rem;
+      border-radius: 12px;
+      box-sizing: border-box;
     }
 
     .btn-random-spark {
-      padding: 0.42rem 0.65rem;
-      font-size: 0.75rem;
-      border-radius: 10px;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.45rem 0.75rem;
+      font-size: 0.78rem;
+      border-radius: 12px;
       white-space: nowrap;
       flex-shrink: 0;
+      box-sizing: border-box;
     }
 
     .filters-bar,

@@ -138,6 +138,7 @@
 
   onDestroy(() => {
     if (breathInterval) clearInterval(breathInterval);
+    if (breathingActive) setMollyMood('curious');
   });
 </script>
 

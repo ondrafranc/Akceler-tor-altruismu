@@ -159,10 +159,17 @@ body {
     radial-gradient(at 88% 16%, rgba(254, 243, 199, 0.38) 0px, transparent 50%),
     radial-gradient(at 50% 88%, rgba(110, 231, 183, 0.16) 0px, transparent 56%),
     linear-gradient(180deg, #f5f9f5 0%, #eef4ef 52%, #f6f7f1 100%);
-  background-attachment: fixed;
   color: var(--text-primary);
   font-family: var(--font-sans);
   overflow-x: hidden;
+}
+
+.content-wrap {
+  width: 100%;
+  max-width: 1140px;
+  box-sizing: border-box;
+  margin: 0 auto;
+  align-items: start;
 }
 
 /* Editorial Display Accents */

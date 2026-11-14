@@ -14,7 +14,7 @@
   export let partnerReturnPromptVisible = false;
   export let ambientPulse = null;
   export let soundMuted = false;
-  export let showEffectPreview = true;
+  export let showEffectPreview = false;
   export let copiedDirectLink = false;
   export let savedValues = [];
   export let usePersonalValues = false;

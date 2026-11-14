@@ -12,17 +12,6 @@
     { left: "81%", top: "22%", size: 7, delay: "2.2s", dur: "9.4s", gold: true },
     { left: "90%", top: "60%", size: 5, delay: "1.5s", dur: "7.1s", gold: false },
   ];
-
-  function handleActionAnchorClick(e) {
-    if (typeof document !== 'undefined') {
-      const target = document.getElementById('dnesni-skutek');
-      if (target) {
-        if (e && e.preventDefault) e.preventDefault();
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        trackEvent('aa_hero_mobile_scroll_action', { to: 'dnesni-skutek' });
-      }
-    }
-  }
 </script>
 
 <section class="hero-stage">
@@ -46,8 +35,11 @@
       </div>
 
       <h1 class="hero-title">
-        Pomáhat může být lehké.
-        <span class="hero-serif">Stačí jeden dobrý skutek dnes.</span>
+        <span class="hero-desktop-heading">
+          Pomáhat může být lehké.
+          <span class="hero-serif">Stačí jeden dobrý skutek dnes.</span>
+        </span>
+        <span class="hero-mobile-claim">Jeden ověřený dobrý skutek na 2 minuty zdarma.</span>
       </h1>
 
       <p class="hero-lead">
@@ -78,16 +70,6 @@
           </svg>
           <span>Mapa pomoci v okolí</span>
           <span class="arrow" aria-hidden="true">→</span>
-        </a>
-
-        <!-- Mobile Visual-First Primary Action Anchor: Smooth scroll to today's deed -->
-        <a
-          href="#dnesni-skutek"
-          class="hero-btn primary hero-btn-mobile"
-          on:click={handleActionAnchorClick}
-          aria-label="Přejít k dnešnímu doporučenému skutku"
-        >
-          <span>⚡ Dnešní skutek (2 min) ↓</span>
         </a>
 
         <!-- Shared Sanctuary Link: Krajina dobra -->
@@ -317,7 +299,7 @@
     transform: translateX(3px);
   }
 
-  .hero-btn-mobile {
+  .hero-mobile-claim {
     display: none;
   }
 
@@ -368,6 +350,7 @@
     .hero-painted-backdrop {
       display: block;
       opacity: 0.44;
+      background-image: url("/art/sanctuary-dawn-800.webp");
       background-position: center 36%;
       mask-image: linear-gradient(
         180deg,
@@ -392,7 +375,7 @@
 
     .hero-stage {
       margin-top: -3.2rem;
-      padding: 3.35rem 0.75rem 1.25rem;
+      padding: 3.55rem 0.75rem 1.05rem;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
@@ -407,7 +390,27 @@
     }
 
     .hero-copy {
+      display: block;
+      margin-bottom: 0.38rem;
+      text-align: center;
+    }
+
+    .hero-desktop-heading,
+    .hero-overline,
+    .hero-lead,
+    .hero-ctas {
       display: none !important;
+    }
+
+    .hero-mobile-claim {
+      display: block;
+      font-size: clamp(0.95rem, 3.8vw, 1.12rem);
+      font-weight: 700;
+      color: #ffffff;
+      margin: 0;
+      line-height: 1.24;
+      text-shadow: 0 2px 10px rgba(5, 24, 16, 0.45);
+      letter-spacing: -0.01em;
     }
 
     .hero-overline {
@@ -434,10 +437,10 @@
     }
 
     .hero-title {
-      font-size: clamp(2rem, 7.8vw, 2.75rem);
-      line-height: 1.1;
-      margin: 0 0 0.85rem 0;
-      letter-spacing: -0.03em;
+      font-size: clamp(0.95rem, 3.8vw, 1.12rem);
+      line-height: 1.24;
+      margin: 0;
+      letter-spacing: -0.01em;
       overflow-wrap: break-word;
       color: #ffffff;
       text-shadow: 0 2px 14px rgba(5, 24, 16, 0.5);
@@ -485,13 +488,6 @@
       display: none !important;
     }
 
-    .hero-btn-mobile {
-      display: inline-flex !important;
-      font-weight: 800;
-      letter-spacing: -0.01em;
-      box-shadow: 0 12px 28px -4px rgba(52, 211, 153, 0.45);
-    }
-
     .sanctuary-hero-btn {
       background: rgba(255, 255, 255, 0.12);
       border: 1px solid rgba(253, 230, 138, 0.38);
@@ -513,15 +509,18 @@
 
   @media (max-width: 360px) {
     .hero-stage {
-      padding: 1.4rem 0.5rem 1.15rem;
+      padding: 3.55rem 0.5rem 0.9rem;
     }
 
     .hero-copy {
-      padding: 1rem 0.15rem 1.8rem;
+      padding: 0;
+      margin-bottom: 0.3rem;
     }
 
-    .hero-title {
-      font-size: 1.7rem;
+    .hero-title,
+    .hero-mobile-claim {
+      font-size: 0.92rem;
+      line-height: 1.22;
     }
 
     .hero-serif {
