@@ -43,7 +43,6 @@
   import SanctuaryTeaser from "../lib/features/home/SanctuaryTeaser.svelte";
   import HopeCarousel from "../lib/features/home/HopeCarousel.svelte";
   import PortalsDrawer from "../lib/features/home/PortalsDrawer.svelte";
-  import ActionCard from "../lib/features/actions/components/ActionCard.svelte";
   import SwipeDeck from "../lib/features/actions/components/SwipeDeck.svelte";
 
   const HOME_MODES = {
@@ -345,19 +344,26 @@
     commitment: activeModeCfg.commitment,
     completedIds: ($completedSteps || []).map((s) => s.id),
     excludeIds: excludeQuickId ? [excludeQuickId] : [],
-    seed: `home:${energyMode}:${suggestionIndex}`,
+    seed: `home:${energyMode}:0`,
   });
 
   $: pinnedAction = pinnedActionId
     ? MICRO_ACTIONS.find((a) => a.id === pinnedActionId) || null
     : null;
-  $: currentQuickAction =
-    pinnedAction || (quickPool.length ? quickPool[0] : null);
   $: quickDeckActions = pinnedAction
     ? [pinnedAction, ...quickPool.filter((a) => a.id !== pinnedAction.id)]
     : quickPool.length > 0
       ? quickPool
       : (MICRO_ACTIONS || []).slice(0, 5);
+  $: currentQuickAction =
+    pinnedAction ||
+    (quickDeckActions && quickDeckActions.length > 0
+      ? quickDeckActions[
+          ((suggestionIndex % quickDeckActions.length) +
+            quickDeckActions.length) %
+            quickDeckActions.length
+        ]
+      : null);
   $: if (currentQuickAction?.id) {
     lastQuickActionId = currentQuickAction.id;
   }
@@ -394,12 +400,19 @@
 
   function nextQuickIdea() {
     handlePrimaryPointerEnd(false);
+    const prevId = currentQuickAction?.id || lastQuickActionId;
+    const wasPinned = Boolean(pinnedActionId);
     pinnedActionId = "";
     awaitingPartnerReturn = false;
     partnerReturnPromptVisible = false;
     justCompleted = false;
-    excludeQuickId = lastQuickActionId;
-    suggestionIndex += 1;
+    if (wasPinned) {
+      suggestionIndex = quickPool[0]?.id === prevId ? 1 : 0;
+    } else if (quickDeckActions.length > 0) {
+      suggestionIndex = (suggestionIndex + 1) % quickDeckActions.length;
+    } else {
+      suggestionIndex += 1;
+    }
     trackEvent("aa_home_next_idea", {
       mode: energyMode,
       index: suggestionIndex,
@@ -413,12 +426,14 @@
 
   function prevQuickIdea() {
     handlePrimaryPointerEnd(false);
+    const wasPinned = Boolean(pinnedActionId);
     pinnedActionId = "";
     awaitingPartnerReturn = false;
     partnerReturnPromptVisible = false;
     justCompleted = false;
-    excludeQuickId = lastQuickActionId;
-    if (suggestionIndex > 0) {
+    if (wasPinned) {
+      suggestionIndex = Math.max(0, quickPool.length - 1);
+    } else if (suggestionIndex > 0) {
       suggestionIndex -= 1;
     } else if (quickDeckActions.length > 0) {
       suggestionIndex = quickDeckActions.length - 1;
@@ -550,7 +565,10 @@
       <div class="card-halo" aria-hidden="true"></div>
 
       <div class="studio-head">
-        <span class="studio-label">Chci pomoct právě teď:</span>
+        <span class="studio-label">
+          <span class="studio-ready-dot" aria-hidden="true"></span>
+          <span>Chci pomoct právě teď:</span>
+        </span>
         <button
           type="button"
           class="cycle-link cycle-btn"
@@ -684,13 +702,14 @@
     min-width: 0;
     max-width: 100%;
     box-sizing: border-box;
-    background: rgba(255, 255, 255, 0.97);
+    background: linear-gradient(180deg, rgba(254, 255, 254, 0.985) 0%, rgba(245, 251, 247, 0.985) 100%);
     color: var(--text-primary);
     border-radius: 28px;
-    padding: 1.65rem 1.7rem;
+    padding: 1.15rem 1.45rem 0.98rem;
     box-shadow:
-      0 30px 60px -14px rgba(3, 12, 8, 0.5),
-      0 0 0 1px rgba(255, 255, 255, 0.6);
+      0 30px 60px -14px rgba(3, 12, 8, 0.52),
+      0 0 0 1px rgba(255, 255, 255, 0.72),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
     scroll-margin-top: 2rem;
   }
 
@@ -698,14 +717,33 @@
     position: absolute;
     inset: -1.5px;
     border-radius: 30px;
-    background: linear-gradient(
-      135deg,
-      rgba(52, 211, 153, 0.45),
-      rgba(251, 191, 36, 0.35),
-      transparent 65%
+    background: radial-gradient(
+      circle at 50% 0%,
+      rgba(52, 211, 153, 0.45) 0%,
+      rgba(251, 191, 36, 0.28) 45%,
+      transparent 75%
     );
     z-index: -1;
     pointer-events: none;
+    animation: ambientAuraBreathe 6s ease-in-out infinite;
+  }
+
+  @keyframes ambientAuraBreathe {
+    0%, 100% {
+      opacity: 0.65;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.008);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card-halo {
+      animation: none;
+      opacity: 0.8;
+    }
   }
 
   .studio-head {
@@ -715,13 +753,26 @@
     flex-wrap: wrap;
     min-width: 0;
     gap: 0.5rem;
-    margin-bottom: 0.65rem;
+    margin-bottom: 0.5rem;
   }
 
   .studio-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.42rem;
     font-size: 0.82rem;
     font-weight: 700;
-    color: var(--text-muted);
+    color: var(--text-secondary);
+    letter-spacing: -0.005em;
+  }
+
+  .studio-ready-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16);
+    flex-shrink: 0;
   }
 
   .cycle-link {
@@ -729,42 +780,50 @@
     align-items: center;
     justify-content: center;
     gap: 0.35rem;
-    border: none;
-    background: transparent;
-    color: var(--emerald-600);
+    border: 1px solid rgba(16, 185, 129, 0.18);
+    background: rgba(16, 185, 129, 0.06);
+    color: #0b5d40;
     font-family: var(--font-sans);
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     font-weight: 700;
     cursor: pointer;
     min-height: 32px;
-    padding: 0.25rem 0.55rem;
+    padding: 0.22rem 0.62rem;
     box-sizing: border-box;
-    border-radius: 8px;
+    border-radius: 999px;
     transition:
       background 0.16s ease,
-      color 0.16s ease;
+      border-color 0.16s ease,
+      color 0.16s ease,
+      transform 0.14s ease;
   }
 
   .cycle-link:hover {
-    background: rgba(16, 185, 129, 0.1);
+    background: rgba(16, 185, 129, 0.14);
+    border-color: rgba(16, 185, 129, 0.34);
     color: var(--forest-850);
+  }
+
+  .cycle-link:active {
+    transform: scale(0.97);
   }
 
   .energy-tabs {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.3rem;
-    padding: 0.28rem;
+    gap: 0.26rem;
+    padding: 0.25rem;
     border-radius: 999px;
-    background: #eef3ef;
-    margin-bottom: 1.25rem;
+    background: #e9f1ec;
+    border: 1px solid rgba(13, 46, 32, 0.08);
+    margin-bottom: 0.68rem;
   }
 
   .energy-tab {
     border: none;
     border-radius: 999px;
     min-height: 44px;
-    padding: 0.5rem 0.5rem;
+    padding: 0.46rem 0.5rem;
     gap: 0.28rem;
     background: transparent;
     color: var(--text-secondary);
@@ -783,12 +842,19 @@
 
   .energy-tab:hover {
     color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.55);
   }
 
   .energy-tab.active {
-    background: #0d281d;
+    background: linear-gradient(135deg, #0d2f20 0%, #144932 100%);
     color: #ffffff;
-    box-shadow: 0 4px 12px rgba(9, 29, 20, 0.18);
+    box-shadow:
+      0 4px 12px rgba(9, 29, 20, 0.2),
+      inset 0 1px 0 rgba(253, 230, 138, 0.22);
+  }
+
+  .energy-tab.active .tab-emoji {
+    filter: brightness(1.18) drop-shadow(0 0 4px rgba(255, 255, 255, 0.45));
   }
 
   @media (max-width: 680px) {
@@ -796,7 +862,7 @@
       min-width: 0;
       max-width: 100%;
       box-sizing: border-box;
-      padding: 0.58rem 0.78rem 0.72rem;
+      padding: 0.52rem 0.76rem 0.64rem;
       border-radius: 24px;
       margin-top: 0;
       scroll-margin-top: 0.5rem;
@@ -806,20 +872,22 @@
     }
 
     .studio-head {
-      margin-bottom: 0.18rem;
+      margin-bottom: 0.14rem;
       padding-bottom: 0;
     }
 
     .studio-label {
-      font-size: 0.8rem;
+      font-size: 0.79rem;
     }
 
     .cycle-link {
       min-height: 44px;
       min-width: 44px;
-      margin: -5px -4px -5px 0;
-      padding: 0.45rem 0.55rem;
-      font-size: 0.78rem;
+      margin: -6px -4px -6px 0;
+      padding: 0.42rem 0.58rem;
+      font-size: 0.77rem;
+      border-color: transparent;
+      background: transparent;
     }
 
     .energy-tabs {
@@ -833,10 +901,10 @@
       max-width: 100%;
       box-sizing: border-box;
       gap: 0.16rem;
-      padding: 0.2rem;
-      margin-bottom: 0.32rem;
+      padding: 0.18rem;
+      margin-bottom: 0.28rem;
       border-radius: 999px;
-      background: #eef3ef;
+      background: #e9f1ec;
       width: 100%;
     }
 

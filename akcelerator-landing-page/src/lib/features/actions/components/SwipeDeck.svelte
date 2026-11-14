@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import ActionCard from './ActionCard.svelte';
   import { safeGetItem, safeSetItem } from '../../../../lib/utils.js';
   import { trackEvent } from '../../../../lib/analytics.js';
@@ -35,6 +35,9 @@
   let dragX = 0;
   let isDragging = false;
   let isHorizontalGesture = false;
+  let suppressNextClick = false;
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  let suppressClickTimer = null;
   let startX = 0;
   let startY = 0;
   let startTime = 0;
@@ -111,6 +114,7 @@
 
   function handlePointerDown(e) {
     if (isSessionClosed || !currentAction) return;
+    if (e.button && e.button !== 0) return;
     startX = e.clientX;
     startY = e.clientY;
     startTime = Date.now();
@@ -121,6 +125,10 @@
 
   function handlePointerMove(e) {
     if (!isDragging) return;
+    if (e.pointerType === 'mouse' && e.buttons === 0) {
+      handlePointerUp();
+      return;
+    }
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
 
@@ -145,6 +153,12 @@
     if (!isDragging) return;
     isDragging = false;
     if (isHorizontalGesture) {
+      suppressNextClick = true;
+      if (suppressClickTimer) clearTimeout(suppressClickTimer);
+      suppressClickTimer = setTimeout(() => {
+        suppressNextClick = false;
+      }, 120);
+
       const dt = Math.max(1, Date.now() - startTime);
       const velocity = Math.abs(dragX) / dt;
       if (dragX < -55 || (dragX < -25 && velocity > 0.3)) {
@@ -162,7 +176,22 @@
     dragX = 0;
     isHorizontalGesture = false;
   }
+
+  function handleWrapperClickCapture(e) {
+    if (suppressNextClick) {
+      suppressNextClick = false;
+      if (suppressClickTimer) clearTimeout(suppressClickTimer);
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }
+
+  onDestroy(() => {
+    if (suppressClickTimer) clearTimeout(suppressClickTimer);
+  });
 </script>
+
+<svelte:window on:pointerup={handlePointerUp} on:pointercancel={handlePointerCancel} />
 
 <div class="swipe-deck-stage" class:session-closed={isSessionClosed}>
   {#if isSessionClosed}
@@ -202,48 +231,18 @@
          MICRO-DEED SWIPE DECK WITH ACCESSIBLE 44x44 NAVIGATION
          ===================================================================== -->
     <div class="deck-container">
-      <div class="deck-header-bar">
-        <button
-          type="button"
-          class="deck-nav-btn deck-nav-prev"
-          on:click={prevCard}
-          disabled={totalCards <= 1}
-          aria-label="Předchozí doporučený skutek"
-          title="Předchozí tip (vlevo)"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-        </button>
-
-        <div class="deck-indicator" aria-live="polite">
-          <span class="deck-step-text">{displayIndex + 1} / {totalCards || 1}</span>
-          <span class="deck-swipe-hint">← potáhni →</span>
-        </div>
-
-        <button
-          type="button"
-          class="deck-nav-btn deck-nav-next"
-          on:click={nextCard}
-          disabled={totalCards <= 1}
-          aria-label="Další doporučený skutek"
-          title="Další tip (vpravo)"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M9 18l6-6-6-6" />
-          </svg>
-        </button>
-      </div>
-
       <!-- Gesture Card Shell -->
+      <!-- svelte-ignore a11y-click-events-have-key-events -->
       <!-- svelte-ignore a11y-no-static-element-interactions -->
       <div
         class="swipe-card-wrapper"
-        style="touch-action: pan-y; transform: translate3d({dragX}px, 0, 0) rotate({dragX * 0.045}deg); transition: {isDragging ? 'none' : 'transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1)'};"
+        style="touch-action: pan-y; transform: translate3d({dragX}px, 0, 0) rotate({dragX * 0.045}deg); transition: {isHorizontalGesture ? 'none' : 'transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1)'};"
         on:pointerdown={handlePointerDown}
         on:pointermove={handlePointerMove}
         on:pointerup={handlePointerUp}
         on:pointercancel={handlePointerCancel}
+        on:dragstart|preventDefault
+        on:click|capture={handleWrapperClickCapture}
       >
         {#if currentAction}
           <ActionCard
@@ -269,6 +268,40 @@
           />
         {/if}
       </div>
+
+      <div class="deck-header-bar">
+        <button
+          type="button"
+          class="deck-nav-btn deck-nav-prev"
+          on:click={prevCard}
+          disabled={totalCards <= 1}
+          aria-label="Předchozí doporučený skutek"
+          title="Předchozí tip (vlevo)"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
+
+        <div class="deck-indicator" aria-live="polite">
+          <span class="deck-step-text">{displayIndex + 1} / {totalCards || 1}</span>
+          <span class="deck-dot-sep" aria-hidden="true">·</span>
+          <span class="deck-swipe-hint">← potáhni →</span>
+        </div>
+
+        <button
+          type="button"
+          class="deck-nav-btn deck-nav-next"
+          on:click={nextCard}
+          disabled={totalCards <= 1}
+          aria-label="Další doporučený skutek"
+          title="Další tip (vpravo)"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+        </button>
+      </div>
     </div>
   {/if}
 </div>
@@ -284,21 +317,24 @@
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.45rem;
   }
 
   .deck-header-bar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0 0.25rem 0.35rem;
+    justify-content: center;
+    gap: 0.85rem;
+    padding: 0.35rem 0 0;
+    margin-top: 0.08rem;
+    border-top: 1px solid rgba(13, 46, 32, 0.08);
     box-sizing: border-box;
   }
 
   .deck-nav-btn {
     appearance: none;
-    border: 1px solid rgba(13, 46, 32, 0.16);
-    background: #eef5f0;
+    border: 1px solid rgba(13, 46, 32, 0.13);
+    background: #f2f7f4;
     color: #0d2e20;
     min-width: 44px;
     min-height: 44px;
@@ -307,14 +343,23 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 1px 3px rgba(9, 29, 20, 0.08);
+    transition:
+      background 0.18s ease,
+      border-color 0.18s ease,
+      color 0.18s ease,
+      transform 0.14s ease;
+    box-shadow: 0 1px 2px rgba(9, 29, 20, 0.05);
   }
 
   .deck-nav-btn:hover:not(:disabled) {
     background: #0d2e20;
     border-color: #0d2e20;
-    color: #ffffff;
+    color: #fde68a;
+    transform: translateY(-1px);
+  }
+
+  .deck-nav-btn:active:not(:disabled) {
+    transform: scale(0.96);
   }
 
   .deck-nav-btn:disabled {
@@ -324,25 +369,33 @@
   }
 
   .deck-indicator {
-    display: flex;
-    flex-direction: column;
+    display: inline-flex;
     align-items: center;
-    gap: 0.08rem;
+    gap: 0.38rem;
+    padding: 0.28rem 0.72rem;
+    border-radius: 999px;
+    background: rgba(13, 46, 32, 0.045);
     user-select: none;
   }
 
   .deck-step-text {
-    font-size: 0.84rem;
+    font-size: 0.8rem;
     font-weight: 800;
     color: #0d2e20;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .deck-dot-sep {
+    color: rgba(13, 46, 32, 0.35);
+    font-weight: 700;
   }
 
   .deck-swipe-hint {
-    font-size: 0.68rem;
+    font-size: 0.72rem;
     font-weight: 600;
-    color: #2f5e49;
-    letter-spacing: 0.02em;
+    color: #35634d;
+    letter-spacing: 0.01em;
   }
 
   .swipe-card-wrapper {
@@ -465,11 +518,14 @@
 
   @media (max-width: 680px) {
     .deck-container {
-      gap: 0.22rem;
+      gap: 0.24rem;
     }
 
     .deck-header-bar {
-      padding: 0 0.15rem 0.05rem;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.26rem 0.06rem 0;
+      margin-top: 0.04rem;
     }
   }
 </style>

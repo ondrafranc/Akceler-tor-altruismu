@@ -113,6 +113,8 @@ export function calculateMatchScore(action, prefsOrCapacity = {}, situation, top
     // Garantovat, že v režimu 2 minuty je výchozím tipem Naplnit misku a druhým Ptačí pasti ČSO
     if (seedStr === 'home:couch:0' && action.id === 'zvirata_utulek_online') {
       score += 25;
+    } else if (seedStr === 'home:couch:0' && action.id === 'birdlife_ptaci_pasti') {
+      score += 18;
     } else if (seedStr === 'home:couch:1' && action.id === 'birdlife_ptaci_pasti') {
       score += 25;
     }

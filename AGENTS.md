@@ -11,9 +11,9 @@ Každá obrazovka, text i technické rozhodnutí slouží jedinému cíli: **oka
    - Sekundární metadata (metodologie, důkazní třídy, detaily partnera) patří výhradně do rozbalovacího detailu na vyžádání (`ℹ️ Jak to funguje`), nikdy nad primární CTA.
    - Všechny interaktivní prvky na mobilu musí splňovat minimální dotykovou plochu `44×44 px` a nesmí překrývat obsah plovoucími vrstvami.
    - Všechna formulářová pole (`input`, `textarea`, `select`) na mobilu musí mít `font-size >= 16px` (`1rem`), aby iOS Safari při fokusu automaticky nepřibližoval viewport.
-3. **Odměna výhradně PO skutečné akci**:
-   - Nikdy nezobrazuj tlačítko „Mám hotovo“ ani dopaminové minihry/vizualizace dříve, než uživatel skutečně spustil akci u partnera.
-   - Odměna proběhne okamžitě in-situ přímo na kartě po návratu z akce, bez nuceného přesměrovávání na jiné trasy (`/svet`).
+3. **Dvoufázový prožitek karty: Živá anticipace PŘED akcí, odměna až PO akci**:
+   - **Před spuštěním (`!isStarted`)**: Karta nikdy nesmí působit jako suchý textový formulář — zobrazuje kompaktní vektorové SVG diorama očekávání (`.deed-preview-stage`, např. prázdná miska čekající na granule) bez falešné affordance tlačítka (`cursor: default`), bez duplicitního textu dopadu a se stránkováním balíčku dole pod obsahem. Na tmavých tlačítkách a odznacích používej ostré vektorové `<svg>` ikony místo systémových emoji (např. `🐾`), která mají na Windows nízký kontrast.
+   - **Výhradně PO spuštění (`isStarted`)**: Tlačítko splnění (`.btn-studio-done`), interaktivní 2D fyzikální minihra (`.card-effect-stage` / `canvas.impact-payoff-canvas`) i započtení pamlsku pro Molly se v DOMu odemykají až po reálném kliknutí na akci u partnera; oslava proběhne in-situ přímo na kartě bez nuceného přesměrování na `/svet`.
 4. **Patronka Molly a čistá desktopová mřížka**:
    - Želvovinová kočka Molly (`MollyCompanion.svelte`) je klíčový a oblíbený prvek napříč všemi záložkami (s plynulým předáním scéně u jezera na `/svet`). Její plátno má vždy `pointer-events: none` a měření překážek probíhá výhradně mimo `requestAnimationFrame`.
    - Na mobilu (`<= 680px`) nikdy neskrývej `.molly-pelisek-dock` přes `display: none`; dokuj jej do pravé části horní kapsle `.nav-capsule` a bubliny vykresluj pod `.top-nav` s nulovým překryvem karet a CTA.
@@ -30,4 +30,7 @@ Každá obrazovka, text i technické rozhodnutí slouží jedinému cíli: **oka
    - Jediným zdrojem pravdy pro DB schéma je `supabase/migrations/`. Každá změna sloupců v `src/routes/api/**` musí odpovídat SQL migraci.
    - Veřejné endpointy používají `PUBLIC_SUPABASE_ANON_KEY` s aktivním RLS; `SUPABASE_SERVICE_ROLE_KEY` nesmí být nikdy přijímán v klientských hlavičkách ani používán pro běžné uživatelské dotazy.
    - Testovací bypassy (`TEST_BYPASS_SECRET`) nesmí mít nikdy hardcodovaný fallback v kódu a tajemství se porovnávají přes `crypto.timingSafeEqual`.
+4. **Toolchain, Vercel Node Runtime a E2E spouštění**:
+   - Do `akcelerator-landing-page/package.json` nikdy nepřidávej pole `"engines"` (`node`) — otevřený rozsah (`>=22`) způsobí, že Vercel přebije Project Settings `"24.x"` (`runtime: 'nodejs24.x'` v `svelte.config.js`) nejnovější major verzí (`26.x`), zatímco striktní pin rozbije lokální vývoj na Node `22.x`. Udržuj `@types/node` na `^24` a `"allowScripts"` pinované na přesnou verzi balíčku.
+   - Playwright E2E testy v `akcelerator-landing-page` spouštěj vždy přes `npm test -- <spec>` (nikoliv holým `npx playwright test`, které natáhne nekompatibilní globální verzi mimo lokální `@playwright/test`).
 
