@@ -1,6 +1,6 @@
 /**
  * Pure data module for Molly's treat catalog and mode mappings.
- * Extracted to eliminate circular dependency between mollyStore.js and sensoryEngine.js (M13 / AUDIT #3).
+ * Extracted to eliminate circular dependency between mollyStore.js and sensory catalog/resolvers (M13 / AUDIT #3).
  */
 
 export const MOLLY_TREAT_BY_FOOD = {

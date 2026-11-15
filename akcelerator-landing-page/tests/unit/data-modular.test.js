@@ -20,8 +20,7 @@ import {
 // Barrel re-exporter imports
 import * as Barrel from '$lib/data/czech-actions.js';
 
-// Sensory Engine barrel and modular imports
-import * as SensoryBarrel from '$lib/sensoryEngine.js';
+// Modular sensory and audio imports
 import {
   isSoundMuted,
   toggleSoundMuted,
@@ -74,34 +73,34 @@ describe('data modularization: barrel re-export identity equivalence', () => {
     expect(Barrel.buildFirstContactTemplate).toBe(buildFirstContactTemplate);
   });
 
-  it('re-exports audio, core, and feature services identically from sensoryEngine.js', () => {
+  it('exports audio, core, and feature services directly from canonical modules', () => {
     // Audio
-    expect(SensoryBarrel.isSoundMuted).toBe(isSoundMuted);
-    expect(SensoryBarrel.toggleSoundMuted).toBe(toggleSoundMuted);
-    expect(SensoryBarrel.getAudioContext).toBe(getAudioContext);
-    expect(SensoryBarrel.tone).toBe(tone);
-    expect(SensoryBarrel.noiseBurst).toBe(noiseBurst);
-    expect(SensoryBarrel.playSanctuaryChime).toBe(playSanctuaryChime);
-    expect(SensoryBarrel.playMollyPurr).toBe(playMollyPurr);
-    expect(SensoryBarrel.playMollyCrunch).toBe(playMollyCrunch);
-    expect(SensoryBarrel.playMollyMeow).toBe(playMollyMeow);
-    expect(SensoryBarrel.playPayoffAsmr).toBe(playPayoffAsmr);
+    expect(typeof isSoundMuted).toBe('function');
+    expect(typeof toggleSoundMuted).toBe('function');
+    expect(typeof getAudioContext).toBe('function');
+    expect(typeof tone).toBe('function');
+    expect(typeof noiseBurst).toBe('function');
+    expect(typeof playSanctuaryChime).toBe('function');
+    expect(typeof playMollyPurr).toBe('function');
+    expect(typeof playMollyCrunch).toBe('function');
+    expect(typeof playMollyMeow).toBe('function');
+    expect(typeof playPayoffAsmr).toBe('function');
 
     // Core device
-    expect(SensoryBarrel.prefersReducedMotion).toBe(prefersReducedMotion);
-    expect(SensoryBarrel.isLowPowerDevice).toBe(isLowPowerDevice);
-    expect(SensoryBarrel.getCanvasDprCap).toBe(getCanvasDprCap);
-    expect(SensoryBarrel.optimizeCanvasContext).toBe(optimizeCanvasContext);
-    expect(SensoryBarrel.frameStep).toBe(frameStep);
-    expect(SensoryBarrel.ensureSharedOrientation).toBe(ensureSharedOrientation);
-    expect(SensoryBarrel.getSharedOrientationGx).toBe(getSharedOrientationGx);
+    expect(typeof prefersReducedMotion).toBe('function');
+    expect(typeof isLowPowerDevice).toBe('function');
+    expect(typeof getCanvasDprCap).toBe('function');
+    expect(typeof optimizeCanvasContext).toBe('function');
+    expect(typeof frameStep).toBe('function');
+    expect(typeof ensureSharedOrientation).toBe('function');
+    expect(typeof getSharedOrientationGx).toBe('function');
 
     // Feature services
-    expect(SensoryBarrel.savePendingPartnerReturn).toBe(savePendingPartnerReturn);
-    expect(SensoryBarrel.getPendingPartnerReturnRemainingMs).toBe(getPendingPartnerReturnRemainingMs);
-    expect(SensoryBarrel.consumePendingPartnerReturn).toBe(consumePendingPartnerReturn);
-    expect(SensoryBarrel.fetchAmbientPulse).toBe(fetchAmbientPulse);
-    expect(SensoryBarrel.describeAmbientPulse).toBe(describeAmbientPulse);
+    expect(typeof savePendingPartnerReturn).toBe('function');
+    expect(typeof getPendingPartnerReturnRemainingMs).toBe('function');
+    expect(typeof consumePendingPartnerReturn).toBe('function');
+    expect(typeof fetchAmbientPulse).toBe('function');
+    expect(typeof describeAmbientPulse).toBe('function');
   });
 });
 

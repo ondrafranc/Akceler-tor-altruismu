@@ -24,13 +24,14 @@
   $: isOpen = $isFeedbackOpen;
 
   $: if ($feedbackPrefill) {
-    if (typeof $feedbackPrefill === 'string') {
+    const prefillVal = $feedbackPrefill;
+    if (typeof prefillVal === 'string') {
       modalTitle = '💬 Nahlásit nefunkční údaj';
-      feedback = $feedbackPrefill;
-    } else if (typeof $feedbackPrefill === 'object') {
-      modalTitle = /** @type {any} */ ($feedbackPrefill).title || '💬 Zpětná vazba';
-      if (/** @type {any} */ ($feedbackPrefill).prefill) {
-        feedback = /** @type {any} */ ($feedbackPrefill).prefill;
+      feedback = prefillVal;
+    } else if (typeof prefillVal === 'object' && prefillVal !== null) {
+      modalTitle = prefillVal.title || '💬 Zpětná vazba';
+      if (prefillVal.prefill) {
+        feedback = prefillVal.prefill;
       }
     }
     statusMessage = '';

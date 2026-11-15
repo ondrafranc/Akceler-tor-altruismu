@@ -12,6 +12,7 @@ import {
   PARTNER_REGISTRATION_IDS
 } from './evidence.js';
 
+/** @type {import('../types').MicroAction[]} */
 export const MICRO_ACTIONS = [
   {
     id: 'zvirata_utulek_online',

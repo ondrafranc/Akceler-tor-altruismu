@@ -1,20 +1,24 @@
 <script>
-  import { onDestroy } from 'svelte';
+  import { onDestroy } from "svelte";
+  import { getActionEffectMeta } from "../../../../lib/sensory/catalog/catalogResolver.js";
+  import { impactCanvas } from "../../../../lib/sensory/canvas/impactCanvasAction.js";
+  import { triggerCanvasBurst } from "../../../../lib/sensory/canvas/controllerRegistry.js";
   import {
-    getActionEffectMeta,
-    impactCanvas,
-    triggerCanvasBurst,
     playPayoffAsmr,
     playCelebrationChord,
-    safeVibrate,
-    startHoldSpark
-  } from '../../../../lib/sensoryEngine.js';
-  import { trackEvent, openBrokenLinkReport } from '../../../../lib/analytics.js';
-  import { notifyMollySpark } from '../../../../lib/mollyStore.js';
-  import { cleanTitle, stripLeadingEmoji } from '../../../../lib/utils.js';
-  import { VALUES } from '../../../data/values.js';
-  import EvidenceBadge from './EvidenceBadge.svelte';
+  } from "../../../../lib/audio/presets.js";
+  import { safeVibrate } from "../../../../lib/core/device.js";
+  import { startHoldSpark } from "../../../../lib/sensory/interaction/holdSpark.js";
+  import {
+    trackEvent,
+    openBrokenLinkReport,
+  } from "../../../../lib/analytics.js";
+  import { notifyMollySpark } from "../../../../lib/mollyStore.js";
+  import { cleanTitle, stripLeadingEmoji } from "../../../../lib/utils.js";
+  import { VALUES } from "../../../data/values.js";
+  import EvidenceBadge from "./EvidenceBadge.svelte";
 
+  /** @type {(import('$lib/types').MicroAction & Record<string, unknown>) | null} */
   export let action = null;
   export let isStarted = false;
   export let isCompleted = false;
@@ -23,20 +27,30 @@
   export let soundMuted = false;
   export let showEffectPreview = false;
   export let copiedDirectLink = false;
+  /** @type {string[]} */
   export let savedValues = [];
   export let usePersonalValues = false;
-  export let variant = 'instant'; // 'instant' | 'directory' | 'compact'
+  export let variant = "instant"; // 'instant' | 'directory' | 'compact'
   export let spotlight = false;
-  export let className = '';
+  export let className = "";
 
+  /** @type {((action?: import('$lib/types').MicroAction) => void) | null} */
   export let onStart = null;
+  /** @type {((action?: import('$lib/types').MicroAction) => void) | null} */
   export let onComplete = null;
+  /** @type {((action?: import('$lib/types').MicroAction) => void) | null} */
   export let onShare = null;
+  /** @type {((action?: import('$lib/types').MicroAction) => void) | null} */
   export let onReportBroken = null;
+  /** @type {(() => void) | null} */
   export let onToggleSound = null;
+  /** @type {(() => void) | null} */
   export let onTogglePersonalValues = null;
+  /** @type {(() => void) | null} */
   export let onNextIdea = null;
+  /** @type {(() => void) | null} */
   export let onDismissReturn = null;
+  /** @type {(() => void) | null} */
   export let onCloseSession = null;
 
   let kibbleGrams = 0;
@@ -63,8 +77,8 @@
       stopHoldSpark(released);
       stopHoldSpark = null;
     } else if (primaryBtnNode) {
-      primaryBtnNode.style.setProperty('--spark-charge', '0');
-      primaryBtnNode.classList.remove('spark-ready');
+      primaryBtnNode.style.setProperty("--spark-charge", "0");
+      primaryBtnNode.classList.remove("spark-ready");
     }
   }
 
@@ -72,7 +86,7 @@
     if (e.button && e.button !== 0) return;
     endHoldSpark(false);
     stopHoldSpark = startHoldSpark(e.currentTarget, () => {
-      trackEvent('aa_hold_spark_ready', { id: action?.id, surface: variant });
+      trackEvent("aa_hold_spark_ready", { id: action?.id, surface: variant });
     });
   }
 
@@ -83,8 +97,20 @@
 
   function handlePreviewPointerMove(e) {
     if (!previewBounds) return;
-    const nx = Math.max(0, Math.min(1, (e.clientX - previewBounds.left) / Math.max(1, previewBounds.width)));
-    const ny = Math.max(0, Math.min(1, (e.clientY - previewBounds.top) / Math.max(1, previewBounds.height)));
+    const nx = Math.max(
+      0,
+      Math.min(
+        1,
+        (e.clientX - previewBounds.left) / Math.max(1, previewBounds.width),
+      ),
+    );
+    const ny = Math.max(
+      0,
+      Math.min(
+        1,
+        (e.clientY - previewBounds.top) / Math.max(1, previewBounds.height),
+      ),
+    );
     spotX = Math.round(nx * 100);
     spotY = Math.round(ny * 100);
   }
@@ -133,11 +159,11 @@
   }
 
   function getSavedValueLabels(ids) {
-    if (!ids || !ids.length) return '';
+    if (!ids || !ids.length) return "";
     return VALUES.filter((v) => ids.includes(v.key || v.id))
       .map((v) => stripLeadingEmoji(v.label))
       .slice(0, 2)
-      .join(', ');
+      .join(", ");
   }
 
   function triggerEffectSpark() {
@@ -150,145 +176,374 @@
     } else {
       playPayoffAsmr(action);
     }
-    trackEvent('aa_effect_preview_toggle', {
+    trackEvent("aa_effect_preview_toggle", {
       id: action.id,
       open: true,
-      surface: variant
+      surface: variant,
     });
   }
 
-  function getCategoryAura(act, scene = '') {
+  function getCategoryAura(act, scene = "") {
     if (!act) return null;
-    const element = act.element || '';
-    const id = act.id || '';
+    const element = act.element || "";
+    const id = act.id || "";
     const values = act.values || [];
 
     // 1. Přesné určení podle scény a primárního elementu (před fallbackem na sekundární values,
     // aby se např. občanská věda Zooniverse neoznačovala jako „Útulek“)
-    if (scene === 'kibble' || scene === 'shelter_care' || id.includes('utulek') || id.includes('utulky') || id.includes('feed')) {
-      return { label: 'Útulek a zvířata', shortLabel: 'Útulek', theme: 'animals' };
+    if (
+      scene === "kibble" ||
+      scene === "shelter_care" ||
+      id.includes("utulek") ||
+      id.includes("utulky") ||
+      id.includes("feed")
+    ) {
+      return {
+        label: "Útulek a zvířata",
+        shortLabel: "Útulek",
+        theme: "animals",
+      };
     }
-    if (scene === 'wildlife_rescue' || scene === 'birds_glass' || scene === 'birds_song' || scene === 'butterfly_lens' || element === 'animals') {
-      return { label: 'Ptáci a volná příroda', shortLabel: 'Volná příroda', theme: 'wildlife' };
+    if (
+      scene === "wildlife_rescue" ||
+      scene === "birds_glass" ||
+      scene === "birds_song" ||
+      scene === "butterfly_lens" ||
+      element === "animals"
+    ) {
+      return {
+        label: "Ptáci a volná příroda",
+        shortLabel: "Volná příroda",
+        theme: "wildlife",
+      };
     }
-    if (element === 'knowledge' || element === 'science') {
-      return { label: 'Věda a poznání', shortLabel: 'Poznání', theme: 'science' };
+    if (element === "knowledge" || element === "science") {
+      return {
+        label: "Věda a poznání",
+        shortLabel: "Poznání",
+        theme: "science",
+      };
     }
-    if (element === 'nature') {
-      return { label: 'Příroda a krajina', shortLabel: 'Příroda', theme: 'nature' };
+    if (element === "nature") {
+      return {
+        label: "Příroda a krajina",
+        shortLabel: "Příroda",
+        theme: "nature",
+      };
     }
-    if (element === 'community') {
-      return { label: 'Blízkost a komunita', shortLabel: 'Komunita', theme: 'community' };
+    if (element === "community") {
+      return {
+        label: "Blízkost a komunita",
+        shortLabel: "Komunita",
+        theme: "community",
+      };
     }
-    if (element === 'care') {
-      return { label: 'Zdraví a přímá opora', shortLabel: 'Péče a opora', theme: 'care' };
+    if (element === "care") {
+      return {
+        label: "Zdraví a přímá opora",
+        shortLabel: "Péče a opora",
+        theme: "care",
+      };
     }
 
     // 2. Fallback pro vlastní nebo minimální záznamy bez elementu
-    if (values.includes('animals') || id.includes('zvirata')) {
-      return { label: 'Pomoc zvířatům', shortLabel: 'Zvířata', theme: 'animals' };
+    if (values.includes("animals") || id.includes("zvirata")) {
+      return {
+        label: "Pomoc zvířatům",
+        shortLabel: "Zvířata",
+        theme: "animals",
+      };
     }
-    if (values.includes('environment') || values.includes('nature') || values.includes('climate') || id.includes('strom') || id.includes('priroda') || id.includes('ptaci') || id.includes('studank') || id.includes('uklid')) {
-      return { label: 'Příroda a krajina', shortLabel: 'Příroda', theme: 'nature' };
+    if (
+      values.includes("environment") ||
+      values.includes("nature") ||
+      values.includes("climate") ||
+      id.includes("strom") ||
+      id.includes("priroda") ||
+      id.includes("ptaci") ||
+      id.includes("studank") ||
+      id.includes("uklid")
+    ) {
+      return {
+        label: "Příroda a krajina",
+        shortLabel: "Příroda",
+        theme: "nature",
+      };
     }
-    if (values.includes('science') || values.includes('education') || id.includes('maps') || id.includes('veda') || id.includes('wiki') || id.includes('digital')) {
-      return { label: 'Věda a poznání', shortLabel: 'Poznání', theme: 'science' };
+    if (
+      values.includes("science") ||
+      values.includes("education") ||
+      id.includes("maps") ||
+      id.includes("veda") ||
+      id.includes("wiki") ||
+      id.includes("digital")
+    ) {
+      return {
+        label: "Věda a poznání",
+        shortLabel: "Poznání",
+        theme: "science",
+      };
     }
-    if (values.includes('community') || values.includes('elderly') || id.includes('knihobudka') || id.includes('senior') || id.includes('soused')) {
-      return { label: 'Blízkost a komunita', shortLabel: 'Komunita', theme: 'community' };
+    if (
+      values.includes("community") ||
+      values.includes("elderly") ||
+      id.includes("knihobudka") ||
+      id.includes("senior") ||
+      id.includes("soused")
+    ) {
+      return {
+        label: "Blízkost a komunita",
+        shortLabel: "Komunita",
+        theme: "community",
+      };
     }
-    if (values.includes('health') || values.includes('poverty') || id.includes('zachranka') || id.includes('jidlo') || id.includes('ryze')) {
-      return { label: 'Zdraví a přímá opora', shortLabel: 'Péče a opora', theme: 'care' };
+    if (
+      values.includes("health") ||
+      values.includes("poverty") ||
+      id.includes("zachranka") ||
+      id.includes("jidlo") ||
+      id.includes("ryze")
+    ) {
+      return {
+        label: "Zdraví a přímá opora",
+        shortLabel: "Péče a opora",
+        theme: "care",
+      };
     }
-    return { label: 'Dobrý skutek', shortLabel: 'Skutek', theme: 'default' };
+    return { label: "Dobrý skutek", shortLabel: "Skutek", theme: "default" };
   }
 
   const PREVIEW_CUE_BY_ID = {
-    zvirata_utulek_online: { promise: '1 klik zdarma = ~25 g granulí do misky', status: 'Miska čeká prázdná' },
-    donio_utulky: { promise: 'Plná miska a přímá péče v útulku', status: 'Miska čeká prázdná' },
-    birdlife_ptaci_pasti: { promise: 'Bezpečné sklo pro ptáky v tvém okolí', status: 'Čiré sklo čeká' },
-    strnadi_nareci: { promise: '15 s zpěvu strnada pro české vědce', status: 'Větev zatím tichá' },
-    zvire_v_nouzi: { promise: '774 155 155 · 34 záchranných stanic v ČR', status: 'Pohotovost v kapse' },
-    aplikace_zachranka: { promise: 'Přesná GPS a mapa AED v kapse', status: 'Maják připraven' },
-    darovani_krve: { promise: '1 odběr krve pomůže až 3 životům', status: '3 srdce čekají' },
-    kostni_dren: { promise: 'Zápis do registru dárců kostní dřeně', status: 'Hledá se shoda' },
-    daruj_vlasy: { promise: 'Pramen vlasů na paruku pro pacienty', status: 'Pramen připraven' },
-    'nevypusť_dusi': { promise: '5 kroků první psychické opory', status: 'Klubko k rozpletení' },
-    opatruj_se_nudz: { promise: '5 min vědecky ověřeného zklidnění mysli', status: 'Poupě na hladině' },
-    s_barvou_ven: { promise: 'Bezpečná opora a přijetí bez předsudků', status: 'Paprsek před hranolem' },
-    wikipedie_cz: { promise: '1 zpřesněný článek pro tisíce čtenářů', status: 'Chybí ověřený fakt' },
-    amnesty_apel: { promise: '1 podpis na obranu nespravedlivě vězněných', status: 'Hlas za svobodu' },
-    cesko_digital_micro: { promise: 'Zapojení dovedností do otevřených projektů', status: 'Uzly před spojením' },
-    missing_maps: { promise: '10 zmapovaných střech pro záchranáře', status: 'Nezmapované území' },
-    freerice_ryze: { promise: '10 zrnek rýže OSN za každou odpověď', status: 'Miska OSN čeká' },
-    zooniverse_veda: { promise: '5 snímků z fotopastí a vesmíru pro vědu', status: 'Hledáček před ostřením' },
-    ucime_online: { promise: 'Doučování školáka online z domova', status: 'Žárovka čeká na jiskru' },
-    doucujte_cvt: { promise: 'Pravidelná opora dítěti ve vzdělávání', status: 'Sešit čeká na tah' },
-    letters_seniors: { promise: 'Dopis či rozhovor proti samotě seniorů', status: 'Zapečetěná obálka' },
-    moudra_sovicka_mobil: { promise: 'Trpělivá digitální rada pro seniora', status: 'Displej bez štítu' },
-    pamet_naroda_vzpominka: { promise: 'Příběhy pamětníků, na které se nezapomene', status: 'Tichý archivní pás' },
-    knihobudka_kniha: { promise: '1 přečtená kniha poslaná dál sousedům', status: 'Police čeká na knihu' },
-    nevyhazujto_sousedum: { promise: 'Druhý život funkční věci zdarma v okolí', status: 'Balíček u dveří' },
-    trash_hero_uklid: { promise: '5 sebraných odpadků na procházce venku', status: 'Stezka před úklidem' },
-    remobil_telefon: { promise: 'Starý mobil = suroviny + 10 Kč charitě', status: 'Mobil v šuplíku' },
-    mapko_kompost: { promise: 'Slupky z kuchyně zpět do živé půdy', status: 'Půda čeká na živiny' },
-    sazime_budoucnost: { promise: 'Výsadba a péče o stromy v české krajině', status: 'Sazenička na holině' },
-    na_ovoce_strom: { promise: 'Volně rostoucí ovocné stromy bez plýtvání', status: 'Sad čeká na záznam' },
-    inaturalist_priroda: { promise: 'Záznam druhu do mapy české biodiverzity', status: 'Lupa před ostřením' },
-    brontosaurus_vikend: { promise: 'Víkendovka pro přírodu a památky v ČR', status: 'Ohniště před jiskrou' },
-    inex_workcamp_cr: { promise: 'Mezinárodní dobrovolnický miniprojekt v ČR', status: 'Břehy před spojením' },
-    estudanky_pramen: { promise: 'Péče o lesní studánku v národním registru', status: 'Pramen pod listím' },
-    potravinova_banka: { promise: 'Zachráněné porce jídla pro rodiny v nouzi', status: 'Regál čeká na zásoby' },
-    nadeje_jidlo: { promise: 'Teplá polévka a noc v teple pro lidi v nouzi', status: 'Chladná ulička' },
-    zachran_jidlo_recept: { promise: 'Chutná večeře ze surovin bez plýtvání', status: 'Suroviny na lince' },
-    nesnezeno_porce: { promise: 'Zachráněná porce z pekárny či bistra v okolí', status: 'Před zavíračkou' },
-    kola_pro_afriku: { promise: 'Darované kolo zkrátí dětem cestu do školy', status: 'Kolo čeká ve stínu' },
-    chodci_sobe: { promise: 'Nahlášení nebezpečného přechodu či bariéry', status: 'Bariéra na chodníku' },
-    epp_pohybem: { promise: 'Chůze a běh proměněné v body pro projekty', status: 'Dráha čeká na krok' },
-    krabice_od_bot: { promise: 'Vánoční dárek v krabici pro dítě v nouzi', status: 'Zavázaná krabice' },
-    dobry_andel: { promise: '100 % daru do posledního haléře rodinám', status: 'Váhy před vyrovnáním' },
-    charita_dar: { promise: 'Podpora domácí hospicové a terénní péče', status: 'Zhasnuté okénko' },
-    znesnaze21_pribeh: { promise: '100 % daru na ověřený příběh člověka', status: 'Most před spojením' }
+    zvirata_utulek_online: {
+      promise: "1 klik zdarma = ~25 g granulí do misky",
+      status: "Miska čeká prázdná",
+    },
+    donio_utulky: {
+      promise: "Plná miska a přímá péče v útulku",
+      status: "Miska čeká prázdná",
+    },
+    birdlife_ptaci_pasti: {
+      promise: "Bezpečné sklo pro ptáky v tvém okolí",
+      status: "Čiré sklo čeká",
+    },
+    strnadi_nareci: {
+      promise: "15 s zpěvu strnada pro české vědce",
+      status: "Větev zatím tichá",
+    },
+    zvire_v_nouzi: {
+      promise: "774 155 155 · 34 záchranných stanic v ČR",
+      status: "Pohotovost v kapse",
+    },
+    aplikace_zachranka: {
+      promise: "Přesná GPS a mapa AED v kapse",
+      status: "Maják připraven",
+    },
+    darovani_krve: {
+      promise: "1 odběr krve pomůže až 3 životům",
+      status: "3 srdce čekají",
+    },
+    kostni_dren: {
+      promise: "Zápis do registru dárců kostní dřeně",
+      status: "Hledá se shoda",
+    },
+    daruj_vlasy: {
+      promise: "Pramen vlasů na paruku pro pacienty",
+      status: "Pramen připraven",
+    },
+    nevypusť_dusi: {
+      promise: "5 kroků první psychické opory",
+      status: "Klubko k rozpletení",
+    },
+    opatruj_se_nudz: {
+      promise: "5 min vědecky ověřeného zklidnění mysli",
+      status: "Poupě na hladině",
+    },
+    s_barvou_ven: {
+      promise: "Bezpečná opora a přijetí bez předsudků",
+      status: "Paprsek před hranolem",
+    },
+    wikipedie_cz: {
+      promise: "1 zpřesněný článek pro tisíce čtenářů",
+      status: "Chybí ověřený fakt",
+    },
+    amnesty_apel: {
+      promise: "1 podpis na obranu nespravedlivě vězněných",
+      status: "Hlas za svobodu",
+    },
+    cesko_digital_micro: {
+      promise: "Zapojení dovedností do otevřených projektů",
+      status: "Uzly před spojením",
+    },
+    missing_maps: {
+      promise: "10 zmapovaných střech pro záchranáře",
+      status: "Nezmapované území",
+    },
+    freerice_ryze: {
+      promise: "10 zrnek rýže OSN za každou odpověď",
+      status: "Miska OSN čeká",
+    },
+    zooniverse_veda: {
+      promise: "5 snímků z fotopastí a vesmíru pro vědu",
+      status: "Hledáček před ostřením",
+    },
+    ucime_online: {
+      promise: "Doučování školáka online z domova",
+      status: "Žárovka čeká na jiskru",
+    },
+    doucujte_cvt: {
+      promise: "Pravidelná opora dítěti ve vzdělávání",
+      status: "Sešit čeká na tah",
+    },
+    letters_seniors: {
+      promise: "Dopis či rozhovor proti samotě seniorů",
+      status: "Zapečetěná obálka",
+    },
+    moudra_sovicka_mobil: {
+      promise: "Trpělivá digitální rada pro seniora",
+      status: "Displej bez štítu",
+    },
+    pamet_naroda_vzpominka: {
+      promise: "Příběhy pamětníků, na které se nezapomene",
+      status: "Tichý archivní pás",
+    },
+    knihobudka_kniha: {
+      promise: "1 přečtená kniha poslaná dál sousedům",
+      status: "Police čeká na knihu",
+    },
+    nevyhazujto_sousedum: {
+      promise: "Druhý život funkční věci zdarma v okolí",
+      status: "Balíček u dveří",
+    },
+    trash_hero_uklid: {
+      promise: "5 sebraných odpadků na procházce venku",
+      status: "Stezka před úklidem",
+    },
+    remobil_telefon: {
+      promise: "Starý mobil = suroviny + 10 Kč charitě",
+      status: "Mobil v šuplíku",
+    },
+    mapko_kompost: {
+      promise: "Slupky z kuchyně zpět do živé půdy",
+      status: "Půda čeká na živiny",
+    },
+    sazime_budoucnost: {
+      promise: "Výsadba a péče o stromy v české krajině",
+      status: "Sazenička na holině",
+    },
+    na_ovoce_strom: {
+      promise: "Volně rostoucí ovocné stromy bez plýtvání",
+      status: "Sad čeká na záznam",
+    },
+    inaturalist_priroda: {
+      promise: "Záznam druhu do mapy české biodiverzity",
+      status: "Lupa před ostřením",
+    },
+    brontosaurus_vikend: {
+      promise: "Víkendovka pro přírodu a památky v ČR",
+      status: "Ohniště před jiskrou",
+    },
+    inex_workcamp_cr: {
+      promise: "Mezinárodní dobrovolnický miniprojekt v ČR",
+      status: "Břehy před spojením",
+    },
+    estudanky_pramen: {
+      promise: "Péče o lesní studánku v národním registru",
+      status: "Pramen pod listím",
+    },
+    potravinova_banka: {
+      promise: "Zachráněné porce jídla pro rodiny v nouzi",
+      status: "Regál čeká na zásoby",
+    },
+    nadeje_jidlo: {
+      promise: "Teplá polévka a noc v teple pro lidi v nouzi",
+      status: "Chladná ulička",
+    },
+    zachran_jidlo_recept: {
+      promise: "Chutná večeře ze surovin bez plýtvání",
+      status: "Suroviny na lince",
+    },
+    nesnezeno_porce: {
+      promise: "Zachráněná porce z pekárny či bistra v okolí",
+      status: "Před zavíračkou",
+    },
+    kola_pro_afriku: {
+      promise: "Darované kolo zkrátí dětem cestu do školy",
+      status: "Kolo čeká ve stínu",
+    },
+    chodci_sobe: {
+      promise: "Nahlášení nebezpečného přechodu či bariéry",
+      status: "Bariéra na chodníku",
+    },
+    epp_pohybem: {
+      promise: "Chůze a běh proměněné v body pro projekty",
+      status: "Dráha čeká na krok",
+    },
+    krabice_od_bot: {
+      promise: "Vánoční dárek v krabici pro dítě v nouzi",
+      status: "Zavázaná krabice",
+    },
+    dobry_andel: {
+      promise: "100 % daru do posledního haléře rodinám",
+      status: "Váhy před vyrovnáním",
+    },
+    charita_dar: {
+      promise: "Podpora domácí hospicové a terénní péče",
+      status: "Zhasnuté okénko",
+    },
+    znesnaze21_pribeh: {
+      promise: "100 % daru na ověřený příběh člověka",
+      status: "Most před spojením",
+    },
   };
 
   function buildPreviewCue(act, meta) {
-    if (!act) return { promise: '', status: '' };
-    const id = act.id || '';
+    if (!act) return { promise: "", status: "" };
+    const id = act.id || "";
     const custom = PREVIEW_CUE_BY_ID[id];
     if (custom) return custom;
 
-    const promise = meta?.label || 'Ověřený dobrý skutek';
-    let status = 'Ověřeno · bez účtu';
-    if (act.mode === 'online' && act.cost === 'free') {
-      status = 'Připraveno · 0 Kč';
-    } else if (act.mode === 'local') {
-      status = 'Ověřeno · v okolí';
+    const promise = meta?.label || "Ověřený dobrý skutek";
+    let status = "Ověřeno · bez účtu";
+    if (act.mode === "online" && act.cost === "free") {
+      status = "Připraveno · 0 Kč";
+    } else if (act.mode === "local") {
+      status = "Ověřeno · v okolí";
     }
     return { promise, status };
   }
 
   function cleanPayoffBadge(raw) {
-    return raw ? String(raw).replace(/\s*🐾\s*/g, '').trim() : '';
+    return raw
+      ? String(raw)
+          .replace(/\s*🐾\s*/g, "")
+          .trim()
+      : "";
   }
 
   function hasPawInBadge(raw) {
-    return Boolean(raw && String(raw).includes('🐾'));
+    return Boolean(raw && String(raw).includes("🐾"));
   }
 
   $: effectMeta = action
-    ? getActionEffectMeta(action, kibbleGrams, { isReturnStrip: partnerReturnPromptVisible })
+    ? getActionEffectMeta(action, kibbleGrams, {
+        isReturnStrip: partnerReturnPromptVisible,
+      })
     : null;
   $: categoryAura = getCategoryAura(action, effectMeta?.scene);
   $: previewCue = buildPreviewCue(action, effectMeta);
-  $: showIdleDiorama = variant === 'instant' && !isStarted && !justCompleted && !partnerReturnPromptVisible;
-  $: actionTitle = action ? cleanTitle(action.title) : '';
+  $: showIdleDiorama =
+    variant === "instant" &&
+    !isStarted &&
+    !justCompleted &&
+    !partnerReturnPromptVisible;
+  $: actionTitle = action ? cleanTitle(action.title) : "";
 </script>
 
 {#if action}
   <article
     id={action ? `online-card-${action.id}` : undefined}
     class="action-card card instant-body {className}"
-    class:directory-card={variant === 'directory'}
+    class:directory-card={variant === "directory"}
     class:has-preview-stage={showIdleDiorama}
     class:spotlight
     class:done-card={isCompleted}
@@ -302,7 +557,7 @@
         class="deed-preview-stage"
         class:is-primed={previewHovered || ctaHovered || previewNudged}
         class:is-nudged={previewNudged}
-        data-scene={effectMeta?.scene || 'default'}
+        data-scene={effectMeta?.scene || "default"}
         style="--spot-x: {spotX}%; --spot-y: {spotY}%;"
         on:pointerenter={handlePreviewPointerEnter}
         on:pointermove={handlePreviewPointerMove}
@@ -316,7 +571,11 @@
           </span>
           <span class="preview-status-pill" class:nudged={previewNudged}>
             <span class="preview-status-dot" aria-hidden="true"></span>
-            <span>{previewNudged ? '↓ Spusť tlačítkem níže' : previewCue.status}</span>
+            <span
+              >{previewNudged
+                ? "↓ Spusť tlačítkem níže"
+                : previewCue.status}</span
+            >
           </span>
         </div>
 
@@ -328,7 +587,7 @@
             action,
             preview: true,
             primed: previewHovered || ctaHovered || previewNudged,
-            silent: true
+            silent: true,
           }}
           aria-hidden="true"
         ></canvas>
@@ -338,39 +597,98 @@
     <!-- 1. Standardizovaná hlavička: Kategorie · Čas · Cena · Režim -->
     <div class="action-meta-line card-meta-top">
       {#if categoryAura}
-        <span class="category-aura-chip category-aura-{categoryAura.theme}" aria-label="Kategorie: {categoryAura.label}">
+        <span
+          class="category-aura-chip category-aura-{categoryAura.theme}"
+          aria-label="Kategorie: {categoryAura.label}"
+        >
           <span class="category-aura-icon" aria-hidden="true">
-            {#if categoryAura.theme === 'animals'}
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+            {#if categoryAura.theme === "animals"}
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
                 <circle cx="7.5" cy="9.5" r="2.3" />
                 <circle cx="12" cy="7" r="2.3" />
                 <circle cx="16.5" cy="9.5" r="2.3" />
-                <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
+                <path
+                  d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z"
+                />
               </svg>
-            {:else if categoryAura.theme === 'wildlife'}
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            {:else if categoryAura.theme === "wildlife"}
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
                 <path d="M3 14c3.5-4.5 7-4.5 9-1 2-3.5 5.5-3.5 9 1" />
                 <path d="M12 13v5" />
               </svg>
-            {:else if categoryAura.theme === 'science'}
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            {:else if categoryAura.theme === "science"}
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
                 <circle cx="12" cy="12" r="9" />
-                <polygon points="16.2 7.8 14.1 14.1 7.8 16.2 9.9 9.9 16.2 7.8" fill="currentColor" stroke="none" />
+                <polygon
+                  points="16.2 7.8 14.1 14.1 7.8 16.2 9.9 9.9 16.2 7.8"
+                  fill="currentColor"
+                  stroke="none"
+                />
               </svg>
-            {:else if categoryAura.theme === 'community'}
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            {:else if categoryAura.theme === "community"}
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
                 <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                 <circle cx="9" cy="7" r="4" />
                 <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
-            {:else if categoryAura.theme === 'care'}
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 20.5s-7.5-4.6-9.3-9C1.4 8.2 3.6 4.5 7.3 4.5c2 0 3.6 1.1 4.7 2.6 1.1-1.5 2.7-2.6 4.7-2.6 3.7 0 5.9 3.7 4.6 7-1.8 4.4-9.3 9-9.3 9Z" />
+            {:else if categoryAura.theme === "care"}
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path
+                  d="M12 20.5s-7.5-4.6-9.3-9C1.4 8.2 3.6 4.5 7.3 4.5c2 0 3.6 1.1 4.7 2.6 1.1-1.5 2.7-2.6 4.7-2.6 3.7 0 5.9 3.7 4.6 7-1.8 4.4-9.3 9-9.3 9Z"
+                />
               </svg>
             {:else}
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"
+                />
                 <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
               </svg>
             {/if}
@@ -379,7 +697,7 @@
         </span>
       {/if}
       <span class="quick-tags-pill quick-tags-inline">
-        {action.quickTagsLabel || '2 min · Zdarma · Online'}
+        {action.quickTagsLabel || "2 min · Zdarma · Online"}
       </span>
       {#if isCompleted}
         <span class="done-dot done-inline">· ✓ Splněno</span>
@@ -392,7 +710,9 @@
           on:click={onTogglePersonalValues}
           title="Přizpůsobit podle témat vybraných v průvodci"
         >
-          {usePersonalValues ? `✦ Tvoje témata (${getSavedValueLabels(savedValues)})` : '🎯 Moje témata'}
+          {usePersonalValues
+            ? `✦ Tvoje témata (${getSavedValueLabels(savedValues)})`
+            : "🎯 Moje témata"}
         </button>
       {/if}
     </div>
@@ -404,10 +724,10 @@
     <p class="action-desc card-desc rec-desc">{action.desc}</p>
 
     <!-- 4. Přínos (v katalogu viditelný přímo; na instant kartě výhradně v detailu bez duplicity) -->
-    {#if variant === 'directory'}
+    {#if variant === "directory"}
       <div class="action-impact-summary card-impact-box rec-impact-block">
         <div class="impact-benefit-line card-benefit-line rec-impact-line">
-          <strong>Přínos ({action.impactBasis || 'doložený'}):</strong>
+          <strong>Přínos ({action.impactBasis || "doložený"}):</strong>
           <span>{action.concreteImpact || action.selfBenefit}</span>
         </div>
       </div>
@@ -415,27 +735,31 @@
 
     <!-- 5. Sekundární metadata výhradně v rozbalovacím detailu -->
     <details class="how-toggle steps-inline">
-      <summary>ℹ️ Jak to funguje ({action.steps?.length ? `${action.steps.length} ${action.steps.length === 1 ? 'krok' : action.steps.length < 5 ? 'kroky' : 'kroků'}` : 'důkazy a partner'})</summary>
+      <summary
+        >ℹ️ Jak to funguje ({action.steps?.length
+          ? `${action.steps.length} ${action.steps.length === 1 ? "krok" : action.steps.length < 5 ? "kroky" : "kroků"}`
+          : "důkazy a partner"})</summary
+      >
       <div class="how-details-content">
         <div class="detail-evidence-line">
           <EvidenceBadge
-            tier={action.impactEvidence || 'B'}
-            variant={variant === 'directory' ? 'card' : 'pill'}
+            tier={action.impactEvidence || "B"}
+            variant={variant === "directory" ? "card" : "pill"}
             className="card-evidence-badge rec-evidence-pill evidence-pill"
           />
         </div>
         <div class="partner-trust-line card-partner-line rec-partner-line">
           <span>
             {action.registrationRequired
-              ? 'Krátká registrace u partnera'
-              : 'Bez registrace na našem webu'}
+              ? "Krátká registrace u partnera"
+              : "Bez registrace na našem webu"}
           </span>
           <span>·</span>
           <span>Aktivita probíhá u <strong>{action.org}</strong></span>
         </div>
-        {#if variant !== 'directory'}
+        {#if variant !== "directory"}
           <div class="impact-benefit-line detail-impact-line">
-            <strong>Přínos ({action.impactBasis || 'doložený'}):</strong>
+            <strong>Přínos ({action.impactBasis || "doložený"}):</strong>
             <span>{action.concreteImpact || action.selfBenefit}</span>
           </div>
         {/if}
@@ -448,14 +772,23 @@
         {/if}
         {#if action.impactChain}
           <div class="impact-chain-row rec-impact-chain card-chain-line">
-            <span><strong>Aktivita:</strong> {action.impactChain.activity}</span>
+            <span><strong>Aktivita:</strong> {action.impactChain.activity}</span
+            >
             <span class="chain-arrow chain-sep">→</span>
-            <span><strong>Výsledek:</strong> {action.impactChain.immediateOutput}</span>
+            <span
+              ><strong>Výsledek:</strong>
+              {action.impactChain.immediateOutput}</span
+            >
             <span class="chain-arrow chain-sep">→</span>
-            <span><strong>Skutečný dopad:</strong> {action.impactChain.realImpact}</span>
+            <span
+              ><strong>Skutečný dopad:</strong>
+              {action.impactChain.realImpact}</span
+            >
           </div>
         {/if}
-        <div class="action-verify-footer card-verify-footer rec-verify-footer mobile-details-extra">
+        <div
+          class="action-verify-footer card-verify-footer rec-verify-footer mobile-details-extra"
+        >
           <span class="verify-meta mde-verify">
             Ověřeno: <strong>{action.verifiedLabel}</strong> · Zdroj:
             <a
@@ -467,7 +800,9 @@
               {action.org} ↗
             </a>
           </span>
-          <div class="verify-footer-actions card-footer-actions rec-footer-btns mde-row">
+          <div
+            class="verify-footer-actions card-footer-actions rec-footer-btns mde-row"
+          >
             {#if onShare}
               <button
                 type="button"
@@ -475,7 +810,7 @@
                 on:click={() => onShare(action)}
                 title="Zkopírovat přímý odkaz na tento skutek pro sdílení v diskuzi nebo zprávě"
               >
-                {copiedDirectLink ? '✓ Odkaz zkopírován' : '🔗 Sdílet odkaz'}
+                {copiedDirectLink ? "✓ Odkaz zkopírován" : "🔗 Sdílet odkaz"}
               </button>
             {/if}
             <button
@@ -483,7 +818,13 @@
               class="broken-link-btn mde-broken-btn card-broken-btn rec-broken-btn"
               on:click={() => {
                 if (onReportBroken) onReportBroken(action);
-                else openBrokenLinkReport({ id: action.id, title: actionTitle, org: action.org, url: action.url });
+                else
+                  openBrokenLinkReport({
+                    id: action.id,
+                    title: actionTitle,
+                    org: action.org,
+                    url: action.url,
+                  });
               }}
             >
               Nahlásit chybu
@@ -499,19 +840,30 @@
         class="celebration-card inline-celebration-card in-situ-celebration"
         role="status"
         aria-live="polite"
-        data-scene={effectMeta?.scene || 'default'}
+        data-scene={effectMeta?.scene || "default"}
       >
         <div class="inline-celebration-head">
-          <span class="kicker celebration-kicker">🎉 Skvělá práce! Dobrý skutek je hotový</span>
+          <span class="kicker celebration-kicker"
+            >🎉 Skvělá práce! Dobrý skutek je hotový</span
+          >
           {#if effectMeta?.badge}
             <span class="impact-payoff-badge">
               <span>{cleanPayoffBadge(effectMeta.badge)}</span>
               {#if hasPawInBadge(effectMeta.badge)}
-                <svg class="badge-paw-svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <svg
+                  class="badge-paw-svg"
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
                   <circle cx="7.5" cy="9.5" r="2.3" />
                   <circle cx="12" cy="7" r="2.3" />
                   <circle cx="16.5" cy="9.5" r="2.3" />
-                  <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
+                  <path
+                    d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z"
+                  />
                 </svg>
               {/if}
             </span>
@@ -522,20 +874,36 @@
           class="impact-payoff-canvas"
           width="320"
           height="118"
-          use:impactCanvas={{ action, climax: true, onWeightUpdate: handleWeightUpdate }}
+          use:impactCanvas={{
+            action,
+            climax: true,
+            onWeightUpdate: handleWeightUpdate,
+          }}
           aria-label="Fyzikální vizualizace dopadu dobrého skutku"
         ></canvas>
         <div class="in-situ-affirmation">
-          ✨ <strong>Dnes už tvůj dobrý skutek pomáhá.</strong> Můžeš pokračovat dalším drobným skutkem, nebo dnešní seanci s klidem uzavřít.
+          ✨ <strong>Dnes už tvůj dobrý skutek pomáhá.</strong> Můžeš pokračovat
+          dalším drobným skutkem, nebo dnešní seanci s klidem uzavřít.
         </div>
         <div class="molly-celebration-note">
-          <svg class="badge-paw-svg molly-note-paw-svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <svg
+            class="badge-paw-svg molly-note-paw-svg"
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+          >
             <circle cx="7.5" cy="9.5" r="2.3" />
             <circle cx="12" cy="7" r="2.3" />
             <circle cx="16.5" cy="9.5" r="2.3" />
-            <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
+            <path
+              d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z"
+            />
           </svg>
-          <strong>Molly děkuje a má radost!</strong> V <a href="/svet" class="molly-svet-inline-link">Krajině dobra</a> na ni za tvůj skutek čeká zasloužený pamlsek.
+          <strong>Molly děkuje a má radost!</strong> V
+          <a href="/svet" class="molly-svet-inline-link">Krajině dobra</a> na ni
+          za tvůj skutek čeká zasloužený pamlsek.
         </div>
         <div class="return-dopamine-actions in-situ-actions">
           {#if onCloseSession}
@@ -565,7 +933,7 @@
         class="return-dopamine-strip in-situ-strip"
         role="status"
         aria-live="polite"
-        data-scene={effectMeta?.scene || 'default'}
+        data-scene={effectMeta?.scene || "default"}
       >
         <div class="inline-celebration-head return-dopamine-head">
           <div class="return-dopamine-text return-dopamine-title">
@@ -573,13 +941,26 @@
           </div>
           {#if effectMeta?.returnBadge || effectMeta?.badge}
             <span class="impact-payoff-badge">
-              <span>{cleanPayoffBadge(effectMeta.returnBadge || effectMeta.badge)}</span>
+              <span
+                >{cleanPayoffBadge(
+                  effectMeta.returnBadge || effectMeta.badge,
+                )}</span
+              >
               {#if hasPawInBadge(effectMeta.returnBadge || effectMeta.badge)}
-                <svg class="badge-paw-svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <svg
+                  class="badge-paw-svg"
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
                   <circle cx="7.5" cy="9.5" r="2.3" />
                   <circle cx="12" cy="7" r="2.3" />
                   <circle cx="16.5" cy="9.5" r="2.3" />
-                  <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
+                  <path
+                    d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z"
+                  />
                 </svg>
               {/if}
             </span>
@@ -589,7 +970,11 @@
           class="impact-payoff-canvas"
           width="320"
           height="118"
-          use:impactCanvas={{ action, climax: true, onWeightUpdate: handleWeightUpdate }}
+          use:impactCanvas={{
+            action,
+            climax: true,
+            onWeightUpdate: handleWeightUpdate,
+          }}
           aria-label="Fyzikální vizualizace dopadu dobrého skutku"
         ></canvas>
         <div class="in-situ-affirmation">
@@ -652,33 +1037,92 @@
           }}
         >
           <!-- Vysoce kontrastní zlatavá vektorová ikona místo tmavě fialového OS emoji -->
-          {#if categoryAura?.theme === 'animals'}
-            <svg class="cta-lead-icon" width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          {#if categoryAura?.theme === "animals"}
+            <svg
+              class="cta-lead-icon"
+              width="17"
+              height="17"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
               <circle cx="7.5" cy="9.5" r="2.2" />
               <circle cx="12" cy="7" r="2.2" />
               <circle cx="16.5" cy="9.5" r="2.2" />
-              <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
+              <path
+                d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z"
+              />
             </svg>
-          {:else if categoryAura?.theme === 'wildlife'}
-            <svg class="cta-lead-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          {:else if categoryAura?.theme === "wildlife"}
+            <svg
+              class="cta-lead-icon"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.3"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
               <path d="M3 14c3.5-4.5 7-4.5 9-1 2-3.5 5.5-3.5 9 1" />
               <path d="M12 13v5" />
             </svg>
-          {:else if categoryAura?.theme === 'nature'}
-            <svg class="cta-lead-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
+          {:else if categoryAura?.theme === "nature"}
+            <svg
+              class="cta-lead-icon"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.3"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path
+                d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"
+              />
               <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
             </svg>
-          {:else if categoryAura?.theme === 'care'}
-            <svg class="cta-lead-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M12 20.5s-7.5-4.6-9.3-9C1.4 8.2 3.6 4.5 7.3 4.5c2 0 3.6 1.1 4.7 2.6 1.1-1.5 2.7-2.6 4.7-2.6 3.7 0 5.9 3.7 4.6 7-1.8 4.4-9.3 9-9.3 9Z" />
+          {:else if categoryAura?.theme === "care"}
+            <svg
+              class="cta-lead-icon"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 20.5s-7.5-4.6-9.3-9C1.4 8.2 3.6 4.5 7.3 4.5c2 0 3.6 1.1 4.7 2.6 1.1-1.5 2.7-2.6 4.7-2.6 3.7 0 5.9 3.7 4.6 7-1.8 4.4-9.3 9-9.3 9Z"
+              />
             </svg>
           {:else}
-            <svg class="cta-lead-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3L12 3z" />
+            <svg
+              class="cta-lead-icon"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3L12 3z"
+              />
             </svg>
           {/if}
-          <span>{action.id === 'zvirata_utulek_online' ? 'Nakrmit útulek teď' : (action.cta || 'Začít pomáhat')}</span>
+          <span
+            >{action.id === "zvirata_utulek_online"
+              ? "Nakrmit útulek teď"
+              : action.cta || "Začít pomáhat"}</span
+          >
           <svg
             class="cta-arrow-icon"
             width="15"
@@ -715,7 +1159,7 @@
             >
               <polyline points="20 6 9 17 4 12" />
             </svg>
-            <span>{action.doneCta || 'Dokončeno'}</span>
+            <span>{action.doneCta || "Dokončeno"}</span>
           </button>
         {/if}
       </div>
@@ -723,18 +1167,27 @@
       {#if isStarted && !partnerReturnPromptVisible}
         <div
           class="card-effect-stage"
-          data-scene={effectMeta?.scene || 'default'}
+          data-scene={effectMeta?.scene || "default"}
         >
           <div class="card-effect-head">
             {#if effectMeta?.badge}
               <span class="impact-payoff-badge">
                 <span>{cleanPayoffBadge(effectMeta.badge)}</span>
                 {#if hasPawInBadge(effectMeta.badge)}
-                  <svg class="badge-paw-svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <svg
+                    class="badge-paw-svg"
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
                     <circle cx="7.5" cy="9.5" r="2.3" />
                     <circle cx="12" cy="7" r="2.3" />
                     <circle cx="16.5" cy="9.5" r="2.3" />
-                    <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
+                    <path
+                      d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z"
+                    />
                   </svg>
                 {/if}
               </span>
@@ -757,10 +1210,12 @@
                   class="sound-mute-btn"
                   on:click={onToggleSound}
                   aria-pressed={soundMuted}
-                  aria-label={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
-                  title={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
+                  aria-label={soundMuted
+                    ? "Zapnout jemné zvuky"
+                    : "Ztlumit zvuky"}
+                  title={soundMuted ? "Zapnout jemné zvuky" : "Ztlumit zvuky"}
                 >
-                  {soundMuted ? '🔇' : '🔊'}
+                  {soundMuted ? "🔇" : "🔊"}
                 </button>
               {/if}
             </div>
@@ -770,7 +1225,11 @@
             class="impact-payoff-canvas"
             width="320"
             height="118"
-            use:impactCanvas={{ action, climax: false, onWeightUpdate: handleWeightUpdate }}
+            use:impactCanvas={{
+              action,
+              climax: false,
+              onWeightUpdate: handleWeightUpdate,
+            }}
             aria-label="Fyzikální vizualizace dopadu dobrého skutku"
           ></canvas>
         </div>
@@ -806,11 +1265,14 @@
     box-shadow:
       0 12px 26px -12px rgba(4, 20, 13, 0.52),
       inset 0 1px 0 rgba(255, 255, 255, 0.14);
-    transition: border-color 0.24s ease, box-shadow 0.24s ease, transform 0.22s ease;
+    transition:
+      border-color 0.24s ease,
+      box-shadow 0.24s ease,
+      transform 0.22s ease;
   }
 
   .deed-preview-stage::after {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     z-index: 1;
@@ -818,7 +1280,7 @@
     background: radial-gradient(
       140px 92px at var(--spot-x) var(--spot-y),
       rgba(253, 230, 138, 0.18) 0%,
-      rgba(52, 211, 153, 0.10) 52%,
+      rgba(52, 211, 153, 0.1) 52%,
       transparent 100%
     );
     opacity: 0.7;
@@ -1221,15 +1683,21 @@
       0 12px 26px -6px rgba(10, 44, 30, 0.46),
       0 0 0 1px rgba(52, 211, 153, 0.32),
       inset 0 1px 0 rgba(255, 255, 255, 0.16);
-    transition: transform 0.18s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.2s ease;
+    transition:
+      transform 0.18s cubic-bezier(0.2, 0.9, 0.3, 1),
+      box-shadow 0.2s ease;
   }
 
   .btn-studio-primary::before {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     z-index: -1;
-    background: linear-gradient(90deg, rgba(16, 185, 129, 0.42), rgba(251, 191, 36, 0.48));
+    background: linear-gradient(
+      90deg,
+      rgba(16, 185, 129, 0.42),
+      rgba(251, 191, 36, 0.48)
+    );
     transform-origin: left center;
     transform: scaleX(var(--spark-charge, 0));
     transition: transform 0.06s linear;
@@ -1237,13 +1705,18 @@
   }
 
   .btn-studio-primary::after {
-    content: '';
+    content: "";
     position: absolute;
     top: -50%;
     bottom: -50%;
     left: -60%;
     width: 34%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.22),
+      transparent
+    );
     transform: rotate(25deg);
     pointer-events: none;
     transition: transform 0.65s ease;
@@ -1333,7 +1806,13 @@
     padding: 0;
     border-radius: 18px;
     overflow: hidden;
-    background: linear-gradient(180deg, #113e2b 0%, #113e2b 48px, #072016 76%, #03100b 100%);
+    background: linear-gradient(
+      180deg,
+      #113e2b 0%,
+      #113e2b 48px,
+      #072016 76%,
+      #03100b 100%
+    );
     border: 1px solid rgba(52, 211, 153, 0.38);
     color: #ecfdf5;
     box-shadow:
@@ -1448,7 +1927,11 @@
     max-width: 100%;
     box-sizing: border-box;
     border-radius: 16px;
-    background: linear-gradient(145deg, rgba(8, 30, 21, 0.96), rgba(16, 54, 38, 0.95));
+    background: linear-gradient(
+      145deg,
+      rgba(8, 30, 21, 0.96),
+      rgba(16, 54, 38, 0.95)
+    );
     border: 1px solid rgba(52, 211, 153, 0.38);
     color: #ecfdf5;
     font-size: 0.84rem;
@@ -1712,11 +2195,15 @@
     background: linear-gradient(180deg, #ffffff 0%, #f9fcfa 100%);
     border: 1px solid rgba(16, 72, 48, 0.11);
     border-radius: 22px;
-    box-shadow: 0 10px 26px -10px rgba(13, 46, 32, 0.08), 0 1px 3px rgba(0, 0, 0, 0.03);
+    box-shadow:
+      0 10px 26px -10px rgba(13, 46, 32, 0.08),
+      0 1px 3px rgba(0, 0, 0, 0.03);
     padding: 0.92rem 1.08rem;
     display: flex;
     flex-direction: column;
-    transition: transform 0.24s var(--ease-gentle, ease), box-shadow 0.24s var(--ease-gentle, ease);
+    transition:
+      transform 0.24s var(--ease-gentle, ease),
+      box-shadow 0.24s var(--ease-gentle, ease);
   }
 
   /* Instant varianta žije uvnitř vnější skořápky (.instant-card na / nebo .highlight-card na /app/guided) — žádný vnořený dvojitý rámeček */
@@ -1730,12 +2217,16 @@
 
   .directory-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 14px 32px -8px rgba(13, 46, 32, 0.12), 0 3px 6px rgba(0, 0, 0, 0.06);
+    box-shadow:
+      0 14px 32px -8px rgba(13, 46, 32, 0.12),
+      0 3px 6px rgba(0, 0, 0, 0.06);
   }
 
   .card.spotlight {
     border: 1.5px solid #f59e0b;
-    box-shadow: 0 0 0 4px rgba(253, 230, 138, 0.4), var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+    box-shadow:
+      0 0 0 4px rgba(253, 230, 138, 0.4),
+      var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
   }
 
   @media (max-width: 680px) {

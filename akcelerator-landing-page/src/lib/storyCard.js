@@ -49,13 +49,13 @@ function loadImageSafe(src) {
 /**
  * Renders a 1080x1920 PNG Data URL & Blob representing the user's Bioluminescent Sanctuary & Constellation.
  * @param {{
- *   mode?: 'tip' | 'quiet',
+ *   mode?: 'tip' | 'quiet' | string,
  *   actionTitle?: string,
  *   stepsCount?: number,
  *   healPercent?: number,
- *   stars?: Array<{ x: number, y: number, color?: string }>
+ *   stars?: Array<{ x: number, y: number, color?: string, lightType?: string }>
  * }} opts
- * @returns {Promise<{ dataUrl: string, blob: Blob | null }>}
+ * @returns {Promise<{ dataUrl: string, objectUrl?: string, blob: Blob | null }>}
  */
 export async function renderStoryCardPng(opts = {}) {
   if (typeof document === 'undefined') {
@@ -128,25 +128,25 @@ export async function renderStoryCardPng(opts = {}) {
 
   // 4. Personal Constellation Threads & Glowing Stars
   const fallbackCoords = [
-    { x: 210, y: 830, color: '#fde68a' },
-    { x: 355, y: 760, color: '#6ee7b7' },
-    { x: 535, y: 815, color: '#fde68a' },
-    { x: 705, y: 745, color: '#bae6fd' },
-    { x: 865, y: 825, color: '#fed7aa' },
-    { x: 290, y: 905, color: '#e9d5ff' },
-    { x: 635, y: 890, color: '#6ee7b7' },
-    { x: 465, y: 715, color: '#fde68a' }
+    { x: 210, y: 830, color: '#fde68a', lightType: 'star' },
+    { x: 355, y: 760, color: '#6ee7b7', lightType: 'star' },
+    { x: 535, y: 815, color: '#fde68a', lightType: 'star' },
+    { x: 705, y: 745, color: '#bae6fd', lightType: 'star' },
+    { x: 865, y: 825, color: '#fed7aa', lightType: 'star' },
+    { x: 290, y: 905, color: '#e9d5ff', lightType: 'star' },
+    { x: 635, y: 890, color: '#6ee7b7', lightType: 'star' },
+    { x: 465, y: 715, color: '#fde68a', lightType: 'star' }
   ];
 
   const starCount = Math.min(8, Math.max(3, stepsCount + 2));
   const pts =
     Array.isArray(opts.stars) && opts.stars.length >= 2
       ? opts.stars.slice(0, 10).map((s) => ({
-          x: 130 + s.x * 820,
-          y: 700 + Math.min(0.48, s.y) * 520,
-          color: s.color || '#fde68a',
-          lightType: s.lightType || 'star'
-        }))
+        x: 130 + s.x * 820,
+        y: 700 + Math.min(0.48, s.y) * 520,
+        color: s.color || '#fde68a',
+        lightType: s.lightType || 'star'
+      }))
       : fallbackCoords.slice(0, starCount);
 
   // Constellation Threads

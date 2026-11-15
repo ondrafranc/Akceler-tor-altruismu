@@ -13,7 +13,7 @@ import {
   MOLLY_FOLLOW_MOUSE_KEY,
   MOLLY_STORAGE_KEY
 } from '$lib/mollyStore.js';
-import { safeGetItem, safeSetItem } from '$lib/utils.js';
+import { safeGetItem, safeSetItem } from '$lib/storage/index.js';
 
 describe('mollyStore Unit Tests (Milestone 3: Follow Mouse & State Transitions)', () => {
   beforeEach(() => {

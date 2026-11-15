@@ -3,9 +3,33 @@
   import { trackEvent } from "../../../analytics.js";
   import { SANCTUARY_ELEMENTS } from "../../../progress.js";
 
+  /**
+   * @typedef {{
+   *   uid?: string,
+   *   actionId?: string,
+   *   title?: string,
+   *   note?: string,
+   *   concreteImpact?: string,
+   *   orgName?: string,
+   *   minutes?: number,
+   *   url?: string,
+   *   element?: string,
+   *   x?: number,
+   *   y?: number,
+   *   zone?: 'sky' | 'water',
+   *   lightType?: string,
+   *   isMine?: boolean,
+   *   [key: string]: unknown
+   * }} InspectorLight
+   */
+
+  /** @type {InspectorLight | null} */
   export let selectedLight = null;
+  /** @type {Record<string, { title?: string, icon?: string, color?: string, [key: string]: unknown }>} */
   export let elementMap = {};
+  /** @type {(() => void) | null} */
   export let onClose = null;
+  /** @type {((light: InspectorLight) => void) | null} */
   export let onMarkDone = null;
 
   function getLightSemanticLabel(light) {

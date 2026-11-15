@@ -3,9 +3,9 @@
  * Shared across the entire app so all pages and components honor a single mute preference.
  */
 
-import { safeGetItem, safeSetItem } from '../utils.js';
+import { safeGetItem, safeSetItem, AA_SOUND_MUTED_KEY } from '../storage/index.js';
 
-const MK = 'aa_sound_muted';
+const MK = AA_SOUND_MUTED_KEY;
 const win = () => typeof window !== 'undefined';
 
 /** @type {AudioContext | null} */
@@ -48,7 +48,7 @@ export const isSoundMuted = () => win() && safeGetItem(MK, 'local') === '1';
 export function getAudioContext() {
   if (!win() || isSoundMuted() || !hasUserGesture) return null;
   try {
-    const AudioCtx = /** @type {any} */ (window).AudioContext || /** @type {any} */ (window).webkitAudioContext;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return null;
     ac = ac || new AudioCtx();
     if (ac.state === 'suspended') {

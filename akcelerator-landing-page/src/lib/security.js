@@ -151,7 +151,7 @@ export function resolveClientKey(request, getClientAddress) {
  * @param {number} [maxBytes=32768]
  * @returns {boolean}
  */
-export function hasExcessiveBodySize(request, maxBytes = 32_768) {
+function hasExcessiveBodySize(request, maxBytes = 32_768) {
   const len = Number(request.headers.get('content-length') || 0);
   return Number.isFinite(len) && len > maxBytes;
 }
@@ -161,7 +161,7 @@ export function hasExcessiveBodySize(request, maxBytes = 32_768) {
  * transfer-encoding payloads cannot bypass Content-Length and cause OOM (M3 / AUDIT #25).
  * @param {Request} request
  * @param {number} [maxBytes=32768]
- * @returns {Promise<{ ok: true, data: any, status?: undefined, error?: undefined } | { ok: false, status: number, error: string, data?: undefined }>}
+ * @returns {Promise<{ ok: true, data: Record<string, unknown>, status?: undefined, error?: undefined } | { ok: false, status: number, error: string, data?: undefined }>}
  */
 export async function readJsonBodyBounded(request, maxBytes = 32_768) {
   if (hasExcessiveBodySize(request, maxBytes)) {
@@ -248,7 +248,7 @@ export function validateMutationOrigin(request, url) {
  * Clock-skew-safe form timing check (H7 / AUDIT #4).
  * Uses monotonic client elapsed_ms when provided; if only wall-clock started_at is sent,
  * only rejects when delta is strictly between 0ms and 800ms (never when delta < 0 due to mobile clock skew).
- * @param {Record<string, any>} body
+ * @param {Record<string, unknown>} body
  * @returns {boolean} true if submission is suspiciously instantaneous (< 800ms)
  */
 export function isSubmissionTooFast(body) {

@@ -10,7 +10,7 @@ const PULSE_CACHE_TTL_MS = 45000;
 /**
  * Fetches recent ambient pulse event from backend API with 45s in-memory TTL caching.
  * Returns null if network fails or no active pulse is available.
- * @returns {Promise<any | null>}
+ * @returns {Promise<import('../../../types').PulseEventItem | { message?: string, isLive?: boolean, actionId?: string, [key: string]: unknown } | null>}
  */
 export async function fetchAmbientPulse() {
   const now = Date.now();
@@ -24,7 +24,7 @@ export async function fetchAmbientPulse() {
       cacheTimestamp = now;
       return cachedPulse;
     }
-  } catch {}
+  } catch { }
   return cachedPulse || null;
 }
 
@@ -35,7 +35,7 @@ export async function fetchAmbientPulse() {
  *   Jiná skutečná událost je zřetelně označená jako „Mezitím v komunitě“, tip na jiný skutek
  *   pod kartu nepatří (konkuroval by hlavní volbě).
  * - jinde: skutečná událost s označením „V komunitě:“, nebo tip na skutek.
- * @param {any} pulse
+ * @param {{ message?: string, isLive?: boolean, actionId?: string, [key: string]: unknown } | null | undefined} pulse
  * @param {{ actionId?: string | null, inCard?: boolean }} [opts]
  * @returns {string}
  */

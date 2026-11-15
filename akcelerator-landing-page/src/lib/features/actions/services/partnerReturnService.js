@@ -4,15 +4,28 @@
  * and detects when they return to celebrate the completed micro-action.
  */
 
-import { safeGetItem, safeSetItem } from '../../../utils.js';
+import { safeGetItem, safeSetItem, AA_PARTNER_RETURN_KEY } from '../../../storage/index.js';
 
-const RK = 'aa_pending_return_v1';
+const RK = AA_PARTNER_RETURN_KEY;
 const win = () => typeof window !== 'undefined';
 
-/** @type {any} */
+/**
+ * @typedef {{
+ *   id?: string,
+ *   title?: string,
+ *   category?: string,
+ *   values?: string[],
+ *   surface?: string,
+ *   ts: number,
+ *   consumed?: number | boolean,
+ *   elapsedMs?: number
+ * }} PartnerReturnRecord
+ */
+
+/** @type {PartnerReturnRecord | null} */
 let mem = null;
 
-const sync = (/** @type {any} */ r) => {
+const sync = (/** @type {PartnerReturnRecord | null} */ r) => {
   mem = r;
   const s = JSON.stringify(r);
   if (win()) {
@@ -23,7 +36,7 @@ const sync = (/** @type {any} */ r) => {
 
 /**
  * Saves a pending external partner visit before navigating out.
- * @param {any} a Action object
+ * @param {{ id?: string, title?: string, name?: string, category?: string, kind?: string, values?: string[], [key: string]: unknown } | null | undefined} a Action object
  * @param {string} [surface='home']
  */
 export const savePendingPartnerReturn = (a, surface = 'home') =>
@@ -39,7 +52,7 @@ export const savePendingPartnerReturn = (a, surface = 'home') =>
 
 /**
  * Reads the pending partner record from in-memory cache or persistent storage.
- * @returns {any}
+ * @returns {PartnerReturnRecord | null}
  */
 export function readPendingPartnerRecord() {
   let stored = null;
@@ -73,7 +86,7 @@ export function getPendingPartnerReturnRemainingMs(minDelayMs = 0) {
 /**
  * Consumes the pending partner return immediately without artificial delay (between 0 and 30 minutes).
  * @param {number} [m=0] Minimum elapsed milliseconds (defaults to 0 for instant celebration)
- * @returns {any | null} Consumed record with elapsedMs, or null if ineligible
+ * @returns {(PartnerReturnRecord & { elapsedMs: number }) | null} Consumed record with elapsedMs, or null if ineligible
  */
 export function consumePendingPartnerReturn(m = 0) {
   const r = readPendingPartnerRecord();
@@ -85,7 +98,7 @@ export function consumePendingPartnerReturn(m = 0) {
 
 /**
  * Checks and immediately consumes any pending partner return upon tab/window focus.
- * @returns {any | null}
+ * @returns {(PartnerReturnRecord & { elapsedMs: number }) | null}
  */
 export function checkImmediatePartnerReturn() {
   return consumePendingPartnerReturn(0);

@@ -18,22 +18,20 @@
     startedActionIds,
     openBrokenLinkReport,
   } from "../lib/analytics.js";
+  import { isSoundMuted, toggleSoundMuted } from "../lib/audio/audioContext.js";
   import {
-    isSoundMuted,
-    toggleSoundMuted,
-    isAnimalAction,
-    getActionEffectMeta,
-    startHoldSpark,
     playPayoffAsmr,
     playCelebrationChord,
+  } from "../lib/audio/presets.js";
+  import {
     savePendingPartnerReturn,
     consumePendingPartnerReturn,
-    getPendingPartnerReturnRemainingMs,
-    impactCanvas,
-    triggerCanvasBurst
-  } from "../lib/sensoryEngine.js";
+  } from "../lib/features/actions/services/partnerReturnService.js";
+  import { triggerCanvasBurst } from "../lib/sensory/canvas/controllerRegistry.js";
+  import { startHoldSpark } from "../lib/sensory/interaction/holdSpark.js";
   import { notifyMollySpark } from "../lib/mollyStore.js";
-  import { cleanTitle, stripLeadingEmoji, safeGetItem } from "../lib/utils.js";
+  import { cleanTitle, stripLeadingEmoji } from "../lib/utils.js";
+  import { safeGetItem, AA_USER_TOPICS_KEY } from "../lib/storage/index.js";
   import HeroSection from "../lib/features/home/HeroSection.svelte";
   import QuickStartSection from "../lib/features/home/QuickStartSection.svelte";
   import PathwaysBento from "../lib/features/home/PathwaysBento.svelte";
@@ -114,7 +112,9 @@
 
   function resolveActionFromParam(rawParam) {
     if (!rawParam) return null;
-    const cleaned = String(rawParam).trim().replace(/^[#?]+/, "");
+    const cleaned = String(rawParam)
+      .trim()
+      .replace(/^[#?]+/, "");
     if (!cleaned) return null;
     const aliased = ACTION_ALIASES[cleaned.toLowerCase()] || cleaned;
     const normalizedUnderscore = aliased.replace(/-/g, "_").toLowerCase();
@@ -167,7 +167,9 @@
         }
       }
 
-      const actionParam = preferHash ? (hashAction || queryAction) : (hashAction || queryAction);
+      const actionParam = preferHash
+        ? hashAction || queryAction
+        : hashAction || queryAction;
       if (actionParam) {
         const matched = resolveActionFromParam(actionParam);
         if (matched) {
@@ -192,7 +194,7 @@
 
   onMount(() => {
     try {
-      const raw = safeGetItem("aa_values", "local");
+      const raw = safeGetItem(AA_USER_TOPICS_KEY, "local");
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -549,115 +551,123 @@
     <!-- CLEAN, BREATHABLE INSTANT CARD (ZERO NESTED BOXES) -->
     <QuickStartSection id="quick-start-area">
       <div class="instant-card" id="dnesni-skutek">
-      <div class="card-halo" aria-hidden="true"></div>
+        <div class="card-halo" aria-hidden="true"></div>
 
-      <div class="studio-head">
-        <span class="studio-label">
-          <span class="studio-ready-dot" aria-hidden="true"></span>
-          <span>Chci pomoct právě teď:</span>
-        </span>
-        <button
-          type="button"
-          class="cycle-link cycle-btn"
-          on:click={nextQuickIdea}
-          title="Ukázat další ověřenou příležitost"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.3"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+        <div class="studio-head">
+          <span class="studio-label">
+            <span class="studio-ready-dot" aria-hidden="true"></span>
+            <span>Chci pomoct právě teď:</span>
+          </span>
+          <button
+            type="button"
+            class="cycle-link cycle-btn"
+            on:click={nextQuickIdea}
+            title="Ukázat další ověřenou příležitost"
           >
-            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-            <path d="M3 3v5h5" />
-            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-            <path d="M16 16h5v5" />
-          </svg>
-          <span>Jiný tip</span>
-        </button>
-      </div>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.3"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <path d="M3 3v5h5" />
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+              <path d="M16 16h5v5" />
+            </svg>
+            <span>Jiný tip</span>
+          </button>
+        </div>
 
-      <div
-        class="energy-tabs"
-        role="tablist"
-        aria-label="Praktický výběr dnešní příležitosti"
-      >
-        <button
-          type="button"
-          class="energy-tab"
-          class:active={energyMode === "couch"}
-          on:click={() => setEnergyMode("couch")}
+        <div
+          class="energy-tabs"
+          role="tablist"
+          aria-label="Praktický výběr dnešní příležitosti"
         >
-          <span class="tab-emoji" aria-hidden="true">🛋️</span><span>Mám 2 min</span>
-        </button>
-        <button
-          type="button"
-          class="energy-tab"
-          class:active={energyMode === "focus"}
-          on:click={() => setEnergyMode("focus")}
-        >
-          <span class="tab-emoji" aria-hidden="true">🔬</span><span>Mám 15 min</span>
-        </button>
-        <button
-          type="button"
-          class="energy-tab"
-          class:active={energyMode === "walk"}
-          on:click={() => setEnergyMode("walk")}
-        >
-          <span class="tab-emoji" aria-hidden="true">📍</span><span>Osobně</span>
-        </button>
-        <button
-          type="button"
-          class="energy-tab"
-          class:active={energyMode === "people"}
-          on:click={() => setEnergyMode("people")}
-        >
-          <span class="tab-emoji" aria-hidden="true">🌱</span><span>Dlouhodobě</span>
-        </button>
-      </div>
+          <button
+            type="button"
+            class="energy-tab"
+            class:active={energyMode === "couch"}
+            on:click={() => setEnergyMode("couch")}
+          >
+            <span class="tab-emoji" aria-hidden="true">🛋️</span><span
+              >Mám 2 min</span
+            >
+          </button>
+          <button
+            type="button"
+            class="energy-tab"
+            class:active={energyMode === "focus"}
+            on:click={() => setEnergyMode("focus")}
+          >
+            <span class="tab-emoji" aria-hidden="true">🔬</span><span
+              >Mám 15 min</span
+            >
+          </button>
+          <button
+            type="button"
+            class="energy-tab"
+            class:active={energyMode === "walk"}
+            on:click={() => setEnergyMode("walk")}
+          >
+            <span class="tab-emoji" aria-hidden="true">📍</span><span
+              >Osobně</span
+            >
+          </button>
+          <button
+            type="button"
+            class="energy-tab"
+            class:active={energyMode === "people"}
+            on:click={() => setEnergyMode("people")}
+          >
+            <span class="tab-emoji" aria-hidden="true">🌱</span><span
+              >Dlouhodobě</span
+            >
+          </button>
+        </div>
 
-      {#if currentQuickAction}
-        <SwipeDeck
-          actions={quickDeckActions}
-          currentIndex={suggestionIndex}
-          isStarted={isCurrentStarted}
-          {justCompleted}
-          {partnerReturnPromptVisible}
-          {soundMuted}
-          {showEffectPreview}
-          {copiedDirectLink}
-          {savedValues}
-          {usePersonalValues}
-          onStart={handleStartQuickAction}
-          onComplete={completeQuickAction}
-          onShare={shareDirectActionLink}
-          onReportBroken={(act) =>
-            openBrokenLinkReport({
-              id: act.id,
-              title: cleanTitle(act.title),
-              org: act.org,
-              url: act.url,
-            })}
-          onToggleSound={handleToggleSound}
-          onTogglePersonalValues={() => {
-            pinnedActionId = "";
-            usePersonalValues = !usePersonalValues;
-            suggestionIndex = 0;
-            trackEvent("aa_home_personal_filter", {
-              enabled: usePersonalValues,
-            });
-          }}
-          onNextIdea={nextQuickIdea}
-          onPrevIdea={prevQuickIdea}
-          onCloseSession={() => {
-            trackEvent("aa_home_session_closed", {});
-          }}
-        />
-      {/if}
+        {#if currentQuickAction}
+          <SwipeDeck
+            actions={quickDeckActions}
+            currentIndex={suggestionIndex}
+            isStarted={isCurrentStarted}
+            {justCompleted}
+            {partnerReturnPromptVisible}
+            {soundMuted}
+            {showEffectPreview}
+            {copiedDirectLink}
+            {savedValues}
+            {usePersonalValues}
+            onStart={handleStartQuickAction}
+            onComplete={completeQuickAction}
+            onShare={shareDirectActionLink}
+            onReportBroken={(act) =>
+              openBrokenLinkReport({
+                id: act.id,
+                title: cleanTitle(act.title),
+                org: act.org,
+                url: act.url,
+              })}
+            onToggleSound={handleToggleSound}
+            onTogglePersonalValues={() => {
+              pinnedActionId = "";
+              usePersonalValues = !usePersonalValues;
+              suggestionIndex = 0;
+              trackEvent("aa_home_personal_filter", {
+                enabled: usePersonalValues,
+              });
+            }}
+            onNextIdea={nextQuickIdea}
+            onPrevIdea={prevQuickIdea}
+            onCloseSession={() => {
+              trackEvent("aa_home_session_closed", {});
+            }}
+          />
+        {/if}
       </div>
     </QuickStartSection>
   </HeroSection>
@@ -688,7 +698,11 @@
     min-width: 0;
     max-width: 100%;
     box-sizing: border-box;
-    background: linear-gradient(180deg, rgba(254, 255, 254, 0.985) 0%, rgba(245, 251, 247, 0.985) 100%);
+    background: linear-gradient(
+      180deg,
+      rgba(254, 255, 254, 0.985) 0%,
+      rgba(245, 251, 247, 0.985) 100%
+    );
     color: var(--text-primary);
     border-radius: 28px;
     padding: 1.15rem 1.45rem 0.98rem;
@@ -715,7 +729,8 @@
   }
 
   @keyframes ambientAuraBreathe {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 0.65;
       transform: scale(1);
     }

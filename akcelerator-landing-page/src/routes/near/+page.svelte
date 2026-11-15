@@ -19,18 +19,20 @@
   import { haversineKm, sanitizeHttpUrl as normalizeUrl, safeText } from '../../lib/validation.js';
   import {
     isSoundMuted,
-    toggleSoundMuted,
-    holdSpark,
-    impactCanvas,
-    getActionEffectMeta,
-    playPayoffAsmr,
+    toggleSoundMuted
+  } from '../../lib/audio/audioContext.js';
+  import { playPayoffAsmr } from '../../lib/audio/presets.js';
+  import {
     savePendingPartnerReturn,
     consumePendingPartnerReturn,
-    getPendingPartnerReturnRemainingMs,
-    triggerCanvasBurst
-  } from '../../lib/sensoryEngine.js';
+    getPendingPartnerReturnRemainingMs
+  } from '../../lib/features/actions/services/partnerReturnService.js';
+  import { getActionEffectMeta } from '../../lib/sensory/catalog/catalogResolver.js';
+  import { impactCanvas } from '../../lib/sensory/canvas/impactCanvasAction.js';
+  import { triggerCanvasBurst } from '../../lib/sensory/canvas/controllerRegistry.js';
   import { notifyMollySpark } from '../../lib/mollyStore.js';
-  import { normSearchStr, safeGetItem } from '../../lib/utils.js';
+  import { normSearchStr } from '../../lib/utils.js';
+  import { safeGetItem, AA_MY_PENDING_SUBMISSIONS_KEY } from '../../lib/storage/index.js';
   import PlaceCard from '../../lib/features/map/components/PlaceCard.svelte';
 
   const CATEGORY_PRESETS = [
@@ -215,7 +217,7 @@
 
   function getMyPendingCommunityItems() {
     try {
-      const raw = safeGetItem('aa_my_pending_submissions_v1', 'local');
+      const raw = safeGetItem(AA_MY_PENDING_SUBMISSIONS_KEY, 'local');
       if (!raw) return [];
       const parsed = JSON.parse(raw);
       return Array.isArray(parsed) ? parsed : [];
@@ -291,7 +293,7 @@
   let userMarker = null;
   let radiusCircle = null;
   let isProgrammaticMove = false;
-  /** @type {Map<string, any>} */
+  /** @type {Map<string, { setPopupContent: (c: string) => void, setZIndexOffset: (z: number) => void, getElement?: () => HTMLElement | null, openPopup: () => void, [key: string]: unknown }>} */
   let markerById = new Map();
   /** @type {{ lat: number, lon: number } | null} */
   let pannedCenter = null;
@@ -307,10 +309,10 @@
   /**
    * Seed verified & community places immediately at initialization (including SSR)
    * so the user never sees "0 míst v okolí" on first load and distances never jump.
-   * @type {Array<any>}
+   * @type {Array<import('$lib/server/nearbyService.js').NearbyPlace>}
    */
   let places = getInstantCurated(centerLat, centerLon, kinds);
-  /** @type {Array<any>} */
+  /** @type {Array<import('$lib/server/nearbyService.js').NearbyPlace>} */
   let communityItems = [];
   let activePlaceId = null;
   let hoveredPlaceId = null;

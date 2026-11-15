@@ -1,44 +1,50 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount } from "svelte";
   import {
     trackEvent,
     trackFunnel,
     startedActionIds,
     markActionStarted,
-    openBrokenLinkReport
-  } from '../../../lib/analytics.js';
+    openBrokenLinkReport,
+  } from "../../../lib/analytics.js";
   import {
     MICRO_ACTIONS,
     VALUES,
     EVIDENCE_TIERS,
-    EVIDENCE_METHODOLOGY
-  } from '../../../lib/data/czech-actions.js';
-  import { recordSmallWin, completedSteps } from '../../../lib/progress.js';
+    EVIDENCE_METHODOLOGY,
+  } from "../../../lib/data/czech-actions.js";
+  import { recordSmallWin, completedSteps } from "../../../lib/progress.js";
   import {
     isSoundMuted,
     toggleSoundMuted,
-    holdSpark,
-    impactCanvas,
-    getActionEffectMeta,
-    playPayoffAsmr,
+  } from "../../../lib/audio/audioContext.js";
+  import { playPayoffAsmr } from "../../../lib/audio/presets.js";
+  import {
     savePendingPartnerReturn,
     consumePendingPartnerReturn,
     getPendingPartnerReturnRemainingMs,
-    triggerCanvasBurst
-  } from '../../../lib/sensoryEngine.js';
-  import { notifyMollySpark } from '../../../lib/mollyStore.js';
-  import { cleanTitle, cleanMeta, safeGetItem } from '../../../lib/utils.js';
-  import ActionCard from '$lib/features/actions/components/ActionCard.svelte';
+  } from "../../../lib/features/actions/services/partnerReturnService.js";
+  import { getActionEffectMeta } from "../../../lib/sensory/catalog/catalogResolver.js";
+  import { impactCanvas } from "../../../lib/sensory/canvas/impactCanvasAction.js";
+  import { triggerCanvasBurst } from "../../../lib/sensory/canvas/controllerRegistry.js";
+  import { notifyMollySpark } from "../../../lib/mollyStore.js";
+  import { cleanTitle, cleanMeta } from "../../../lib/utils.js";
+  import {
+    safeGetItem,
+    AA_USER_TOPICS_KEY,
+    AA_GUIDED_VALUES_KEY,
+  } from "../../../lib/storage/index.js";
+  import ActionCard from "$lib/features/actions/components/ActionCard.svelte";
 
-  let activeFilter = 'all';
-  let searchQuery = '';
+  let activeFilter = "all";
+  let searchQuery = "";
   /** @type {string[]} */
   let savedValues = [];
-  let copiedId = '';
-  let spotlightId = '';
+  let copiedId = "";
+  let spotlightId = "";
   let visibleLimit = 3;
   let soundMuted = false;
-  let activeEffectCardId = '';
+  let activeEffectCardId = "";
   /** @type {Record<string, number>} */
   let cardMetrics = {};
   let returnPromptAction = null;
@@ -47,14 +53,14 @@
   let leaveTimestamp = 0;
 
   const FILTERS = [
-    { id: 'all', label: '✨ Doporučené' },
-    { id: 'free', label: 'Zdarma' },
-    { id: 'fast', label: 'Do 5 min' },
-    { id: 'writing', label: 'Z gauče' },
-    { id: 'outdoor', label: 'Venku' },
-    { id: 'tutoring', label: 'U počítače' },
-    { id: 'donation', label: 'Drobný dar' },
-    { id: 'evidenceA', label: '✦ Ověřený dopad (A)' }
+    { id: "all", label: "✨ Doporučené" },
+    { id: "free", label: "Zdarma" },
+    { id: "fast", label: "Do 5 min" },
+    { id: "writing", label: "Z gauče" },
+    { id: "outdoor", label: "Venku" },
+    { id: "tutoring", label: "U počítače" },
+    { id: "donation", label: "Drobný dar" },
+    { id: "evidenceA", label: "✦ Ověřený dopad (A)" },
   ];
 
   onMount(() => {
@@ -62,15 +68,17 @@
     soundMuted = isSoundMuted();
     try {
       const sp = new URLSearchParams(window.location.search);
-      const fParam = sp.get('filter');
+      const fParam = sp.get("filter");
       if (fParam && FILTERS.some((f) => f.id === fParam)) {
         activeFilter = fParam;
         visibleLimit = 6;
       }
-      const actionParam = sp.get('action') || window.location.hash.replace(/^#(?:action=)?/, '');
+      const actionParam =
+        sp.get("action") || window.location.hash.replace(/^#(?:action=)?/, "");
       if (actionParam) {
         const matched = MICRO_ACTIONS.find(
-          (a) => a.id === actionParam || a.id.replace(/_/g, '-') === actionParam
+          (a) =>
+            a.id === actionParam || a.id.replace(/_/g, "-") === actionParam,
         );
         if (matched) {
           spotlightId = matched.id;
@@ -78,7 +86,9 @@
         }
       }
       const s = JSON.parse(
-        safeGetItem('aa_values', 'local') || safeGetItem('aa_guided_values_v2', 'local') || '[]'
+        safeGetItem(AA_USER_TOPICS_KEY, "local") ||
+          safeGetItem(AA_GUIDED_VALUES_KEY, "local") ||
+          "[]",
       );
       if (Array.isArray(s)) savedValues = s;
     } catch {}
@@ -96,17 +106,24 @@
           consumePendingPartnerReturn(0);
         }
         const targetId = persisted?.id || awaitingReturnAction?.id;
-        const matched = MICRO_ACTIONS.find((a) => a.id === targetId) || awaitingReturnAction;
+        const matched =
+          MICRO_ACTIONS.find((a) => a.id === targetId) || awaitingReturnAction;
         if (matched) {
           returnPromptAction = matched;
           returnMetric = 0;
           awaitingReturnAction = null;
           playPayoffAsmr(matched);
-          trackEvent('aa_partner_return_prompt', { surface: 'online', id: matched.id });
+          trackEvent("aa_partner_return_prompt", {
+            surface: "online",
+            id: matched.id,
+          });
         }
       } else {
         const remPersisted = getPendingPartnerReturnRemainingMs(3000);
-        const remMem = awaitingReturnAction && elapsedMem > 0 ? Math.max(0, 3000 - elapsedMem) : 0;
+        const remMem =
+          awaitingReturnAction && elapsedMem > 0
+            ? Math.max(0, 3000 - elapsedMem)
+            : 0;
         const rem = Math.max(remPersisted, remMem);
         if (rem > 0) {
           onlineReturnTimer = setTimeout(checkPartnerReturn, rem + 30);
@@ -115,52 +132,55 @@
     };
 
     const onVis = () => {
-      if (document.visibilityState === 'visible') checkPartnerReturn();
+      if (document.visibilityState === "visible") checkPartnerReturn();
     };
     checkPartnerReturn();
 
-    document.addEventListener('visibilitychange', onVis);
-    window.addEventListener('focus', checkPartnerReturn);
-    window.addEventListener('pageshow', checkPartnerReturn);
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", checkPartnerReturn);
+    window.addEventListener("pageshow", checkPartnerReturn);
 
     return () => {
       if (onlineReturnTimer) clearTimeout(onlineReturnTimer);
-      document.removeEventListener('visibilitychange', onVis);
-      window.removeEventListener('focus', checkPartnerReturn);
-      window.removeEventListener('pageshow', checkPartnerReturn);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", checkPartnerReturn);
+      window.removeEventListener("pageshow", checkPartnerReturn);
     };
   });
 
   function handleToggleSound() {
     soundMuted = toggleSoundMuted();
-    trackEvent('aa_sound_toggle', { surface: 'online', muted: soundMuted });
+    trackEvent("aa_sound_toggle", { surface: "online", muted: soundMuted });
   }
 
   function toggleCardEffect(action, event) {
     activeEffectCardId = action.id;
-    notifyMollySpark(action, { surface: 'online' });
-    const stage = event?.currentTarget?.closest?.('.card-effect-stage');
-    const canvas = stage?.querySelector?.('canvas.impact-payoff-canvas');
+    notifyMollySpark(action, { surface: "online" });
+    const stage = event?.currentTarget?.closest?.(".card-effect-stage");
+    const canvas = stage?.querySelector?.("canvas.impact-payoff-canvas");
     if (canvas) {
       triggerCanvasBurst(canvas, true);
     } else {
       playPayoffAsmr(action);
     }
-    trackEvent('aa_effect_preview_toggle', { surface: 'online', id: action.id });
+    trackEvent("aa_effect_preview_toggle", {
+      surface: "online",
+      id: action.id,
+    });
   }
 
   function handleStartOnlineAction(action) {
     awaitingReturnAction = action;
     leaveTimestamp = Date.now();
     returnPromptAction = null;
-    savePendingPartnerReturn(action, 'online');
-    markActionStarted(action.id, 'online');
-    trackEvent('aa_clickout', { surface: 'online', id: action.id });
+    savePendingPartnerReturn(action, "online");
+    markActionStarted(action.id, "online");
+    trackEvent("aa_clickout", { surface: "online", id: action.id });
   }
 
   async function shareAction(action) {
     const directUrl =
-      typeof window !== 'undefined'
+      typeof window !== "undefined"
         ? `${window.location.origin}/?action=${encodeURIComponent(action.id)}`
         : action.url;
     const shareText = `Tip na drobný dobrý skutek (${cleanTitle(action.title)} – ${action.org}): ${directUrl}`;
@@ -169,16 +189,16 @@
         await navigator.clipboard.writeText(directUrl);
         copiedId = action.id;
         setTimeout(() => {
-          if (copiedId === action.id) copiedId = '';
+          if (copiedId === action.id) copiedId = "";
         }, 2500);
       } else if (navigator.share) {
         await navigator.share({
           title: cleanTitle(action.title),
           text: shareText,
-          url: directUrl
+          url: directUrl,
         });
       }
-      trackEvent('aa_online_share', { id: action.id });
+      trackEvent("aa_online_share", { id: action.id });
     } catch {}
   }
 
@@ -195,7 +215,7 @@
     const first = action.values
       .map((k) => VALUES.find((v) => v.key === k)?.shortLabel)
       .filter(Boolean)[0];
-    return first || 'Dobrý skutek';
+    return first || "Dobrý skutek";
   }
 
   function pickRandomSpark() {
@@ -207,28 +227,37 @@
       visibleLimit = chosenIdx + 3;
     }
     spotlightId = chosen.id;
-    trackEvent('aa_online_random_spark', { id: chosen.id });
+    trackEvent("aa_online_random_spark", { id: chosen.id });
     setTimeout(() => {
       const el = document.getElementById(`online-card-${chosen.id}`);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 60);
     setTimeout(() => {
-      if (spotlightId === chosen.id) spotlightId = '';
+      if (spotlightId === chosen.id) spotlightId = "";
     }, 3200);
   }
 
   $: filteredActions = MICRO_ACTIONS.filter((a) => {
-    if (activeFilter === 'free' && a.cost !== 'free') return false;
-    if (activeFilter === 'fast' && a.timeBucket !== '5') return false;
-    if (activeFilter === 'writing' && !(a.categoryTag === 'writing' || a.mode === 'home')) return false;
-    if (activeFilter === 'outdoor' && a.mode !== 'local') return false;
-    if (activeFilter === 'tutoring' && !(a.categoryTag === 'tutoring' || a.categoryTag === 'tech')) return false;
-    if (activeFilter === 'donation' && a.cost !== 'donation') return false;
-    if (activeFilter === 'evidenceA' && a.impactEvidence !== 'A') return false;
+    if (activeFilter === "free" && a.cost !== "free") return false;
+    if (activeFilter === "fast" && a.timeBucket !== "5") return false;
+    if (
+      activeFilter === "writing" &&
+      !(a.categoryTag === "writing" || a.mode === "home")
+    )
+      return false;
+    if (activeFilter === "outdoor" && a.mode !== "local") return false;
+    if (
+      activeFilter === "tutoring" &&
+      !(a.categoryTag === "tutoring" || a.categoryTag === "tech")
+    )
+      return false;
+    if (activeFilter === "donation" && a.cost !== "donation") return false;
+    if (activeFilter === "evidenceA" && a.impactEvidence !== "A") return false;
 
     const q = searchQuery.trim().toLowerCase();
     if (q) {
-      const hay = `${a.title} ${a.org} ${a.desc} ${a.reassurance || ''} ${a.metaLabel}`.toLowerCase();
+      const hay =
+        `${a.title} ${a.org} ${a.desc} ${a.reassurance || ""} ${a.metaLabel}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -239,9 +268,14 @@
     return a.timeMinutes - b.timeMinutes;
   });
 
-  $: effectiveLimit = searchQuery.trim() ? Math.max(visibleLimit, 9) : visibleLimit;
+  $: effectiveLimit = searchQuery.trim()
+    ? Math.max(visibleLimit, 9)
+    : visibleLimit;
   $: visibleActions = filteredActions.slice(0, effectiveLimit);
-  $: remainingCount = Math.max(0, filteredActions.length - visibleActions.length);
+  $: remainingCount = Math.max(
+    0,
+    filteredActions.length - visibleActions.length,
+  );
 </script>
 
 <svelte:head>
@@ -250,10 +284,17 @@
 
 <div class="page">
   <header class="subpage-hero header">
-    <div class="hero-kicker">DROBNÉ SKUTKY NA DÁLKU I VENKU · {MICRO_ACTIONS.length} OVĚŘENÝCH PROJEKTŮ</div>
-    <h1 class="title">Drobné skutky, které zvládneš <span class="serif-accent">během pár minut</span></h1>
+    <div class="hero-kicker">
+      DROBNÉ SKUTKY NA DÁLKU I VENKU · {MICRO_ACTIONS.length} OVĚŘENÝCH PROJEKTŮ
+    </div>
+    <h1 class="title">
+      Drobné skutky, které zvládneš <span class="serif-accent"
+        >během pár minut</span
+      >
+    </h1>
     <p class="subtitle">
-      Začínáme třemi lehkými tipy — další si kdykoliv rozbalíš nebo vyhledáš podle nálady.
+      Začínáme třemi lehkými tipy — další si kdykoliv rozbalíš nebo vyhledáš
+      podle nálady.
     </p>
 
     <div class="hero-tools-row">
@@ -283,10 +324,13 @@
     >
       <div class="return-dopamine-head">
         <span class="return-dopamine-title">
-          ✨ Vítej zpět z projektu {cleanTitle(returnPromptAction.title)}! Povedlo se?
+          ✨ Vítej zpět z projektu {cleanTitle(returnPromptAction.title)}!
+          Povedlo se?
         </span>
         <span class="impact-payoff-badge">
-          {getActionEffectMeta(returnPromptAction, returnMetric, { isReturnStrip: true }).badge}
+          {getActionEffectMeta(returnPromptAction, returnMetric, {
+            isReturnStrip: true,
+          }).badge}
         </span>
       </div>
       <canvas
@@ -299,7 +343,7 @@
           climax: true,
           onProgress: (v) => {
             returnMetric = v;
-          }
+          },
         }}
       ></canvas>
       <div class="return-dopamine-actions">
@@ -312,7 +356,7 @@
             recordSmallWin({
               id: doneAction.id,
               title: doneAction.title,
-              surface: 'online'
+              surface: "online",
             });
           }}
         >
@@ -329,7 +373,11 @@
     </div>
   {/if}
 
-  <div class="filters-bar filter-toolbar" role="group" aria-label="Filtrovat drobné skutky">
+  <div
+    class="filters-bar filter-toolbar"
+    role="group"
+    aria-label="Filtrovat drobné skutky"
+  >
     {#each FILTERS as f}
       <button
         type="button"
@@ -338,8 +386,8 @@
         on:click={() => {
           activeFilter = f.id;
           visibleLimit = 3;
-          trackEvent('aa_online_filter', { filter: f.id });
-          trackFunnel('intent_selected', { surface: 'online', filter: f.id });
+          trackEvent("aa_online_filter", { filter: f.id });
+          trackFunnel("intent_selected", { surface: "online", filter: f.id });
         }}
       >
         {f.label}
@@ -354,8 +402,8 @@
         type="button"
         class="cta primary"
         on:click={() => {
-          searchQuery = '';
-          activeFilter = 'all';
+          searchQuery = "";
+          activeFilter = "all";
           visibleLimit = 3;
         }}
       >
@@ -369,17 +417,18 @@
           action={o}
           variant="directory"
           spotlight={spotlightId === o.id}
-          isStarted={Array.isArray($startedActionIds) && $startedActionIds.includes(o.id)}
+          isStarted={Array.isArray($startedActionIds) &&
+            $startedActionIds.includes(o.id)}
           isCompleted={isCompleted(o.id)}
           showEffectPreview={oi === 0}
-          soundMuted={soundMuted}
+          {soundMuted}
           copiedDirectLink={copiedId === o.id}
           onStart={(action) => handleStartOnlineAction(action)}
           onComplete={(action) =>
             recordSmallWin({
               id: action.id,
               title: action.title,
-              surface: 'online'
+              surface: "online",
             })}
           onShare={(action) => shareAction(action)}
           onReportBroken={(action) =>
@@ -387,7 +436,7 @@
               id: action.id,
               title: cleanTitle(action.title),
               org: action.org,
-              url: action.url
+              url: action.url,
             })}
           onToggleSound={handleToggleSound}
         />
@@ -404,9 +453,14 @@
           <span>Ukázat dalších {Math.min(6, remainingCount)} tipů</span>
         </button>
         <span class="calm-more-hint">
-          Zobrazeno {visibleActions.length} z {filteredActions.length} ověřených možností.
+          Zobrazeno {visibleActions.length} z {filteredActions.length} ověřených
+          možností.
           {#if remainingCount > 6}
-            <button type="button" class="link-show-all" on:click={() => (visibleLimit = filteredActions.length)}>
+            <button
+              type="button"
+              class="link-show-all"
+              on:click={() => (visibleLimit = filteredActions.length)}
+            >
               Zobrazit všechny ({filteredActions.length})
             </button>
           {/if}
@@ -426,7 +480,9 @@
       </div>
       <div class="om-links">
         {#each EVIDENCE_METHODOLOGY.sources as s}
-          <a href={s.url} target="_blank" rel="noopener noreferrer">{s.label} ↗</a>
+          <a href={s.url} target="_blank" rel="noopener noreferrer"
+            >{s.label} ↗</a
+          >
         {/each}
       </div>
     </div>
@@ -708,8 +764,18 @@
       -webkit-overflow-scrolling: touch;
       scroll-snap-type: x mandatory;
       scroll-padding: 0 0.5rem;
-      mask-image: linear-gradient(to right, black 0%, black calc(100% - 32px), transparent 100%);
-      -webkit-mask-image: linear-gradient(to right, black 0%, black calc(100% - 32px), transparent 100%);
+      mask-image: linear-gradient(
+        to right,
+        black 0%,
+        black calc(100% - 32px),
+        transparent 100%
+      );
+      -webkit-mask-image: linear-gradient(
+        to right,
+        black 0%,
+        black calc(100% - 32px),
+        transparent 100%
+      );
     }
 
     .filters-bar::-webkit-scrollbar,

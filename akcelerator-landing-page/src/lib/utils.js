@@ -1,102 +1,10 @@
 import { writable } from 'svelte/store';
 import { safeText, haversineKm } from './validation.js';
 
-export { safeText, haversineKm };
-
-/** @type {Map<string, string>} */
-const MEMORY_LOCAL = new Map();
-/** @type {Map<string, string>} */
-const MEMORY_SESSION = new Map();
-
-/**
- * Safely resolves window.localStorage or window.sessionStorage inside try/catch
- * so browsers with "Block all cookies" or strict In-App WebViews never throw SecurityError (H2).
- * @param {'local' | 'session'} [kind='local']
- * @returns {Storage | null}
- */
-function resolveNativeStorage(kind = 'local') {
-  if (typeof window === 'undefined') return null;
-  try {
-    return kind === 'session' ? window.sessionStorage : window.localStorage;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Checks whether native localStorage is accessible and persistent.
- * @returns {boolean}
- */
-export function isStoragePersistent() {
-  const s = resolveNativeStorage('local');
-  if (!s) return false;
-  try {
-    const probeKey = '__aa_storage_probe__';
-    s.setItem(probeKey, '1');
-    s.removeItem(probeKey);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Safely reads a key from localStorage or sessionStorage with in-memory fallback (H2).
- * @param {string} key
- * @param {'local' | 'session'} [kind='local']
- * @returns {string | null}
- */
-export function safeGetItem(key, kind = 'local') {
-  const mem = kind === 'session' ? MEMORY_SESSION : MEMORY_LOCAL;
-  const native = resolveNativeStorage(kind);
-  if (native) {
-    try {
-      const val = native.getItem(key);
-      if (val !== null) return val;
-    } catch {
-      // Fall through to in-memory map
-    }
-  }
-  return mem.has(key) ? (mem.get(key) ?? null) : null;
-}
-
-/**
- * Safely writes a key to localStorage or sessionStorage with in-memory fallback (H2).
- * @param {string} key
- * @param {string} value
- * @param {'local' | 'session'} [kind='local']
- */
-export function safeSetItem(key, value, kind = 'local') {
-  const strVal = String(value);
-  const mem = kind === 'session' ? MEMORY_SESSION : MEMORY_LOCAL;
-  mem.set(key, strVal);
-  const native = resolveNativeStorage(kind);
-  if (native) {
-    try {
-      native.setItem(key, strVal);
-    } catch {
-      // Stored in memory fallback
-    }
-  }
-}
-
-/**
- * Safely removes a key from localStorage or sessionStorage and in-memory fallback (H2).
- * @param {string} key
- * @param {'local' | 'session'} [kind='local']
- */
-export function safeRemoveItem(key, kind = 'local') {
-  const mem = kind === 'session' ? MEMORY_SESSION : MEMORY_LOCAL;
-  mem.delete(key);
-  const native = resolveNativeStorage(kind);
-  if (native) {
-    try {
-      native.removeItem(key);
-    } catch {
-      // Ignore
-    }
-  }
-}
+export {
+  safeText,
+  haversineKm
+};
 
 /**
  * Detects whether the user is browsing inside an ephemeral social-media In-App WebView (M18).
@@ -175,6 +83,7 @@ export function firstText(v) {
  * window CustomEvents during SSR hydration (M21 / AUDIT #30).
  */
 export const isFeedbackOpen = writable(false);
+/** @type {import('svelte/store').Writable<string | { title?: string, prefill?: string }>} */
 export const feedbackPrefill = writable('');
 export const isCrisisOpen = writable(false);
 
@@ -186,12 +95,10 @@ export function openFeedbackModal(prefillOrOpts = '') {
   if (typeof prefillOrOpts === 'string' && prefillOrOpts.trim()) {
     feedbackPrefill.set(prefillOrOpts.trim());
   } else if (prefillOrOpts && typeof prefillOrOpts === 'object') {
-    feedbackPrefill.set(
-      /** @type {any} */ ({
-        title: prefillOrOpts.title || '💬 Zpětná vazba',
-        prefill: prefillOrOpts.prefill || ''
-      })
-    );
+    feedbackPrefill.set({
+      title: prefillOrOpts.title || '💬 Zpětná vazba',
+      prefill: prefillOrOpts.prefill || ''
+    });
   }
   isFeedbackOpen.set(true);
 }
@@ -204,17 +111,9 @@ export function toggleCrisisModal() {
   isCrisisOpen.update((v) => !v);
 }
 
-export function openCrisisModal() {
-  isCrisisOpen.set(true);
-}
-
-export function closeCrisisModal() {
-  isCrisisOpen.set(false);
-}
-
 /**
  * Encodes a compact, portable Base64URL backup code of the user's progress (M18 / AUDIT #26).
- * @param {Record<string, any>} payload
+ * @param {Record<string, unknown>} payload
  * @returns {string}
  */
 export function exportProgressPasscode(payload) {
@@ -235,7 +134,7 @@ export function exportProgressPasscode(payload) {
 /**
  * Decodes a portable Base64URL backup code produced by exportProgressPasscode (M18 / AUDIT #26).
  * @param {string} code
- * @returns {Record<string, any> | null}
+ * @returns {Record<string, unknown> | null}
  */
 export function importProgressPasscode(code) {
   try {

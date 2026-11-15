@@ -47,8 +47,8 @@ export function clamp(n, min, max) {
 
 /**
  * Validates geographic coordinates.
- * @param {number | null} lat
- * @param {number | null} lon
+ * @param {unknown} lat
+ * @param {unknown} lon
  * @returns {lat is number}
  */
 export function isValidLatLon(lat, lon) {
@@ -91,9 +91,9 @@ export function haversineKm(lat1, lon1, lat2, lon2) {
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
 }
 

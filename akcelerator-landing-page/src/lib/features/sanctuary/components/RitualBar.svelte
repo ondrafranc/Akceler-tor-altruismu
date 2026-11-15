@@ -4,9 +4,13 @@
   export let nextSeedToPlant = null;
   export let wishesCount = 0;
 
+  /** @type {((payload: { ritualMode: string, ritualInput: string }) => void) | null} */
   export let onSubmit = null;
+  /** @type {((mode: string) => void) | null} */
   export let onSelectMode = null;
+  /** @type {((deed: { label: string, title: string, element: string, lightType: string }) => void) | null} */
   export let onQuickDeed = null;
+  /** @type {(() => void) | null} */
   export let onClearWishes = null;
 
   export const QUICK_OFFLINE_DEEDS = [

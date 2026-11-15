@@ -25,7 +25,7 @@ export function isLowPowerDevice() {
   if (cachedLowPower !== null) return cachedLowPower;
   if (!win()) return false;
   try {
-    const nav = /** @type {any} */ (navigator);
+    const nav = /** @type {Navigator & { deviceMemory?: number, connection?: { saveData?: boolean } }} */ (navigator);
     const coarse = !!window.matchMedia?.('(pointer: coarse)').matches;
     const narrow = (window.innerWidth || 1280) <= 820;
     const cores = Number(nav.hardwareConcurrency) || 4;
@@ -50,8 +50,9 @@ export function getCanvasDprCap() {
  * Na slabších zařízeních udělá z `shadowBlur` no-op pro konkrétní 2D kontext.
  * Gaussovský rozmaz stínu se počítá na CPU při každém vykreslení tvaru a je hlavní příčinou sekání
  * částicových scén na telefonech. Barvy, tvary i aditivní záře (`lighter`) zůstávají zachované.
- * @param {CanvasRenderingContext2D | null | undefined} ctx
- * @returns {CanvasRenderingContext2D | null | undefined}
+ * @template T
+ * @param {T} ctx
+ * @returns {T}
  */
 export function optimizeCanvasContext(ctx) {
   if (!ctx || !isLowPowerDevice()) return ctx;
@@ -59,9 +60,9 @@ export function optimizeCanvasContext(ctx) {
     Object.defineProperty(ctx, 'shadowBlur', {
       configurable: true,
       get: () => 0,
-      set: () => {}
+      set: () => { }
     });
-  } catch {}
+  } catch { }
   return ctx;
 }
 
@@ -98,7 +99,7 @@ export function ensureSharedOrientation() {
       { passive: true }
     );
     sharedOrientationListening = true;
-  } catch {}
+  } catch { }
 }
 
 /**
@@ -116,5 +117,5 @@ export function getSharedOrientationGx() {
 export function safeVibrate(v) {
   try {
     navigator.vibrate?.(v);
-  } catch {}
+  } catch { }
 }

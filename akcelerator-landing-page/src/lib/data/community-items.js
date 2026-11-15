@@ -1,6 +1,6 @@
 /**
  * In-memory úložiště pro komunitní tipy (slouží jako okamžitý fallback, když není připojená DB)
- * @type {Array<any>}
+ * @type {Array<{ id: string, kind: string, name: string, category: string, description: string, lat: number, lon: number, [key: string]: unknown }>}
  */
 export const LOCAL_COMMUNITY_ITEMS = [
   {

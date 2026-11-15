@@ -20,24 +20,29 @@
   import { recordSmallWin, completedSteps } from "../../../lib/progress.js";
   import {
     isSoundMuted,
-    toggleSoundMuted,
-    holdSpark,
-    impactCanvas,
-    getActionEffectMeta,
-    playPayoffAsmr,
+    toggleSoundMuted
+  } from "../../../lib/audio/audioContext.js";
+  import { playPayoffAsmr } from "../../../lib/audio/presets.js";
+  import {
     savePendingPartnerReturn,
     consumePendingPartnerReturn,
-    getPendingPartnerReturnRemainingMs,
-    triggerCanvasBurst
-  } from "../../../lib/sensoryEngine.js";
+    getPendingPartnerReturnRemainingMs
+  } from "../../../lib/features/actions/services/partnerReturnService.js";
+  import { triggerCanvasBurst } from "../../../lib/sensory/canvas/controllerRegistry.js";
+  import { holdSpark } from "../../../lib/sensory/interaction/holdSpark.js";
   import { notifyMollySpark } from "../../../lib/mollyStore.js";
   import { haversineKm } from "../../../lib/validation.js";
   import {
     cleanTitle,
-    cleanMeta,
+    cleanMeta
+  } from "../../../lib/utils.js";
+  import {
     safeGetItem,
     safeSetItem,
-  } from "../../../lib/utils.js";
+    AA_USER_TOPICS_KEY,
+    AA_GUIDED_VALUES_KEY,
+    AA_PREFS_NEAR_KEY
+  } from "../../../lib/storage/index.js";
   import ActionCard from "$lib/features/actions/components/ActionCard.svelte";
 
   const SITUATIONS = [
@@ -116,13 +121,20 @@
   let copiedDirectLink = false;
 
   // Adaptivní parametry průvodce (sekce 4.2 + 5.2)
-  let commitment = "any"; // 'any' | 'one_off' | 'long_term'
-  let contactLevel = "any"; // 'any' | 'anonymous' | 'contact_ok'
-  let recipientMacro = "any"; // 'any' | 'people' | 'animals' | 'nature'
-  let socialOverride = "any"; // 'any' | 'solo' | 'group'
-  let modeOverride = "any"; // 'any' | 'online' | 'local'
-  let costOverride = "any"; // 'any' | 'free' | 'donation'
-  let evidenceTier = "any"; // 'any' | 'A' | 'B' | 'C'
+  /** @type {'any' | 'one_off' | 'long_term'} */
+  let commitment = "any";
+  /** @type {'any' | 'anonymous' | 'contact_ok'} */
+  let contactLevel = "any";
+  /** @type {'any' | 'people' | 'animals' | 'nature'} */
+  let recipientMacro = "any";
+  /** @type {'any' | 'solo' | 'group'} */
+  let socialOverride = "any";
+  /** @type {'any' | 'online' | 'local'} */
+  let modeOverride = "any";
+  /** @type {'any' | 'free' | 'donation'} */
+  let costOverride = "any";
+  /** @type {'any' | 'A' | 'B' | 'C'} */
+  let evidenceTier = "any";
 
   $: activeSituation =
     SITUATIONS.find((s) => s.id === activeSituationId) || SITUATIONS[0];
@@ -282,14 +294,14 @@
 
   function persistPrefs() {
     try {
-      safeSetItem("aa_values", JSON.stringify(selectedTopics), "local");
+      safeSetItem(AA_USER_TOPICS_KEY, JSON.stringify(selectedTopics), "local");
       safeSetItem(
-        "aa_guided_values_v2",
+        AA_GUIDED_VALUES_KEY,
         JSON.stringify(selectedTopics),
         "local",
       );
       safeSetItem(
-        "aa_prefs_near",
+        AA_PREFS_NEAR_KEY,
         JSON.stringify({ situation: activeSituationId, cityId }),
         "local",
       );
@@ -319,11 +331,11 @@
       const topicParam = sp.get("topic");
       if (topicParam && VALUES.some((v) => v.key === topicParam)) {
         selectedTopics = [topicParam];
-        safeSetItem("aa_values", JSON.stringify(selectedTopics), "local");
+        safeSetItem(AA_USER_TOPICS_KEY, JSON.stringify(selectedTopics), "local");
       } else {
         const s = JSON.parse(
-          safeGetItem("aa_values", "local") ||
-            safeGetItem("aa_guided_values_v2", "local") ||
+          safeGetItem(AA_USER_TOPICS_KEY, "local") ||
+            safeGetItem(AA_GUIDED_VALUES_KEY, "local") ||
             "[]",
         );
         if (Array.isArray(s) && s.length) {
@@ -333,7 +345,7 @@
         }
       }
       const nearSaved = JSON.parse(
-        safeGetItem("aa_prefs_near", "local") || "{}",
+        safeGetItem(AA_PREFS_NEAR_KEY, "local") || "{}",
       );
       if (
         nearSaved?.cityId &&
@@ -710,7 +722,7 @@
           <button
             type="button"
             class="topic-pill"
-            class:selected={recipientMacro === "people"}
+            class:selected={String(recipientMacro) === "people"}
             on:click={() =>
               applyAdaptiveFilter(() => (recipientMacro = "people"), "recipient")}
           >
@@ -719,7 +731,7 @@
           <button
             type="button"
             class="topic-pill"
-            class:selected={recipientMacro === "animals"}
+            class:selected={String(recipientMacro) === "animals"}
             on:click={() =>
               applyAdaptiveFilter(
                 () => (recipientMacro = "animals"),
@@ -731,7 +743,7 @@
           <button
             type="button"
             class="topic-pill"
-            class:selected={recipientMacro === "nature"}
+            class:selected={String(recipientMacro) === "nature"}
             on:click={() =>
               applyAdaptiveFilter(() => (recipientMacro = "nature"), "recipient")}
           >

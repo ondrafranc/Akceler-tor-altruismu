@@ -241,8 +241,9 @@ export async function PATCH({ request }) {
     return json({ success: false, error: parsed.error }, { status: parsed.status });
   }
 
-  const id = safeText(parsed.data.id);
-  const status = safeText(parsed.data.status);
+  const patchData = parsed.data;
+  const id = safeText(patchData.id);
+  const status = safeText(patchData.status);
   if (!id || !['approved', 'rejected', 'pending'].includes(status)) {
     return json({ success: false, error: 'Chybí platné ID nebo cílový status.' }, { status: 400 });
   }

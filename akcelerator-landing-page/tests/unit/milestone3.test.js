@@ -7,7 +7,6 @@ import { compile } from 'svelte/compiler';
 import {
   playCelebrationChord
 } from '../../src/lib/audio/presets.js';
-import * as SensoryEngineBarrel from '../../src/lib/sensoryEngine.js';
 import {
   savePendingPartnerReturn,
   readPendingPartnerRecord,
@@ -41,10 +40,8 @@ describe('Milestone 3: In-Situ Reward, Swipe Deck, Session Closure & Offline PWA
   });
 
   describe('1. In-Situ Audio Synthesis & Celebration Engine', () => {
-    it('playCelebrationChord is exported from presets and sensoryEngine barrel', () => {
+    it('playCelebrationChord is exported directly from presets', () => {
       expect(typeof playCelebrationChord).toBe('function');
-      expect(typeof SensoryEngineBarrel.playCelebrationChord).toBe('function');
-      expect(SensoryEngineBarrel.playCelebrationChord).toBe(playCelebrationChord);
     });
 
     it('playCelebrationChord runs safely without exceptions and without external network audio downloads', () => {
@@ -53,7 +50,6 @@ describe('Milestone 3: In-Situ Reward, Swipe Deck, Session Closure & Offline PWA
 
     it('checkImmediatePartnerReturn and partnerReturnService eliminate the artificial 3000ms delay', () => {
       expect(typeof checkImmediatePartnerReturn).toBe('function');
-      expect(SensoryEngineBarrel.checkImmediatePartnerReturn).toBe(checkImmediatePartnerReturn);
 
       // Remaining ms should be 0 by default (no artificial 3000ms delay)
       expect(getPendingPartnerReturnRemainingMs(0)).toBe(0);
@@ -238,6 +234,100 @@ describe('Milestone 3: In-Situ Reward, Swipe Deck, Session Closure & Offline PWA
       } finally {
         global.fetch = originalFetch;
       }
+    });
+  });
+
+  describe('6. Heavy Canvas Modularization & Invariant Guards', () => {
+    it('mollyCatRenderer exports drawMollyCat with robust null guards', async () => {
+      const { drawMollyCat } = await import('../../src/lib/molly/mollyCatRenderer.js');
+      expect(typeof drawMollyCat).toBe('function');
+
+      // Null context guard
+      expect(() => drawMollyCat(null, 110, 96, 0, null)).not.toThrow();
+
+      // Null state guard
+      const mockCtx = /** @type {CanvasRenderingContext2D} */ (/** @type {unknown} */ ({
+        clearRect: vi.fn(),
+        save: vi.fn(),
+        restore: vi.fn(),
+        createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+        beginPath: vi.fn(),
+        ellipse: vi.fn(),
+        fill: vi.fn(),
+        stroke: vi.fn(),
+        translate: vi.fn(),
+        scale: vi.fn(),
+        rotate: vi.fn(),
+        moveTo: vi.fn(),
+        lineTo: vi.fn(),
+        arc: vi.fn(),
+        quadraticCurveTo: vi.fn(),
+        bezierCurveTo: vi.fn(),
+        closePath: vi.fn(),
+        clip: vi.fn(),
+        fillRect: vi.fn()
+      }));
+      expect(() => drawMollyCat(mockCtx, 110, 96, 0, null)).not.toThrow();
+
+      // Normal execution with state
+      const mockState = {
+        vx: 0,
+        vy: 0,
+        behavior: 'IDLE_SIT',
+        eatTimer: 0,
+        petBlissTimer: 0,
+        currentState: { mode: 'roaming', mood: 'curious' },
+        facing: 1,
+        walkCycle: 0,
+        flyingTreat: null,
+        pouncePhase: 0,
+        groomPhase: 0,
+        accessories: { collar: true, bell: true, flower: true, star: true },
+        pointerX: 100,
+        pointerY: 100,
+        posX: 50,
+        posY: 50,
+        blinkProgress: 0,
+        firefly: null,
+        hearts: [{ x: 10, y: 10, vx: 0, vy: -1, alpha: 0.8, scale: 1, color: '#f59e0b' }],
+        stardust: [{ x: 20, y: 20, vx: 0, vy: -0.5, alpha: 0.9, size: 2, twinkle: 0, color: '#fde68a' }],
+        frameK: 1,
+        isFollowingMouse: false
+      };
+      expect(() => drawMollyCat(mockCtx, 110, 96, 1.5, mockState)).not.toThrow();
+      expect(mockCtx.clearRect).toHaveBeenCalled();
+      expect(mockCtx.save).toHaveBeenCalled();
+      expect(mockCtx.restore).toHaveBeenCalled();
+    });
+
+    it('MollyCompanion.svelte does not contain duplicate drawMollyCat and actively calls renderProceduralMollyCat', () => {
+      const source = readFileSync(path.resolve(__dirname, '../../src/components/MollyCompanion.svelte'), 'utf8');
+      expect(source).not.toContain('function drawMollyCat(');
+      expect(source).toContain("import { drawMollyCat as renderProceduralMollyCat } from '$lib/molly/mollyCatRenderer.js';");
+      expect(source).toContain('renderProceduralMollyCat(catCtx, LOGICAL_W, LOGICAL_H, nowSec, {');
+    });
+
+    it('sanctuaryLakeRenderer functions safely handle null context without throwing', async () => {
+      const lakeRenderer = await import('../../src/lib/features/sanctuary/services/sanctuaryLakeRenderer.js');
+      expect(() => lakeRenderer.drawLakeMist(null, null)).not.toThrow();
+      expect(() => lakeRenderer.drawBreathingPondAura(null, null)).not.toThrow();
+      expect(() => lakeRenderer.drawStarLakeReflection(null, null)).not.toThrow();
+      expect(() => lakeRenderer.drawWaterRipples(null, null)).not.toThrow();
+      expect(() => lakeRenderer.drawLanternWaterReflection(null, null)).not.toThrow();
+
+      // Also safely handle null params
+      const mockCtx = /** @type {CanvasRenderingContext2D} */ (/** @type {unknown} */ ({ save: vi.fn(), restore: vi.fn() }));
+      expect(() => lakeRenderer.drawLakeMist(mockCtx, null)).not.toThrow();
+      expect(() => lakeRenderer.drawBreathingPondAura(mockCtx, null)).not.toThrow();
+      expect(() => lakeRenderer.drawStarLakeReflection(mockCtx, null)).not.toThrow();
+      expect(() => lakeRenderer.drawWaterRipples(mockCtx, null)).not.toThrow();
+      expect(() => lakeRenderer.drawLanternWaterReflection(mockCtx, null)).not.toThrow();
+    });
+
+    it('src/lib/sensory/index.js forwarder barrel does not exist', async () => {
+      const { existsSync } = await import('node:fs');
+      const barrelPath = path.resolve(__dirname, '../../src/lib/sensory/index.js');
+      expect(existsSync(barrelPath)).toBe(false);
     });
   });
 });

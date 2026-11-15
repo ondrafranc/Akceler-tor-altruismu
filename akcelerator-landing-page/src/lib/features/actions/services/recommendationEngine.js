@@ -20,12 +20,69 @@ export function hashSignature(str) {
 }
 
 /**
+ * Type guard verifying that a value is a non-null, non-array object record.
+ * @param {unknown} val
+ * @returns {val is Record<string, unknown>}
+ */
+export function isRecord(val) {
+  return Object.prototype.toString.call(val) === '[object Object]';
+}
+
+/**
+ * Runtime type guard verifying whether a value satisfies the MicroAction contract.
+ * @param {unknown} val
+ * @returns {val is import('$lib/types').MicroAction}
+ */
+export function isMicroAction(val) {
+  if (!isRecord(val)) return false;
+  return (
+    typeof val.id === 'string' &&
+    typeof val.title === 'string' &&
+    typeof val.org === 'string' &&
+    typeof val.desc === 'string' &&
+    Array.isArray(val.steps)
+  );
+}
+
+/**
+ * Normalizes an arbitrary object record into a structurally complete MicroAction.
+ * @param {Record<string, unknown>} raw
+ * @returns {import('$lib/types').MicroAction}
+ */
+export function toSafeMicroAction(raw) {
+  return {
+    ...raw,
+    id: typeof raw.id === 'string' ? raw.id : '',
+    title: typeof raw.title === 'string' ? raw.title : '',
+    org: typeof raw.org === 'string' ? raw.org : '',
+    desc: typeof raw.desc === 'string' ? raw.desc : '',
+    whyItMatters: typeof raw.whyItMatters === 'string' ? raw.whyItMatters : '',
+    steps: Array.isArray(raw.steps) ? raw.steps.map(String) : [],
+    cta: typeof raw.cta === 'string' ? raw.cta : '',
+    url: typeof raw.url === 'string' ? raw.url : '',
+    reassurance: typeof raw.reassurance === 'string' ? raw.reassurance : '',
+    selfBenefit: typeof raw.selfBenefit === 'string' ? raw.selfBenefit : '',
+    concreteImpact: typeof raw.concreteImpact === 'string' ? raw.concreteImpact : '',
+    element: typeof raw.element === 'string' ? raw.element : 'civic',
+    values: Array.isArray(raw.values) ? raw.values.filter((v) => typeof v === 'string') : [],
+    timeMinutes: typeof raw.timeMinutes === 'number' && Number.isFinite(raw.timeMinutes) ? raw.timeMinutes : 5,
+    timeBucket: typeof raw.timeBucket === 'string' ? raw.timeBucket : '5',
+    cost: typeof raw.cost === 'string' ? raw.cost : 'free',
+    mode: typeof raw.mode === 'string' ? raw.mode : 'online',
+    social: typeof raw.social === 'string' ? raw.social : 'solo',
+    recipientMacro: typeof raw.recipientMacro === 'string' ? raw.recipientMacro : 'people',
+    commitment: typeof raw.commitment === 'string' ? raw.commitment : 'one_off',
+    contactLevel: typeof raw.contactLevel === 'string' ? raw.contactLevel : 'anonymous'
+  };
+}
+
+/**
  * Normalizes input preferences from either an options object or positional arguments.
- * @param {any} prefsOrCapacity
+ * @param {unknown} [prefsOrCapacity]
  * @param {string} [situation]
  * @param {string} [topic]
  * @param {string} [city]
- * @returns {Record<string, any>}
+ * @returns {Record<string, unknown>}
  */
 function normalizePrefs(prefsOrCapacity = {}, situation, topic, city) {
   if (typeof prefsOrCapacity === 'string') {
@@ -50,38 +107,52 @@ function normalizePrefs(prefsOrCapacity = {}, situation, topic, city) {
     };
   }
 
-  return prefsOrCapacity && typeof prefsOrCapacity === 'object' ? prefsOrCapacity : {};
+  if (isRecord(prefsOrCapacity)) {
+    return prefsOrCapacity;
+  }
+
+  return {};
 }
 
 /**
  * Calculates the match score and reason badges for an action against user preferences.
- * @param {any} action
- * @param {any} prefsOrCapacity Options object or capacity string
+ * @param {unknown} [rawAction]
+ * @param {unknown} [prefsOrCapacity] Options object or capacity string
  * @param {string} [situation]
  * @param {string} [topic]
  * @returns {{ score: number, reasons: string[] }}
  */
-export function calculateMatchScore(action, prefsOrCapacity = {}, situation, topic) {
-  if (!action) return { score: -999, reasons: [] };
+export function calculateMatchScore(rawAction, prefsOrCapacity = {}, situation, topic) {
+  if (!isRecord(rawAction)) return { score: -999, reasons: [] };
+  const action = isMicroAction(rawAction) ? rawAction : toSafeMicroAction(rawAction);
 
   const prefs = normalizePrefs(prefsOrCapacity, situation, topic);
 
-  const selectedValues = Array.isArray(prefs.values)
-    ? prefs.values
-    : Array.isArray(prefs.selectedValues)
-      ? prefs.selectedValues
-      : [];
-  const timeBucket = prefs.timeBucket || 'any'; // 'any' | '5' | '15' | '45'
-  const cost = prefs.cost || 'any'; // 'any' | 'free' | 'donation'
-  const social = prefs.social || 'any'; // 'any' | 'solo' | 'group'
-  const mode = prefs.mode || 'any'; // 'any' | 'online' | 'local' | 'home'
-  const commitment = prefs.commitment || 'any'; // 'any' | 'one_off' | 'long_term'
-  const contactLevel = prefs.contactLevel || 'any'; // 'any' | 'anonymous' | 'contact_ok'
-  const recipientMacro = prefs.recipientMacro || 'any'; // 'any' | 'people' | 'animals' | 'nature'
-  const evidenceTier = prefs.evidenceTier || 'any'; // 'any' | 'A' | 'B' | 'C'
+  const cleanValues = (
+    Array.isArray(prefs.values)
+      ? prefs.values
+      : Array.isArray(prefs.selectedValues)
+        ? prefs.selectedValues
+        : []
+  ).filter((v) => typeof v === 'string');
+  const selectedValues = cleanValues;
+
+  const safeStr = (v, fallback = 'any') =>
+    typeof v === 'string' ? v : typeof v === 'number' ? String(v) : fallback;
+  const timeBucket = safeStr(prefs.timeBucket); // 'any' | '5' | '15' | '45'
+  const cost = safeStr(prefs.cost); // 'any' | 'free' | 'donation'
+  const social = safeStr(prefs.social); // 'any' | 'solo' | 'group'
+  const mode = safeStr(prefs.mode); // 'any' | 'online' | 'local' | 'home'
+  const commitment = safeStr(prefs.commitment); // 'any' | 'one_off' | 'long_term'
+  const contactLevel = safeStr(prefs.contactLevel); // 'any' | 'anonymous' | 'contact_ok'
+  const recipientMacro = safeStr(prefs.recipientMacro); // 'any' | 'people' | 'animals' | 'nature'
+  const evidenceTier = safeStr(prefs.evidenceTier); // 'any' | 'A' | 'B' | 'C'
   const completedSet = new Set(Array.isArray(prefs.completedIds) ? prefs.completedIds : []);
   const excludeSet = new Set(Array.isArray(prefs.excludeIds) ? prefs.excludeIds : []);
-  const seedKey = `${[...selectedValues].sort().join(',')}|${timeBucket}|${cost}|${social}|${mode}|${commitment}|${contactLevel}|${recipientMacro}|${evidenceTier}|${prefs.seed ?? 0}`;
+
+  const safeSeed =
+    typeof prefs.seed === 'string' || typeof prefs.seed === 'number' ? String(prefs.seed) : '0';
+  const seedKey = `${cleanValues.sort().join(',')}|${safeStr(timeBucket)}|${safeStr(cost)}|${safeStr(social)}|${safeStr(mode)}|${safeStr(commitment)}|${safeStr(contactLevel)}|${safeStr(recipientMacro)}|${safeStr(evidenceTier)}|${safeSeed}`;
 
   let score = 0;
   /** @type {string[]} */
@@ -103,7 +174,12 @@ export function calculateMatchScore(action, prefsOrCapacity = {}, situation, top
     if (!['aplikace_zachranka', 'opatruj_se_nudz', 'nevypusť_dusi'].includes(action.id)) {
       score += 6;
     }
-    const seedStr = String(prefs.seed ?? '');
+    const seedStr =
+      typeof prefs.seed === 'string'
+        ? prefs.seed
+        : typeof prefs.seed === 'number'
+          ? String(prefs.seed)
+          : '';
     if (
       seedStr.endsWith(':0') &&
       ['zvirata_utulek_online', 'missing_maps', 'knihobudka_kniha', 'brontosaurus_vikend', 'nadeje_jidlo'].includes(action.id)
@@ -305,24 +381,11 @@ export function calculateMatchScore(action, prefsOrCapacity = {}, situation, top
 /**
  * Doporučí a seřadí mikro-akce podle vybraných hodnot, času, prostředí, rozpočtu a rotace.
  * Garantuje pestré střídání doporučení při změně libovolného filtru (žádné zasekávání na 1 tipu!).
- * @param {{
- *   values?: string[],
- *   selectedValues?: string[],
- *   timeBucket?: string,
- *   cost?: string,
- *   social?: string,
- *   mode?: string,
- *   commitment?: string,
- *   contactLevel?: string,
- *   recipientMacro?: string,
- *   evidenceTier?: string,
- *   completedIds?: string[],
- *   excludeIds?: string[],
- *   seed?: number | string
- * } | string} [prefsOrCapacity={}]
+ * @param {unknown} [prefsOrCapacity]
  * @param {string} [situation]
  * @param {string} [topic]
  * @param {string} [city]
+ * @returns {import('$lib/types').MicroAction[]}
  */
 export function recommendActions(prefsOrCapacity = {}, situation, topic, city) {
   const prefs = normalizePrefs(prefsOrCapacity, situation, topic, city);

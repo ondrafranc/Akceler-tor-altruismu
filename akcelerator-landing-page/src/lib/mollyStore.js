@@ -1,5 +1,12 @@
 import { writable } from 'svelte/store';
-import { safeGetItem, safeSetItem } from './utils.js';
+import {
+  safeGetItem,
+  safeSetItem,
+  AA_MOLLY_COMPANION_KEY,
+  AA_MOLLY_FOLLOW_MOUSE_KEY,
+  AA_COMPLETED_STEPS_KEY,
+  AA_SANCTUARY_WISHES_KEY
+} from './storage/index.js';
 import {
   resolveMollyTreat,
   getUnlockedMilestone,
@@ -8,14 +15,16 @@ import {
 } from './mollyTypes.js';
 import {
   getActionEffectMeta,
+  registerMollyNotifier
+} from './sensory/catalog/catalogResolver.js';
+import {
   playMollyPurr,
   playMollyCrunch,
-  playMollyMeow,
-  registerMollyNotifier
-} from './sensoryEngine.js';
+  playMollyMeow
+} from './audio/presets.js';
 
-export const MOLLY_STORAGE_KEY = 'aa_molly_companion_v1';
-export const MOLLY_FOLLOW_MOUSE_KEY = 'aa_molly_follow_mouse';
+export const MOLLY_STORAGE_KEY = AA_MOLLY_COMPANION_KEY;
+export const MOLLY_FOLLOW_MOUSE_KEY = AA_MOLLY_FOLLOW_MOUSE_KEY;
 export { MOLLY_PET_WHISPERS, MOLLY_UNEARNED_PET_WHISPERS };
 
 const DEFAULT_MOLLY_STATE = {
@@ -44,7 +53,7 @@ const DEED_FEED_SOURCES = new Set(['win', 'sanctuary', 'sanctuary_molly', 'celeb
  */
 function countStoredDeeds() {
   let n = 0;
-  for (const key of ['aa_completed_steps_v2', 'aa_sanctuary_wishes_v1']) {
+  for (const key of [AA_COMPLETED_STEPS_KEY, AA_SANCTUARY_WISHES_KEY]) {
     try {
       const arr = JSON.parse(safeGetItem(key, 'local') || '[]');
       if (Array.isArray(arr)) n += arr.length;
@@ -182,9 +191,9 @@ function scheduleMoodReset(delayMs = 3600) {
 /**
  * Odemkne 1 zasloužený pamlsek pro Molly za skutečný altruistický skutek (delayed gratification).
  * Pamlsek se přidá do dostupné zásoby (availableTreats) a zařadí do fronty earnedTreatQueue.
- * @param {any} action
+ * @param {import('./types').MicroAction | { id?: string, title?: string, category?: string, [key: string]: unknown } | string | null | undefined} action
  * @param {{ reason?: string, source?: string }} [opts]
- * @returns {{ unlocked: boolean, treat: any }}
+ * @returns {{ unlocked: boolean, treat: import('./types').MollyTreat | Record<string, unknown> }}
  */
 export function unlockMollyTreat(action, opts = {}) {
   const meta = getActionEffectMeta(action);
@@ -233,9 +242,9 @@ export function unlockMollyTreat(action, opts = {}) {
  * Pokud uživatel nemá žádný odemčený pamlsek (availableTreats <= 0), pamlsek se nevydá,
  * čítač pamlsků se nezvýší a Molly se místo toho nechá s láskou pohladit.
  *
- * @param {string | any} [sourceOrAction]
- * @param {{ silent?: boolean, source?: string, action?: any, unearnedWhisper?: string, fromDock?: boolean }} [opts]
- * @returns {{ success: boolean, treat: any }}
+ * @param {string | import('./types').MicroAction | Record<string, unknown> | null | undefined} [sourceOrAction]
+ * @param {{ silent?: boolean, source?: string, action?: import('./types').MicroAction | Record<string, unknown> | null, unearnedWhisper?: string, fromDock?: boolean }} [opts]
+ * @returns {{ success: boolean, treat: import('./types').MollyTreat | null }}
  */
 export function feedMolly(sourceOrAction = 'action', opts = {}) {
   const action =
@@ -343,7 +352,7 @@ export function feedMolly(sourceOrAction = 'action', opts = {}) {
 
 /**
  * Zpětně kompatibilní delegace na feedMolly.
- * @param {any} action
+ * @param {import('./types').MicroAction | Record<string, unknown> | string | null | undefined} action
  * @param {{ silent?: boolean, source?: string }} [opts]
  */
 export function feedMollyFromAction(action, opts = {}) {
@@ -355,7 +364,7 @@ export function feedMollyFromAction(action, opts = {}) {
  * Spustí vizuální a zvukový vjem zvídavosti Molly, ale STRIKTNĚ NEZVYŠUJE počet pamlsků
  * ani dárků (delayed gratification — pamlsky se získávají jen skutečnými skutky).
  *
- * @param {any} action
+ * @param {import('./types').MicroAction | Record<string, unknown> | string | null | undefined} action
  * @param {{ surface?: string, silentSound?: boolean, fromCanvas?: boolean }} [opts]
  */
 export function notifyMollySpark(action, opts = {}) {
@@ -499,7 +508,7 @@ export function toggleMollyPelisek() {
 
 /**
  * Nastaví, zda má Molly na desktopu volitelně sledovat kurzor myši (R2).
- * @param {boolean} val
+ * @param {unknown} val
  * @returns {boolean}
  */
 export function setMollyFollowMouse(val) {

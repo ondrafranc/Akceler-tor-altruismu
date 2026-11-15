@@ -1,14 +1,18 @@
 import { browser, dev } from '$app/environment';
 import { writable, get } from 'svelte/store';
 import {
-  safeGetItem,
-  safeSetItem,
   cleanTitle as canonicalCleanTitle,
   openFeedbackModal
 } from './utils.js';
+import {
+  safeGetItem,
+  safeSetItem,
+  AA_STARTED_ACTIONS_KEY,
+  AA_FUNNEL_COUNTS_KEY
+} from './storage/index.js';
 
 let _track = null;
-/** @type {Promise<null | ((name: string, data?: Record<string, any>) => void)> | null} */
+/** @type {Promise<null | ((name: string, data?: Record<string, unknown>) => void)> | null} */
 let _trackPromise = null;
 
 async function getTrack() {
@@ -32,7 +36,7 @@ async function getTrack() {
  * - Avoids capturing lat/lon or other PII
  *
  * @param {string} name
- * @param {Record<string, any>=} data
+ * @param {Record<string, unknown>=} data
  */
 export function trackEvent(name, data = undefined) {
   if (!browser || dev) return;
@@ -58,8 +62,8 @@ export function trackEvent(name, data = undefined) {
   });
 }
 
-const STARTED_STORAGE_KEY = 'aa_started_actions_v1';
-const FUNNEL_STORAGE_KEY = 'aa_funnel_counts_v1';
+const STARTED_STORAGE_KEY = AA_STARTED_ACTIONS_KEY;
+const FUNNEL_STORAGE_KEY = AA_FUNNEL_COUNTS_KEY;
 
 function loadStartedIds() {
   if (!browser) return [];
@@ -117,7 +121,7 @@ if (browser) {
 /**
  * Tracks a product funnel milestone (Critique 8.3).
  * @param {'intent_selected' | 'recommendation_shown' | 'action_started' | 'action_completed_self_reported' | 'reflection_saved' | 'real_world_conversion'} stage
- * @param {Record<string, any>=} data
+ * @param {Record<string, unknown>=} data
  */
 export function trackFunnel(stage, data = {}) {
   funnelCounts.update((curr) => {
@@ -136,7 +140,7 @@ export function trackFunnel(stage, data = {}) {
 /**
  * Records that the user genuinely initiated an action (opened partner URL or copied contact message).
  * @param {string} id
- * @param {(string | Record<string, any>)=} meta
+ * @param {(string | Record<string, unknown>)=} meta
  */
 export function markActionStarted(id, meta = {}) {
   if (!id) return;

@@ -13,11 +13,23 @@ const DEEDS_STORE = 'deeds_cache';
 const isBrowser = () => typeof window !== 'undefined';
 const hasIdb = () => isBrowser() && typeof window.indexedDB !== 'undefined';
 
+/**
+ * @typedef {{
+ *   id?: number | string,
+ *   url: string,
+ *   method: string,
+ *   body: BodyInit | null | undefined,
+ *   headers: Record<string, string>,
+ *   createdAt: number,
+ *   attempts: number
+ * }} OutboxItem
+ */
+
 /** @type {IDBDatabase | null} */
 let cachedDb = null;
 
 /** In-memory fallback queue for SSR or environments without IndexedDB */
-/** @type {Array<any>} */
+/** @type {Array<OutboxItem>} */
 const memoryOutbox = [];
 
 /**
@@ -69,7 +81,7 @@ export function openOfflineDb() {
  * @param {object} param0
  * @param {string} param0.url Target URL
  * @param {string} [param0.method='POST'] HTTP method
- * @param {any} [param0.body] Request payload
+ * @param {unknown} [param0.body] Request payload
  * @param {Record<string, string>} [param0.headers] Optional headers
  * @returns {Promise<number | string>} Generated queue item ID
  */
@@ -77,7 +89,7 @@ export async function enqueueOfflineRequest({ url, method = 'POST', body, header
   const item = {
     url,
     method,
-    body: typeof body === 'object' ? JSON.stringify(body) : body,
+    body: typeof body === 'object' && body !== null ? JSON.stringify(body) : /** @type {BodyInit | null | undefined} */ (body),
     headers,
     createdAt: Date.now(),
     attempts: 0
@@ -114,7 +126,7 @@ export async function enqueueOfflineRequest({ url, method = 'POST', body, header
 
 /**
  * Retrieves all pending outbox requests.
- * @returns {Promise<Array<any>>}
+ * @returns {Promise<Array<OutboxItem>>}
  */
 export async function getPendingRequests() {
   const db = await openOfflineDb();
@@ -232,7 +244,7 @@ export async function flushOfflineQueue() {
 
 /**
  * Caches an array of recommended deeds into IndexedDB for offline discovery.
- * @param {Array<any>} deeds
+ * @param {Array<import('./types').MicroAction | Record<string, unknown>>} deeds
  * @returns {Promise<void>}
  */
 export async function cacheDeedsOffline(deeds) {
@@ -245,7 +257,7 @@ export async function cacheDeedsOffline(deeds) {
       const tx = db.transaction(DEEDS_STORE, 'readwrite');
       const store = tx.objectStore(DEEDS_STORE);
       for (const deed of deeds) {
-        if (deed && deed.id) {
+        if (deed && typeof deed === 'object' && 'id' in deed && deed.id) {
           store.put(deed);
         }
       }
@@ -259,7 +271,7 @@ export async function cacheDeedsOffline(deeds) {
 
 /**
  * Retrieves cached deeds from offline storage.
- * @returns {Promise<Array<any>>}
+ * @returns {Promise<Array<import('./types').MicroAction | Record<string, unknown>>>}
  */
 export async function getCachedDeedsOffline() {
   const db = await openOfflineDb();
@@ -286,13 +298,46 @@ export async function registerBackgroundSync() {
   if (!isBrowser()) return false;
   try {
     if ('serviceWorker' in navigator && 'SyncManager' in window) {
-      const reg = await navigator.serviceWorker.ready;
-      // @ts-ignore
+      const reg = /** @type {ServiceWorkerRegistration & { sync?: { register: (tag: string) => Promise<void> } }} */ (await navigator.serviceWorker.ready);
       await reg.sync?.register('akcelerator-sync');
       return true;
     }
   } catch {}
   return false;
+}
+
+/**
+ * Safely normalizes HeadersInit into a plain Record<string, string>.
+ * @param {HeadersInit | undefined} headers
+ * @returns {Record<string, string>}
+ */
+function normalizeHeaders(headers) {
+  if (!headers) return {};
+  /** @type {Record<string, string>} */
+  const res = {};
+  if (typeof Headers !== 'undefined' && headers instanceof Headers) {
+    headers.forEach((v, k) => {
+      res[k] = v;
+    });
+    return res;
+  }
+  if (Array.isArray(headers)) {
+    for (const [k, v] of headers) {
+      if (typeof k === 'string' && typeof v === 'string') {
+        res[k] = v;
+      }
+    }
+    return res;
+  }
+  if (typeof headers === 'object' && headers !== null) {
+    for (const [k, v] of Object.entries(headers)) {
+      if (typeof v === 'string') {
+        res[k] = v;
+      }
+    }
+    return res;
+  }
+  return res;
 }
 
 /**
@@ -315,7 +360,7 @@ export async function offlineFetch(url, options = {}) {
       url,
       method,
       body: options.body,
-      headers: /** @type {Record<string, string>} */ (options.headers || {})
+      headers: normalizeHeaders(options.headers)
     });
     return new Response(JSON.stringify({ offline: true, queued: true }), {
       status: 202,
@@ -331,7 +376,7 @@ export async function offlineFetch(url, options = {}) {
       url,
       method,
       body: options.body,
-      headers: /** @type {Record<string, string>} */ (options.headers || {})
+      headers: normalizeHeaders(options.headers)
     });
     return new Response(JSON.stringify({ offline: true, queued: true }), {
       status: 202,

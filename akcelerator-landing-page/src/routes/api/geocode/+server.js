@@ -9,9 +9,9 @@ import {
   resolveClientKey
 } from '$lib/security.js';
 
-/** @type {Map<string, { expiresAt: number, data: any }>} */
+/** @type {Map<string, { expiresAt: number, data: unknown }>} */
 const CACHE = new Map();
-/** @type {Map<string, Promise<any>>} */
+/** @type {Map<string, Promise<unknown>>} */
 const INFLIGHT = new Map();
 
 let LAST_UPSTREAM_TS = 0;

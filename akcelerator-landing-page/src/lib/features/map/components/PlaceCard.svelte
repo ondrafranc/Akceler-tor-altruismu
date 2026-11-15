@@ -1,12 +1,11 @@
 <script>
-  import { buildFirstContactTemplate } from '../../../data/czech-actions.js';
-  import { sanitizeHttpUrl as normalizeUrl } from '../../../validation.js';
-  import {
-    getActionEffectMeta,
-    impactCanvas,
-    holdSpark
-  } from '../../../sensoryEngine.js';
+  import { buildFirstContactTemplate } from "../../../data/czech-actions.js";
+  import { sanitizeHttpUrl as normalizeUrl } from "../../../validation.js";
+  import { getActionEffectMeta } from "../../../sensory/catalog/catalogResolver.js";
+  import { impactCanvas } from "../../../sensory/canvas/impactCanvasAction.js";
+  import { holdSpark } from "../../../sensory/interaction/holdSpark.js";
 
+  /** @type {import('$lib/server/nearbyService.js').NearbyPlace & Record<string, unknown>} */
   export let p;
   export let idx = 0;
   export let isActive = false;
@@ -19,99 +18,119 @@
   export let copiedPlaceLinkId = null;
   export let placeMetric = 0;
 
+  /** @type {((...args: unknown[]) => void) | null} */
   export let onMouseEnter = null;
+  /** @type {((...args: unknown[]) => void) | null} */
   export let onMouseLeave = null;
+  /** @type {((place: import('$lib/server/nearbyService.js').NearbyPlace) => void) | null} */
   export let onStart = null;
+  /** @type {((place: import('$lib/server/nearbyService.js').NearbyPlace) => void) | null} */
   export let onDone = null;
+  /** @type {((place: import('$lib/server/nearbyService.js').NearbyPlace, event?: Event) => void) | null} */
   export let onToggleEffect = null;
+  /** @type {(() => void) | null} */
   export let onToggleSound = null;
+  /** @type {((place: import('$lib/server/nearbyService.js').NearbyPlace) => void) | null} */
   export let onFocusMap = null;
+  /** @type {((place: import('$lib/server/nearbyService.js').NearbyPlace) => void) | null} */
   export let onShare = null;
+  /** @type {((place: import('$lib/server/nearbyService.js').NearbyPlace) => void) | null} */
   export let onToggleTemplate = null;
+  /** @type {((place: import('$lib/server/nearbyService.js').NearbyPlace) => void) | null} */
   export let onCopyTemplate = null;
 
   const KIND_META = {
-    ngo: { emoji: '🏛️', label: 'Neziskovka / spolek', color: '#059669' },
-    community: { emoji: '🤝', label: 'Komunita / knihobudka', color: '#0d9488' },
-    food: { emoji: '🥫', label: 'Potraviny a šatník', color: '#d97706' },
-    animals: { emoji: '🐾', label: 'Zvířata a útulek', color: '#2563eb' }
+    ngo: { emoji: "🏛️", label: "Neziskovka / spolek", color: "#059669" },
+    community: {
+      emoji: "🤝",
+      label: "Komunita / knihobudka",
+      color: "#0d9488",
+    },
+    food: { emoji: "🥫", label: "Potraviny a šatník", color: "#d97706" },
+    animals: { emoji: "🐾", label: "Zvířata a útulek", color: "#2563eb" },
   };
 
   const HELP_WAY_META = {
-    food_donation: { icon: '🥫', label: 'Darovat potraviny' },
-    material_dropoff: { icon: '🧥', label: 'Přinést věci / knihy' },
-    one_off_help: { icon: '⚡', label: 'Jednorázová výpomoc' },
-    regular_volunteering: { icon: '🤝', label: 'Dobrovolnictví' }
+    food_donation: { icon: "🥫", label: "Darovat potraviny" },
+    material_dropoff: { icon: "🧥", label: "Přinést věci / knihy" },
+    one_off_help: { icon: "⚡", label: "Jednorázová výpomoc" },
+    regular_volunteering: { icon: "🤝", label: "Dobrovolnictví" },
   };
 
   const VISIT_MODE_META = {
-    drop_in: { icon: '🟢', label: 'Volně přístupné bez domlouvání' },
-    opening_hours: { icon: '🕒', label: 'Otevírací doba' },
-    by_agreement: { icon: '📅', label: 'Po domluvě' }
+    drop_in: { icon: "🟢", label: "Volně přístupné bez domlouvání" },
+    opening_hours: { icon: "🕒", label: "Otevírací doba" },
+    by_agreement: { icon: "📅", label: "Po domluvě" },
   };
 
   function formatDist(km) {
-    if (!Number.isFinite(km)) return '';
+    if (!Number.isFinite(km)) return "";
     if (km < 1) return `${Math.max(100, Math.round(km * 10) * 100)} m`;
-    return `${km < 10 ? km.toFixed(1).replace('.', ',') : Math.round(km)} km`;
+    return `${km < 10 ? km.toFixed(1).replace(".", ",") : Math.round(km)} km`;
   }
 
   function isSelfServicePoint(place) {
-    const text = `${place?.name || ''} ${place?.subcategory || ''}`.toLowerCase();
+    const text =
+      `${place?.name || ""} ${place?.subcategory || ""}`.toLowerCase();
     return (
       /knihobudka|knihovnička|public_bookcase|give_box|reuse skříňka|freeshop|sdílená lednice|food_sharing|potravinová skříňka/.test(
-        text
+        text,
       ) ||
-      (place?.visitMode === 'drop_in' && !place?.website && !place?.email && !place?.phone)
+      (place?.visitMode === "drop_in" &&
+        !place?.website &&
+        !place?.email &&
+        !place?.phone)
     );
   }
 
   function getPlaceVisitMode(place) {
     if (place.visitMode) return place.visitMode;
-    if (isSelfServicePoint(place)) return 'drop_in';
-    if (place.openingHours) return 'opening_hours';
-    return 'by_agreement';
+    if (isSelfServicePoint(place)) return "drop_in";
+    if (place.openingHours) return "opening_hours";
+    return "by_agreement";
   }
 
   function getPlaceHelpWays(place) {
-    if (Array.isArray(place.helpWays) && place.helpWays.length > 0) return place.helpWays;
+    if (Array.isArray(place.helpWays) && place.helpWays.length > 0)
+      return place.helpWays;
     const ways = [];
-    if (place.kind === 'food') ways.push('food_donation');
-    if (place.kind === 'community') ways.push('material_dropoff');
-    if (place.kind === 'ngo' || place.kind === 'animals') {
-      ways.push('one_off_help', 'regular_volunteering');
+    if (place.kind === "food") ways.push("food_donation");
+    if (place.kind === "community") ways.push("material_dropoff");
+    if (place.kind === "ngo" || place.kind === "animals") {
+      ways.push("one_off_help", "regular_volunteering");
     }
-    return ways.length ? ways : ['one_off_help'];
+    return ways.length ? ways : ["one_off_help"];
   }
 
   function concreteActionHint(place) {
     if (isSelfServicePoint(place)) {
-      if (/knihobudka|kni/i.test(place.name || place.subcategory || '')) {
-        return 'Přines 1-2 přečtené knížky v dobrém stavu nebo si vyber novou četbu.';
+      if (/knihobudka|kni/i.test(place.name || place.subcategory || "")) {
+        return "Přines 1-2 přečtené knížky v dobrém stavu nebo si vyber novou četbu.";
       }
-      return 'Vlož trvanlivé potraviny či zachovalé oblečení pro lidi v nouzi.';
+      return "Vlož trvanlivé potraviny či zachovalé oblečení pro lidi v nouzi.";
     }
-    if (place.kind === 'animals') {
-      return 'Zavolej a zeptej se na venčení pejsků nebo přines konzervy a pamlsky.';
+    if (place.kind === "animals") {
+      return "Zavolej a zeptej se na venčení pejsků nebo přines konzervy a pamlsky.";
     }
-    if (place.kind === 'food') {
-      return 'Přines trvanlivé potraviny, drogerii nebo teplé oblečení.';
+    if (place.kind === "food") {
+      return "Přines trvanlivé potraviny, drogerii nebo teplé oblečení.";
     }
-    return 'Napiš krátkou zprávu koordinátorovi — ozvou se ti s konkrétní potřebou.';
+    return "Napiš krátkou zprávu koordinátorovi — ozvou se ti s konkrétní potřebou.";
   }
 
   $: meta = KIND_META[p?.kind] || KIND_META.ngo;
-  $: webUrl = p?.website ? normalizeUrl(p.website) : '';
+  $: webUrl = p?.website ? normalizeUrl(p.website) : "";
   $: selfService = isSelfServicePoint(p);
-  $: visitMode = VISIT_MODE_META[getPlaceVisitMode(p)] || VISIT_MODE_META.by_agreement;
+  $: visitMode =
+    VISIT_MODE_META[getPlaceVisitMode(p)] || VISIT_MODE_META.by_agreement;
   $: helpWays = getPlaceHelpWays(p);
   $: placeAction = {
     id: p?.id,
-    title: p?.name || 'Místo pomoci',
-    category: p?.kind || 'ngo',
-    subcategory: p?.subcategory || ''
+    title: p?.name || "Místo pomoci",
+    category: p?.kind || "ngo",
+    subcategory: p?.subcategory || "",
   };
-  $: cardId = `place-card-${String(p?.id || '').replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+  $: cardId = `place-card-${String(p?.id || "").replace(/[^a-zA-Z0-9_-]/g, "-")}`;
   $: tpl = p ? buildFirstContactTemplate(p) : null;
   $: effectMeta = getActionEffectMeta(placeAction, placeMetric || 0);
 </script>
@@ -120,7 +139,7 @@
   <article
     id={cardId}
     class="place-card"
-    data-molly-guide={idx === 0 ? 'true' : undefined}
+    data-molly-guide={idx === 0 ? "true" : undefined}
     class:active={isActive}
     class:top-pick={isTopPick}
     on:mouseenter={onMouseEnter}
@@ -131,22 +150,28 @@
       <span>·</span>
       <span class="pc-dist">{formatDist(p.distanceKm)}</span>
       <span>·</span>
-      {#if p.curated || p.sourceType === 'verified_org'}
+      {#if p.curated || p.sourceType === "verified_org"}
         <span class="pc-verified" title="Ručně ověřená organizace v ČR">
-          ✦ Ověřená organizace · Ověřeno {p.verifiedAt || '11/2026'}
+          ✦ Ověřená organizace · Ověřeno {p.verifiedAt || "11/2026"}
         </span>
-      {:else if p.sourceType === 'community'}
+      {:else if p.sourceType === "community"}
         <span class="pc-community-badge" title="Sousedský komunitní tip">
           🌱 Komunitní tip
         </span>
         {#if p.pendingModeration}
           <span>·</span>
-          <span class="pc-pending-badge" title="Tvůj tip čeká na schválení moderátorem">
+          <span
+            class="pc-pending-badge"
+            title="Tvůj tip čeká na schválení moderátorem"
+          >
             ⏳ Čeká na schválení
           </span>
         {/if}
       {:else}
-        <span class="pc-osm-badge" title="Orientační bod z veřejné mapy OpenStreetMap">
+        <span
+          class="pc-osm-badge"
+          title="Orientační bod z veřejné mapy OpenStreetMap"
+        >
           🗺️ Orientační bod OSM
         </span>
       {/if}
@@ -158,7 +183,7 @@
       <div class="pc-addr">📍 {p.address}</div>
     {/if}
 
-    <p class="pc-desc">{p.description || ''}</p>
+    <p class="pc-desc">{p.description || ""}</p>
 
     <!-- STRUCTURED DECISION CONTEXT: JAK TU MŮŽEŠ POMOCT -->
     <div class="pc-decision-box">
@@ -166,12 +191,15 @@
         <span class="pcd-visit-badge">{visitMode.icon} {visitMode.label}</span>
         {#each helpWays as hw}
           {#if HELP_WAY_META[hw]}
-            <span class="pcd-way-chip">{HELP_WAY_META[hw].icon} {HELP_WAY_META[hw].label}</span>
+            <span class="pcd-way-chip"
+              >{HELP_WAY_META[hw].icon} {HELP_WAY_META[hw].label}</span
+            >
           {/if}
         {/each}
       </div>
       <p class="pcd-mission">
-        <strong>Jak tu můžeš pomoct:</strong> {concreteActionHint(p)}
+        <strong>Jak tu můžeš pomoct:</strong>
+        {concreteActionHint(p)}
       </p>
     </div>
 
@@ -182,7 +210,7 @@
           target="_blank"
           rel="noopener noreferrer"
           class="pc-btn primary"
-          use:holdSpark={{ id: p.id, surface: 'near_place' }}
+          use:holdSpark={{ id: p.id, surface: "near_place" }}
           on:click={() => onStart && onStart(p)}
         >
           Web ↗
@@ -193,7 +221,7 @@
           target="_blank"
           rel="noopener noreferrer"
           class="pc-btn primary"
-          use:holdSpark={{ id: p.id, surface: 'near_place' }}
+          use:holdSpark={{ id: p.id, surface: "near_place" }}
           on:click={() => onStart && onStart(p)}
         >
           🧭 Navigovat (Mapy.cz) ↗
@@ -204,7 +232,7 @@
           class="pc-btn msg"
           on:click={() => onToggleTemplate && onToggleTemplate(p)}
         >
-          {openTemplateId === p.id ? 'Skrýt zprávu' : '💬 Co napsat'}
+          {openTemplateId === p.id ? "Skrýt zprávu" : "💬 Co napsat"}
         </button>
       {/if}
 
@@ -223,11 +251,11 @@
     {#if isStarted}
       <div
         class="card-effect-stage"
-        data-scene={effectMeta?.scene || 'default'}
+        data-scene={effectMeta?.scene || "default"}
       >
         <div class="card-effect-head">
           <span class="impact-payoff-badge">
-            {effectMeta?.badge || ''}
+            {effectMeta?.badge || ""}
           </span>
           <div class="card-effect-controls">
             <button
@@ -247,10 +275,12 @@
                 class="sound-mute-btn"
                 on:click={onToggleSound}
                 aria-pressed={soundMuted}
-                aria-label={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
-                title={soundMuted ? 'Zapnout jemné zvuky' : 'Ztlumit zvuky'}
+                aria-label={soundMuted
+                  ? "Zapnout jemné zvuky"
+                  : "Ztlumit zvuky"}
+                title={soundMuted ? "Zapnout jemné zvuky" : "Ztlumit zvuky"}
               >
-                {soundMuted ? '🔇' : '🔊'}
+                {soundMuted ? "🔇" : "🔊"}
               </button>
             {/if}
           </div>
@@ -265,7 +295,7 @@
             climax: false,
             onProgress: (v) => {
               placeMetric = v;
-            }
+            },
           }}
         ></canvas>
       </div>
@@ -276,7 +306,10 @@
         <div class="td-head">
           <strong>Vzor krátké zprávy:</strong>
           {#if p.phone}
-            <span>📞 <a href={`tel:${p.phone.replace(/[^\d+]/g, '')}`}>{p.phone}</a></span>
+            <span
+              >📞 <a href={`tel:${p.phone.replace(/[^\d+]/g, "")}`}>{p.phone}</a
+              ></span
+            >
           {/if}
         </div>
         <pre class="td-body">{tpl.body}</pre>
@@ -286,7 +319,7 @@
             class="pc-btn primary"
             on:click={() => onCopyTemplate && onCopyTemplate(p)}
           >
-            {copiedTemplateId === p.id ? '✓ Zkopírováno' : '📋 Zkopírovat text'}
+            {copiedTemplateId === p.id ? "✓ Zkopírováno" : "📋 Zkopírovat text"}
           </button>
           {#if tpl.mailtoUrl}
             <a href={tpl.mailtoUrl} class="pc-btn ghost">✉️ E-mail</a>
@@ -305,12 +338,13 @@
 
     <div class="pc-verify-footer">
       <span>
-        {#if p.curated || p.sourceType === 'verified_org'}
-          Zdroj: Ověřený katalog ({p.verifiedAt || '11/2026'})
-        {:else if p.sourceType === 'community'}
+        {#if p.curated || p.sourceType === "verified_org"}
+          Zdroj: Ověřený katalog ({p.verifiedAt || "11/2026"})
+        {:else if p.sourceType === "community"}
           Zdroj: Komunitní tip v okolí
         {:else}
-          Zdroj: OpenStreetMap ČR — před návštěvou doporučujeme ověřit otevírací dobu
+          Zdroj: OpenStreetMap ČR — před návštěvou doporučujeme ověřit otevírací
+          dobu
         {/if}
       </span>
       <span class="pc-footer-links">
@@ -320,7 +354,7 @@
             class="pc-report-btn"
             on:click={() => onToggleTemplate && onToggleTemplate(p)}
           >
-            {openTemplateId === p.id ? 'Skrýt zprávu' : '💬 Co napsat'}
+            {openTemplateId === p.id ? "Skrýt zprávu" : "💬 Co napsat"}
           </button>
           ·
         {/if}
@@ -340,7 +374,9 @@
             class="pc-report-btn pc-share-btn"
             on:click={() => onShare(p)}
           >
-            {copiedPlaceLinkId === p.id ? '✓ Odkaz zkopírován' : '🔗 Sdílet místo'}
+            {copiedPlaceLinkId === p.id
+              ? "✓ Odkaz zkopírován"
+              : "🔗 Sdílet místo"}
           </button>
         {/if}
       </span>
@@ -355,7 +391,10 @@
     border-radius: 1.15rem;
     padding: 1.15rem 1.25rem;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
-    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    transition:
+      transform 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease;
     display: flex;
     flex-direction: column;
   }
@@ -368,7 +407,11 @@
 
   .place-card.top-pick {
     border-color: rgba(16, 185, 129, 0.35);
-    background: linear-gradient(145deg, #ffffff 0%, rgba(240, 253, 244, 0.5) 100%);
+    background: linear-gradient(
+      145deg,
+      #ffffff 0%,
+      rgba(240, 253, 244, 0.5) 100%
+    );
   }
 
   .pc-meta-top {

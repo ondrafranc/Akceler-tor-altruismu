@@ -9,15 +9,20 @@ import {
   MOLLY_STORAGE_KEY
 } from './mollyStore.js';
 import {
-  safeGetItem,
-  safeSetItem,
   stripLeadingEmoji as canonicalStripLeadingEmoji,
   exportProgressPasscode,
   importProgressPasscode
 } from './utils.js';
+import {
+  safeGetItem,
+  safeSetItem,
+  AA_COMPLETED_STEPS_KEY,
+  AA_SANCTUARY_WISHES_KEY,
+  AA_MOLLY_COMPANION_KEY
+} from './storage/index.js';
 
-const STORAGE_KEY = 'aa_completed_steps_v2';
-const WISHES_STORAGE_KEY = 'aa_sanctuary_wishes_v1';
+const STORAGE_KEY = AA_COMPLETED_STEPS_KEY;
+const WISHES_STORAGE_KEY = AA_SANCTUARY_WISHES_KEY;
 
 /**
  * Tři sémantické typy světel v Krajině dobra (/svet):
@@ -181,21 +186,47 @@ export const HOPE_PROOFS = [
 export const WORLD_MILESTONES = HOPE_PROOFS;
 
 /**
+ * Type guard verifying that a value is a non-null, non-array object record.
+ * @param {unknown} val
+ * @returns {val is Record<string, unknown>}
+ */
+function isRecord(val) {
+  return typeof val === 'object' && val !== null && !Array.isArray(val);
+}
+
+/**
+ * Type guard verifying whether a value is one of the 5 sanctuary element keys.
+ * @param {unknown} key
+ * @returns {key is 'animals' | 'nature' | 'community' | 'care' | 'knowledge'}
+ */
+export function isSanctuaryElementKey(key) {
+  return (
+    key === 'animals' ||
+    key === 'nature' ||
+    key === 'community' ||
+    key === 'care' ||
+    key === 'knowledge'
+  );
+}
+
+/**
  * Odvodí barevný motiv ('animals' | 'nature' | 'community' | 'care' | 'knowledge') pro libovolný krok.
- * @param {any} step
+ * @param {import('./types').CompletedStep | import('./types').MicroAction | { id?: string, element?: string, values?: string[], category?: string, title?: string } | null | undefined} step
  * @returns {'animals' | 'nature' | 'community' | 'care' | 'knowledge'}
  */
 export function inferStepElement(step) {
-  if (step?.element && SANCTUARY_ELEMENTS.some((e) => e.key === step.element)) {
-    return step.element;
+  const stepElement = step?.element;
+  if (isSanctuaryElementKey(stepElement)) {
+    return stepElement;
   }
 
   const catalogMatch = Array.isArray(MICRO_ACTIONS)
     ? MICRO_ACTIONS.find((a) => a.id === step?.id)
     : null;
 
-  if (catalogMatch?.element && SANCTUARY_ELEMENTS.some((e) => e.key === catalogMatch.element)) {
-    return /** @type {any} */ (catalogMatch.element);
+  const catalogElement = catalogMatch?.element;
+  if (isSanctuaryElementKey(catalogElement)) {
+    return catalogElement;
   }
 
   const vals = step?.values || catalogMatch?.values || [];
@@ -335,7 +366,7 @@ export const ripplePeopleCount = derived(totalCompletedCount, ($count) => $count
 
 /**
  * Stav pro klidný „After done“ modál bez nátlakových ukazatelů
- * @type {import('svelte/store').Writable<{ open: boolean, title: string, message: string, surface: string, element: string, concreteImpact?: string } | null>}
+ * @type {import('svelte/store').Writable<{ open: boolean, id?: string, category?: string, title: string, message: string, surface: string, element: string, concreteImpact?: string } | null>}
  */
 export const activeCelebration = writable(null);
 
@@ -574,21 +605,22 @@ export function restoreProgressFromBackupCode(code) {
     sanctuaryWishes.set(decoded.w);
     saveWishes(decoded.w);
   }
-  if (decoded.m && typeof decoded.m === 'object') {
+  if (isRecord(decoded.m)) {
+    const m = decoded.m;
     mollyState.update((prev) => {
       const next = {
         ...prev,
-        treatsFedTotal: Math.max(prev.treatsFedTotal || 0, Number(decoded.m.treatsFedTotal) || 0),
-        petCount: Math.max(prev.petCount || 0, Number(decoded.m.petCount) || 0),
-        availableTreats: Math.max(prev.availableTreats || 0, Number(decoded.m.availableTreats) || 0),
+        treatsFedTotal: Math.max(prev.treatsFedTotal || 0, Number(m.treatsFedTotal) || 0),
+        petCount: Math.max(prev.petCount || 0, Number(m.petCount) || 0),
+        availableTreats: Math.max(prev.availableTreats || 0, Number(m.availableTreats) || 0),
         giftDeeds: Math.max(
           prev.giftDeeds || 0,
-          Number(decoded.m.giftDeeds) || 0,
+          Number(m.giftDeeds) || 0,
           // Starší kódy dárky neznaly → aspoň počet obnovených skutků
           (Array.isArray(decoded.s) ? decoded.s.length : 0) + (Array.isArray(decoded.w) ? decoded.w.length : 0)
         )
       };
-      safeSetItem(MOLLY_STORAGE_KEY, JSON.stringify(next), 'local');
+      safeSetItem(AA_MOLLY_COMPANION_KEY, JSON.stringify(next), 'local');
       return next;
     });
   }

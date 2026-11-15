@@ -111,9 +111,9 @@ self.addEventListener('fetch', (event) => {
 
 // Service Worker Background Sync for draining offline outbox
 self.addEventListener('sync', (event) => {
-  const syncEvent = /** @type {any} */ (event);
+  const syncEvent = /** @type {Event & { tag?: string, waitUntil?: (p: Promise<unknown>) => void }} */ (event);
   if (syncEvent.tag === 'akcelerator-sync' || syncEvent.tag === 'offline-outbox-sync') {
-    syncEvent.waitUntil(
+    syncEvent.waitUntil?.(
       (async () => {
         const clients = await self.clients.matchAll({ type: 'window' });
         for (const client of clients) {

@@ -16,10 +16,10 @@ export async function GET(event) {
   ) {
     return json({ success: true, status: 'ok' }, { headers: { 'cache-control': 'no-store' } });
   }
-  return feedbackGet(/** @type {any} */ (event));
+  return feedbackGet(/** @type {import('../feedback/$types').RequestEvent} */(/** @type {unknown} */ (event)));
 }
 
 /** @type {import('./$types').RequestHandler} */
 export async function POST(event) {
-  return feedbackPost(/** @type {any} */ (event));
+  return feedbackPost(/** @type {import('../feedback/$types').RequestEvent} */(/** @type {unknown} */ (event)));
 }

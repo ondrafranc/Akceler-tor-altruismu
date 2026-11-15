@@ -111,7 +111,7 @@ const CITY_LOCATIVES = {
   mladaboleslav: 'v Mladé Boleslavi'
 };
 
-/** @type {{ expiresAt: number, data: any } | null} */
+/** @type {{ expiresAt: number, data: unknown } | null} */
 let LIVE_PULSE_CACHE = null;
 
 /**
@@ -313,13 +313,14 @@ export async function POST({ request, url, getClientAddress }) {
     return json({ success: false, error: parsed.error }, { status: parsed.status });
   }
 
-  const actionId = safeText(parsed.data.action_id ?? parsed.data.actionId).slice(0, 80);
+  const data = parsed.data;
+  const actionId = safeText(data.action_id ?? data.actionId).slice(0, 80);
   if (!actionId) {
     return json({ success: false, error: 'Chybí action_id.' }, { status: 400 });
   }
   // Bez skutečného města nic nevymýšlíme (dříve se doplňovala „Praha“)
-  const city = safeText(parsed.data.city).slice(0, 60) || null;
-  const kind = safeText(parsed.data.kind) === 'completed' ? 'completed' : 'click';
+  const city = safeText(data.city).slice(0, 60) || null;
+  const kind = safeText(data.kind) === 'completed' ? 'completed' : 'click';
 
   if (isNonProductionTraffic(request, url)) {
     return json({ success: true, skipped: 'non-production' });

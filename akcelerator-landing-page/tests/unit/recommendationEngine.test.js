@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   recommendActions,
   calculateMatchScore,
-  hashSignature
+  hashSignature,
+  isRecord
 } from '$lib/features/actions/services/recommendationEngine.js';
 import { MICRO_ACTIONS } from '$lib/data/micro-actions.js';
 
@@ -107,5 +108,49 @@ describe('recommendationEngine: scoring & ranking algorithms', () => {
     expect(h1).toBeGreaterThanOrEqual(0);
     expect(h1).toBeLessThan(1);
     expect(h1).not.toBe(h3);
+  });
+
+  it('isRecord strictly identifies plain records and rejects Date, RegExp, Map, Set, arrays, and primitives', () => {
+    expect(isRecord({})).toBe(true);
+    expect(isRecord(Object.create(null))).toBe(true);
+    expect(isRecord(Object.freeze({}))).toBe(true);
+    expect(isRecord(new Proxy({}, {}))).toBe(true);
+
+    expect(isRecord(new Date())).toBe(false);
+    expect(isRecord(/abc/)).toBe(false);
+    expect(isRecord(new Map())).toBe(false);
+    expect(isRecord(new Set())).toBe(false);
+    expect(isRecord(new Error('err'))).toBe(false);
+    expect(isRecord([])).toBe(false);
+    expect(isRecord(null)).toBe(false);
+    expect(isRecord(undefined)).toBe(false);
+    expect(isRecord(123)).toBe(false);
+    expect(isRecord('str')).toBe(false);
+    expect(isRecord(Symbol())).toBe(false);
+    expect(isRecord(() => {})).toBe(false);
+  });
+
+  it('calculateMatchScore returns { score: -999, reasons: [] } for Date, RegExp, and non-plain objects', () => {
+    expect(calculateMatchScore(new Date())).toEqual({ score: -999, reasons: [] });
+    expect(calculateMatchScore(/abc/)).toEqual({ score: -999, reasons: [] });
+    expect(calculateMatchScore(new Map())).toEqual({ score: -999, reasons: [] });
+    expect(calculateMatchScore(new Set())).toEqual({ score: -999, reasons: [] });
+  });
+
+  it('safely handles Symbol values in preferences without throwing TypeError', () => {
+    const action = MICRO_ACTIONS[0];
+    expect(() => calculateMatchScore(action, { seed: Symbol('bad') })).not.toThrow();
+    const symMatch = calculateMatchScore(action, {
+      seed: Symbol('bad'),
+      timeBucket: /** @type {*} */ (Symbol('5')),
+      cost: /** @type {*} */ (Symbol('free')),
+      values: /** @type {*} */ ([Symbol('animals')])
+    });
+    expect(typeof symMatch.score).toBe('number');
+    expect(Number.isFinite(symMatch.score)).toBe(true);
+
+    expect(() => recommendActions({ seed: Symbol('bad') })).not.toThrow();
+    const results = recommendActions({ seed: Symbol('bad') });
+    expect(results.length).toBe(MICRO_ACTIONS.length);
   });
 });

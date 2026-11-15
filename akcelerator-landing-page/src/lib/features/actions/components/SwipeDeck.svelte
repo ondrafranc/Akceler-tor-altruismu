@@ -1,8 +1,11 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import ActionCard from './ActionCard.svelte';
-  import { safeGetItem, safeSetItem } from '../../../../lib/utils.js';
+  import { safeGetItem, safeSetItem, AA_DONE_FOR_TODAY_PREFIX } from '../../../../lib/storage/index.js';
   import { trackEvent } from '../../../../lib/analytics.js';
+
+  // Psychological session closure key prefix: 'aa_done_for_today_'
+  const DONE_FOR_TODAY_PREFIX = AA_DONE_FOR_TODAY_PREFIX;
   import { safeVibrate } from '../../../../lib/core/device.js';
   import { playCelebrationChord } from '../../../../lib/audio/presets.js';
   import { completedSteps } from '../../../../lib/progress.js';
@@ -59,7 +62,7 @@
   onMount(() => {
     try {
       const todayKey = getTodayKey();
-      if (safeGetItem(`aa_done_for_today_${todayKey}`, 'local') === '1') {
+      if (safeGetItem(`${AA_DONE_FOR_TODAY_PREFIX}${todayKey}`, 'local') === '1') {
         isSessionClosed = true;
       }
     } catch {}
@@ -69,7 +72,7 @@
     isSessionClosed = true;
     try {
       const todayKey = getTodayKey();
-      safeSetItem(`aa_done_for_today_${todayKey}`, '1', 'local');
+      safeSetItem(`${AA_DONE_FOR_TODAY_PREFIX}${todayKey}`, '1', 'local');
       safeVibrate(40);
       playCelebrationChord();
     } catch {}
@@ -83,7 +86,7 @@
     isSessionClosed = false;
     try {
       const todayKey = getTodayKey();
-      safeSetItem(`aa_done_for_today_${todayKey}`, '0', 'local');
+      safeSetItem(`${AA_DONE_FOR_TODAY_PREFIX}${todayKey}`, '0', 'local');
     } catch {}
     trackEvent('aa_session_reopened', {});
     if (onReopenSession) onReopenSession();

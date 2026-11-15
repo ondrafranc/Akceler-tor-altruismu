@@ -24,6 +24,30 @@ const PLACES_CACHE = new Map();
 const COMMUNITY_CACHE = new Map();
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
+/**
+ * @typedef {{
+ *   id: string,
+ *   kind: string,
+ *   name: string,
+ *   category?: string,
+ *   description?: string | null,
+ *   city?: string | null,
+ *   address_label?: string | null,
+ *   address?: string | null,
+ *   lat: number,
+ *   lon: number,
+ *   website?: string | null,
+ *   url?: string | null,
+ *   event_url?: string | null,
+ *   email?: string | null,
+ *   phone?: string | null,
+ *   status?: string,
+ *   distanceKm: number,
+ *   distance_m?: number,
+ *   [key: string]: unknown
+ * }} NearbyPlace
+ */
+
 function extractContactParts(contactRaw, emailRaw, phoneRaw) {
   let email = emailRaw ? sanitizeEmail(emailRaw) : null;
   let phone = phoneRaw ? sanitizePhone(phoneRaw) : null;
@@ -70,7 +94,7 @@ function sanitizeCommunityRecord(r, dKm) {
  * @param {number} lat
  * @param {number} lon
  * @param {number} radiusM
- * @returns {Array<any>}
+ * @returns {Array<NearbyPlace>}
  */
 export function getLocalCommunityNearby(lat, lon, radiusM) {
   const maxKm = Math.max(radiusM / 1000, 15);
@@ -89,7 +113,7 @@ export function getLocalCommunityNearby(lat, lon, radiusM) {
 /**
  * Queries community submissions (Supabase with fallback to local seed).
  * @param {{ lat: number, lon: number, radiusM?: number }} params
- * @returns {Promise<{ items: Array<any>, lat: number, lon: number, radius_m: number, fallback: boolean }>}
+ * @returns {Promise<{ items: Array<NearbyPlace>, lat: number, lon: number, radius_m: number, fallback: boolean }>}
  */
 export async function getNearbyCommunityItems({ lat, lon, radiusM = 5000 }) {
   const radius = clamp(radiusM, 250, 25_000);
@@ -165,8 +189,8 @@ export async function getNearbyCommunityItems({ lat, lon, radiusM = 5000 }) {
  *   includeAssociations?: boolean
  * }} params
  * @returns {Promise<{
- *   places: Array<any>,
- *   items: Array<any>,
+ *   places: Array<NearbyPlace>,
+ *   items: Array<NearbyPlace>,
  *   radius_m: number,
  *   lat: number,
  *   lon: number,

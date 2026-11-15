@@ -1,20 +1,31 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { MICRO_ACTIONS } from '$lib/data/micro-actions.js';
-import * as Sensory from '$lib/sensoryEngine.js';
+import { ACTION_EFFECT_CATALOG } from '$lib/sensory/catalog/catalogResolver.js';
+import { mountImpactCanvas } from '$lib/sensory/canvas/impactCanvasEngine.js';
+import { impactCanvas } from '$lib/sensory/canvas/impactCanvasAction.js';
+import { triggerCanvasBurst } from '$lib/sensory/canvas/controllerRegistry.js';
+
+const Sensory = {
+  ACTION_EFFECT_CATALOG,
+  mountImpactCanvas,
+  impactCanvas,
+  triggerCanvasBurst
+};
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const srcDir = path.resolve(__dirname, '../../src');
 
-function createMockCanvas(width = 380, height = 86) {
+function createMockCanvas(width = 380, height = 86, initialClasses = ['preview-diorama-canvas']) {
   const ops = [];
   const attrs = new Map();
   const listeners = new Map();
+  const classes = new Set(initialClasses);
 
   const gradientStub = {
-    addColorStop: () => {}
+    addColorStop: () => { }
   };
 
   const ctx = {
@@ -103,8 +114,17 @@ function createMockCanvas(width = 380, height = 86) {
     getAttribute(k) {
       return attrs.has(k) ? attrs.get(k) : null;
     },
+    hasAttribute(k) {
+      return attrs.has(k);
+    },
     removeAttribute(k) {
       attrs.delete(k);
+    },
+    classList: {
+      add: (...tokens) => tokens.forEach((t) => classes.add(t)),
+      remove: (...tokens) => tokens.forEach((t) => classes.delete(t)),
+      contains: (t) => classes.has(t),
+      toArray: () => [...classes]
     },
     addEventListener(type, fn) {
       listeners.set(type, fn);
@@ -164,8 +184,9 @@ describe('Poetic 2-Phase Deed Transformations & Preview Diorama', () => {
 
   it('removes dead drawCanvasMiniMolly helper and maps all 45 MICRO_ACTIONS to unique poetic scene modes and Czech preview cues', () => {
     expect('drawCanvasMiniMolly' in Sensory).toBe(false);
-    const engineSource = readFileSync(path.resolve(srcDir, 'lib/sensoryEngine.js'), 'utf8');
+    const engineSource = readFileSync(path.resolve(srcDir, 'lib/sensory/canvas/impactCanvasEngine.js'), 'utf8');
     expect(engineSource).not.toContain('drawCanvasMiniMolly');
+    expect(existsSync(path.resolve(srcDir, 'lib/sensoryEngine.js'))).toBe(false);
 
     const cardSource = readFileSync(
       path.resolve(srcDir, 'lib/features/actions/components/ActionCard.svelte'),
@@ -287,6 +308,10 @@ describe('Poetic 2-Phase Deed Transformations & Preview Diorama', () => {
       silent: true
     });
     expect(cv.getContextCalls).toBe(1);
+    // Regression guard: preview canvas must never gain payoff height class or Molly mini-stage marker
+    expect(cv.classList.contains('preview-diorama-canvas')).toBe(true);
+    expect(cv.classList.contains('impact-payoff-canvas')).toBe(false);
+    expect(cv.getAttribute('data-molly-mini')).toBeNull();
 
     // Let idle preview auto-sleep after > 90 settled frames
     stepFrames(100);
@@ -310,11 +335,11 @@ describe('Poetic 2-Phase Deed Transformations & Preview Diorama', () => {
   });
 
   it('snaps climax directly to p = 1 on frame 0 without scheduling rAF when prefers-reduced-motion is active', () => {
-    globalThis.window = {
+    globalThis.window = /** @type {Window & typeof globalThis} */ (/** @type {unknown} */ ({
       devicePixelRatio: 1,
       matchMedia: (q) => ({ matches: q.includes('prefers-reduced-motion') }),
-      addEventListener: () => {}
-    };
+      addEventListener: () => { }
+    }));
 
     const sBarvou = MICRO_ACTIONS.find((a) => a.id === 's_barvou_ven');
     const cv = createMockCanvas(320, 118);
@@ -467,11 +492,11 @@ describe('Poetic 2-Phase Deed Transformations & Preview Diorama', () => {
     }
 
     // Climax at p = 1 (via reduced-motion instant settle)
-    globalThis.window = {
+    globalThis.window = /** @type {Window & typeof globalThis} */ (/** @type {unknown} */ ({
       devicePixelRatio: 1,
       matchMedia: (q) => ({ matches: q.includes('prefers-reduced-motion') }),
-      addEventListener: () => {}
-    };
+      addEventListener: () => { }
+    }));
 
     const spClimax = createMockCanvas(320, 118);
     const cleanSpClimax = Sensory.mountImpactCanvas(spClimax, { action: estudanky, climax: true });

@@ -2,27 +2,25 @@
   import {
     activeCelebration,
     closeCelebration,
-    SANCTUARY_ELEMENTS
-  } from '../lib/progress.js';
-  import { trackEvent } from '../lib/analytics.js';
-  import {
-    impactCanvas,
-    getActionEffectMeta,
-    playPayoffAsmr
-  } from '../lib/sensoryEngine.js';
-  import { feedMolly, mollyState } from '../lib/mollyStore.js';
-  import { cleanTitle } from '../lib/utils.js';
+    SANCTUARY_ELEMENTS,
+  } from "../lib/progress.js";
+  import { trackEvent } from "../lib/analytics.js";
+  import { impactCanvas } from "../lib/sensory/canvas/impactCanvasAction.js";
+  import { getActionEffectMeta } from "../lib/sensory/catalog/catalogResolver.js";
+  import { playPayoffAsmr } from "../lib/audio/presets.js";
+  import { feedMolly, mollyState } from "../lib/mollyStore.js";
+  import { cleanTitle } from "../lib/utils.js";
 
   let restingMode = false;
   let sharedCopied = false;
   let impactMetricValue = 0;
-  let lastCelebratedKey = '';
+  let lastCelebratedKey = "";
   let fedThisCelebration = false;
 
   $: if ($activeCelebration) {
     restingMode = false;
     sharedCopied = false;
-    const key = `${$activeCelebration.id || ''}:${$activeCelebration.title || ''}`;
+    const key = `${$activeCelebration.id || ""}:${$activeCelebration.title || ""}`;
     if (key !== lastCelebratedKey) {
       lastCelebratedKey = key;
       impactMetricValue = 0;
@@ -30,12 +28,13 @@
       playPayoffAsmr($activeCelebration);
     }
   } else {
-    lastCelebratedKey = '';
+    lastCelebratedKey = "";
     fedThisCelebration = false;
   }
 
   $: activeElementMeta = $activeCelebration
-    ? SANCTUARY_ELEMENTS.find((e) => e.key === $activeCelebration.element) || SANCTUARY_ELEMENTS[0]
+    ? SANCTUARY_ELEMENTS.find((e) => e.key === $activeCelebration.element) ||
+      SANCTUARY_ELEMENTS[0]
     : SANCTUARY_ELEMENTS[0];
 
   $: effectMeta = $activeCelebration
@@ -44,55 +43,65 @@
 
   function handleStopHere() {
     restingMode = true;
-    trackEvent('aa_after_done_choice', { choice: 'stop_here' });
+    trackEvent("aa_after_done_choice", { choice: "stop_here" });
   }
 
   function handleContinue() {
-    trackEvent('aa_after_done_choice', { choice: 'one_more' });
+    trackEvent("aa_after_done_choice", { choice: "one_more" });
     closeCelebration();
   }
 
   function handleFeedMolly() {
     if (!$activeCelebration || fedThisCelebration) return;
-    const res = feedMolly('celebration', {
+    const res = feedMolly("celebration", {
       action: $activeCelebration,
-      silent: false
+      silent: false,
     });
     if (res?.success) {
       fedThisCelebration = true;
-      trackEvent('aa_molly_celebration_fed', {
-        actionId: $activeCelebration.id
+      trackEvent("aa_molly_celebration_fed", {
+        actionId: $activeCelebration.id,
       });
     }
   }
 
   function handleGoToWorld() {
-    trackEvent('aa_after_done_choice', { choice: 'enter_world' });
+    trackEvent("aa_after_done_choice", { choice: "enter_world" });
     closeCelebration();
   }
 
   async function handleShareWithFriend() {
     if (!$activeCelebration) return;
-    const shareTitle = cleanTitle($activeCelebration.title || 'Malý dobrý skutek');
-    const baseOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://akcelerator-altruismu.cz';
-    const actionId = $activeCelebration.id && $activeCelebration.id !== 'step' ? $activeCelebration.id : '';
-    const shareUrl = actionId ? `${baseOrigin}/?action=${encodeURIComponent(actionId)}` : baseOrigin;
+    const shareTitle = cleanTitle(
+      $activeCelebration.title || "Malý dobrý skutek",
+    );
+    const baseOrigin =
+      typeof window !== "undefined"
+        ? window.location.origin
+        : "https://akcelerator-altruismu.cz";
+    const actionId =
+      $activeCelebration.id && $activeCelebration.id !== "step"
+        ? $activeCelebration.id
+        : "";
+    const shareUrl = actionId
+      ? `${baseOrigin}/?action=${encodeURIComponent(actionId)}`
+      : baseOrigin;
     const shareText = `Tip na jednoduchou pomoc, která zabere jen chvilku („${shareTitle}“): ${shareUrl}`;
 
-    trackEvent('aa_after_done_choice', { choice: 'share_friend' });
+    trackEvent("aa_after_done_choice", { choice: "share_friend" });
 
-    if (typeof navigator !== 'undefined' && navigator.share) {
+    if (typeof navigator !== "undefined" && navigator.share) {
       try {
         await navigator.share({
-          title: 'Akcelerátor altruismu',
+          title: "Akcelerátor altruismu",
           text: shareText,
-          url: shareUrl
+          url: shareUrl,
         });
         return;
       } catch {}
     }
 
-    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
       try {
         await navigator.clipboard.writeText(shareText);
         sharedCopied = true;
@@ -102,7 +111,7 @@
   }
 
   function handleKeydown(e) {
-    if (e.key === 'Escape' && $activeCelebration) {
+    if (e.key === "Escape" && $activeCelebration) {
       closeCelebration();
     }
   }
@@ -120,12 +129,23 @@
     <div class="celebration-card">
       <div class="celebration-glow" aria-hidden="true"></div>
       {#if !restingMode}
-        <div class="win-overline">{activeElementMeta.icon} Klidné poděkování</div>
-        <h3 id="win-title" class="win-title">{cleanTitle($activeCelebration.title)}</h3>
-        <div class="win-sensory-stage card-effect-stage" data-scene={effectMeta?.scene || 'light'}>
+        <div class="win-overline">
+          {activeElementMeta.icon} Klidné poděkování
+        </div>
+        <h3 id="win-title" class="win-title">
+          {cleanTitle($activeCelebration.title)}
+        </h3>
+        <div
+          class="win-sensory-stage card-effect-stage"
+          data-scene={effectMeta?.scene || "light"}
+        >
           <div class="win-sensory-head card-effect-head">
-            <span class="impact-payoff-badge">{effectMeta?.badge || '✨ Světelná stopa'}</span>
-            <span class="win-sensory-hint card-effect-hint">Dotkni se pro jiskru</span>
+            <span class="impact-payoff-badge"
+              >{effectMeta?.badge || "✨ Světelná stopa"}</span
+            >
+            <span class="win-sensory-hint card-effect-hint"
+              >Dotkni se pro jiskru</span
+            >
           </div>
           <canvas
             class="impact-payoff-canvas"
@@ -137,7 +157,7 @@
               climax: true,
               onProgress: (v) => {
                 impactMetricValue = v;
-              }
+              },
             }}
           ></canvas>
         </div>
@@ -160,27 +180,37 @@
             </button>
           {:else if fedThisCelebration}
             <div class="molly-fed-badge" role="status">
-              ✨ Molly spokojeně chroupe svůj zasloužený pamlsek a přede radostí!
+              ✨ Molly spokojeně chroupe svůj zasloužený pamlsek a přede
+              radostí!
             </div>
           {/if}
         {/if}
         <p class="win-rest-reassurance">
-          Dnes se ti povedlo něco dobrého. Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout.
+          Dnes se ti povedlo něco dobrého. Nemusíš dělat nic dalšího. Můžeš si
+          chvíli odpočinout.
         </p>
         <p class="win-message">
           {$activeCelebration.concreteImpact || $activeCelebration.message}
         </p>
 
         <div class="win-actions">
-          <a href="/svet?just_lit=1" class="btn-world" on:click={handleGoToWorld}>
+          <a
+            href="/svet?just_lit=1"
+            class="btn-world"
+            on:click={handleGoToWorld}
+          >
             ✨ Rozsvítit tenhle skutek v Krajině dobra →
           </a>
           <button type="button" class="btn-stop" on:click={handleStopHere}>
             ☕ Pro dnešek mám splněno — dopřát si klid
           </button>
           <div class="win-secondary-row">
-            <button type="button" class="btn-share" on:click={handleShareWithFriend}>
-              {sharedCopied ? '✓ Odkaz zkopírován' : '↗ Poslat tip blízkému'}
+            <button
+              type="button"
+              class="btn-share"
+              on:click={handleShareWithFriend}
+            >
+              {sharedCopied ? "✓ Odkaz zkopírován" : "↗ Poslat tip blízkému"}
             </button>
             <button type="button" class="btn-more" on:click={handleContinue}>
               Zavřít
@@ -189,9 +219,12 @@
         </div>
       {:else}
         <div class="rest-icon" aria-hidden="true">🌿</div>
-        <h3 id="win-title" class="win-title">Dnes se ti povedlo něco dobrého</h3>
+        <h3 id="win-title" class="win-title">
+          Dnes se ti povedlo něco dobrého
+        </h3>
         <p class="win-message">
-          Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout, odložit telefon a dopřát si ticho.
+          Nemusíš dělat nic dalšího. Můžeš si chvíli odpočinout, odložit telefon
+          a dopřát si ticho.
         </p>
         <div class="win-actions">
           <a href="/svet#dech" class="btn-world" on:click={handleGoToWorld}>
@@ -240,7 +273,11 @@
     transform: translateX(-50%);
     width: 260px;
     height: 140px;
-    background: radial-gradient(circle, rgba(52, 211, 153, 0.2) 0%, transparent 70%);
+    background: radial-gradient(
+      circle,
+      rgba(52, 211, 153, 0.2) 0%,
+      transparent 70%
+    );
     pointer-events: none;
   }
 
@@ -284,7 +321,11 @@
     margin: 0 0 0.7rem 0;
     padding: 0.48rem 0.75rem;
     border-radius: 12px;
-    background: linear-gradient(135deg, rgba(254, 243, 199, 0.75), rgba(209, 250, 229, 0.55));
+    background: linear-gradient(
+      135deg,
+      rgba(254, 243, 199, 0.75),
+      rgba(209, 250, 229, 0.55)
+    );
     border: 1px solid rgba(245, 158, 11, 0.35);
     color: #0b2419;
     font-size: 0.81rem;
@@ -309,7 +350,9 @@
     font-weight: 700;
     cursor: pointer;
     box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    transition:
+      transform 0.15s ease,
+      box-shadow 0.15s ease;
   }
 
   .btn-celebration-feed:hover {
@@ -411,7 +454,11 @@
   }
 
   @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 </style>

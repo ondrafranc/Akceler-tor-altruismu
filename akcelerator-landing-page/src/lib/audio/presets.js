@@ -8,12 +8,12 @@ import { tone, noiseBurst } from './synthesizer.js';
 
 let lastAsmrTs = 0;
 
-/** @type {((action: any) => { asmr?: string }) | null} */
+/** @type {((action: unknown) => { asmr?: string }) | null} */
 let actionSpecResolver = null;
 
 /**
  * Registers an action-effect spec resolver to resolve rich action objects into ASMR audio profiles.
- * @param {(action: any) => { asmr?: string }} fn
+ * @param {(action: unknown) => { asmr?: string }} fn
  */
 export function registerActionSpecResolver(fn) {
   actionSpecResolver = typeof fn === 'function' ? fn : null;
@@ -22,13 +22,20 @@ export function registerActionSpecResolver(fn) {
 /**
  * Shared chime generator for /svet so the entire app shares a single AudioContext
  * and honors the global mute setting `isSoundMuted()`.
- * @param {number} [freq=528]
+ * @param {number | number[]} [freq=528]
  * @param {number} [dur=1.4]
  * @param {OscillatorType} [wave='sine']
  * @param {number} [delay=0]
  * @returns {GainNode | null}
  */
 export function playSanctuaryChime(freq = 528, dur = 1.4, wave = 'sine', delay = 0) {
+  if (Array.isArray(freq)) {
+    let last = null;
+    freq.forEach((f, idx) => {
+      last = tone(f, dur, wave, delay + idx * 0.05, 0.045 / Math.sqrt(freq.length));
+    });
+    return last;
+  }
   return tone(freq, dur, wave, delay, 0.045);
 }
 
@@ -42,7 +49,7 @@ export function playCelebrationChord() {
   if (!c) return;
   try {
     if (c.state === 'suspended') {
-      c.resume().catch(() => {});
+      c.resume().catch(() => { });
     }
     const notes = [
       { freq: 349.23, type: /** @type {OscillatorType} */ ('sine'), delay: 0.0, dur: 0.85, gain: 0.035 },    // F4
@@ -51,7 +58,7 @@ export function playCelebrationChord() {
       { freq: 659.25, type: /** @type {OscillatorType} */ ('triangle'), delay: 0.09, dur: 0.70, gain: 0.018 } // E5
     ];
     notes.forEach((n) => tone(n.freq, n.dur, n.type, n.delay, n.gain));
-  } catch {}
+  } catch { }
 }
 
 /**
@@ -111,7 +118,7 @@ export function playMollyPurr(dur = 1.1, intensity = 0.8) {
 
     // Jemný dechový třpyt
     tone(528, Math.min(0.45, dur * 0.4), 'sine', 0.05, 0.012 * intensity, 660);
-  } catch {}
+  } catch { }
 }
 
 /**
@@ -125,7 +132,7 @@ export function playMollyCrunch() {
       tone(380 + i * 90, 0.06, 'triangle', d, 0.02);
     });
     tone(587.33, 0.18, 'sine', 0.21, 0.024, 783.99);
-  } catch {}
+  } catch { }
 }
 
 /**
@@ -161,12 +168,12 @@ export function playMollyMeow() {
 
     osc.start(t);
     osc.stop(t + dur + 0.03);
-  } catch {}
+  } catch { }
 }
 
 /**
  * Procedurální Web Audio ASMR syntéza přizpůsobená každému z 18 zvukových profilů.
- * @param {any} [actionOrMode='kibble']
+ * @param {string | { asmr?: string, mode?: string, [key: string]: unknown } | null | undefined} [actionOrMode='kibble']
  */
 export function playPayoffAsmr(actionOrMode = 'kibble') {
   const now = typeof performance !== 'undefined' ? performance.now() : Date.now();

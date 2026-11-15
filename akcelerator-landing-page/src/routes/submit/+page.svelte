@@ -1,82 +1,91 @@
 <script>
-  import { onMount } from 'svelte';
-  import { CZECH_CITIES } from '../../lib/data/czech-actions.js';
-  import { recordSmallWin } from '../../lib/progress.js';
-  import { trackEvent } from '../../lib/analytics.js';
-  import { safeText } from '../../lib/validation.js';
-  import { firstText, safeGetItem, safeSetItem, safeRemoveItem } from '../../lib/utils.js';
+  import { onMount } from "svelte";
+  import { CZECH_CITIES } from "../../lib/data/czech-actions.js";
+  import { recordSmallWin } from "../../lib/progress.js";
+  import { trackEvent } from "../../lib/analytics.js";
+  import { safeText } from "../../lib/validation.js";
+  import { firstText } from "../../lib/utils.js";
+  import {
+    safeGetItem,
+    safeSetItem,
+    safeRemoveItem,
+    AA_SUBMIT_DRAFT_KEY,
+    AA_MY_PENDING_SUBMISSIONS_KEY,
+  } from "../../lib/storage/index.js";
 
-  const DRAFT_KEY = 'aa_submit_draft_v1';
-  const MY_PENDING_KEY = 'aa_my_pending_submissions_v1';
+  const DRAFT_KEY = AA_SUBMIT_DRAFT_KEY;
+  const MY_PENDING_KEY = AA_MY_PENDING_SUBMISSIONS_KEY;
 
   const QUICK_CATEGORIES = [
-    '🐾 Zvířata a útulky',
-    '🥫 Potraviny a šatníky',
-    '📚 Knihobudka / druhá šance věcí',
-    '🤝 Komunita a sousedé',
-    '👴 Senioři',
-    '🌱 Příroda a úklid'
+    "🐾 Zvířata a útulky",
+    "🥫 Potraviny a šatníky",
+    "📚 Knihobudka / druhá šance věcí",
+    "🤝 Komunita a sousedé",
+    "👴 Senioři",
+    "🌱 Příroda a úklid",
   ];
 
   const TOP_CITIES = CZECH_CITIES.slice(0, 6);
 
-  let kind = 'org'; // org | event
+  let kind = "org"; // org | event
 
-  let name = '';
-  let category = '';
-  let website = '';
-  let email = '';
-  let phone = '';
-  let description = '';
+  let name = "";
+  let category = "";
+  let website = "";
+  let email = "";
+  let phone = "";
+  let description = "";
 
-  let eventUrl = '';
-  let eventStartLocal = '';
-  let eventEndLocal = '';
+  let eventUrl = "";
+  let eventStartLocal = "";
+  let eventEndLocal = "";
 
-  let locationQuery = '';
-  let geoStatus = 'idle';
-  let geoMessage = '';
+  let locationQuery = "";
+  let geoStatus = "idle";
+  let geoMessage = "";
   /** @type {Array<{label: string, lat: number, lon: number}>} */
   let geoResults = [];
   let lat = null;
   let lon = null;
-  let addressLabel = '';
+  let addressLabel = "";
 
   // Spam protection (honeypot + monotonic elapsed time)
-  let hp = '';
+  let hp = "";
   const startedAt = Date.now();
-  const mountPerfNow = typeof performance !== 'undefined' ? performance.now() : 0;
+  const mountPerfNow =
+    typeof performance !== "undefined" ? performance.now() : 0;
   let draftReady = false;
 
   let isSubmitting = false;
   let submitStatus = null; // null | success | error
-  let submitMessage = '';
-  let submittedMapUrl = '/near';
+  let submitMessage = "";
+  let submittedMapUrl = "/near";
 
   onMount(() => {
     try {
-      const rawDraft = safeGetItem(DRAFT_KEY, 'session');
+      const rawDraft = safeGetItem(DRAFT_KEY, "session");
       if (rawDraft) {
         const d = JSON.parse(rawDraft);
-        if (d && typeof d === 'object') {
-          if (d.kind === 'org' || d.kind === 'event') kind = d.kind;
-          if (typeof d.name === 'string') name = d.name;
-          if (typeof d.category === 'string') category = d.category;
-          if (typeof d.website === 'string') website = d.website;
-          if (typeof d.email === 'string') email = d.email;
-          if (typeof d.description === 'string') description = d.description;
-          if (typeof d.locationQuery === 'string') locationQuery = d.locationQuery;
-          if (typeof d.lat === 'number') lat = d.lat;
-          if (typeof d.lon === 'number') lon = d.lon;
-          if (typeof d.addressLabel === 'string') addressLabel = d.addressLabel;
-          if (typeof d.eventUrl === 'string') eventUrl = d.eventUrl;
+        if (d && typeof d === "object") {
+          if (d.kind === "org" || d.kind === "event") kind = d.kind;
+          if (typeof d.name === "string") name = d.name;
+          if (typeof d.category === "string") category = d.category;
+          if (typeof d.website === "string") website = d.website;
+          if (typeof d.email === "string") email = d.email;
+          if (typeof d.description === "string") description = d.description;
+          if (typeof d.locationQuery === "string")
+            locationQuery = d.locationQuery;
+          if (typeof d.lat === "number") lat = d.lat;
+          if (typeof d.lon === "number") lon = d.lon;
+          if (typeof d.addressLabel === "string") addressLabel = d.addressLabel;
+          if (typeof d.eventUrl === "string") eventUrl = d.eventUrl;
         }
       }
     } catch {}
     draftReady = true;
   });
 
-  $: if (draftReady && submitStatus !== 'success') {
+  $: if (draftReady && submitStatus !== "success") {
     safeSetItem(
       DRAFT_KEY,
       JSON.stringify({
@@ -90,9 +99,9 @@
         lat,
         lon,
         addressLabel,
-        eventUrl
+        eventUrl,
       }),
-      'session'
+      "session",
     );
   }
 
@@ -102,49 +111,53 @@
     addressLabel = city.name;
     locationQuery = city.name;
     geoResults = [];
-    geoStatus = 'ok';
+    geoStatus = "ok";
     geoMessage = `Vybráno: ${city.name}`;
   }
 
   async function searchLocation() {
     const q = safeText(locationQuery);
     if (!q || q.length < 2) {
-      geoStatus = 'error';
-      geoMessage = 'Zadej aspoň 2 znaky.';
+      geoStatus = "error";
+      geoMessage = "Zadej aspoň 2 znaky.";
       geoResults = [];
       return;
     }
 
-    geoStatus = 'loading';
-    geoMessage = 'Hledám v ČR…';
+    geoStatus = "loading";
+    geoMessage = "Hledám v ČR…";
     geoResults = [];
 
     try {
-      const resp = await fetch(`/api/geocode?q=${encodeURIComponent(q)}&limit=6`);
+      const resp = await fetch(
+        `/api/geocode?q=${encodeURIComponent(q)}&limit=6`,
+      );
       const data = await resp.json();
       const results = Array.isArray(data?.results) ? data.results : [];
       geoResults = results;
       if (!results.length) {
-        geoStatus = 'error';
-        geoMessage = 'Přesnou adresu jsem nenašel – klikni případně na nejbližší město.';
+        geoStatus = "error";
+        geoMessage =
+          "Přesnou adresu jsem nenašel – klikni případně na nejbližší město.";
         return;
       }
-      geoStatus = 'ok';
-      geoMessage = 'Vyber přesné místo ze seznamu:';
+      geoStatus = "ok";
+      geoMessage = "Vyber přesné místo ze seznamu:";
     } catch {
-      geoStatus = 'error';
-      geoMessage = 'Vyhledávání je dočasně nedostupné – vyber prosím město níže.';
+      geoStatus = "error";
+      geoMessage =
+        "Vyhledávání je dočasně nedostupné – vyber prosím město níže.";
     }
   }
 
   function pickLocation(r) {
-    lat = typeof r?.lat === 'number' ? r.lat : null;
-    lon = typeof r?.lon === 'number' ? r.lon : null;
+    lat = typeof r?.lat === "number" ? r.lat : null;
+    lon = typeof r?.lon === "number" ? r.lon : null;
     addressLabel = safeText(r?.label);
     locationQuery = firstText(addressLabel);
     geoResults = [];
-    geoMessage = 'Poloha vybrána.';
-    geoStatus = 'ok';
+    geoMessage = "Poloha vybrána.";
+    geoStatus = "ok";
   }
 
   function toIsoOrNull(dtLocal) {
@@ -156,20 +169,20 @@
 
   async function submit() {
     submitStatus = null;
-    submitMessage = '';
+    submitMessage = "";
 
     const n = safeText(name);
     if (!n) {
-      submitStatus = 'error';
-      submitMessage = 'Vyplň prosím název místa, spolku nebo akce.';
+      submitStatus = "error";
+      submitMessage = "Vyplň prosím název místa, spolku nebo akce.";
       return;
     }
 
     if (lat == null || lon == null) {
       const q = safeText(locationQuery);
       if (q.length >= 2) {
-        const matchedCity = CZECH_CITIES.find(
-          (c) => c.name.toLowerCase().startsWith(q.toLowerCase())
+        const matchedCity = CZECH_CITIES.find((c) =>
+          c.name.toLowerCase().startsWith(q.toLowerCase()),
         );
         if (matchedCity) {
           pickQuickCity(matchedCity);
@@ -183,14 +196,14 @@
     }
 
     if (lat == null || lon == null) {
-      submitStatus = 'error';
-      submitMessage = 'Vyhledej obec nebo klikni na nejbližší město.';
+      submitStatus = "error";
+      submitMessage = "Vyhledej obec nebo klikni na nejbližší město.";
       return;
     }
 
-    if (kind === 'event' && !safeText(eventUrl)) {
-      submitStatus = 'error';
-      submitMessage = 'U akce prosím přidej odkaz na detail nebo událost.';
+    if (kind === "event" && !safeText(eventUrl)) {
+      submitStatus = "error";
+      submitMessage = "U akce prosím přidej odkaz na detail nebo událost.";
       return;
     }
 
@@ -198,7 +211,10 @@
     try {
       const elapsedMs = Math.max(
         0,
-        Math.round((typeof performance !== 'undefined' ? performance.now() : 0) - mountPerfNow)
+        Math.round(
+          (typeof performance !== "undefined" ? performance.now() : 0) -
+            mountPerfNow,
+        ),
       );
       const payload = {
         hp,
@@ -216,45 +232,54 @@
         postcode: null,
         lat,
         lon,
-        event_url: kind === 'event' ? safeText(eventUrl) : null,
-        event_start: kind === 'event' ? toIsoOrNull(eventStartLocal) : null,
-        event_end: kind === 'event' ? toIsoOrNull(eventEndLocal) : null
+        event_url: kind === "event" ? safeText(eventUrl) : null,
+        event_start: kind === "event" ? toIsoOrNull(eventStartLocal) : null,
+        event_end: kind === "event" ? toIsoOrNull(eventEndLocal) : null,
       };
 
-      const resp = await fetch('/api/submissions', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload)
+      const resp = await fetch("/api/submissions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok || !data?.success) {
-        submitStatus = 'error';
-        submitMessage = data?.error || 'Něco se pokazilo. Zkus to prosím znovu.';
+        submitStatus = "error";
+        submitMessage =
+          data?.error || "Něco se pokazilo. Zkus to prosím znovu.";
         return;
       }
 
       if (data?.item) {
         try {
-          const existingRaw = safeGetItem(MY_PENDING_KEY, 'local');
+          const existingRaw = safeGetItem(MY_PENDING_KEY, "local");
           const existing = existingRaw ? JSON.parse(existingRaw) : [];
           const list = Array.isArray(existing) ? existing : [];
           list.unshift({ ...data.item, pendingModeration: true });
-          safeSetItem(MY_PENDING_KEY, JSON.stringify(list.slice(0, 20)), 'local');
+          safeSetItem(
+            MY_PENDING_KEY,
+            JSON.stringify(list.slice(0, 20)),
+            "local",
+          );
         } catch {}
       }
-      safeRemoveItem(DRAFT_KEY, 'session');
+      safeRemoveItem(DRAFT_KEY, "session");
 
       submittedMapUrl = `/near?lat=${lat}&lon=${lon}`;
-      submitStatus = 'success';
+      submitStatus = "success";
       submitMessage =
         data?.moderationNotice ||
-        'Díky! Tip jsme přijali ke kontrole a u tebe na mapě už teď svítí se štítkem „Čeká na schválení“.';
-      trackEvent('aa_submission_sent', { kind });
-      recordSmallWin({ id: `submit_${Date.now()}`, title: `Přidán sousedský tip: ${n}`, surface: 'submit' });
+        "Díky! Tip jsme přijali ke kontrole a u tebe na mapě už teď svítí se štítkem „Čeká na schválení“.";
+      trackEvent("aa_submission_sent", { kind });
+      recordSmallWin({
+        id: `submit_${Date.now()}`,
+        title: `Přidán sousedský tip: ${n}`,
+        surface: "submit",
+      });
     } catch {
-      submitStatus = 'error';
-      submitMessage = 'Něco se pokazilo. Zkus to prosím znovu.';
+      submitStatus = "error";
+      submitMessage = "Něco se pokazilo. Zkus to prosím znovu.";
     } finally {
       isSubmitting = false;
     }
@@ -268,9 +293,12 @@
 <div class="page">
   <header class="subpage-hero header">
     <div class="hero-kicker">SPOLEČNÁ MAPA POMOCI</div>
-    <h1 class="title">Přidej místo nebo akci, <span class="serif-accent">kde se dá pomoct</span></h1>
+    <h1 class="title">
+      Přidej místo nebo akci, <span class="serif-accent">kde se dá pomoct</span>
+    </h1>
     <p class="subtitle">
-      Víš o útulku, komunitním šatníku, knihobudce nebo sousedské brigádě? Stačí název a obec.
+      Víš o útulku, komunitním šatníku, knihobudce nebo sousedské brigádě? Stačí
+      název a obec.
     </p>
   </header>
 
@@ -278,10 +306,20 @@
     <!-- CLEAN FOCUSED FORM -->
     <div class="card">
       <div class="tabs">
-        <button class="tab" class:active={kind === 'org'} type="button" on:click={() => (kind = 'org')}>
+        <button
+          class="tab"
+          class:active={kind === "org"}
+          type="button"
+          on:click={() => (kind = "org")}
+        >
           📍 Místo / spolek
         </button>
-        <button class="tab" class:active={kind === 'event'} type="button" on:click={() => (kind = 'event')}>
+        <button
+          class="tab"
+          class:active={kind === "event"}
+          type="button"
+          on:click={() => (kind = "event")}
+        >
           📅 Sousedská akce
         </button>
       </div>
@@ -289,7 +327,14 @@
       <form class="form" on:submit|preventDefault={submit}>
         <div class="hp" aria-hidden="true">
           <label for="hp_company">Company</label>
-          <input id="hp_company" name="hp_company" type="text" bind:value={hp} tabindex="-1" autocomplete="off" />
+          <input
+            id="hp_company"
+            name="hp_company"
+            type="text"
+            bind:value={hp}
+            tabindex="-1"
+            autocomplete="off"
+          />
         </div>
 
         <div class="field wide">
@@ -318,19 +363,25 @@
               placeholder="Město, obec nebo ulice"
               on:input={() => {
                 geoResults = [];
-                geoMessage = '';
-                geoStatus = 'idle';
+                geoMessage = "";
+                geoStatus = "idle";
               }}
               on:keydown={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === "Enter") {
                   e.preventDefault();
                   searchLocation();
                 }
               }}
-              disabled={geoStatus === 'loading'}
+              disabled={geoStatus === "loading"}
             />
-            <button class="btn secondary" type="button" on:click={searchLocation} disabled={geoStatus === 'loading' || locationQuery.trim().length < 2}>
-              {geoStatus === 'loading' ? 'Hledám…' : 'Najít'}
+            <button
+              class="btn secondary"
+              type="button"
+              on:click={searchLocation}
+              disabled={geoStatus === "loading" ||
+                locationQuery.trim().length < 2}
+            >
+              {geoStatus === "loading" ? "Hledám…" : "Najít"}
             </button>
           </div>
 
@@ -350,7 +401,11 @@
           {#if geoResults.length}
             <div class="geo-results">
               {#each geoResults as r}
-                <button class="geo-item" type="button" on:click={() => pickLocation(r)}>
+                <button
+                  class="geo-item"
+                  type="button"
+                  on:click={() => pickLocation(r)}
+                >
                   <span class="geo-title">{firstText(r.label)}</span>
                   <span class="geo-sub">{r.label}</span>
                 </button>
@@ -359,7 +414,9 @@
           {/if}
 
           {#if lat != null && lon != null && addressLabel}
-            <div class="picked">✓ Poloha vybrána: <strong>{addressLabel}</strong></div>
+            <div class="picked">
+              ✓ Poloha vybrána: <strong>{addressLabel}</strong>
+            </div>
           {:else if geoMessage}
             <div class="geo-hint">{geoMessage}</div>
           {/if}
@@ -378,19 +435,39 @@
           ></textarea>
         </div>
 
-        {#if kind === 'event'}
+        {#if kind === "event"}
           <div class="grid">
             <div class="field wide">
               <label for="event_url">Odkaz na událost / detail *</label>
-              <input id="event_url" name="event_url" autocomplete="url" type="text" bind:value={eventUrl} placeholder="https://…" maxlength="220" />
+              <input
+                id="event_url"
+                name="event_url"
+                autocomplete="url"
+                type="text"
+                bind:value={eventUrl}
+                placeholder="https://…"
+                maxlength="220"
+              />
             </div>
             <div class="field">
               <label for="event_start">Začátek (volitelné)</label>
-              <input id="event_start" name="event_start" autocomplete="off" type="datetime-local" bind:value={eventStartLocal} />
+              <input
+                id="event_start"
+                name="event_start"
+                autocomplete="off"
+                type="datetime-local"
+                bind:value={eventStartLocal}
+              />
             </div>
             <div class="field">
               <label for="event_end">Konec (volitelné)</label>
-              <input id="event_end" name="event_end" autocomplete="off" type="datetime-local" bind:value={eventEndLocal} />
+              <input
+                id="event_end"
+                name="event_end"
+                autocomplete="off"
+                type="datetime-local"
+                bind:value={eventEndLocal}
+              />
             </div>
           </div>
         {/if}
@@ -400,7 +477,11 @@
           <div class="grid opt-grid">
             <div class="field wide">
               <span class="label" id="category-label">Oblast pomoci</span>
-              <div class="quick-pills" role="group" aria-labelledby="category-label">
+              <div
+                class="quick-pills"
+                role="group"
+                aria-labelledby="category-label"
+              >
                 {#each QUICK_CATEGORIES as qc}
                   <button
                     type="button"
@@ -416,27 +497,45 @@
 
             <div class="field">
               <label for="website">Web nebo sociální síť</label>
-              <input id="website" name="website" autocomplete="url" type="text" bind:value={website} placeholder="https://…" maxlength="220" />
+              <input
+                id="website"
+                name="website"
+                autocomplete="url"
+                type="text"
+                bind:value={website}
+                placeholder="https://…"
+                maxlength="220"
+              />
             </div>
 
             <div class="field">
               <label for="email">Kontaktní e-mail</label>
-              <input id="email" name="email" autocomplete="email" type="email" bind:value={email} placeholder="info@…" maxlength="120" />
+              <input
+                id="email"
+                name="email"
+                autocomplete="email"
+                type="email"
+                bind:value={email}
+                placeholder="info@…"
+                maxlength="120"
+              />
             </div>
           </div>
         </details>
 
         <div class="actions">
           <button class="btn submit-btn" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Ukládám…' : '✦ Připnout tip na mapu'}
+            {isSubmitting ? "Ukládám…" : "✦ Připnout tip na mapu"}
           </button>
         </div>
 
         {#if submitStatus}
-          <div class={'banner ' + submitStatus} aria-live="polite">
+          <div class={"banner " + submitStatus} aria-live="polite">
             <div>{submitMessage}</div>
-            {#if submitStatus === 'success'}
-              <a href={submittedMapUrl} class="map-jump-link">Ukázat místo na mapě →</a>
+            {#if submitStatus === "success"}
+              <a href={submittedMapUrl} class="map-jump-link"
+                >Ukázat místo na mapě →</a
+              >
             {/if}
           </div>
         {/if}
@@ -448,10 +547,21 @@
       <span class="board-kicker">🌿 INSPIRACE Z OKOLÍ</span>
       <h3>Co sem lidé nejčastěji přidávají?</h3>
       <ul class="idea-list">
-        <li><strong>Menší útulky a depozita</strong>, kde uvítají deky nebo vyvenčení psa.</li>
-        <li><strong>Veřejné knihobudky a poličky pro druhou šanci věcí</strong> na nádražích a v parcích.</li>
-        <li><strong>Komunitní šatníky a potravinové skříňky</strong> pro rodiny v nouzi.</li>
-        <li><strong>Sousedské úklidy, výsadby stromů</strong> nebo sousedské výměny oblečení a věcí.</li>
+        <li>
+          <strong>Menší útulky a depozita</strong>, kde uvítají deky nebo
+          vyvenčení psa.
+        </li>
+        <li>
+          <strong>Veřejné knihobudky a poličky pro druhou šanci věcí</strong> na
+          nádražích a v parcích.
+        </li>
+        <li>
+          <strong>Komunitní šatníky a potravinové skříňky</strong> pro rodiny v nouzi.
+        </li>
+        <li>
+          <strong>Sousedské úklidy, výsadby stromů</strong> nebo sousedské výměny
+          oblečení a věcí.
+        </li>
       </ul>
     </aside>
   </div>
