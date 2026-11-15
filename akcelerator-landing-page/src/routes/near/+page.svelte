@@ -27,9 +27,7 @@
     savePendingPartnerReturn,
     consumePendingPartnerReturn,
     getPendingPartnerReturnRemainingMs,
-    triggerCanvasBurst,
-    fetchAmbientPulse,
-    describeAmbientPulse
+    triggerCanvasBurst
   } from '../../lib/sensoryEngine.js';
   import { notifyMollySpark } from '../../lib/mollyStore.js';
   import { normSearchStr, safeGetItem } from '../../lib/utils.js';
@@ -47,7 +45,7 @@
     { id: 'all', label: 'Všechny zdroje' },
     { id: 'verified_org', label: '✦ Ověřené organizace' },
     { id: 'community', label: '🌱 Komunitní tipy' },
-    { id: 'osm', label: '🗺️ Orientační body OSM' }
+    { id: 'osm', label: '🗺️ Veřejné mapy a orientační body' }
   ];
 
   const RADIUS_PRESETS = [2, 5, 8, 15, 25];
@@ -331,16 +329,6 @@
   let nearReturnMetric = 0;
   let awaitingNearPlace = null;
   let nearLeaveTimestamp = 0;
-  /** @type {any} */
-  let ambientPulse = null;
-  $: ambientPulseText = describeAmbientPulse(ambientPulse, {});
-
-  function sanitizePulseText(msg) {
-    return String(msg || '')
-      .replace(/v Kladno\s*\([^)]*\)/gi, 'v Kladně')
-      .replace(/v Karlovy Vary/gi, 'v Karlových Varech')
-      .replace(/\s*\([^)]*\)/g, '');
-  }
 
   function toPlaceAction(p) {
     if (!p) return null;
@@ -1212,11 +1200,6 @@
     };
     checkNearReturn();
 
-    const pulseTimer = setTimeout(async () => {
-      const pulse = await fetchAmbientPulse();
-      ambientPulse = pulse;
-    }, 300);
-
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('focus', checkNearReturn);
     window.addEventListener('pageshow', checkNearReturn);
@@ -1289,7 +1272,6 @@
 
     return () => {
       destroyed = true;
-      clearTimeout(pulseTimer);
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('focus', checkNearReturn);
       window.removeEventListener('pageshow', checkNearReturn);
@@ -1747,13 +1729,6 @@
             {/if}
           </div>
         {/each}
-      </div>
-
-      <div class="near-pulse-wrap">
-        <div class="ambient-pulse-pill" role="status" aria-live="off">
-          <span class="pulse-dot-live" aria-hidden="true"></span>
-          <span class="pulse-msg-text">{ambientPulseText}</span>
-        </div>
       </div>
 
       {#if filteredPlaces.length > visibleCount}
@@ -2311,15 +2286,6 @@
   }
 
   /* List Column */
-  .near-pulse-wrap {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.45rem;
-    flex-wrap: wrap;
-    margin-top: 0.75rem;
-  }
-
   .list-toolbar {
     display: flex;
     justify-content: space-between;

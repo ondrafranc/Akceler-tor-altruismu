@@ -12,7 +12,6 @@
   export let isStarted = false;
   export let justCompleted = false;
   export let partnerReturnPromptVisible = false;
-  export let ambientPulse = null;
   export let soundMuted = false;
   export let showEffectPreview = false;
   export let copiedDirectLink = false;
@@ -250,7 +249,6 @@
             {isStarted}
             {justCompleted}
             {partnerReturnPromptVisible}
-            {ambientPulse}
             {soundMuted}
             {showEffectPreview}
             {copiedDirectLink}

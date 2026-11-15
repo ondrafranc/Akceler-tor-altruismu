@@ -28,9 +28,7 @@
     savePendingPartnerReturn,
     consumePendingPartnerReturn,
     getPendingPartnerReturnRemainingMs,
-    triggerCanvasBurst,
-    fetchAmbientPulse,
-    describeAmbientPulse,
+    triggerCanvasBurst
   } from "../../../lib/sensoryEngine.js";
   import { notifyMollySpark } from "../../../lib/mollyStore.js";
   import { haversineKm } from "../../../lib/validation.js";
@@ -116,8 +114,6 @@
   let awaitingGuidedAction = null;
   let guidedLeaveTimestamp = 0;
   let copiedDirectLink = false;
-  /** @type {any} */
-  let ambientPulse = null;
 
   // Adaptivní parametry průvodce (sekce 4.2 + 5.2)
   let commitment = "any"; // 'any' | 'one_off' | 'long_term'
@@ -157,8 +153,6 @@
   });
 
   $: bestAction = recommendations[0] || null;
-  // Až pod bestAction — reaktivní pořadí jinak předběhne nastavení parametrů z URL / sessionu
-  $: ambientPulseText = describeAmbientPulse(ambientPulse, { inCard: true, actionId: bestAction?.id });
   $: if (bestAction?.id) {
     lastShownActionId = bestAction.id;
   }
@@ -396,17 +390,11 @@
     };
     checkGuidedReturn();
 
-    const pulseTimer = setTimeout(async () => {
-      const pulse = await fetchAmbientPulse();
-      ambientPulse = pulse;
-    }, 300);
-
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("focus", checkGuidedReturn);
     window.addEventListener("pageshow", checkGuidedReturn);
 
     return () => {
-      clearTimeout(pulseTimer);
       if (guidedReturnTimer) clearTimeout(guidedReturnTimer);
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("focus", checkGuidedReturn);
@@ -587,7 +575,6 @@
             partnerReturnPromptVisible={!!guidedReturnAction}
             showEffectPreview={showGuidedEffect}
             soundMuted={soundMuted}
-            ambientPulse={ambientPulse}
             copiedDirectLink={copiedDirectLink}
             onStart={() => handleStartGuidedAction(bestAction, "guided_best")}
             onComplete={(action) => {

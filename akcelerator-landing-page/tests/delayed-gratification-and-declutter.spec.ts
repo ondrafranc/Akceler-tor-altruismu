@@ -413,6 +413,71 @@ test.describe('R1: Progressive Disclosure & UI Declutter', () => {
     }
   });
 
+  test('PD-1.5: Verification info and share/report buttons are hidden by default and render inline without vertical stacking inside open details.how-toggle across mobile & desktop', async ({ page }) => {
+    for (const vp of [{ width: 320, height: 568 }, { width: 360, height: 800 }, { width: 375, height: 667 }, { width: 1280, height: 800 }]) {
+      await page.setViewportSize(vp);
+      await page.goto('/');
+
+      const howToggle = page.locator('.instant-card details.how-toggle');
+      const verifyFooter = page.locator('.instant-card .action-verify-footer');
+      const verifyMeta = verifyFooter.locator('.verify-meta');
+
+      // Default state: MUST be hidden
+      await expect(howToggle).not.toHaveAttribute('open', '');
+      await expect(verifyFooter).toBeHidden();
+
+      // Expanded state: MUST be visible and inline (not stacked into 4 vertical flex items)
+      await howToggle.locator('summary').click();
+      await expect(howToggle).toHaveAttribute('open', '');
+      await expect(verifyFooter).toBeVisible();
+      await expect(verifyFooter).toContainText('Ověřeno:');
+      await expect(verifyFooter).toContainText('Zdroj:');
+      await expect(verifyFooter.locator('.broken-link-btn')).toBeVisible();
+
+      const metaDisplay = await verifyMeta.evaluate((el) => {
+        const cs = window.getComputedStyle(el);
+        const chain = el.closest('.how-details-content')?.querySelector('.impact-chain-row');
+        const trust = el.closest('.how-details-content')?.querySelector('.partner-trust-line');
+        return {
+          display: cs.display,
+          flexDirection: cs.flexDirection,
+          textAlign: cs.textAlign,
+          chainDisplay: chain ? window.getComputedStyle(chain).display : 'block',
+          trustDisplay: trust ? window.getComputedStyle(trust).display : 'block'
+        };
+      });
+      expect(metaDisplay.display, `verify-meta must not use flex column on ${vp.width}px`).not.toBe('flex');
+      expect(metaDisplay.chainDisplay, 'impact-chain-row must flow inline without orphaned flex arrows').toBe('block');
+      expect(metaDisplay.trustDisplay, 'partner-trust-line must flow inline without orphaned flex dots').toBe('block');
+      expect(metaDisplay.textAlign).toBe('left');
+
+      const metaBox = await verifyMeta.boundingBox();
+      const actionsBox = await verifyFooter.locator('.verify-footer-actions').boundingBox();
+      expect(metaBox).not.toBeNull();
+      expect(actionsBox).not.toBeNull();
+      // On >= 360px viewports, "Ověřeno: 11/2026 · Zdroj: Click and Feed ↗" fits in 1–2 lines (< 42px), never 4 stacked lines (~80px)
+      if (vp.width >= 360) {
+        expect(metaBox!.height, `verify-meta height (${metaBox!.height}px) must stay compact on ${vp.width}px`).toBeLessThan(42);
+      }
+      // On desktop 1280x800, verify-meta and verify-footer-actions sit side-by-side on one single row
+      if (vp.width === 1280) {
+        const metaCenterY = metaBox!.y + metaBox!.height / 2;
+        const actionsCenterY = actionsBox!.y + actionsBox!.height / 2;
+        expect(Math.abs(metaCenterY - actionsCenterY), 'Desktop 1280x800 verify-meta and share/report actions must sit on the same horizontal row').toBeLessThanOrEqual(8);
+      }
+      if (vp.width <= 680) {
+        const brokenBox = await verifyFooter.locator('.mde-broken-btn').boundingBox();
+        expect(brokenBox!.height).toBeGreaterThanOrEqual(44);
+        expect(brokenBox!.width).toBeGreaterThanOrEqual(44);
+      }
+      await checkZeroHorizontalOverflow(page, `verify-footer-open-${vp.width}px`);
+
+      // Toggle back closed: MUST be hidden again
+      await howToggle.locator('summary').click();
+      await expect(verifyFooter).toBeHidden();
+    }
+  });
+
   // =========================================================================
   // PD-2: Guided Wizard (/app/guided) Progressive Flow
   // =========================================================================
@@ -569,6 +634,87 @@ test.describe('R1: Progressive Disclosure & UI Declutter', () => {
       await page.goto(route);
       await checkZeroHorizontalOverflow(page, `route-${route}-360x800`);
     }
+  });
+
+  test('PD-5.5: Krajina dobra (/svet) uses crisp SVG paws on dark pills, compact inline guide pill, and zero Molly dock overlap on 1280x800 & 375x667', async ({ page }) => {
+    // 1. Desktop 1280x800 checks
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await gotoHydrated(page, '/svet');
+
+    const legendMolly = page.locator('.legend-chip.legend-molly');
+    const sanctuaryPill = page.locator('.molly-sanctuary-pill');
+    await expect(legendMolly.locator('svg.sanctuary-paw-svg')).toBeVisible();
+    await expect(sanctuaryPill.locator('svg.sanctuary-paw-svg')).toBeVisible();
+    expect(await legendMolly.innerText()).not.toContain('🐾');
+    expect(await sanctuaryPill.innerText()).not.toContain('🐾');
+
+    // Compact guide pill sits in the same row as legend chips when closed (not a full-width empty bar)
+    const starBox = await page.locator('.legend-chip.legend-star').boundingBox();
+    const guideSummary = page.locator('summary.guide-toggle-summary');
+    const summaryBox = await guideSummary.boundingBox();
+    expect(starBox).not.toBeNull();
+    expect(summaryBox).not.toBeNull();
+    expect(summaryBox!.width, 'Closed guide summary must be a compact pill, not full-width bar').toBeLessThan(200);
+    expect(Math.abs(summaryBox!.y - starBox!.y), 'Guide pill must align in the same horizontal row as legend chips on 1280x800').toBeLessThanOrEqual(8);
+    await expect(guideSummary.locator('.guide-chevron')).toContainText('▸');
+
+    // At scrollY = 0 on 1280x800, fixed .molly-pelisek-dock must NOT overlap 💡 Rychlé nápady or quick deed chips
+    const dock = page.locator('.molly-pelisek-dock');
+    const quickIdeasSummary = page.locator('.quick-ideas-summary');
+    const firstQuickChip = page.locator('.qd-chip').first();
+    if ((await dock.isVisible()) && (await quickIdeasSummary.isVisible())) {
+      const dockBox = (await dock.boundingBox())!;
+      for (const target of [quickIdeasSummary, firstQuickChip]) {
+        if (await target.isVisible()) {
+          const tBox = (await target.boundingBox())!;
+          const overlapsX = dockBox.x < tBox.x + tBox.width && dockBox.x + dockBox.width > tBox.x;
+          const overlapsY = dockBox.y < tBox.y + tBox.height && dockBox.y + dockBox.height > tBox.y;
+          expect(
+            overlapsX && overlapsY,
+            `Molly dock (${JSON.stringify(dockBox)}) must not overlap RitualBar quick ideas (${JSON.stringify(tBox)}) at scrollY=0 on 1280x800`
+          ).toBe(false);
+        }
+      }
+    }
+
+    // Expanding guide opens full-width panel below legend row WITHOUT teleporting summary pill out from under cursor
+    await guideSummary.click();
+    const guideToggle = page.locator('details.sanctuary-guide-toggle');
+    await expect(guideToggle).toHaveAttribute('open', '');
+    const openSummaryBox = (await guideSummary.boundingBox())!;
+    expect(Math.abs(openSummaryBox.x - summaryBox!.x), 'Guide summary pill must not jump horizontally when opened').toBeLessThanOrEqual(2);
+    expect(Math.abs(openSummaryBox.y - summaryBox!.y), 'Guide summary pill must not jump vertically when opened').toBeLessThanOrEqual(2);
+    const stripBox = (await page.locator('.sanctuary-legend-strip').boundingBox())!;
+    const panelBox = (await page.locator('.guide-toggle-panel').boundingBox())!;
+    expect(panelBox.width).toBeGreaterThanOrEqual(stripBox.width - 40);
+    expect(panelBox.y).toBeGreaterThanOrEqual(stripBox.y + stripBox.height - 2);
+    await checkZeroHorizontalOverflow(page, 'svet-guide-open-1280x800');
+    await guideSummary.click();
+
+    // Clicking sanctuary pill triggers gentle-toast with crisp SVG paw instead of OS 🐾 emoji
+    await sanctuaryPill.click();
+    const toast = page.locator('.gentle-toast');
+    await expect(toast).toBeVisible();
+    await expect(toast.locator('svg.sanctuary-paw-svg')).toBeVisible();
+    expect(await toast.innerText()).not.toContain('🐾');
+
+    // 2. Mobile 375x667 checks (including AGENTS.md §1.2 >= 44x44 px touch targets)
+    await page.setViewportSize({ width: 375, height: 667 });
+    await gotoHydrated(page, '/svet');
+    const mobileSummaryBox = (await guideSummary.boundingBox())!;
+    const mobilePillBox = (await sanctuaryPill.boundingBox())!;
+    expect(mobileSummaryBox.width, 'Closed guide summary must be a compact pill on 375x667').toBeLessThan(180);
+    expect(mobileSummaryBox.width, 'Guide summary touch target width >= 44px on mobile').toBeGreaterThanOrEqual(44);
+    expect(mobileSummaryBox.height, 'Guide summary touch target height >= 44px on mobile').toBeGreaterThanOrEqual(44);
+    expect(mobilePillBox.width, 'Molly sanctuary pill touch target width >= 44px on mobile').toBeGreaterThanOrEqual(44);
+    expect(mobilePillBox.height, 'Molly sanctuary pill touch target height >= 44px on mobile').toBeGreaterThanOrEqual(44);
+    const mobileMollyBox = (await legendMolly.boundingBox())!;
+    expect(Math.abs(mobileSummaryBox.y - mobileMollyBox.y), 'Guide pill sits inline next to Molly chip on 375x667').toBeLessThanOrEqual(8);
+    await guideSummary.click();
+    const mobileOpenSummaryBox = (await guideSummary.boundingBox())!;
+    expect(Math.abs(mobileOpenSummaryBox.x - mobileSummaryBox.x), 'Mobile guide summary must stay stationary when opened').toBeLessThanOrEqual(2);
+    await expect(page.locator('.guide-toggle-panel')).toBeVisible();
+    await checkZeroHorizontalOverflow(page, 'svet-guide-open-375x667');
   });
 
 });

@@ -459,7 +459,7 @@
   // na tlačítku „Zobrazit krok“ nebo na výběru měst. Teď si Molly vybírá místo podle toho,
   // co je zrovna pod ní: tlačítka, odkazy, pole formuláře a nadpisy se snaží nikdy nepřekrýt.
   const OBSTACLE_SELECTOR =
-    'a[href], button, input, select, textarea, label, summary, [role="button"], [data-molly-guide], h1, h2, h3, h4, .chip, .pill, .cat-pill, .city-chip, .q-pill, .preset-pill, .topic-pill, .filter-chip, .source-chip, .radius-pill, .energy-tab, .ambient-pulse-pill, .mobile-guided-preview-bar, .feedback-pill';
+    'a[href], button, input, select, textarea, label, summary, [role="button"], [data-molly-guide], h1, h2, h3, h4, .chip, .pill, .cat-pill, .city-chip, .q-pill, .preset-pill, .topic-pill, .filter-chip, .source-chip, .radius-pill, .energy-tab, .mobile-guided-preview-bar, .feedback-pill';
   const MOBILE_MAX_W = 680;
 
   function viewportSize() {
@@ -2367,7 +2367,18 @@
       title="Skrýt zprávu"
     >
       <span class="molly-whisper-inner">
-        <span class="whisper-icon" aria-hidden="true">{activeWhisper.icon || '🐾'}</span>
+        <span class="whisper-icon" aria-hidden="true">
+          {#if !activeWhisper.icon || activeWhisper.icon === '🐾'}
+            <svg class="molly-paw-svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="7.5" cy="9.5" r="2.3" />
+              <circle cx="12" cy="7" r="2.3" />
+              <circle cx="16.5" cy="9.5" r="2.3" />
+              <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
+            </svg>
+          {:else}
+            {activeWhisper.icon}
+          {/if}
+        </span>
         <span class="whisper-text">{activeWhisper.text}</span>
       </span>
     </button>
@@ -2397,7 +2408,17 @@
   >
     {#if dockWhisper}
       <div class="molly-dock-whisper">
-        <span>{activeWhisper.icon || '🐾'} {activeWhisper.text}</span>
+        {#if !activeWhisper.icon || activeWhisper.icon === '🐾'}
+          <svg class="molly-paw-svg dock-whisper-paw-svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <circle cx="7.5" cy="9.5" r="2.3" />
+            <circle cx="12" cy="7" r="2.3" />
+            <circle cx="16.5" cy="9.5" r="2.3" />
+            <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
+          </svg>
+          <span>{activeWhisper.text}</span>
+        {:else}
+          <span>{activeWhisper.icon} {activeWhisper.text}</span>
+        {/if}
       </div>
     {/if}
 
@@ -2470,7 +2491,18 @@
           aria-label={$mollyState.followMouse ? 'Vypnout sledování myši' : 'Zapnout sledování myši (Molly půjde za kurzorem)'}
           title={$mollyState.followMouse ? 'Vypnout sledování myši' : 'Zapnout sledování myši (Molly půjde za kurzorem)'}
         >
-          <span aria-hidden="true">{$mollyState.followMouse ? '🐾' : '🖱️'}</span>
+          <span aria-hidden="true">
+            {#if $mollyState.followMouse}
+              <svg class="molly-paw-svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="7.5" cy="9.5" r="2.3" />
+                <circle cx="12" cy="7" r="2.3" />
+                <circle cx="16.5" cy="9.5" r="2.3" />
+                <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
+              </svg>
+            {:else}
+              🖱️
+            {/if}
+          </span>
           <span class="molly-follow-text">{$mollyState.followMouse ? 'Sleduji' : 'Myš'}</span>
         </button>
       {/if}
@@ -2552,6 +2584,20 @@
   .whisper-icon {
     flex-shrink: 0;
     font-size: 0.88rem;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .molly-paw-svg {
+    color: #fde68a;
+    flex-shrink: 0;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+  }
+
+  .dock-whisper-paw-svg {
+    display: inline-block;
+    vertical-align: -1.5px;
+    margin-right: 0.2rem;
   }
 
   .whisper-text {

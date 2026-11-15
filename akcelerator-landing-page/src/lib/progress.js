@@ -386,14 +386,6 @@ export function recordSmallWin(step, options = {}) {
     source: 'win'
   });
 
-  if (typeof window !== 'undefined' && typeof fetch === 'function') {
-    fetch('/api/pulse', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action_id: entry.id, kind: 'completed' })
-    }).catch(() => {});
-  }
-
   trackEvent('aa_small_win', {
     surface: entry.surface,
     id: entry.id,

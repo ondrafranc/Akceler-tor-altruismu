@@ -24,9 +24,7 @@
     savePendingPartnerReturn,
     consumePendingPartnerReturn,
     getPendingPartnerReturnRemainingMs,
-    triggerCanvasBurst,
-    fetchAmbientPulse,
-    describeAmbientPulse
+    triggerCanvasBurst
   } from '../../../lib/sensoryEngine.js';
   import { notifyMollySpark } from '../../../lib/mollyStore.js';
   import { cleanTitle, cleanMeta, safeGetItem } from '../../../lib/utils.js';
@@ -47,9 +45,6 @@
   let returnMetric = 0;
   let awaitingReturnAction = null;
   let leaveTimestamp = 0;
-  /** @type {any} */
-  let ambientPulse = null;
-  $: ambientPulseText = describeAmbientPulse(ambientPulse, {});
 
   const FILTERS = [
     { id: 'all', label: '✨ Doporučené' },
@@ -59,7 +54,7 @@
     { id: 'outdoor', label: 'Venku' },
     { id: 'tutoring', label: 'U počítače' },
     { id: 'donation', label: 'Drobný dar' },
-    { id: 'evidenceA', label: '✦ Důkazy A' }
+    { id: 'evidenceA', label: '✦ Ověřený dopad (A)' }
   ];
 
   onMount(() => {
@@ -124,17 +119,11 @@
     };
     checkPartnerReturn();
 
-    const pulseTimer = setTimeout(async () => {
-      const pulse = await fetchAmbientPulse();
-      ambientPulse = pulse;
-    }, 300);
-
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('focus', checkPartnerReturn);
     window.addEventListener('pageshow', checkPartnerReturn);
 
     return () => {
-      clearTimeout(pulseTimer);
       if (onlineReturnTimer) clearTimeout(onlineReturnTimer);
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('focus', checkPartnerReturn);
@@ -405,13 +394,6 @@
       {/each}
     </div>
 
-    <div class="online-pulse-wrap">
-      <div class="ambient-pulse-pill" role="status" aria-live="off">
-        <span class="pulse-dot-live" aria-hidden="true"></span>
-        <span class="pulse-msg-text">{ambientPulseText}</span>
-      </div>
-    </div>
-
     {#if remainingCount > 0}
       <div class="calm-more-wrap">
         <button
@@ -539,12 +521,6 @@
 
   .btn-random-spark:hover {
     transform: translateY(-2px);
-  }
-
-  .online-pulse-wrap {
-    display: flex;
-    justify-content: center;
-    margin-top: 0.9rem;
   }
 
   .filters-bar {
@@ -767,18 +743,6 @@
     .online-methodology-drawer {
       max-width: 100%;
       box-sizing: border-box;
-    }
-
-    .online-pulse-wrap {
-      max-width: 100%;
-      box-sizing: border-box;
-    }
-
-    .ambient-pulse-pill {
-      max-width: 100%;
-      box-sizing: border-box;
-      white-space: normal;
-      text-align: center;
     }
 
     :global(.grid .card .cta),

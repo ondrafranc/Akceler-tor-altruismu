@@ -38,7 +38,17 @@
   >
     <div class="mw-head">
       <span class="mw-overline">
-        {selMeta.icon} {selMeta.title} · {getLightSemanticLabel(selectedLight)}
+        {#if selMeta.icon === '🐾'}
+          <svg class="mw-paw-svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <circle cx="7.5" cy="9.5" r="2.3" />
+            <circle cx="12" cy="7" r="2.3" />
+            <circle cx="16.5" cy="9.5" r="2.3" />
+            <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
+          </svg>
+        {:else}
+          {selMeta.icon}
+        {/if}
+        {selMeta.title} · {getLightSemanticLabel(selectedLight)}
         {#if selectedLight.isMine} · ✦ Tvůj skutek{/if}
       </span>
       <button type="button" class="mw-close" on:click={handleClose} aria-label="Zavřít">✕</button>
@@ -115,6 +125,13 @@
     font-weight: 800;
     color: #fde68a;
     letter-spacing: 0.03em;
+  }
+
+  .mw-paw-svg {
+    display: inline-block;
+    vertical-align: -1.5px;
+    color: #fde68a;
+    margin-right: 0.14rem;
   }
 
   .mw-close {

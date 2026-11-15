@@ -6,9 +6,11 @@ Každá obrazovka, text i technické rozhodnutí slouží jedinému cíli: **oka
 1. **Zákon 3 vteřin a Zero-Scroll vstupu (`100dvh`)**:
    - Na mobilních rozlišeních (`360×800`, `375×667`) musí být na `/` okamžitě nad ohybem obrazovky viditelná samotná karta konkrétního skutku a její hlavní akční tlačítko (`boundingBox.bottom <= viewportHeight`).
    - Nikdy nevkládej nad kartu skutku celoobrazovkové uvítací plakáty, kotevní scroll-tlačítka, morální kázání ani stěny filtrů.
-2. **Jedna dominantní akce na obrazovku**:
+2. **Jedna dominantní akce na obrazovku a nulový manipulativní šum**:
    - Hlavní CTA používá konkrétní akční sloveso (např. *„Nakrmit útulek teď“*) a reaguje okamžitě na první kliknutí (žádné umělé držení tlačítka / hold-to-confirm).
-   - Sekundární metadata (metodologie, důkazní třídy, detaily partnera) patří výhradně do rozbalovacího detailu na vyžádání (`ℹ️ Jak to funguje`), nikdy nad primární CTA.
+   - Nikde v aplikaci nepoužívej e-shopové / FOMO notifikace sociálního nátlaku typu *„právě někdo…“*, *„před X h někdo…“* ani *„v komunitě někdo…“* (`.ambient-pulse-pill`).
+   - Sekundární metadata a pomocné akce (metodologie, důkazní třídy, detaily partnera, *„Ověřeno / Zdroj“*, *„Sdílet odkaz“* a *„Nahlásit chybu“*) patří výhradně dovnitř rozbalovacího detailu na vyžádání (`ℹ️ Jak to funguje`), nikdy přímo na výchozí plochu karty.
+   - Každá záložka i filtr musí být okamžitě srozumitelné i pro prvonávštěvníka bez interních zkratek (např. *„Ověřený dopad (A)“* místo *„Důkazy A“*; u metaforické scény `/svet` kompaktní jednořádková legenda symbolů + rozbalovací klíč `▸ Jak to funguje`, jehož přepínač při otevření nemění pozici pod kurzorem).
    - Všechny interaktivní prvky na mobilu musí splňovat minimální dotykovou plochu `44×44 px` a nesmí překrývat obsah plovoucími vrstvami.
    - Všechna formulářová pole (`input`, `textarea`, `select`) na mobilu musí mít `font-size >= 16px` (`1rem`), aby iOS Safari při fokusu automaticky nepřibližoval viewport.
 3. **Dvoufázový prožitek karty: Živá anticipace PŘED akcí, odměna až PO akci**:

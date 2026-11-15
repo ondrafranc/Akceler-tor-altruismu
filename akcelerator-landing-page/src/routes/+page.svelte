@@ -30,9 +30,7 @@
     consumePendingPartnerReturn,
     getPendingPartnerReturnRemainingMs,
     impactCanvas,
-    triggerCanvasBurst,
-    fetchAmbientPulse,
-    describeAmbientPulse,
+    triggerCanvasBurst
   } from "../lib/sensoryEngine.js";
   import { notifyMollySpark } from "../lib/mollyStore.js";
   import { cleanTitle, stripLeadingEmoji, safeGetItem } from "../lib/utils.js";
@@ -112,10 +110,6 @@
   let showEffectPreview = false;
   let sparkBoosted = false;
   let cardCanvasNode = null;
-  /** @type {any} */
-  let ambientPulse = null;
-  // Pozn.: reaktivní text pulsu je až POD `currentQuickAction` (viz níže). Kdyby stál tady,
-  // Svelte by kvůli závislosti spočítal kartu dřív, než deep-link (?action=) nastaví pinnedActionId.
   let stopHoldSpark = null;
 
   function resolveActionFromParam(rawParam) {
@@ -259,11 +253,6 @@
 
     triggerPartnerReturnIfReady();
 
-    const pulseTimer = setTimeout(async () => {
-      const pulse = await fetchAmbientPulse();
-      ambientPulse = pulse;
-    }, 250);
-
     window.addEventListener("hashchange", handleHashChange);
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("focus", handleWindowFocus);
@@ -275,7 +264,6 @@
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handleWindowFocus);
       window.removeEventListener("pageshow", handleWindowFocus);
-      clearTimeout(pulseTimer);
       if (returnDelayTimer) clearTimeout(returnDelayTimer);
       if (copyLinkTimer) clearTimeout(copyLinkTimer);
     };
@@ -367,7 +355,6 @@
   $: if (currentQuickAction?.id) {
     lastQuickActionId = currentQuickAction.id;
   }
-  $: ambientPulseText = describeAmbientPulse(ambientPulse, { inCard: true, actionId: currentQuickAction?.id });
   $: isCurrentStarted = Boolean(
     currentQuickAction?.id &&
       Array.isArray($startedActionIds) &&
@@ -640,7 +627,6 @@
           isStarted={isCurrentStarted}
           {justCompleted}
           {partnerReturnPromptVisible}
-          {ambientPulse}
           {soundMuted}
           {showEffectPreview}
           {copiedDirectLink}

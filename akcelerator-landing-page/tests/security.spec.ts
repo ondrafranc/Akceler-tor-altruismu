@@ -430,7 +430,7 @@ test('/app/guided adaptive parameters, Evidence Tier A filter, and methodology t
 
 test('/app/online Evidence A filter and /svet 3 semantic light types + post-deed rest reassurance work', async ({ page }) => {
   await page.goto('/app/online');
-  await page.locator('.filters-bar .filter-chip:has-text("Důkazy A")').click();
+  await page.locator('.filters-bar .filter-chip:has-text("Ověřený dopad (A)"), .filters-bar .filter-chip:has-text("Důkazy A")').click();
   await expect(page.locator('.grid .card .card-evidence-badge').first()).toContainText('Důkazy A');
   await expect(page.locator('.grid .card .card-verify-footer').first()).toContainText('Ověřeno:');
 
@@ -523,8 +523,8 @@ test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #actio
   await page.locator('.crisis-panel .close-btn').click();
   await expect(page.locator('.crisis-panel')).toBeHidden();
 
-  // Úkol 2: Sound mute toggle & ambient pulse pill (after initiating action)
-  await expect(page.locator('.instant-card .ambient-pulse-pill')).toBeVisible();
+  // Úkol 2: Sound mute toggle & verified absence of ambient pulse pill (after initiating action)
+  await expect(page.locator('.instant-card .ambient-pulse-pill')).toHaveCount(0);
   await primaryCta.dispatchEvent('click');
   const doneBox = await doneBtn800.boundingBox();
   expect(doneBox).not.toBeNull();
@@ -820,7 +820,7 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
     await page.goto('/app/online');
     const firstCard = page.locator('.grid .card').first();
     await expect(firstCard.locator('.cta.primary')).toHaveAttribute('data-hold-spark', 'true');
-    await expect(page.locator('.ambient-pulse-pill').first()).toBeVisible();
+    await expect(page.locator('.ambient-pulse-pill')).toHaveCount(0);
     await expect(firstCard.locator('.actions-row .effect-spark-btn')).toHaveCount(0);
     await firstCard.locator('.cta.primary').dispatchEvent('click');
     await expect(firstCard.locator('.card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
@@ -847,7 +847,7 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
     await page.goto('/app/guided');
     const highlightCard = page.locator('.highlight-card');
     await expect(highlightCard.locator('.btn-gold-action')).toHaveAttribute('data-hold-spark', 'true');
-    await expect(highlightCard.locator('.ambient-pulse-pill')).toBeVisible();
+    await expect(highlightCard.locator('.ambient-pulse-pill')).toHaveCount(0);
     await expect(highlightCard.locator('.rec-top-actions .effect-spark-btn')).toHaveCount(0);
     await highlightCard.locator('.btn-gold-action').dispatchEvent('click');
     if (!(await highlightCard.locator('.card-effect-stage').isVisible())) {
@@ -869,7 +869,7 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
     await expect(firstPlaceCard.locator('.card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
     await firstPlaceCard.locator('.effect-spark-btn').click();
     await expect(firstPlaceCard.locator('.card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
-    await expect(page.locator('.ambient-pulse-pill').first()).toBeVisible();
+    await expect(page.locator('.ambient-pulse-pill')).toHaveCount(0);
     await firstPlaceCard.locator('.pc-share-btn').click();
     await expect(firstPlaceCard.locator('.pc-share-btn')).toContainText('✓ Odkaz zkopírován');
 
@@ -976,6 +976,7 @@ test('Molly tortoiseshell cat companion, action-driven feeding, in-canvas Mini-M
   // Dynamic resize from Desktop (1280x900) to Mobile (360x800) clamps Molly inside mobile viewport
   // and allows mobile pointer tap on .molly-dock-toggle-btn when no interactive page element is underneath
   await page.setViewportSize({ width: 360, height: 800 });
+  await page.waitForTimeout(200);
   const mobileActorBox = await page.locator('.molly-roaming-actor').boundingBox();
   expect(mobileActorBox).not.toBeNull();
   expect(mobileActorBox!.x).toBeGreaterThanOrEqual(-5);

@@ -313,7 +313,7 @@
     </a>
     <a href="/svet" class="mb-tab" class:active={pathname.startsWith("/svet")}>
       <span class="mb-icon" aria-hidden="true">✨</span>
-      <span class="mb-label">Krajina</span>
+      <span class="mb-label">Krajina dobra</span>
     </a>
     <a
       href="/app/guided"

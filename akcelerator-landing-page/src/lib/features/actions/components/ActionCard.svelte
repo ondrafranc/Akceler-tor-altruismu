@@ -5,7 +5,6 @@
     impactCanvas,
     triggerCanvasBurst,
     playPayoffAsmr,
-    describeAmbientPulse,
     playCelebrationChord,
     safeVibrate,
     startHoldSpark
@@ -21,7 +20,6 @@
   export let isCompleted = false;
   export let justCompleted = false;
   export let partnerReturnPromptVisible = false;
-  export let ambientPulse = null;
   export let soundMuted = false;
   export let showEffectPreview = false;
   export let copiedDirectLink = false;
@@ -269,7 +267,6 @@
   $: previewSceneFamily = resolvePreviewSceneFamily(effectMeta?.scene, categoryAura?.theme);
   $: previewCue = buildPreviewCue(action, effectMeta);
   $: showIdleDiorama = variant === 'instant' && !isStarted && !justCompleted && !partnerReturnPromptVisible;
-  $: ambientPulseText = describeAmbientPulse(ambientPulse, { inCard: true, actionId: action?.id });
   $: actionTitle = action ? cleanTitle(action.title) : '';
 </script>
 
@@ -626,40 +623,39 @@
             <span><strong>Skutečný dopad:</strong> {action.impactChain.realImpact}</span>
           </div>
         {/if}
-        <div class="mobile-details-extra">
-          <div class="mde-verify">
-            <span>
-              Ověřeno: <strong>{action.verifiedLabel}</strong> · Zdroj:
-              <a
-                href={action.sourceUrl || action.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="verify-source-link"
-              >
-                {action.org} ↗
-              </a>
-            </span>
-            <div class="mde-row">
-              {#if onShare}
-                <button
-                  type="button"
-                  class="mde-share-btn"
-                  on:click={() => onShare(action)}
-                >
-                  {copiedDirectLink ? '✓ Odkaz zkopírován' : '🔗 Sdílet odkaz'}
-                </button>
-              {/if}
+        <div class="action-verify-footer card-verify-footer rec-verify-footer mobile-details-extra">
+          <span class="verify-meta mde-verify">
+            Ověřeno: <strong>{action.verifiedLabel}</strong> · Zdroj:
+            <a
+              href={action.sourceUrl || action.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="verify-source-link card-source-link rec-source-link"
+            >
+              {action.org} ↗
+            </a>
+          </span>
+          <div class="verify-footer-actions card-footer-actions rec-footer-btns mde-row">
+            {#if onShare}
               <button
                 type="button"
-                class="mde-broken-btn"
-                on:click={() => {
-                  if (onReportBroken) onReportBroken(action);
-                  else openBrokenLinkReport({ id: action.id, title: actionTitle, org: action.org, url: action.url });
-                }}
+                class="direct-link-share-btn mde-share-btn card-broken-btn rec-broken-btn"
+                on:click={() => onShare(action)}
+                title="Zkopírovat přímý odkaz na tento skutek pro sdílení v diskuzi nebo zprávě"
               >
-                Nahlásit chybu
+                {copiedDirectLink ? '✓ Odkaz zkopírován' : '🔗 Sdílet odkaz'}
               </button>
-            </div>
+            {/if}
+            <button
+              type="button"
+              class="broken-link-btn mde-broken-btn card-broken-btn rec-broken-btn"
+              on:click={() => {
+                if (onReportBroken) onReportBroken(action);
+                else openBrokenLinkReport({ id: action.id, title: actionTitle, org: action.org, url: action.url });
+              }}
+            >
+              Nahlásit chybu
+            </button>
           </div>
         </div>
       </div>
@@ -701,7 +697,13 @@
           ✨ <strong>Dnes už tvůj dobrý skutek pomáhá.</strong> Můžeš pokračovat dalším drobným skutkem, nebo dnešní seanci s klidem uzavřít.
         </div>
         <div class="molly-celebration-note">
-          🐾 <strong>Molly má radost!</strong> V <a href="/svet" class="molly-svet-inline-link">Krajině dobra</a> na ni za tvůj skutek čeká zasloužený pamlsek.
+          <svg class="badge-paw-svg molly-note-paw-svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <circle cx="7.5" cy="9.5" r="2.3" />
+            <circle cx="12" cy="7" r="2.3" />
+            <circle cx="16.5" cy="9.5" r="2.3" />
+            <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
+          </svg>
+          <strong>Molly děkuje a má radost!</strong> V <a href="/svet" class="molly-svet-inline-link">Krajině dobra</a> na ni za tvůj skutek čeká zasloužený pamlsek.
         </div>
         <div class="return-dopamine-actions in-situ-actions">
           {#if onCloseSession}
@@ -942,48 +944,6 @@
         </div>
       {/if}
     {/if}
-
-    <div class="ambient-pulse-pill" role="status" aria-live="off">
-      <span class="ambient-pulse-wave pulse-dot-live" aria-hidden="true"></span>
-      <span class="ambient-pulse-dot" aria-hidden="true"></span>
-      <span class="ambient-pulse-text pulse-msg-text">{ambientPulseText}</span>
-    </div>
-
-    <div class="action-verify-footer card-verify-footer rec-verify-footer">
-      <span class="verify-meta">
-        Ověřeno: <strong>{action.verifiedLabel}</strong> · Zdroj:
-        <a
-          href={action.sourceUrl || action.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="verify-source-link card-source-link rec-source-link"
-        >
-          {action.org} ↗
-        </a>
-      </span>
-      <div class="verify-footer-actions card-footer-actions rec-footer-btns">
-        {#if onShare}
-          <button
-            type="button"
-            class="direct-link-share-btn mde-share-btn card-broken-btn rec-broken-btn"
-            on:click={() => onShare(action)}
-            title="Zkopírovat přímý odkaz na tento skutek pro sdílení v diskuzi nebo zprávě"
-          >
-            {copiedDirectLink ? '✓ Odkaz zkopírován' : 'Sdílet odkaz'}
-          </button>
-        {/if}
-        <button
-          type="button"
-          class="broken-link-btn mde-broken-btn card-broken-btn rec-broken-btn"
-          on:click={() => {
-            if (onReportBroken) onReportBroken(action);
-            else openBrokenLinkReport({ id: action.id, title: actionTitle, org: action.org, url: action.url });
-          }}
-        >
-          Nahlásit chybu
-        </button>
-      </div>
-    </div>
   </article>
 {/if}
 
@@ -1355,12 +1315,14 @@
   }
 
   .partner-trust-line {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    flex-wrap: wrap;
+    display: block;
     font-size: 0.78rem;
+    line-height: 1.44;
     color: var(--text-muted, #6b7280);
+  }
+
+  .partner-trust-line > span + span {
+    margin-left: 0.25rem;
   }
 
   .partner-trust-line strong {
@@ -1399,6 +1361,7 @@
 
   .how-toggle summary::before {
     content: "▸";
+    display: inline-block;
     color: var(--emerald-600, #059669);
     transition: transform 0.18s ease;
   }
@@ -1421,15 +1384,15 @@
     margin-top: 0.45rem;
     padding-top: 0.45rem;
     border-top: 1px dashed rgba(22, 66, 48, 0.14);
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    flex-wrap: wrap;
+    display: block;
     font-size: 0.78rem;
+    line-height: 1.48;
     color: var(--text-secondary, #374151);
   }
 
   .chain-arrow {
+    display: inline-block;
+    margin: 0 0.24rem;
     color: var(--emerald-600, #059669);
     font-weight: 800;
   }
@@ -1764,6 +1727,12 @@
     flex-shrink: 0;
   }
 
+  .molly-note-paw-svg {
+    display: inline-block;
+    vertical-align: -2px;
+    margin-right: 0.18rem;
+  }
+
   .in-situ-affirmation,
   .molly-celebration-note {
     font-size: 0.82rem;
@@ -1858,83 +1827,42 @@
   }
 
   /* =========================================================================
-     ŽIVÝ PULS KOMUNITY A OVĚŘOVACÍ PATIČKA
+     OVĚŘOVACÍ PATIČKA (V DETAILU „JAK TO FUNGUJE“)
      ========================================================================= */
-  .ambient-pulse-pill {
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    gap: 0.42rem;
+  .how-details-content .action-verify-footer,
+  .action-verify-footer,
+  .mobile-details-extra {
     margin-top: 0.45rem;
-    padding: 0.15rem 0.05rem;
-    color: #2c5540;
-    font-size: 0.73rem;
-    font-weight: 600;
-    line-height: 1.25;
-  }
-
-  .ambient-pulse-wave {
-    display: inline-block;
-    position: absolute;
-    left: 1px;
-    top: 50%;
-    margin-top: -3px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: rgba(16, 185, 129, 0.55);
-    animation: pulseRadar 2.4s ease-out infinite;
-    pointer-events: none;
-  }
-
-  @keyframes pulseRadar {
-    0% {
-      transform: scale(1);
-      opacity: 0.85;
-    }
-    100% {
-      transform: scale(3.4);
-      opacity: 0;
-    }
-  }
-
-  .ambient-pulse-dot {
-    position: relative;
-    z-index: 1;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #10b981;
-    box-shadow: 0 0 8px rgba(16, 185, 129, 0.65);
-    flex-shrink: 0;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .ambient-pulse-wave {
-      animation: none;
-      display: none;
-    }
-  }
-
-  .ambient-pulse-text {
-    position: relative;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .action-verify-footer {
-    margin-top: 0.55rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid rgba(22, 66, 48, 0.08);
+    padding-top: 0.45rem;
+    border-top: 1px dashed rgba(22, 66, 48, 0.16);
     display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: 0.2rem 0.48rem;
     flex-wrap: wrap;
-    font-size: 0.74rem;
+    font-size: 0.73rem;
+    line-height: 1.4;
     color: var(--text-muted, #6b7280);
+    text-align: left;
+  }
+
+  .verify-meta,
+  .mde-verify {
+    display: inline-block;
+    min-width: 0;
+    max-width: 100%;
+    font-size: 0.73rem;
+    line-height: 1.4;
+    color: var(--text-muted, #6b7280);
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+
+  .verify-meta strong,
+  .mde-verify strong {
+    color: var(--text-secondary, #374151);
+    font-weight: 700;
   }
 
   .verify-source-link {
@@ -1948,10 +1876,11 @@
     text-decoration: underline;
   }
 
-  .verify-footer-actions {
+  .verify-footer-actions,
+  .mde-row {
     display: inline-flex;
     align-items: center;
-    gap: 0.65rem;
+    gap: 0.5rem;
     flex-wrap: wrap;
   }
 
@@ -1960,10 +1889,14 @@
     appearance: none;
     background: none;
     border: none;
-    padding: 0;
+    padding: 0.12rem 0;
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+    box-sizing: border-box;
     color: #047857;
     font-family: var(--font-sans);
-    font-size: 0.74rem;
+    font-size: 0.73rem;
     font-weight: 700;
     cursor: pointer;
     text-decoration: underline;
@@ -1972,16 +1905,21 @@
 
   .broken-link-btn,
   .mde-broken-btn {
+    appearance: none;
     border: none;
     background: transparent;
+    padding: 0.12rem 0;
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+    box-sizing: border-box;
     color: var(--text-muted, #6b7280);
     font-family: var(--font-sans);
-    font-size: 0.73rem;
+    font-size: 0.72rem;
     font-weight: 600;
     text-decoration: underline;
     text-underline-offset: 2px;
     cursor: pointer;
-    padding: 0;
   }
 
   .broken-link-btn:hover {
@@ -1997,12 +1935,6 @@
     .instant-body > :global(.card-effect-stage) {
       order: 5;
       margin: 0.2rem 0 0.45rem;
-    }
-    .instant-body > .ambient-pulse-pill {
-      order: 6;
-    }
-    .instant-body > .action-verify-footer {
-      order: 7;
     }
   }
 
@@ -2036,52 +1968,13 @@
     box-shadow: 0 0 0 4px rgba(253, 230, 138, 0.4), var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
   }
 
-  .mobile-details-extra {
-    display: none;
-  }
-
-  @media (max-width: 1024px) {
-    .instant-body:not(.directory-card) > .action-verify-footer {
-      display: none;
-    }
-
-    .mobile-details-extra {
-      display: flex;
-      flex-direction: column;
-      gap: 0.38rem;
-      margin-top: 0.4rem;
-      padding-top: 0.42rem;
-      border-top: 1px dashed rgba(22, 82, 56, 0.18);
-      font-size: 0.76rem;
-      line-height: 1.38;
-    }
-
-    .mde-row {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-
+  @media (max-width: 680px) {
     .mde-share-btn,
     .mde-broken-btn {
       min-height: 44px;
-      display: inline-flex;
-      align-items: center;
-      padding: 0.25rem 0.35rem;
-      box-sizing: border-box;
+      min-width: 44px;
+      padding: 0.25rem 0.2rem;
     }
-
-    .mde-verify {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-      font-size: 0.72rem;
-      color: var(--text-muted, #6b7280);
-    }
-  }
-
-  @media (max-width: 680px) {
     .card.directory-card {
       padding: 0.58rem 0.78rem;
       border-radius: 18px;
@@ -2286,32 +2179,6 @@
       font-size: 0.78rem;
       border-radius: 12px;
       background: rgba(238, 247, 241, 0.75);
-    }
-
-    .ambient-pulse-pill {
-      margin-top: 0.22rem;
-      padding: 0.16rem 0.08rem;
-      font-size: 0.68rem;
-      align-items: flex-start;
-    }
-
-    .ambient-pulse-wave {
-      top: 0.28rem;
-      margin-top: 0;
-      left: 1px;
-    }
-
-    .ambient-pulse-dot {
-      margin-top: 0.28rem;
-    }
-
-    .ambient-pulse-text {
-      white-space: normal;
-      display: -webkit-box;
-      line-clamp: 2;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
     }
   }
 

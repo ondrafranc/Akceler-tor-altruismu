@@ -19,8 +19,6 @@
   import { MICRO_ACTIONS } from "../../lib/data/czech-actions.js";
   import { trackEvent } from "../../lib/analytics.js";
   import {
-    fetchAmbientPulse,
-    describeAmbientPulse,
     playMollyPurr,
     playMollyCrunch,
     playMollyMeow,
@@ -45,10 +43,6 @@
   import RitualBar from "$lib/features/sanctuary/components/RitualBar.svelte";
   import BreathingPacer from "$lib/features/sanctuary/components/BreathingPacer.svelte";
   import ProgressDashboard from "$lib/features/sanctuary/components/ProgressDashboard.svelte";
-
-  /** @type {any} */
-  let ambientPulse = null;
-  $: ambientPulseText = describeAmbientPulse(ambientPulse, {});
 
   /** @type {Record<string, typeof SANCTUARY_ELEMENTS[0]>} */
   const ELEMENT_MAP = Object.fromEntries(
@@ -562,7 +556,7 @@
         mollyLakeHearts.splice(0, mollyLakeHearts.length - 32);
       }
       showGentleToast(
-        "🐾 Hladíš Molly u břehu tůně. Přede a pamlsky si šetří na další dobrý skutek.",
+        "🐾 Patronka Molly spokojeně přede. Za každý dokončený dobrý skutek v aplikaci dostane do mističky pamlsek.",
       );
     }
   }
@@ -2647,18 +2641,12 @@
       io.observe(stageWrapEl);
     }
 
-    const pulseTimer = setTimeout(async () => {
-      const pulse = await fetchAmbientPulse();
-      ambientPulse = pulse;
-    }, 300);
-
     rafId = requestAnimationFrame(render);
 
     return () => {
       cancelAnimationFrame(rafId);
       if (ro) ro.disconnect();
       if (io) io.disconnect();
-      clearTimeout(pulseTimer);
       if (typeof window !== "undefined") {
         window.removeEventListener("hashchange", handleHashScroll);
       }
@@ -2688,9 +2676,68 @@
           Klikni na kterékoliv světlo pro inspiraci na dnešní skutek — nebo
           klikni na hladinu či oblohu a rozsviť ten svůj.
         </p>
-        <div class="ambient-pulse-pill" role="status" aria-live="off">
-          <span class="ambient-pulse-dot" aria-hidden="true"></span>
-          <span class="ambient-pulse-text">{ambientPulseText}</span>
+        <div class="sanctuary-orientation-block" role="region" aria-label="Klíč ke Krajině dobra">
+          <div class="sanctuary-legend-strip">
+            <span class="legend-chip legend-star" title="Klikni na hvězdu na obloze pro tip na ověřený skutek">
+              <span class="chip-symbol" aria-hidden="true">✦</span>
+              <span class="chip-text"><strong>Hvězdy</strong> · Inspirace</span>
+            </span>
+            <span class="legend-chip legend-lantern" title="Dokončený skutek se rozsvítí jako plovoucí lucerna">
+              <span class="chip-symbol" aria-hidden="true">🏮</span>
+              <span class="chip-text"><strong>Lucerny</strong> · Tvé skutky</span>
+            </span>
+            <span class="legend-chip legend-molly" title="Patronka Molly na břehu dostane za každý skutek pamlsek">
+              <span class="chip-symbol chip-symbol-svg" aria-hidden="true">
+                <svg class="sanctuary-paw-svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="7.5" cy="9.5" r="2.3" />
+                  <circle cx="12" cy="7" r="2.3" />
+                  <circle cx="16.5" cy="9.5" r="2.3" />
+                  <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
+                </svg>
+              </span>
+              <span class="chip-text"><strong>Molly</strong> · Pamlsek</span>
+            </span>
+
+            <details class="sanctuary-guide-toggle">
+              <summary class="guide-toggle-summary" aria-controls="sanctuary-guide-panel">
+                <span class="guide-pill-face">
+                  <span class="guide-chevron" aria-hidden="true">▸</span>
+                  <span>Jak to funguje</span>
+                </span>
+              </summary>
+            </details>
+          </div>
+
+          <div id="sanctuary-guide-panel" class="guide-toggle-panel">
+            <div class="guide-steps-grid">
+              <div class="guide-step">
+                <span class="guide-num">1</span>
+                <div>
+                  <strong>Vyber si světlo v krajině</strong>
+                  <p>Kliknutím na hvězdu na obloze otevřeš ověřený český skutek na 2–15 minut.</p>
+                </div>
+              </div>
+              <div class="guide-step">
+                <span class="guide-num">2</span>
+                <div>
+                  <strong>Udělej dobrý skutek</strong>
+                  <p>Pomoz zdarma online, v okolí nebo si zapiš vlastní dobrý skutek do tůně.</p>
+                </div>
+              </div>
+              <div class="guide-step">
+                <span class="guide-num">3</span>
+                <div>
+                  <strong>Rozsviť světlo a potěš Molly</strong>
+                  <p>Tvé světlo zůstane svítit v krajině a patronka Molly dostane zasloužený pamlsek.</p>
+                </div>
+              </div>
+            </div>
+            <div class="guide-cta-row">
+              <button type="button" class="guide-action-btn" on:click={openRandomInspiringDeed}>
+                ✨ Otevřít náhodný skutek na 2 minuty
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -2800,14 +2847,35 @@
             class="light-hover-pill"
             style={`left: ${Math.min(86, Math.max(14, hoveredLight.x * 100)).toFixed(1)}%; top: ${Math.max(10, hoveredLight.y * 100 - 6).toFixed(1)}%;`}
           >
-            <span>{hMeta.icon}</span>
+            {#if hMeta.icon === "🐾"}
+              <svg class="sanctuary-paw-svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <circle cx="7.5" cy="9.5" r="2.3" />
+                <circle cx="12" cy="7" r="2.3" />
+                <circle cx="16.5" cy="9.5" r="2.3" />
+                <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
+              </svg>
+            {:else}
+              <span>{hMeta.icon}</span>
+            {/if}
             <strong>{cleanTitle(hoveredLight.title)}</strong>
             <span class="hp-hint">· klikni</span>
           </div>
         {/if}
 
         {#if gentleToast}
-          <div class="gentle-toast" role="status">{gentleToast}</div>
+          <div class="gentle-toast" role="status">
+            {#if gentleToast.includes("🐾")}
+              <svg class="sanctuary-paw-svg toast-paw-svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <circle cx="7.5" cy="9.5" r="2.3" />
+                <circle cx="12" cy="7" r="2.3" />
+                <circle cx="16.5" cy="9.5" r="2.3" />
+                <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
+              </svg>
+              <span>{gentleToast.replace(/\s*🐾\s*/g, "").trim()}</span>
+            {:else}
+              {gentleToast}
+            {/if}
+          </div>
         {/if}
 
         <button
@@ -2821,12 +2889,16 @@
             ? "Dát patronce Molly pamlsek"
             : "Pohladit patronku Molly"}
         >
+          <svg class="sanctuary-paw-svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <circle cx="7.5" cy="9.5" r="2.3" />
+            <circle cx="12" cy="7" r="2.3" />
+            <circle cx="16.5" cy="9.5" r="2.3" />
+            <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
+          </svg>
           {#if $mollyState.availableTreats > 0}
-            🐾 Dát Molly pamlsek ({$mollyState.availableTreats}
-            {$mollyState.lastTreat?.icon || "🐟"})
+            <span>Dát Molly pamlsek ({$mollyState.availableTreats} {$mollyState.lastTreat?.icon || "🐟"})</span>
           {:else}
-            🐾 Pohladit Molly ({$mollyState.treatsFedTotal}
-            {$mollyState.lastTreat?.icon || "🐟"})
+            <span>Pohladit Molly ({$mollyState.treatsFedTotal} {$mollyState.lastTreat?.icon || "🐟"})</span>
           {/if}
         </button>
       </div>
@@ -2932,7 +3004,7 @@
   .sanctuary-page {
     max-width: 1140px;
     margin: 0 auto;
-    padding: 0.75rem 1.25rem 4.5rem;
+    padding: 0.65rem 1.25rem 5.25rem;
     display: flex;
     flex-direction: column;
     gap: 2rem;
@@ -2943,7 +3015,7 @@
      ========================================================================= */
   .sanctuary-stage {
     border-radius: 32px;
-    padding: 1.15rem 1.45rem 1.05rem;
+    padding: 1rem 1.4rem 0.92rem;
     background: radial-gradient(
         90% 90% at 80% 10%,
         rgba(251, 191, 36, 0.16) 0%,
@@ -2961,7 +3033,7 @@
     align-items: flex-end;
     gap: 1rem;
     flex-wrap: wrap;
-    margin-bottom: 0.85rem;
+    margin-bottom: 0.65rem;
   }
 
   .sanctuary-intro {
@@ -3094,8 +3166,8 @@
     position: relative;
     width: 100%;
     aspect-ratio: 16 / 8.2;
-    max-height: 48dvh;
-    min-height: 310px;
+    max-height: 41dvh;
+    min-height: 295px;
     border-radius: 24px;
     overflow: hidden;
     cursor: pointer;
@@ -3345,7 +3417,16 @@
     }
 
     .sanctuary-intro .lead {
-      display: none;
+      font-size: 0.80rem;
+      line-height: 1.35;
+      margin: 0.25rem 0 0.4rem;
+      color: rgba(220, 252, 231, 0.9);
+    }
+
+    .legend-chip {
+      font-size: 0.68rem;
+      min-height: 30px;
+      padding: 0.22rem 0.48rem;
     }
 
     .sanctuary-canvas-shell .atmosphere-controls {
@@ -3449,55 +3530,287 @@
     }
 
     .molly-sanctuary-pill {
-      bottom: 0.55rem;
-      left: 0.55rem;
-      padding: 0.26rem 0.58rem;
-      font-size: 0.68rem;
-      max-width: calc(100% - 1.1rem);
+      bottom: 0.38rem;
+      left: 0.45rem;
+      min-height: 44px;
+      min-width: 44px;
+      padding: 0.4rem 0.68rem;
+      font-size: 0.7rem;
+      max-width: calc(100% - 0.9rem);
       white-space: nowrap;
       text-overflow: ellipsis;
+      box-sizing: border-box;
     }
   }
 
   .sanctuary-intro {
     min-width: 0;
     max-width: 100%;
-    overflow: hidden;
+    overflow-x: clip;
   }
 
-  .ambient-pulse-pill {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    margin-top: 0.55rem;
-    padding: 0.32rem 0.72rem;
-    border-radius: 999px;
-    background: rgba(16, 185, 129, 0.14);
-    border: 1px solid rgba(110, 231, 183, 0.28);
-    color: #d1fae5;
-    font-size: 0.75rem;
-    font-weight: 600;
-    min-width: 0;
+  /* =========================================================================
+     SANCTUARY ORIENTATION BLOCK & ONBOARDING (R3)
+     ========================================================================= */
+  .sanctuary-orientation-block {
+    margin-top: 0.48rem;
+    display: block;
     max-width: 100%;
-    overflow: hidden;
     box-sizing: border-box;
   }
 
-  .ambient-pulse-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #34d399;
-    box-shadow: 0 0 8px rgba(52, 211, 153, 0.75);
-    flex-shrink: 0;
+  .sanctuary-legend-strip {
+    display: flex;
+    align-items: center;
+    gap: 0.42rem;
+    flex-wrap: wrap;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
-  .ambient-pulse-text {
-    min-width: 0;
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .legend-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+    padding: 0.22rem 0.56rem;
+    border-radius: 999px;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(110, 231, 183, 0.24);
+    color: #e6fcf5;
+    font-size: 0.72rem;
+    line-height: 1.2;
+    cursor: default;
+    user-select: none;
+    box-sizing: border-box;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+
+  .legend-chip:hover {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: rgba(110, 231, 183, 0.4);
+  }
+
+  .legend-chip .chip-symbol {
+    font-size: 0.8rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .legend-chip.legend-star .chip-symbol {
+    color: #fde68a;
+  }
+
+  .legend-chip.legend-lantern .chip-symbol {
+    color: #fb923c;
+  }
+
+  .legend-chip.legend-molly .chip-symbol {
+    color: #fde68a;
+  }
+
+  .sanctuary-paw-svg {
+    color: #fde68a;
+    flex-shrink: 0;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+  }
+
+  .toast-paw-svg {
+    display: inline-block;
+    vertical-align: -2px;
+    margin-right: 0.28rem;
+  }
+
+  .legend-chip .chip-text strong {
+    font-weight: 700;
+    color: #ffffff;
+  }
+
+  .sanctuary-guide-toggle {
+    flex: 0 0 auto;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+  }
+
+  .guide-toggle-summary {
+    list-style: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 999px;
+    background: transparent;
+    border: none;
+    user-select: none;
+    box-sizing: border-box;
+  }
+
+  .guide-toggle-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .guide-pill-face {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.22rem 0.62rem;
+    border-radius: 999px;
+    background: rgba(253, 230, 138, 0.12);
+    border: 1px solid rgba(253, 230, 138, 0.42);
+    color: #fde68a;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.2;
+    box-sizing: border-box;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  }
+
+  .guide-toggle-summary:hover .guide-pill-face {
+    background: rgba(253, 230, 138, 0.22);
+    border-color: rgba(253, 230, 138, 0.68);
+    color: #fef3c7;
+  }
+
+  .sanctuary-guide-toggle[open] .guide-pill-face {
+    background: rgba(52, 211, 153, 0.2);
+    border-color: rgba(110, 231, 183, 0.5);
+    color: #d1fae5;
+  }
+
+  .guide-chevron {
+    display: inline-block;
+    font-size: 0.78rem;
+    line-height: 1;
+    color: #fbbf24;
+    transition: transform 0.18s ease, color 0.18s ease;
+  }
+
+  .sanctuary-guide-toggle[open] .guide-chevron {
+    transform: rotate(90deg);
+    color: #6ee7b7;
+  }
+
+  .guide-toggle-panel {
+    display: none;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 0.48rem;
+    flex-direction: column;
+    gap: 0.55rem;
+    background: rgba(9, 34, 24, 0.84);
+    border: 1px solid rgba(167, 243, 208, 0.34);
+    border-radius: 16px;
+    padding: 0.62rem 0.8rem 0.68rem;
+  }
+
+  .sanctuary-orientation-block:has(.sanctuary-guide-toggle[open]) .guide-toggle-panel {
+    display: flex;
+  }
+
+  .guide-steps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  @media (max-width: 760px) {
+    .guide-steps-grid {
+      grid-template-columns: 1fr;
+      gap: 0.48rem;
+    }
+  }
+
+  @media (max-width: 680px) {
+    .sanctuary-guide-toggle {
+      margin: -7px 0;
+    }
+
+    .guide-toggle-summary {
+      min-height: 44px;
+      min-width: 44px;
+    }
+
+    .guide-pill-face {
+      min-height: 30px;
+      font-size: 0.68rem;
+      padding: 0.22rem 0.54rem;
+    }
+
+    .guide-action-btn {
+      min-height: 44px;
+    }
+  }
+
+  .guide-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    font-size: 0.74rem;
+    line-height: 1.35;
+    color: #e2e8f0;
+  }
+
+  .guide-num {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(52, 211, 153, 0.25);
+    border: 1px solid rgba(52, 211, 153, 0.5);
+    color: #a7f3d0;
+    font-weight: 800;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 0.08rem;
+  }
+
+  .guide-step strong {
+    display: block;
+    color: #ffffff;
+    font-weight: 700;
+    margin-bottom: 0.08rem;
+  }
+
+  .guide-step p {
+    margin: 0;
+    color: #cbd5e1;
+    font-size: 0.71rem;
+  }
+
+  .guide-cta-row {
+    margin-top: 0.3rem;
+    display: flex;
+  }
+
+  .guide-action-btn {
+    appearance: none;
+    border: 1px solid rgba(253, 230, 138, 0.45);
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.22), rgba(245, 158, 11, 0.12));
+    color: #fef3c7;
+    border-radius: 999px;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.74rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+  }
+
+  .guide-action-btn:hover {
+    transform: translateY(-1px);
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.32), rgba(245, 158, 11, 0.2));
+    border-color: rgba(253, 230, 138, 0.7);
+    color: #ffffff;
   }
 
   .molly-sanctuary-pill {
