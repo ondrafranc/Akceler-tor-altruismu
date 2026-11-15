@@ -57,8 +57,6 @@
   let previewNudgeTimer = null;
   let spotX = 50;
   let spotY = 34;
-  let tiltX = 0;
-  let tiltY = 0;
 
   function endHoldSpark(released = false) {
     if (stopHoldSpark) {
@@ -89,8 +87,6 @@
     const ny = Math.max(0, Math.min(1, (e.clientY - previewBounds.top) / Math.max(1, previewBounds.height)));
     spotX = Math.round(nx * 100);
     spotY = Math.round(ny * 100);
-    tiltX = Number(((nx - 0.5) * 2).toFixed(2));
-    tiltY = Number(((ny - 0.5) * 2).toFixed(2));
   }
 
   function handlePreviewPointerLeave() {
@@ -98,8 +94,6 @@
     previewBounds = null;
     spotX = 50;
     spotY = 34;
-    tiltX = 0;
-    tiltY = 0;
   }
 
   function handlePreviewNudge() {
@@ -209,41 +203,63 @@
     return { label: 'Dobrý skutek', shortLabel: 'Skutek', theme: 'default' };
   }
 
-  function resolvePreviewSceneFamily(scene, auraTheme) {
-    if (['kibble', 'shelter_care'].includes(scene)) return 'animals';
-    if (scene === 'wildlife_rescue') return 'wildlife';
-    if (['birds_glass', 'birds_song', 'butterfly_lens'].includes(scene)) return 'birds';
-    if (['satellite_map', 'code_nodes', 'cosmos_science', 'wiki_ink', 'dove_appeal'].includes(scene)) return 'science';
-    if (['rice', 'food_bank', 'soup_lantern', 'zero_waste_pot', 'bakery_save'].includes(scene)) return 'nourish';
-    if (['forest_bloom', 'compost_sprout', 'fruit_tree', 'eco_cleanup', 'water_spring', 'campfire_group', 'globe_bridge', 'phone_recycle'].includes(scene)) return 'nature';
-    if (!scene) {
-      if (auraTheme === 'animals') return 'animals';
-      if (auraTheme === 'wildlife') return 'wildlife';
-      if (auraTheme === 'science') return 'science';
-      return 'nature';
-    }
-    return 'care';
-  }
+  const PREVIEW_CUE_BY_ID = {
+    zvirata_utulek_online: { promise: '1 klik zdarma = ~25 g granulí do misky', status: 'Miska čeká prázdná' },
+    donio_utulky: { promise: 'Plná miska a přímá péče v útulku', status: 'Miska čeká prázdná' },
+    birdlife_ptaci_pasti: { promise: 'Bezpečné sklo pro ptáky v tvém okolí', status: 'Čiré sklo čeká' },
+    strnadi_nareci: { promise: '15 s zpěvu strnada pro české vědce', status: 'Větev zatím tichá' },
+    zvire_v_nouzi: { promise: '774 155 155 · 34 záchranných stanic v ČR', status: 'Pohotovost v kapse' },
+    aplikace_zachranka: { promise: 'Přesná GPS a mapa AED v kapse', status: 'Maják připraven' },
+    darovani_krve: { promise: '1 odběr krve pomůže až 3 životům', status: '3 srdce čekají' },
+    kostni_dren: { promise: 'Zápis do registru dárců kostní dřeně', status: 'Hledá se shoda' },
+    daruj_vlasy: { promise: 'Pramen vlasů na paruku pro pacienty', status: 'Pramen připraven' },
+    'nevypusť_dusi': { promise: '5 kroků první psychické opory', status: 'Klubko k rozpletení' },
+    opatruj_se_nudz: { promise: '5 min vědecky ověřeného zklidnění mysli', status: 'Poupě na hladině' },
+    s_barvou_ven: { promise: 'Bezpečná opora a přijetí bez předsudků', status: 'Paprsek před hranolem' },
+    wikipedie_cz: { promise: '1 zpřesněný článek pro tisíce čtenářů', status: 'Chybí ověřený fakt' },
+    amnesty_apel: { promise: '1 podpis na obranu nespravedlivě vězněných', status: 'Hlas za svobodu' },
+    cesko_digital_micro: { promise: 'Zapojení dovedností do otevřených projektů', status: 'Uzly před spojením' },
+    missing_maps: { promise: '10 zmapovaných střech pro záchranáře', status: 'Nezmapované území' },
+    freerice_ryze: { promise: '10 zrnek rýže OSN za každou odpověď', status: 'Miska OSN čeká' },
+    zooniverse_veda: { promise: '5 snímků z fotopastí a vesmíru pro vědu', status: 'Hledáček před ostřením' },
+    ucime_online: { promise: 'Doučování školáka online z domova', status: 'Žárovka čeká na jiskru' },
+    doucujte_cvt: { promise: 'Pravidelná opora dítěti ve vzdělávání', status: 'Sešit čeká na tah' },
+    letters_seniors: { promise: 'Dopis či rozhovor proti samotě seniorů', status: 'Zapečetěná obálka' },
+    moudra_sovicka_mobil: { promise: 'Trpělivá digitální rada pro seniora', status: 'Displej bez štítu' },
+    pamet_naroda_vzpominka: { promise: 'Příběhy pamětníků, na které se nezapomene', status: 'Tichý archivní pás' },
+    knihobudka_kniha: { promise: '1 přečtená kniha poslaná dál sousedům', status: 'Police čeká na knihu' },
+    nevyhazujto_sousedum: { promise: 'Druhý život funkční věci zdarma v okolí', status: 'Balíček u dveří' },
+    trash_hero_uklid: { promise: '5 sebraných odpadků na procházce venku', status: 'Stezka před úklidem' },
+    remobil_telefon: { promise: 'Starý mobil = suroviny + 10 Kč charitě', status: 'Mobil v šuplíku' },
+    mapko_kompost: { promise: 'Slupky z kuchyně zpět do živé půdy', status: 'Půda čeká na živiny' },
+    sazime_budoucnost: { promise: 'Výsadba a péče o stromy v české krajině', status: 'Sazenička na holině' },
+    na_ovoce_strom: { promise: 'Volně rostoucí ovocné stromy bez plýtvání', status: 'Sad čeká na záznam' },
+    inaturalist_priroda: { promise: 'Záznam druhu do mapy české biodiverzity', status: 'Lupa před ostřením' },
+    brontosaurus_vikend: { promise: 'Víkendovka pro přírodu a památky v ČR', status: 'Ohniště před jiskrou' },
+    inex_workcamp_cr: { promise: 'Mezinárodní dobrovolnický miniprojekt v ČR', status: 'Břehy před spojením' },
+    estudanky_pramen: { promise: 'Péče o lesní studánku v národním registru', status: 'Pramen pod listím' },
+    potravinova_banka: { promise: 'Zachráněné porce jídla pro rodiny v nouzi', status: 'Regál čeká na zásoby' },
+    nadeje_jidlo: { promise: 'Teplá polévka a noc v teple pro lidi v nouzi', status: 'Chladná ulička' },
+    zachran_jidlo_recept: { promise: 'Chutná večeře ze surovin bez plýtvání', status: 'Suroviny na lince' },
+    nesnezeno_porce: { promise: 'Zachráněná porce z pekárny či bistra v okolí', status: 'Před zavíračkou' },
+    kola_pro_afriku: { promise: 'Darované kolo zkrátí dětem cestu do školy', status: 'Kolo čeká ve stínu' },
+    chodci_sobe: { promise: 'Nahlášení nebezpečného přechodu či bariéry', status: 'Bariéra na chodníku' },
+    epp_pohybem: { promise: 'Chůze a běh proměněné v body pro projekty', status: 'Dráha čeká na krok' },
+    krabice_od_bot: { promise: 'Vánoční dárek v krabici pro dítě v nouzi', status: 'Zavázaná krabice' },
+    dobry_andel: { promise: '100 % daru do posledního haléře rodinám', status: 'Váhy před vyrovnáním' },
+    charita_dar: { promise: 'Podpora domácí hospicové a terénní péče', status: 'Zhasnuté okénko' },
+    znesnaze21_pribeh: { promise: '100 % daru na ověřený příběh člověka', status: 'Most před spojením' }
+  };
 
   function buildPreviewCue(act, meta) {
     if (!act) return { promise: '', status: '' };
     const id = act.id || '';
-    let promise = meta?.label || 'Ověřený dobrý skutek';
-    if (id === 'zvirata_utulek_online') promise = '1 klik zdarma = ~25 g granulí do misky';
-    else if (id === 'donio_utulky') promise = 'Plná miska a přímá péče v útulku';
-    else if (id === 'zvire_v_nouzi') promise = '774 155 155 · 34 záchranných stanic v ČR';
-    else if (id === 'freerice_ryze') promise = '10 zrnek rýže OSN za každou odpověď';
-    else if (id === 'missing_maps') promise = '10 zmapovaných střech pro záchranáře';
-    else if (id === 'birdlife_ptaci_pasti') promise = 'Bezpečné sklo pro ptáky v tvém okolí';
-    else if (id === 'strnadi_nareci') promise = '15 s zpěvu strnada pro české vědce';
-    else if (id === 'zooniverse_veda') promise = '5 snímků z fotopastí a vesmíru';
-    else if (id === 'wikipedie_cz') promise = '1 zpřesněný článek pro tisíce čtenářů';
-    else if (id === 'aplikace_zachranka') promise = 'Přesná GPS a mapa AED v kapse';
+    const custom = PREVIEW_CUE_BY_ID[id];
+    if (custom) return custom;
 
+    const promise = meta?.label || 'Ověřený dobrý skutek';
     let status = 'Ověřeno · bez účtu';
-    if (id === 'zvirata_utulek_online' || id === 'donio_utulky') {
-      status = 'Miska čeká prázdná';
-    } else if (act.mode === 'online' && act.cost === 'free') {
+    if (act.mode === 'online' && act.cost === 'free') {
       status = 'Připraveno · 0 Kč';
     } else if (act.mode === 'local') {
       status = 'Ověřeno · v okolí';
@@ -259,12 +275,10 @@
     return Boolean(raw && String(raw).includes('🐾'));
   }
 
-  $: safeSvgId = (action?.id || 'act').replace(/[^a-zA-Z0-9_-]/g, '_');
   $: effectMeta = action
     ? getActionEffectMeta(action, kibbleGrams, { isReturnStrip: partnerReturnPromptVisible })
     : null;
   $: categoryAura = getCategoryAura(action, effectMeta?.scene);
-  $: previewSceneFamily = resolvePreviewSceneFamily(effectMeta?.scene, categoryAura?.theme);
   $: previewCue = buildPreviewCue(action, effectMeta);
   $: showIdleDiorama = variant === 'instant' && !isStarted && !justCompleted && !partnerReturnPromptVisible;
   $: actionTitle = action ? cleanTitle(action.title) : '';
@@ -280,15 +294,16 @@
     class:done-card={isCompleted}
     class:is-done={isCompleted}
   >
-    <!-- 0. Živá scéna očekávání (pouze v klidovém stavu před spuštěním akce — nebudí falešný pocit splnění) -->
+    <!-- 0. Živá scéna očekávání (unikátní Before p = 0 ilustrace každého skutku před spuštěním) -->
     {#if showIdleDiorama}
       <!-- svelte-ignore a11y-click-events-have-key-events -->
       <!-- svelte-ignore a11y-no-static-element-interactions -->
       <div
-        class="deed-preview-stage scene-family-{previewSceneFamily}"
+        class="deed-preview-stage"
         class:is-primed={previewHovered || ctaHovered || previewNudged}
         class:is-nudged={previewNudged}
-        style="--spot-x: {spotX}%; --spot-y: {spotY}%; --tilt-x: {tiltX}; --tilt-y: {tiltY};"
+        data-scene={effectMeta?.scene || 'default'}
+        style="--spot-x: {spotX}%; --spot-y: {spotY}%;"
         on:pointerenter={handlePreviewPointerEnter}
         on:pointermove={handlePreviewPointerMove}
         on:pointerleave={handlePreviewPointerLeave}
@@ -305,201 +320,18 @@
           </span>
         </div>
 
-        <svg
-          class="preview-diorama-svg"
-          viewBox="0 0 380 100"
-          preserveAspectRatio="xMidYMid slice"
+        <canvas
+          class="preview-diorama-canvas"
+          width="380"
+          height="86"
+          use:impactCanvas={{
+            action,
+            preview: true,
+            primed: previewHovered || ctaHovered || previewNudged,
+            silent: true
+          }}
           aria-hidden="true"
-        >
-          <defs>
-            <linearGradient id="beamGrad-{safeSvgId}" x1="0.5" y1="0" x2="0.5" y2="1">
-              <stop offset="0%" stop-color="#fde68a" stop-opacity="0.34" />
-              <stop offset="65%" stop-color="#34d399" stop-opacity="0.12" />
-              <stop offset="100%" stop-color="#052e1e" stop-opacity="0" />
-            </linearGradient>
-            <linearGradient id="bowlGrad-{safeSvgId}" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#fbbf24" />
-              <stop offset="100%" stop-color="#b45309" />
-            </linearGradient>
-            <linearGradient id="groundGrad-{safeSvgId}" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#0e402b" />
-              <stop offset="100%" stop-color="#04150e" />
-            </linearGradient>
-          </defs>
-
-          <!-- Společná hloubková krajina a světlušky -->
-          <path d="M0,88 Q92,68 190,78 T380,74 L380,100 L0,100 Z" fill="#092d1e" opacity="0.55" />
-          <path d="M0,85 Q95,72 190,81 T380,77 L380,100 L0,100 Z" fill="url(#groundGrad-{safeSvgId})" opacity="0.94" />
-          <circle class="diorama-firefly f1" cx="44" cy="48" r="2.1" fill="#fde68a" />
-          <circle class="diorama-firefly f2" cx="98" cy="64" r="1.7" fill="#6ee7b7" />
-          <circle class="diorama-firefly f3" cx="334" cy="42" r="2" fill="#fde68a" />
-          <circle class="diorama-firefly f4" cx="250" cy="56" r="1.5" fill="#6ee7b7" />
-
-          {#if previewSceneFamily === 'animals'}
-            <!-- Kužel teplého světla nad čekající prázdnou miskou -->
-            <polygon class="diorama-beam" points="144,0 218,0 238,85 124,85" fill="url(#beamGrad-{safeSvgId})" />
-
-            <!-- Vznášející se zlaté granulky s jemnými stopami očekávání -->
-            <g class="diorama-floating-cluster">
-              <line x1="169" y1="46" x2="172" y2="59" stroke="rgba(253, 230, 138, 0.3)" stroke-width="1" stroke-dasharray="2 2" />
-              <line x1="185" y1="41" x2="184" y2="57" stroke="rgba(253, 230, 138, 0.35)" stroke-width="1" stroke-dasharray="2 2" />
-              <line x1="198" y1="51" x2="195" y2="61" stroke="rgba(253, 230, 138, 0.28)" stroke-width="1" stroke-dasharray="2 2" />
-              <circle cx="169" cy="42" r="4.1" fill="#fbbf24" stroke="#fef3c7" stroke-width="1" />
-              <circle cx="185" cy="36" r="4.6" fill="#f59e0b" stroke="#fde68a" stroke-width="1.1" />
-              <circle cx="198" cy="47" r="3.9" fill="#fbbf24" stroke="#fef3c7" stroke-width="1" />
-              <circle cx="178" cy="51" r="3.6" fill="#fde68a" />
-              <circle cx="158" cy="50" r="3.1" fill="#f59e0b" />
-            </g>
-
-            <!-- Útulková miska čekající na naplnění -->
-            <g class="diorama-focal">
-              <ellipse cx="181" cy="87" rx="45" ry="6.5" fill="#03110b" opacity="0.58" />
-              <path d="M143,69 L151,86 Q181,92 211,86 L219,69 Z" fill="url(#bowlGrad-{safeSvgId})" stroke="#fde68a" stroke-width="1.2" />
-              <ellipse cx="181" cy="69" rx="38" ry="6.8" fill="#1b140d" stroke="#fcd34d" stroke-width="1.3" />
-              <ellipse class="bowl-inner-glow" cx="181" cy="69.5" rx="28" ry="4" fill="#fbbf24" opacity="0.2" />
-              <!-- Tlapka na misce -->
-              <circle cx="181" cy="79.6" r="2.5" fill="#fef3c7" opacity="0.94" />
-              <circle cx="176.2" cy="76" r="1.25" fill="#fef3c7" opacity="0.92" />
-              <circle cx="181" cy="74.8" r="1.25" fill="#fef3c7" opacity="0.92" />
-              <circle cx="185.8" cy="76" r="1.25" fill="#fef3c7" opacity="0.92" />
-            </g>
-
-            <!-- Želvovinová kočička s oběma viditelnými oušky a konturovým protisvětlem -->
-            <g class="diorama-kitty">
-              <ellipse cx="288" cy="88" rx="19" ry="4.5" fill="#03110b" opacity="0.5" />
-              <!-- Ocas -->
-              <path d="M300,84 C314,83 321,73 317,63" fill="none" stroke="#d97706" stroke-width="3.6" stroke-linecap="round" />
-              <path d="M317,63 C316,60 313,59 311,61" fill="none" stroke="#fde68a" stroke-width="2.2" stroke-linecap="round" />
-              <!-- Tělo se želvovinovými skvrnami a jemnou konturou -->
-              <ellipse cx="288" cy="79.5" rx="13.5" ry="10.2" fill="#1c1613" stroke="rgba(253, 230, 138, 0.34)" stroke-width="1" />
-              <ellipse cx="293" cy="77" rx="5.5" ry="4.4" fill="#d97706" opacity="0.82" />
-              <ellipse cx="283" cy="83" rx="4.2" ry="3" fill="#f59e0b" opacity="0.65" />
-              <ellipse cx="277" cy="87.5" rx="3.3" ry="2" fill="#fef3c7" opacity="0.9" />
-              <ellipse cx="284" cy="88" rx="3.3" ry="2" fill="#d97706" opacity="0.9" />
-              <!-- Hlava a OBĚ ouška s teplým lemem proti tmavému lesu -->
-              <path d="M268,61 L269.5,49.5 L277,57.5 Z" fill="#231b17" stroke="#fbbf24" stroke-width="1.15" stroke-linejoin="round" />
-              <path d="M279,57.5 L286.5,49.5 L288,61 Z" fill="#d97706" stroke="#fde68a" stroke-width="1.15" stroke-linejoin="round" />
-              <polygon points="270.4,58.5 271.2,52.8 275.2,57.2" fill="#f59e0b" opacity="0.65" />
-              <polygon points="280.8,57.2 284.8,52.8 285.6,58.5" fill="#fef3c7" opacity="0.55" />
-              <circle cx="278" cy="66.5" r="9.6" fill="#1c1613" stroke="rgba(253, 230, 138, 0.38)" stroke-width="1" />
-              <!-- Poloviční želvovinová maska -->
-              <path d="M278,56.9 A9.6,9.6 0 0,1 278,76.1 Z" fill="#d97706" opacity="0.82" />
-              <!-- Výrazné zlatavé oči sledující misku -->
-              <circle cx="274" cy="66.2" r="2.25" fill="#fef08a" />
-              <circle cx="281.6" cy="66.2" r="2.25" fill="#fef08a" />
-              <circle cx="273.3" cy="66.2" r="0.95" fill="#05150f" />
-              <circle cx="280.9" cy="66.2" r="0.95" fill="#05150f" />
-              <circle cx="274.5" cy="65.5" r="0.5" fill="#ffffff" />
-              <circle cx="282.1" cy="65.5" r="0.5" fill="#ffffff" />
-              <!-- Čumáček a fousky -->
-              <polygon points="276.6,69.6 279.2,69.6 277.9,71.1" fill="#fda4af" />
-              <line x1="264" y1="68" x2="270" y2="68.8" stroke="rgba(254, 243, 199, 0.55)" stroke-width="0.8" stroke-linecap="round" />
-              <line x1="264.5" y1="70.8" x2="270.2" y2="70.4" stroke="rgba(254, 243, 199, 0.45)" stroke-width="0.8" stroke-linecap="round" />
-            </g>
-          {:else if previewSceneFamily === 'wildlife'}
-            <!-- Záchrana volně žijících zvířat v přírodě (ježek, ptáček a ochranná aura — bez granulí v misce) -->
-            <polygon class="diorama-beam" points="148,0 232,0 252,88 128,88" fill="url(#beamGrad-{safeSvgId})" />
-            <!-- Lesní kapradí a keře -->
-            <path d="M98,84 Q108,64 124,58 Q116,74 114,84 Z" fill="#10b981" opacity="0.34" />
-            <path d="M282,84 Q272,62 256,56 Q264,72 266,84 Z" fill="#34d399" opacity="0.32" />
-            <!-- Ochranná záchranná aura -->
-            <g class="diorama-floating-cluster">
-              <circle cx="190" cy="64" r="28" fill="none" stroke="rgba(253, 230, 138, 0.42)" stroke-width="1.3" stroke-dasharray="4 3" />
-              <path d="M190,34 L192,39 L197,41 L192,43 L190,48 L188,43 L183,41 L188,39 Z" fill="#fde68a" />
-            </g>
-            <!-- Ježeček v bezpečí pod světlem -->
-            <g class="diorama-focal">
-              <ellipse cx="188" cy="85" rx="26" ry="5" fill="#03110b" opacity="0.5" />
-              <path d="M168,82 C168,67 184,61 199,66 C206,68 210,75 212,81 Z" fill="#92400e" stroke="#fde68a" stroke-width="1.2" />
-              <path d="M172,74 L175,66 L180,72 L185,64 L189,71 L195,65 L198,73" fill="none" stroke="#fde68a" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
-              <path d="M198,72 Q209,73 214,79 Q206,83 197,82 Z" fill="#fde68a" opacity="0.9" />
-              <circle cx="206" cy="76.5" r="1.4" fill="#05150f" />
-              <circle cx="213.5" cy="78.8" r="1.6" fill="#1f1a17" />
-              <!-- Drobný ptáček na větvičce -->
-              <path d="M138,54 Q146,45 154,52 Q161,45 168,53" fill="none" stroke="#6ee7b7" stroke-width="2.3" stroke-linecap="round" />
-            </g>
-          {:else if previewSceneFamily === 'birds'}
-            <!-- Bezpečná skla s ochrannými body a letící ptáci -->
-            <rect x="68" y="34" width="64" height="48" rx="6" fill="rgba(56, 189, 248, 0.08)" stroke="#7dd3fc" stroke-width="1.2" stroke-dasharray="3 3" />
-            <g class="diorama-floating-cluster">
-              <circle cx="82" cy="46" r="2.2" fill="#fde68a" />
-              <circle cx="100" cy="46" r="2.2" fill="#fde68a" />
-              <circle cx="118" cy="46" r="2.2" fill="#fde68a" />
-              <circle cx="82" cy="64" r="2.2" fill="#fde68a" />
-              <circle cx="100" cy="64" r="2.2" fill="#fde68a" />
-              <circle cx="118" cy="64" r="2.2" fill="#fde68a" />
-            </g>
-            <path d="M148,68 Q210,34 292,52" fill="none" stroke="rgba(110, 231, 183, 0.34)" stroke-width="1.5" stroke-dasharray="4 4" />
-            <g class="diorama-focal">
-              <path d="M180,56 Q191,42 201,53 Q211,42 222,56" fill="none" stroke="#fde68a" stroke-width="2.8" stroke-linecap="round" />
-              <path d="M240,46 Q249,35 257,45 Q265,35 274,46" fill="none" stroke="#6ee7b7" stroke-width="2.4" stroke-linecap="round" />
-              <circle cx="298" cy="52" r="10" fill="none" stroke="rgba(253, 230, 138, 0.38)" stroke-width="1.3" />
-              <circle cx="298" cy="52" r="18" fill="none" stroke="rgba(52, 211, 153, 0.24)" stroke-width="1.1" />
-            </g>
-          {:else if previewSceneFamily === 'science'}
-            <!-- Satelitní mřížka a obrysy budov / uzlů poznání -->
-            <g opacity="0.28" stroke="#34d399" stroke-width="0.8">
-              <line x1="70" y1="36" x2="310" y2="36" />
-              <line x1="55" y1="58" x2="325" y2="58" />
-              <line x1="40" y1="80" x2="340" y2="80" />
-              <line x1="120" y1="24" x2="100" y2="92" />
-              <line x1="190" y1="24" x2="190" y2="92" />
-              <line x1="260" y1="24" x2="280" y2="92" />
-            </g>
-            <polygon class="diorama-beam" points="154,0 226,0 256,92 124,92" fill="url(#beamGrad-{safeSvgId})" />
-            <g class="diorama-focal">
-              <rect x="136" y="48" width="26" height="20" rx="2.5" fill="rgba(56, 189, 248, 0.16)" stroke="#38bdf8" stroke-width="1.6" />
-              <rect x="176" y="42" width="32" height="24" rx="2.5" fill="rgba(251, 191, 36, 0.2)" stroke="#fde68a" stroke-width="1.8" />
-              <rect x="222" y="52" width="24" height="18" rx="2.5" fill="rgba(52, 211, 153, 0.18)" stroke="#6ee7b7" stroke-width="1.6" />
-            </g>
-            <g class="diorama-floating-cluster">
-              <circle cx="192" cy="34" r="3.2" fill="#fde68a" />
-              <line x1="149" y1="58" x2="192" y2="54" stroke="#fde68a" stroke-width="1.1" stroke-dasharray="2.5 2.5" />
-              <line x1="192" y1="54" x2="234" y2="61" stroke="#6ee7b7" stroke-width="1.1" stroke-dasharray="2.5 2.5" />
-            </g>
-          {:else if previewSceneFamily === 'nourish'}
-            <!-- Teplá miska a darovaná zrnka / porce jídla -->
-            <polygon class="diorama-beam" points="152,0 228,0 244,86 136,86" fill="url(#beamGrad-{safeSvgId})" />
-            <g class="diorama-floating-cluster">
-              <ellipse cx="176" cy="42" rx="4" ry="2.3" transform="rotate(-18 176 42)" fill="#fef3c7" />
-              <ellipse cx="191" cy="37" rx="4.2" ry="2.4" transform="rotate(14 191 37)" fill="#fde68a" />
-              <ellipse cx="202" cy="46" rx="3.8" ry="2.2" transform="rotate(-12 202 46)" fill="#ffffff" />
-              <ellipse cx="184" cy="50" rx="4" ry="2.3" transform="rotate(20 184 50)" fill="#fde68a" />
-            </g>
-            <g class="diorama-focal">
-              <path d="M152,66 A38,24 0 0,0 228,66 Z" fill="url(#bowlGrad-{safeSvgId})" stroke="#fef3c7" stroke-width="1.4" />
-              <ellipse cx="190" cy="66" rx="38" ry="6" fill="#fef3c7" opacity="0.9" />
-              <path d="M174,56 Q170,46 175,38" fill="none" stroke="rgba(254, 243, 199, 0.55)" stroke-width="1.6" stroke-linecap="round" />
-              <path d="M206,56 Q210,46 205,38" fill="none" stroke="rgba(254, 243, 199, 0.55)" stroke-width="1.6" stroke-linecap="round" />
-            </g>
-          {:else if previewSceneFamily === 'nature'}
-            <!-- Živá krajina, studánka a klíčící strom -->
-            <polygon class="diorama-beam" points="158,0 222,0 240,88 140,88" fill="url(#beamGrad-{safeSvgId})" />
-            <ellipse cx="190" cy="84" rx="46" ry="7" fill="none" stroke="rgba(110, 231, 183, 0.4)" stroke-width="1.3" />
-            <ellipse cx="190" cy="84" rx="28" ry="4.2" fill="none" stroke="rgba(253, 230, 138, 0.45)" stroke-width="1.2" />
-            <g class="diorama-focal">
-              <path d="M190,84 L190,52" stroke="#6ee7b7" stroke-width="3" stroke-linecap="round" />
-              <path d="M190,66 Q172,62 170,48 Q184,48 190,62" fill="#34d399" stroke="#a7f3d0" stroke-width="1" />
-              <path d="M190,60 Q208,56 210,42 Q196,42 190,56" fill="#10b981" stroke="#fde68a" stroke-width="1" />
-            </g>
-            <g class="diorama-floating-cluster">
-              <circle cx="190" cy="36" r="3.6" fill="#fde68a" />
-              <circle cx="168" cy="40" r="2.2" fill="#6ee7b7" />
-              <circle cx="214" cy="36" r="2.4" fill="#fde68a" />
-            </g>
-          {:else}
-            <!-- Lidská blízkost, záchrana a solidární most -->
-            <polygon class="diorama-beam" points="150,0 230,0 250,88 130,88" fill="url(#beamGrad-{safeSvgId})" />
-            <path d="M108,80 Q190,34 272,80" fill="none" stroke="#34d399" stroke-width="2.4" stroke-linecap="round" />
-            <path d="M122,82 Q190,46 258,82" fill="none" stroke="rgba(253, 230, 138, 0.5)" stroke-width="1.4" stroke-dasharray="4 4" />
-            <circle cx="108" cy="80" r="4.8" fill="#fde68a" />
-            <circle cx="272" cy="80" r="4.8" fill="#6ee7b7" />
-            <g class="diorama-floating-cluster">
-              <circle cx="190" cy="48" r="13" fill="rgba(251, 191, 36, 0.16)" stroke="rgba(253, 230, 138, 0.55)" stroke-width="1.2" />
-              <path d="M190,54 C190,54 181,48 181,43.5 C181,40.8 183.2,39 185.6,39 C187.4,39 189,40.1 190,41.6 C191,40.1 192.6,39 194.4,39 C196.8,39 199,40.8 199,43.5 C199,48 190,54 190,54 Z" fill="#fde68a" />
-            </g>
-          {/if}
-        </svg>
+        ></canvas>
       </div>
     {/if}
 
@@ -914,8 +746,8 @@
                 class:active={sparkBoosted}
                 on:click={triggerEffectSpark}
                 aria-pressed={sparkBoosted}
-                aria-label="Spustit interaktivní efekt dopadu"
-                title="Klikni pro vlnu dopadu na plátně (nebo klepni přímo do scény)"
+                aria-label="Jemná vizualizace proměny dopadu"
+                title="Přehrát vizualizaci proměny"
               >
                 ✨ Impuls
               </button>
@@ -961,8 +793,6 @@
   .deed-preview-stage {
     --spot-x: 50%;
     --spot-y: 34%;
-    --tilt-x: 0;
-    --tilt-y: 0;
     position: relative;
     width: 100%;
     height: 86px;
@@ -971,19 +801,28 @@
     overflow: hidden;
     cursor: default;
     user-select: none;
-    background:
-      radial-gradient(
-        130px 90px at var(--spot-x) var(--spot-y),
-        rgba(253, 230, 138, 0.22) 0%,
-        rgba(52, 211, 153, 0.14) 48%,
-        transparent 100%
-      ),
-      radial-gradient(110% 100% at 50% 15%, #124530 0%, #082318 62%, #04130d 100%);
-    border: 1px solid rgba(52, 211, 153, 0.32);
+    background: linear-gradient(180deg, #113e2b 0%, #072016 58%, #03100b 100%);
+    border: 1px solid rgba(52, 211, 153, 0.34);
     box-shadow:
       0 12px 26px -12px rgba(4, 20, 13, 0.52),
       inset 0 1px 0 rgba(255, 255, 255, 0.14);
     transition: border-color 0.24s ease, box-shadow 0.24s ease, transform 0.22s ease;
+  }
+
+  .deed-preview-stage::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: radial-gradient(
+      140px 92px at var(--spot-x) var(--spot-y),
+      rgba(253, 230, 138, 0.18) 0%,
+      rgba(52, 211, 153, 0.10) 52%,
+      transparent 100%
+    );
+    opacity: 0.7;
+    transition: opacity 0.24s ease;
   }
 
   .deed-preview-stage.is-primed {
@@ -992,6 +831,10 @@
       0 14px 30px -10px rgba(6, 28, 19, 0.6),
       0 0 0 2px rgba(251, 191, 36, 0.2),
       inset 0 1px 0 rgba(254, 243, 199, 0.25);
+  }
+
+  .deed-preview-stage.is-primed::after {
+    opacity: 1;
   }
 
   .deed-preview-stage.is-nudged {
@@ -1072,77 +915,11 @@
     box-shadow: 0 0 8px #fbbf24;
   }
 
-  .preview-diorama-svg {
+  .preview-diorama-canvas {
     display: block;
     width: 100%;
     height: 100%;
     pointer-events: none;
-  }
-
-  .diorama-beam {
-    opacity: 0.72;
-    transition: opacity 0.28s ease;
-  }
-
-  .deed-preview-stage.is-primed .diorama-beam {
-    opacity: 1;
-  }
-
-  .diorama-floating-cluster {
-    transform: translate3d(calc(var(--tilt-x) * 4px), calc(var(--tilt-y) * 2px), 0);
-    animation: previewBob 3.6s ease-in-out infinite;
-    transition: transform 0.26s cubic-bezier(0.2, 0.9, 0.3, 1);
-  }
-
-  .deed-preview-stage.is-primed .diorama-floating-cluster {
-    animation: none;
-    transform: translate3d(calc(var(--tilt-x) * 4px), 8px, 0) scale(1.04);
-  }
-
-  .diorama-focal {
-    transform: translate3d(calc(var(--tilt-x) * -2px), 0, 0);
-    transition: transform 0.26s ease;
-  }
-
-  .diorama-kitty {
-    transform-origin: 286px 84px;
-    transition: transform 0.28s ease;
-  }
-
-  .deed-preview-stage.is-primed .diorama-kitty {
-    transform: translateX(-3px) rotate(-2deg);
-  }
-
-  .bowl-inner-glow {
-    transition: opacity 0.28s ease;
-  }
-
-  .deed-preview-stage.is-primed .bowl-inner-glow {
-    opacity: 0.58;
-  }
-
-  .diorama-firefly {
-    animation: dioramaTwinkle 4.2s ease-in-out infinite;
-  }
-  .diorama-firefly.f2 { animation-delay: 1.1s; }
-  .diorama-firefly.f3 { animation-delay: 2.1s; }
-  .diorama-firefly.f4 { animation-delay: 2.9s; }
-
-  @keyframes previewBob {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-4px); }
-  }
-
-  @keyframes dioramaTwinkle {
-    0%, 100% { opacity: 0.28; }
-    50% { opacity: 0.92; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .diorama-floating-cluster,
-    .diorama-firefly {
-      animation: none;
-    }
   }
 
   /* =========================================================================
@@ -1556,7 +1333,7 @@
     padding: 0;
     border-radius: 18px;
     overflow: hidden;
-    background: radial-gradient(circle at 50% 38%, #0e3625 0%, #04140e 100%);
+    background: linear-gradient(180deg, #113e2b 0%, #113e2b 48px, #072016 76%, #03100b 100%);
     border: 1px solid rgba(52, 211, 153, 0.38);
     color: #ecfdf5;
     box-shadow:
@@ -1565,20 +1342,13 @@
   }
 
   .card-effect-head {
-    position: absolute;
-    top: 8px;
-    left: 10px;
-    right: 10px;
-    z-index: 3;
+    position: relative;
+    z-index: 2;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.4rem;
-    pointer-events: none;
-  }
-
-  .card-effect-head > * {
-    pointer-events: auto;
+    padding: 0.38rem 0.58rem 0.1rem;
   }
 
   .card-effect-controls {
@@ -2130,13 +1900,11 @@
 
     .card-effect-stage .impact-payoff-canvas,
     .impact-payoff-canvas {
-      height: 76px;
+      height: 82px;
     }
 
     .card-effect-head {
-      top: 6px;
-      left: 7px;
-      right: 7px;
+      padding: 0.26rem 0.45rem 0.06rem;
     }
 
     .card-effect-stage .impact-payoff-badge {
@@ -2184,8 +1952,17 @@
 
   @media (max-width: 680px) and (max-height: 700px) {
     .deed-preview-stage {
-      height: 50px;
+      height: 52px;
       margin-bottom: 0.14rem;
+    }
+
+    .preview-hud {
+      top: 4px;
+    }
+
+    .preview-promise-pill {
+      padding: 0.09rem 0.4rem;
+      font-size: 0.62rem;
     }
   }
 </style>

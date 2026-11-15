@@ -1,7 +1,7 @@
 <script>
-  import { cleanTitle } from '../../../utils.js';
-  import { trackEvent } from '../../../analytics.js';
-  import { SANCTUARY_ELEMENTS } from '../../../progress.js';
+  import { cleanTitle } from "../../../utils.js";
+  import { trackEvent } from "../../../analytics.js";
+  import { SANCTUARY_ELEMENTS } from "../../../progress.js";
 
   export let selectedLight = null;
   export let elementMap = {};
@@ -9,10 +9,10 @@
   export let onMarkDone = null;
 
   function getLightSemanticLabel(light) {
-    const lt = light?.lightType || (light?.zone === 'sky' ? 'star' : 'lantern');
-    if (lt === 'wave') return '〰️ Vlna · Pomoc druhému';
-    if (lt === 'star') return '✦ Hvězda · Inspirace';
-    return '🏮 Lucerna · Osobní skutek';
+    const lt = light?.lightType || (light?.zone === "sky" ? "star" : "lantern");
+    if (lt === "wave") return "〰️ Vlna · Pomoc druhému";
+    if (lt === "star") return "✦ Hvězda · Inspirace";
+    return "🏮 Lucerna · Osobní skutek";
   }
 
   function handleClose() {
@@ -23,7 +23,9 @@
     if (onMarkDone) onMarkDone(selectedLight);
   }
 
-  $: selMeta = (selectedLight && elementMap[selectedLight.element]) || SANCTUARY_ELEMENTS[3];
+  $: selMeta =
+    (selectedLight && elementMap[selectedLight.element]) ||
+    SANCTUARY_ELEMENTS[3];
 </script>
 
 {#if selectedLight}
@@ -38,20 +40,35 @@
   >
     <div class="mw-head">
       <span class="mw-overline">
-        {#if selMeta.icon === '🐾'}
-          <svg class="mw-paw-svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        {#if selMeta.icon === "🐾"}
+          <svg
+            class="mw-paw-svg"
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+          >
             <circle cx="7.5" cy="9.5" r="2.3" />
             <circle cx="12" cy="7" r="2.3" />
             <circle cx="16.5" cy="9.5" r="2.3" />
-            <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
+            <path
+              d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z"
+            />
           </svg>
         {:else}
           {selMeta.icon}
         {/if}
         {selMeta.title} · {getLightSemanticLabel(selectedLight)}
-        {#if selectedLight.isMine} · ✦ Tvůj skutek{/if}
+        {#if selectedLight.isMine}
+          · ✦ Tvůj skutek{/if}
       </span>
-      <button type="button" class="mw-close" on:click={handleClose} aria-label="Zavřít">✕</button>
+      <button
+        type="button"
+        class="mw-close"
+        on:click={handleClose}
+        aria-label="Zavřít">✕</button
+      >
     </div>
 
     <strong class="mw-title">{cleanTitle(selectedLight.title)}</strong>
@@ -79,17 +96,14 @@
           target="_blank"
           rel="noopener noreferrer"
           class="mw-btn-link"
-          on:click={() => trackEvent('aa_world_deed_open', { id: selectedLight.actionId })}
+          on:click={() =>
+            trackEvent("aa_world_deed_open", { id: selectedLight.actionId })}
         >
           Udělat tenhle skutek ↗
         </a>
       {/if}
       {#if !selectedLight.isMine}
-        <button
-          type="button"
-          class="mw-btn-done"
-          on:click={handleDone}
-        >
+        <button type="button" class="mw-btn-done" on:click={handleDone}>
           ✓ Mám splněno — rozsvítit
         </button>
       {/if}
@@ -108,7 +122,7 @@
     background: rgba(7, 26, 18, 0.97);
     border: 1px solid rgba(253, 230, 138, 0.4);
     color: #f8faf8;
-    z-index: 6;
+    z-index: 20;
     box-shadow: 0 18px 38px rgba(0, 0, 0, 0.45);
   }
 
@@ -222,4 +236,3 @@
     }
   }
 </style>
-

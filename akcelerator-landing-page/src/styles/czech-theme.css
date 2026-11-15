@@ -211,7 +211,7 @@ body {
   pointer-events: none;
 }
 
-.subpage-hero > * {
+.subpage-hero>* {
   position: relative;
   z-index: 1;
 }
@@ -266,7 +266,7 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
-.calm-drawer > summary {
+.calm-drawer>summary {
   list-style: none;
   cursor: pointer;
   display: flex;
@@ -278,11 +278,11 @@ body {
   color: var(--forest-850);
 }
 
-.calm-drawer > summary::-webkit-details-marker {
+.calm-drawer>summary::-webkit-details-marker {
   display: none;
 }
 
-.calm-drawer > summary::after {
+.calm-drawer>summary::after {
   content: 'Rozbalit ↓';
   font-size: 0.8rem;
   font-weight: 700;
@@ -292,7 +292,7 @@ body {
   background: rgba(16, 185, 129, 0.1);
 }
 
-.calm-drawer[open] > summary::after {
+.calm-drawer[open]>summary::after {
   content: 'Skrýt ↑';
 }
 
@@ -308,10 +308,13 @@ select:focus-visible {
 
 /* Keyframes for Atmospheric Glimmers */
 @keyframes floatFirefly {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translate3d(0, 0, 0) scale(1);
     opacity: 0.35;
   }
+
   50% {
     transform: translate3d(12px, -22px, 0) scale(1.25);
     opacity: 0.9;
@@ -323,10 +326,12 @@ select:focus-visible {
     transform: scale(0.95);
     opacity: 0.85;
   }
+
   50% {
     transform: scale(1.65);
     opacity: 0;
   }
+
   100% {
     transform: scale(0.95);
     opacity: 0;
@@ -337,6 +342,7 @@ select:focus-visible {
   0% {
     transform: translateX(-120%) skewX(-18deg);
   }
+
   100% {
     transform: translateX(220%) skewX(-18deg);
   }
@@ -364,12 +370,10 @@ select:focus-visible {
   position: absolute;
   inset: 0;
   width: calc(var(--spark-charge, 0) * 100%);
-  background: linear-gradient(
-    90deg,
-    rgba(251, 191, 36, 0.32) 0%,
-    rgba(52, 211, 153, 0.42) 60%,
-    rgba(253, 230, 138, 0.58) 100%
-  );
+  background: linear-gradient(90deg,
+      rgba(251, 191, 36, 0.32) 0%,
+      rgba(52, 211, 153, 0.42) 60%,
+      rgba(253, 230, 138, 0.58) 100%);
   pointer-events: none;
   z-index: 0;
   transition: width 0.05s linear;
@@ -416,7 +420,7 @@ select:focus-visible {
   padding: 0;
   border-radius: 18px;
   overflow: hidden;
-  background: radial-gradient(circle at 50% 38%, #0e3625 0%, #04140e 100%);
+  background: linear-gradient(180deg, #113e2b 0%, #113e2b 48px, #072016 76%, #03100b 100%);
   border: 1px solid rgba(52, 211, 153, 0.38);
   color: #ecfdf5;
   box-shadow:
@@ -431,20 +435,13 @@ select:focus-visible {
 }
 
 .card-effect-head {
-  position: absolute;
-  top: 8px;
-  left: 10px;
-  right: 10px;
-  z-index: 3;
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.4rem;
-  pointer-events: none;
-}
-
-.card-effect-head > * {
-  pointer-events: auto;
+  padding: 0.38rem 0.58rem 0.1rem;
 }
 
 .card-effect-controls {
@@ -505,13 +502,11 @@ select:focus-visible {
 
   .card-effect-stage .impact-payoff-canvas,
   .impact-payoff-canvas {
-    height: 76px;
+    height: 82px;
   }
 
   .card-effect-head {
-    top: 6px;
-    left: 7px;
-    right: 7px;
+    padding: 0.26rem 0.45rem 0.06rem;
   }
 
   .card-effect-stage .impact-payoff-badge {
@@ -596,6 +591,7 @@ select:focus-visible {
   html {
     scroll-behavior: auto !important;
   }
+
   *,
   *::before,
   *::after {
