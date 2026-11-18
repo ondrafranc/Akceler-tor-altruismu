@@ -73,9 +73,12 @@ test('all core routes return 200, render Krajina dobra navigation, and contain z
 test('home mood tabs start with shelter bowl, rotate 4 distinct actions, and connect to deed-lit Krajina dobra + breathing', async ({ page }) => {
   await page.goto('/');
 
-  // Editorial daylight hero stage present & old backdrops/aurora/fireflies/fate slider absent
+  // Desktop forest hero stage present & deprecated fate slider absent
   await expect(page.locator('.hero-stage')).toBeVisible();
-  await expect(page.locator('.hero-painted-backdrop, .hero-aurora, .fireflies-layer')).toHaveCount(0);
+  await expect(page.locator('.hero-painted-backdrop')).toBeVisible();
+  await expect(page.locator('.hero-aurora')).toBeVisible();
+  await expect(page.locator('.fireflies-layer')).toBeVisible();
+  await expect(page.locator('.hero-wave svg')).toBeVisible();
   await expect(page.locator('.fate-compare')).toHaveCount(0);
 
   // External portals are tucked inside a closed drawer by default

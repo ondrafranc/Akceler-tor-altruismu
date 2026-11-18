@@ -73,7 +73,7 @@ test.describe('Tier 1: Feature Coverage', () => {
       await expect(page.locator('.hero-stage')).toBeVisible();
     });
 
-    test('F1-2: Clean daylight editorial hero stage is visible without legacy backdrop, aurora, or fireflies', async ({ page }) => {
+    test('F1-2: Desktop hero stage is visible with forest backdrop, aurora, fireflies, and curved wave', async ({ page }) => {
       await page.goto('/');
       await expect(page.locator('.hero-stage')).toBeVisible();
       const heroInner = page.locator('.hero-inner');
@@ -81,7 +81,10 @@ test.describe('Tier 1: Feature Coverage', () => {
       const innerBox = await heroInner.boundingBox();
       expect(innerBox).not.toBeNull();
       expect(innerBox!.width).toBeLessThanOrEqual(1140);
-      await expect(page.locator('.hero-painted-backdrop, .hero-aurora, .fireflies-layer')).toHaveCount(0);
+      await expect(page.locator('.hero-painted-backdrop')).toBeVisible();
+      await expect(page.locator('.hero-aurora')).toBeVisible();
+      await expect(page.locator('.fireflies-layer')).toBeVisible();
+      await expect(page.locator('.hero-wave svg')).toBeVisible();
     });
 
     test('F1-3: Primary hero CTAs link directly to /near (map) and /svet (Krajina dobra)', async ({ page }) => {
@@ -614,7 +617,7 @@ test.describe('Tier 2: Boundary & Corner Cases', () => {
       await checkZeroHorizontalOverflow(page, 'home-320x568');
     });
 
-    test('F1-B5: Hero stage covers full width with unified <= 1140px inner container and zero legacy backdrop', async ({ page }) => {
+    test('F1-B5: Hero stage covers full width with unified <= 1140px inner container and desktop forest backdrop', async ({ page }) => {
       await page.setViewportSize({ width: 1024, height: 768 });
       await page.goto('/');
       const stage = page.locator('.hero-stage');
@@ -625,7 +628,8 @@ test.describe('Tier 2: Boundary & Corner Cases', () => {
       const innerBox = await page.locator('.hero-inner').boundingBox();
       expect(innerBox).not.toBeNull();
       expect(innerBox!.width).toBeLessThanOrEqual(1140);
-      await expect(page.locator('.hero-painted-backdrop')).toHaveCount(0);
+      await expect(page.locator('.hero-painted-backdrop')).toBeVisible();
+      await expect(page.locator('.hero-wave svg')).toBeVisible();
       await checkZeroHorizontalOverflow(page, 'home-1024x768');
     });
   });
@@ -1191,9 +1195,12 @@ test.describe('Tier 4: Real-World Application Scenarios', () => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/');
 
-    // 1. Clean editorial hero stage & mobile claim
+    // 1. Clean compact mobile hero stage (decorative desktop backdrop hidden) & mobile claim
     await expect(page.locator('.hero-stage')).toBeVisible();
-    await expect(page.locator('.hero-painted-backdrop, .hero-aurora, .fireflies-layer')).toHaveCount(0);
+    await expect(page.locator('.hero-painted-backdrop')).toBeHidden();
+    await expect(page.locator('.hero-aurora')).toBeHidden();
+    await expect(page.locator('.fireflies-layer')).toBeHidden();
+    await expect(page.locator('.hero-wave')).toBeHidden();
     await expect(page.locator('.hero-mobile-claim')).toBeVisible();
     await expect(page.locator('.hero-mobile-claim')).toContainText('Jeden ověřený dobrý skutek');
 

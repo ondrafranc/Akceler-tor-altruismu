@@ -62,12 +62,16 @@
   let lastHoldActionId = null;
   let lastCelebratedActionId = null;
 
-  // Interactive anticipation diorama state (zero-reflow)
+  // Interactive anticipation diorama state (zero-reflow cached bounds)
+  /** @type {DOMRect | null} */
+  let previewBounds = null;
   let previewHovered = false;
   let ctaHovered = false;
   let previewNudged = false;
   /** @type {ReturnType<typeof setTimeout> | null} */
   let previewNudgeTimer = null;
+  let spotX = 50;
+  let spotY = 34;
 
   function endHoldSpark(released = false) {
     if (stopHoldSpark) {
@@ -87,12 +91,45 @@
     });
   }
 
-  function handlePreviewPointerEnter() {
+  function invalidatePreviewBounds() {
+    previewBounds = null;
+  }
+
+  function handlePreviewPointerEnter(e) {
+    previewBounds = e.currentTarget.getBoundingClientRect();
     previewHovered = true;
+  }
+
+  function handlePreviewPointerMove(e) {
+    if (e.pointerType !== "touch") {
+      previewHovered = true;
+    }
+    if (!previewBounds) {
+      previewBounds = e.currentTarget.getBoundingClientRect();
+    }
+    const nx = Math.max(
+      0,
+      Math.min(
+        1,
+        (e.clientX - previewBounds.left) / Math.max(1, previewBounds.width),
+      ),
+    );
+    const ny = Math.max(
+      0,
+      Math.min(
+        1,
+        (e.clientY - previewBounds.top) / Math.max(1, previewBounds.height),
+      ),
+    );
+    spotX = Math.round(nx * 100);
+    spotY = Math.round(ny * 100);
   }
 
   function handlePreviewPointerLeave() {
     previewHovered = false;
+    previewBounds = null;
+    spotX = 50;
+    spotY = 34;
   }
 
   function handlePreviewNudge() {
@@ -110,6 +147,10 @@
   $: if (action?.id !== lastHoldActionId) {
     lastHoldActionId = action?.id || null;
     endHoldSpark(false);
+    previewHovered = false;
+    previewBounds = null;
+    spotX = 50;
+    spotY = 34;
     previewNudged = false;
     ctaHovered = false;
   }
@@ -532,6 +573,11 @@
   $: actionTitle = action ? cleanTitle(action.title) : "";
 </script>
 
+<svelte:window
+  on:scroll|passive={invalidatePreviewBounds}
+  on:resize|passive={invalidatePreviewBounds}
+/>
+
 {#if action}
   <article
     id={action ? `online-card-${action.id}` : undefined}
@@ -551,8 +597,11 @@
         class:is-primed={previewHovered || ctaHovered || previewNudged}
         class:is-nudged={previewNudged}
         data-scene={effectMeta?.scene || "default"}
+        style="--spot-x: {spotX}%; --spot-y: {spotY}%;"
         on:pointerenter={handlePreviewPointerEnter}
+        on:pointermove={handlePreviewPointerMove}
         on:pointerleave={handlePreviewPointerLeave}
+        on:pointercancel={handlePreviewPointerLeave}
         on:click={handlePreviewNudge}
       >
         <div class="preview-hud">
@@ -1090,6 +1139,8 @@
      ŽIVÁ SCÉNA OČEKÁVÁNÍ (DAYLIGHT BOTANICAL FRAME + NON-OVERLAPPING HUD)
      ========================================================================= */
   .deed-preview-stage {
+    --spot-x: 50%;
+    --spot-y: 34%;
     position: relative;
     display: flex;
     flex-direction: column;
@@ -1104,14 +1155,41 @@
     border: 1px solid var(--border-strong, #c2cec5);
     box-shadow: 0 4px 14px -6px rgba(17, 41, 30, 0.1);
     transition:
-      border-color 0.2s ease,
-      box-shadow 0.2s ease,
-      transform 0.2s ease;
+      border-color 0.24s ease,
+      box-shadow 0.24s ease,
+      transform 0.22s ease;
+  }
+
+  .deed-preview-stage::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background: radial-gradient(
+      150px 100px at var(--spot-x) var(--spot-y),
+      rgba(253, 230, 138, 0.34) 0%,
+      rgba(251, 191, 36, 0.16) 46%,
+      transparent 100%
+    );
+    opacity: 0;
+    transition: opacity 0.24s ease;
   }
 
   .deed-preview-stage.is-primed {
-    border-color: var(--accent-primary, #1b5e42);
-    box-shadow: 0 6px 18px -6px rgba(17, 41, 30, 0.16);
+    border-color: rgba(245, 158, 11, 0.72);
+    box-shadow:
+      0 8px 22px -6px rgba(180, 120, 16, 0.24),
+      0 0 0 2px rgba(251, 191, 36, 0.28),
+      inset 0 1px 0 rgba(254, 243, 199, 0.35);
+  }
+
+  .deed-preview-stage.is-primed::after {
+    opacity: 1;
+  }
+
+  .deed-preview-stage.is-primed .preview-hud {
+    border-bottom-color: rgba(245, 158, 11, 0.32);
   }
 
   .deed-preview-stage.is-nudged {

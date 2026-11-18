@@ -40,15 +40,19 @@ describe('Milestone 3: Extracted Feature Components & UI Primitives', () => {
   });
 
   describe('Home Feature Components (src/lib/features/home/)', () => {
-    it('HeroSection.svelte compiles and contains editorial daylight hero stage without AI-look aurora', () => {
+    it('HeroSection.svelte compiles and contains desktop forest backdrop, wave transition, and SVG icons without Unicode emojis', () => {
       const source = loadComponentSource('features/home/HeroSection.svelte');
       const compiled = compile(source, { generate: 'server' });
       expect(compiled.js.code).toBeDefined();
 
       expect(source).toContain('hero-stage');
-      expect(source).not.toContain('hero-aurora');
-      expect(source).not.toContain('fireflies-layer');
+      expect(source).toContain('hero-painted-backdrop');
+      expect(source).toContain('hero-aurora');
+      expect(source).toContain('fireflies-layer');
+      expect(source).toContain('hero-wave');
       expect(source).toContain('hero-title');
+      expect(source).toContain('AppIcon');
+      expect(source).not.toContain('✨');
     });
 
     it('PathwaysBento.svelte compiles and preserves bento-card selectors', () => {

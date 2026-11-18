@@ -2616,6 +2616,439 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
 
     assertZeroRuntimeErrors(errors, 'T3-18');
   });
+
+  test('T3-19: (R1 Desktop Hero Forest Backdrop & .hero-wave SVG) 681..1440px top flush, rendered-pixel WCAG contrast, wave match, 1140px align, and mobile hidden', async ({
+    page
+  }) => {
+    test.setTimeout(120_000);
+    const errors = await setupPageEnvironment(page);
+
+    for (const vp of [
+      { width: 1440, height: 900, label: '1440x900' },
+      { width: 1280, height: 800, label: '1280x800' },
+      { width: 1025, height: 800, label: '1025x800' },
+      { width: 1024, height: 768, label: '1024x768' },
+      { width: 681, height: 800, label: '681x800' }
+    ]) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await gotoHydrated(page, '/');
+
+      const layoutMetrics = await page.evaluate(() => {
+        const stage = document.querySelector('.hero-stage') as HTMLElement | null;
+        const backdrop = document.querySelector('.hero-painted-backdrop') as HTMLElement | null;
+        const aurora = document.querySelector('.hero-aurora') as HTMLElement | null;
+        const scrim = document.querySelector('.hero-scrim') as HTMLElement | null;
+        const firefliesLayer = document.querySelector('.fireflies-layer') as HTMLElement | null;
+        const fireflies = Array.from(document.querySelectorAll('.fireflies-layer .firefly'));
+        const overline = document.querySelector('.hero-overline') as HTMLElement | null;
+        const title = document.querySelector('.hero-title') as HTMLElement | null;
+        const serif = document.querySelector('.hero-serif') as HTMLElement | null;
+        const lead = document.querySelector('.hero-lead') as HTMLElement | null;
+        const leadStrong = document.querySelector('.hero-lead strong') as HTMLElement | null;
+        const primaryBtn = document.querySelector('.hero-btn.primary') as HTMLElement | null;
+        const sanctuaryBtn = document.querySelector('.sanctuary-hero-btn') as HTMLElement | null;
+        const waveSvg = document.querySelector('.hero-wave svg') as SVGElement | null;
+        const wavePath = document.querySelector('.hero-wave svg path') as SVGPathElement | null;
+        const navCapsule = document.querySelector('header.top-nav .nav-capsule') as HTMLElement | null;
+        const heroInner = document.querySelector('.hero-inner') as HTMLElement | null;
+        const contentWrap = document.querySelector('.home-sections .content-wrap') as HTMLElement | null;
+        const molly = document.querySelector('.molly-roaming-actor') as HTMLElement | null;
+        const headerDock = document.querySelector('.molly-pelisek-dock.is-header-dock') as HTMLElement | null;
+
+        if (
+          !stage ||
+          !backdrop ||
+          !aurora ||
+          !scrim ||
+          !firefliesLayer ||
+          !overline ||
+          !title ||
+          !serif ||
+          !lead ||
+          !leadStrong ||
+          !primaryBtn ||
+          !sanctuaryBtn ||
+          !waveSvg ||
+          !wavePath
+        ) {
+          return null;
+        }
+
+        function tightRect(el: HTMLElement) {
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          const r = range.getBoundingClientRect();
+          if (r.width > 0 && r.height > 0) return r;
+          return el.getBoundingClientRect();
+        }
+
+        const stageCs = window.getComputedStyle(stage);
+        const backdropCs = window.getComputedStyle(backdrop);
+        const auroraCs = window.getComputedStyle(aurora);
+        const scrimCs = window.getComputedStyle(scrim);
+        const overlineCs = window.getComputedStyle(overline);
+        const titleCs = window.getComputedStyle(title);
+        const leadCs = window.getComputedStyle(lead);
+        const leadStrongCs = window.getComputedStyle(leadStrong);
+        const primaryBtnCs = window.getComputedStyle(primaryBtn);
+        const sanctuaryBtnCs = window.getComputedStyle(sanctuaryBtn);
+        const wavePathCs = window.getComputedStyle(wavePath);
+        const rootSurface = window.getComputedStyle(document.documentElement).getPropertyValue('--surface-page').trim();
+
+        const stageRect = stage.getBoundingClientRect();
+        const waveRect = waveSvg.getBoundingClientRect();
+        const mollyRect = molly?.getBoundingClientRect();
+        const dockRect = headerDock?.getBoundingClientRect();
+
+        const toRel = (r: DOMRect, insetX = 0, insetY = 0) => ({
+          x: Math.max(0, r.left - stageRect.left + insetX),
+          y: Math.max(0, r.top - stageRect.top + insetY),
+          width: Math.max(1, r.width - insetX * 2),
+          height: Math.max(1, r.height - insetY * 2)
+        });
+
+        return {
+          stageTop: stageRect.top,
+          stageWidth: stageRect.width,
+          stageHeight: stageRect.height,
+          stageBgImg: stageCs.backgroundImage,
+          stageBorderBottom: stageCs.borderBottomWidth,
+          backdropDisplay: backdropCs.display,
+          backdropOpacity: parseFloat(backdropCs.opacity),
+          backdropBgImg: backdropCs.backgroundImage,
+          auroraDisplay: auroraCs.display,
+          scrimDisplay: scrimCs.display,
+          firefliesDisplay: window.getComputedStyle(firefliesLayer).display,
+          fireflyCount: fireflies.length,
+          waveWidth: Math.round(waveRect.width),
+          waveHeight: Math.round(waveRect.height),
+          waveAtBottom: Math.abs(waveRect.bottom - stageRect.bottom) <= 2,
+          waveFill: wavePathCs.fill,
+          rootSurface,
+          navWidth: navCapsule ? Math.round(navCapsule.getBoundingClientRect().width) : 0,
+          heroInnerWidth: heroInner ? Math.round(heroInner.getBoundingClientRect().width) : 0,
+          contentWidth: contentWrap ? Math.round(contentWrap.getBoundingClientRect().width) : 0,
+          scrollY: window.scrollY,
+          mollyVisible: Boolean(molly && mollyRect && mollyRect.width >= 40 && mollyRect.bottom <= window.innerHeight + 2),
+          headerDockVisible: Boolean(headerDock && dockRect && dockRect.width >= 40 && dockRect.height >= 30),
+          colors: {
+            overline: overlineCs.color,
+            title: titleCs.color,
+            lead: leadCs.color,
+            leadStrong: leadStrongCs.color,
+            primaryBtn: primaryBtnCs.color,
+            sanctuaryBtn: sanctuaryBtnCs.color
+          },
+          rects: {
+            overline: toRel(tightRect(overline), 16, 1),
+            title: toRel(tightRect(title), 2, 2),
+            serif: toRel(tightRect(serif), 2, 2),
+            lead: toRel(tightRect(lead), 2, 2),
+            leadStrong: toRel(tightRect(leadStrong), 2, 1),
+            primaryBtn: toRel(tightRect((primaryBtn.querySelector('span') as HTMLElement | null) || primaryBtn), 1, 1),
+            sanctuaryBtn: toRel(tightRect((sanctuaryBtn.querySelector('span') as HTMLElement | null) || sanctuaryBtn), 1, 1)
+          }
+        };
+      });
+
+      expect(layoutMetrics, `${vp.label}: hero metrics`).not.toBeNull();
+      expect(layoutMetrics!.stageTop, `${vp.label}: heroStage.top <= 0 (no exposed light strip at y=0)`).toBeLessThanOrEqual(0);
+      expect(layoutMetrics!.stageBgImg, `${vp.label}: dark forest gradient`).toContain('rgb(11, 38, 27)');
+      expect(layoutMetrics!.stageBgImg, `${vp.label}: mid forest gradient`).toContain('rgb(18, 58, 41)');
+      expect(layoutMetrics!.stageBorderBottom, `${vp.label}: zero seam border-bottom`).toBe('0px');
+      expect(layoutMetrics!.backdropDisplay).not.toBe('none');
+      expect(layoutMetrics!.backdropOpacity).toBeGreaterThan(0.2);
+      expect(layoutMetrics!.backdropBgImg).toContain('/art/sanctuary-dawn');
+      expect(layoutMetrics!.auroraDisplay).not.toBe('none');
+      expect(layoutMetrics!.scrimDisplay).not.toBe('none');
+      expect(layoutMetrics!.firefliesDisplay).not.toBe('none');
+      expect(layoutMetrics!.fireflyCount).toBeGreaterThanOrEqual(7);
+      expect(layoutMetrics!.waveHeight).toBeGreaterThanOrEqual(40);
+      expect(layoutMetrics!.waveAtBottom).toBe(true);
+      expect(layoutMetrics!.waveFill).toBe('rgb(246, 247, 243)');
+      expect(layoutMetrics!.rootSurface.toLowerCase()).toBe('#f6f7f3');
+      expect(layoutMetrics!.navWidth).toBeLessThanOrEqual(1140);
+      expect(layoutMetrics!.heroInnerWidth).toBeLessThanOrEqual(1140);
+      expect(layoutMetrics!.contentWidth).toBeLessThanOrEqual(1140);
+      expect(layoutMetrics!.scrollY).toBe(0);
+      if (vp.width > 1024) {
+        expect(layoutMetrics!.mollyVisible, `${vp.label}: Molly visible at scrollY === 0`).toBe(true);
+      } else {
+        expect(layoutMetrics!.headerDockVisible, `${vp.label}: Molly header dock visible`).toBe(true);
+      }
+
+      // Sample actual rendered composited background pixels behind each Hero copy/CTA element
+      await page.evaluate(() => {
+        const s = document.createElement('style');
+        s.id = 't319-bg-probe';
+        s.textContent = `
+          .hero-copy, .hero-copy * {
+            color: transparent !important;
+            -webkit-text-fill-color: transparent !important;
+          }
+          .hero-serif {
+            background: none !important;
+          }
+          .hero-overline .live-dot,
+          .hero-copy svg {
+            opacity: 0 !important;
+          }
+        `;
+        document.head.appendChild(s);
+      });
+
+      let stagePngBase64 = '';
+      try {
+        const stageLoc = page.locator('.hero-stage').first();
+        const pngBuf = await stageLoc.screenshot({ type: 'png', animations: 'disabled' });
+        stagePngBase64 = pngBuf.toString('base64');
+      } finally {
+        await page.evaluate(() => {
+          document.getElementById('t319-bg-probe')?.remove();
+        });
+      }
+
+      const pixelContrast = await page.evaluate(
+        async ({ pngB64, colors, rects, expectedWidth, expectedHeight }) => {
+          function parseRgba(str: string): { r: number; g: number; b: number; a: number } {
+            const m = str.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)/i);
+            if (!m) return { r: 0, g: 0, b: 0, a: 1 };
+            return {
+              r: Number(m[1]),
+              g: Number(m[2]),
+              b: Number(m[3]),
+              a: m[4] !== undefined ? Number(m[4]) : 1
+            };
+          }
+          function compositeOver(fg: { r: number; g: number; b: number; a: number }, bg: { r: number; g: number; b: number }) {
+            return {
+              r: fg.r * fg.a + bg.r * (1 - fg.a),
+              g: fg.g * fg.a + bg.g * (1 - fg.a),
+              b: fg.b * fg.a + bg.b * (1 - fg.a)
+            };
+          }
+          function relLuminance(c: { r: number; g: number; b: number }) {
+            const toLin = (v: number) => {
+              const s = v / 255;
+              return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+            };
+            return 0.2126 * toLin(c.r) + 0.7152 * toLin(c.g) + 0.0722 * toLin(c.b);
+          }
+          function contrastRatio(c1: { r: number; g: number; b: number }, c2: { r: number; g: number; b: number }) {
+            const l1 = relLuminance(c1);
+            const l2 = relLuminance(c2);
+            return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+          }
+
+          const img = new Image();
+          img.src = `data:image/png;base64,${pngB64}`;
+          await new Promise<void>((resolve, reject) => {
+            img.onload = () => resolve();
+            img.onerror = () => reject(new Error('Failed to decode stage screenshot'));
+          });
+
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('Missing 2d canvas context');
+          ctx.drawImage(img, 0, 0);
+
+          const scaleX = img.width / Math.max(1, expectedWidth);
+          const scaleY = img.height / Math.max(1, expectedHeight);
+
+          function worstCaseContrast(
+            rect: { x: number; y: number; width: number; height: number },
+            fgColors: Array<{ r: number; g: number; b: number; a: number }>
+          ) {
+            const x0 = Math.max(0, Math.floor(rect.x * scaleX));
+            const y0 = Math.max(0, Math.floor(rect.y * scaleY));
+            const w = Math.max(1, Math.min(img.width - x0, Math.ceil(rect.width * scaleX)));
+            const h = Math.max(1, Math.min(img.height - y0, Math.ceil(rect.height * scaleY)));
+            const data = ctx.getImageData(x0, y0, w, h).data;
+            let minRatio = Infinity;
+            for (let i = 0; i < data.length; i += 16) {
+              const bg = { r: data[i], g: data[i + 1], b: data[i + 2] };
+              for (const fgRaw of fgColors) {
+                const fg = compositeOver(fgRaw, bg);
+                const r = contrastRatio(fg, bg);
+                if (r < minRatio) minRatio = r;
+              }
+            }
+            return minRatio;
+          }
+
+          return {
+            overline: worstCaseContrast(rects.overline, [parseRgba(colors.overline)]),
+            title: worstCaseContrast(rects.title, [parseRgba(colors.title)]),
+            serif: worstCaseContrast(rects.serif, [
+              { r: 254, g: 243, b: 199, a: 1 },
+              { r: 167, g: 243, b: 208, a: 1 },
+              { r: 253, g: 230, b: 138, a: 1 }
+            ]),
+            lead: worstCaseContrast(rects.lead, [parseRgba(colors.lead)]),
+            leadStrong: worstCaseContrast(rects.leadStrong, [parseRgba(colors.leadStrong)]),
+            primaryBtn: worstCaseContrast(rects.primaryBtn, [parseRgba(colors.primaryBtn)]),
+            sanctuaryBtn: worstCaseContrast(rects.sanctuaryBtn, [parseRgba(colors.sanctuaryBtn)])
+          };
+        },
+        {
+          pngB64: stagePngBase64,
+          colors: layoutMetrics!.colors,
+          rects: layoutMetrics!.rects,
+          expectedWidth: layoutMetrics!.stageWidth,
+          expectedHeight: layoutMetrics!.stageHeight
+        }
+      );
+
+      expect(pixelContrast.overline, `${vp.label}: rendered .hero-overline contrast >= 4.5`).toBeGreaterThanOrEqual(4.5);
+      expect(pixelContrast.title, `${vp.label}: rendered .hero-title contrast >= 4.5`).toBeGreaterThanOrEqual(4.5);
+      expect(pixelContrast.serif, `${vp.label}: rendered .hero-serif stops contrast >= 4.5`).toBeGreaterThanOrEqual(4.5);
+      expect(pixelContrast.lead, `${vp.label}: rendered .hero-lead contrast >= 4.5`).toBeGreaterThanOrEqual(4.5);
+      expect(pixelContrast.leadStrong, `${vp.label}: rendered .hero-lead strong contrast >= 4.5`).toBeGreaterThanOrEqual(4.5);
+      expect(pixelContrast.primaryBtn, `${vp.label}: rendered .hero-btn.primary contrast >= 4.5`).toBeGreaterThanOrEqual(4.5);
+      expect(pixelContrast.sanctuaryBtn, `${vp.label}: rendered .sanctuary-hero-btn contrast >= 4.5`).toBeGreaterThanOrEqual(4.5);
+
+      await assertZeroOverflow(page, `T3-19 ${vp.label}`);
+      expect(await scanForbiddenEmojis(page)).toEqual([]);
+    }
+
+    // Mobile viewports must hide desktop forest backdrop, aurora, scrim, fireflies, and wave
+    for (const mvp of [
+      { width: 360, height: 800, label: '360x800' },
+      { width: 375, height: 667, label: '375x667' }
+    ]) {
+      await page.setViewportSize({ width: mvp.width, height: mvp.height });
+      await gotoHydrated(page, '/');
+      await expect(page.locator('.hero-painted-backdrop')).toBeHidden();
+      await expect(page.locator('.hero-aurora')).toBeHidden();
+      await expect(page.locator('.hero-scrim')).toBeHidden();
+      await expect(page.locator('.fireflies-layer')).toBeHidden();
+      await expect(page.locator('.hero-wave')).toBeHidden();
+      await expect(page.locator('.hero-mobile-claim')).toBeVisible();
+    }
+
+    assertZeroRuntimeErrors(errors, 'T3-19');
+  });
+
+  test('T3-20: (R2 Desktop 1440x900 Deed Preview Warm-Yellow Hover Illumination) Light resting frame, pointer-tracking --spot-x/--spot-y glow, scroll-while-hovered invalidation, CTA priming, and mouseleave reset', async ({
+    page
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const errors = await setupPageEnvironment(page);
+    await gotoHydrated(page, '/');
+
+    const stage = page.locator('.instant-card .deed-preview-stage').first();
+    const cta = page.locator('.instant-card .btn-studio-primary').first();
+    await expect(stage).toBeVisible();
+    await expect(cta).toBeVisible();
+
+    // 1. Resting state keeps Daylight Editorial light frame with zero .is-primed and ::after opacity 0
+    const resting = await stage.evaluate((el) => {
+      const hud = el.querySelector('.preview-hud') as HTMLElement | null;
+      const cs = window.getComputedStyle(el);
+      const afterCs = window.getComputedStyle(el, '::after');
+      const hudCs = hud ? window.getComputedStyle(hud) : null;
+      return {
+        isPrimed: el.classList.contains('is-primed'),
+        bg: cs.backgroundColor,
+        borderColor: cs.borderColor,
+        boxShadow: cs.boxShadow,
+        hudBg: hudCs?.backgroundColor || '',
+        afterOpacity: parseFloat(afterCs.opacity),
+        afterBgImg: afterCs.backgroundImage
+      };
+    });
+    expect(resting.isPrimed).toBe(false);
+    expect(resting.bg).toBe('rgb(237, 242, 238)');
+    expect(resting.hudBg).toBe('rgb(255, 255, 255)');
+    expect(resting.afterOpacity).toBe(0);
+
+    // 2. Hover over .deed-preview-stage at two distinct pointer coordinates
+    const box = await stage.boundingBox();
+    expect(box).not.toBeNull();
+    await page.mouse.move(box!.x + box!.width * 0.2, box!.y + box!.height * 0.3, { steps: 4 });
+    await page.waitForTimeout(300);
+
+    const hoverLeft = await stage.evaluate((el) => {
+      const cs = window.getComputedStyle(el);
+      const afterCs = window.getComputedStyle(el, '::after');
+      return {
+        isPrimed: el.classList.contains('is-primed'),
+        spotX: el.style.getPropertyValue('--spot-x'),
+        spotY: el.style.getPropertyValue('--spot-y'),
+        borderColor: cs.borderColor,
+        boxShadow: cs.boxShadow,
+        afterOpacity: parseFloat(afterCs.opacity),
+        afterBgImg: afterCs.backgroundImage
+      };
+    });
+    expect(hoverLeft.isPrimed).toBe(true);
+    expect(parseFloat(hoverLeft.spotX)).toBeLessThan(35);
+    expect(hoverLeft.afterOpacity).toBeGreaterThanOrEqual(0.9);
+    expect(hoverLeft.afterBgImg).toContain('radial-gradient');
+    expect(hoverLeft.afterBgImg).toMatch(/253,\s*230,\s*138|251,\s*191,\s*36/);
+    expect(hoverLeft.borderColor).not.toBe(resting.borderColor);
+    expect(hoverLeft.boxShadow).toMatch(/251,\s*191,\s*36|180,\s*120,\s*16/);
+
+    await page.mouse.move(box!.x + box!.width * 0.82, box!.y + box!.height * 0.72, { steps: 4 });
+    await page.waitForTimeout(80);
+    const hoverRight = await stage.evaluate((el) => ({
+      isPrimed: el.classList.contains('is-primed'),
+      spotX: el.style.getPropertyValue('--spot-x'),
+      spotY: el.style.getPropertyValue('--spot-y')
+    }));
+    expect(hoverRight.isPrimed).toBe(true);
+    expect(parseFloat(hoverRight.spotX)).toBeGreaterThan(65);
+    expect(parseFloat(hoverRight.spotY)).toBeGreaterThan(55);
+
+    // 2b. Scroll while hovered invalidates cached previewBounds so --spot-y tracks accurately
+    await page.evaluate(() => window.scrollTo({ top: 30, behavior: 'instant' }));
+    await page.waitForTimeout(60);
+    const scrolledBox = await stage.boundingBox();
+    expect(scrolledBox).not.toBeNull();
+    await page.mouse.move(scrolledBox!.x + scrolledBox!.width * 0.5, scrolledBox!.y + scrolledBox!.height * 0.8, {
+      steps: 2
+    });
+    await page.waitForTimeout(60);
+    const hoverAfterScroll = await stage.evaluate((el) => ({
+      isPrimed: el.classList.contains('is-primed'),
+      spotX: parseFloat(el.style.getPropertyValue('--spot-x')),
+      spotY: parseFloat(el.style.getPropertyValue('--spot-y'))
+    }));
+    expect(hoverAfterScroll.isPrimed).toBe(true);
+    expect(hoverAfterScroll.spotX).toBeGreaterThanOrEqual(42);
+    expect(hoverAfterScroll.spotX).toBeLessThanOrEqual(58);
+    expect(hoverAfterScroll.spotY).toBeGreaterThanOrEqual(72);
+    expect(hoverAfterScroll.spotY).toBeLessThanOrEqual(88);
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    await page.waitForTimeout(60);
+
+    // 3. Moving pointer off .deed-preview-stage removes .is-primed and hides glow
+    await page.mouse.move(10, 10);
+    await page.waitForTimeout(300);
+    const afterLeave = await stage.evaluate((el) => ({
+      isPrimed: el.classList.contains('is-primed'),
+      spotX: el.style.getPropertyValue('--spot-x'),
+      afterOpacity: parseFloat(window.getComputedStyle(el, '::after').opacity)
+    }));
+    expect(afterLeave.isPrimed).toBe(false);
+    expect(afterLeave.spotX).toBe('50%');
+    expect(afterLeave.afterOpacity).toBe(0);
+
+    // 4. Hovering primary CTA also primes .deed-preview-stage, and leaving resets it
+    const ctaBox = await cta.boundingBox();
+    expect(ctaBox).not.toBeNull();
+    await page.mouse.move(ctaBox!.x + ctaBox!.width * 0.5, ctaBox!.y + ctaBox!.height * 0.5, { steps: 3 });
+    await page.waitForTimeout(100);
+    expect(await stage.evaluate((el) => el.classList.contains('is-primed'))).toBe(true);
+
+    await page.mouse.move(10, 10);
+    await page.waitForTimeout(100);
+    expect(await stage.evaluate((el) => el.classList.contains('is-primed'))).toBe(false);
+
+    assertZeroRuntimeErrors(errors, 'T3-20');
+  });
 });
 
 // ============================================================================
