@@ -1345,8 +1345,8 @@
   }
 
   .directory-card .quick-tags-pill {
-    padding: 0.16rem 0.44rem;
-    font-size: 0.68rem;
+    padding: 0.15rem 0.4rem;
+    font-size: 0.66rem;
     letter-spacing: 0;
   }
 

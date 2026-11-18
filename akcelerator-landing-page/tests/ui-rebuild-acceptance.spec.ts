@@ -2905,8 +2905,8 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
             title: worstCaseContrast(rects.title, [parseRgba(colors.title)]),
             serif: worstCaseContrast(rects.serif, [
               { r: 253, g: 230, b: 138, a: 1 },
-              { r: 167, g: 243, b: 208, a: 1 },
-              { r: 253, g: 224, b: 71, a: 1 }
+              { r: 187, g: 247, b: 208, a: 1 },
+              { r: 254, g: 240, b: 138, a: 1 }
             ]),
             lead: worstCaseContrast(rects.lead, [parseRgba(colors.lead)]),
             leadStrong: worstCaseContrast(rects.leadStrong, [parseRgba(colors.leadStrong)]),
@@ -2986,6 +2986,13 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
     expect(resting.bgImg).toContain('linear-gradient');
     expect(resting.hudBg).toBe('rgba(0, 0, 0, 0)');
     expect(resting.afterOpacity).toBe(0);
+
+    const topLeftCanvasAlpha = await stage.evaluate((el) => {
+      const cv = el.querySelector('canvas.preview-diorama-canvas') as HTMLCanvasElement | null;
+      const ctx = cv?.getContext('2d');
+      return ctx ? ctx.getImageData(2, 2, 1, 1).data[3] : -1;
+    });
+    expect(topLeftCanvasAlpha).toBe(0);
 
     // 2. Hover over .deed-preview-stage at two distinct pointer coordinates
     const box = await stage.boundingBox();

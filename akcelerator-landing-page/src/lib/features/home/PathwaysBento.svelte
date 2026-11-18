@@ -73,9 +73,9 @@
 
   .section-overline {
     font-size: 0.76rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    color: #944f12;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: #047857;
     text-transform: uppercase;
     display: block;
     margin-bottom: 0.45rem;

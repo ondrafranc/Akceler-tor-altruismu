@@ -274,17 +274,20 @@ export function mountImpactCanvas(cv, o = {}) {
     const cx = w / 2;
     c.scale(scale, scale);
 
-    // Jednotná botanicko-smaragdová scénická kulisa (#113e2b -> #072016 -> #03100b)
-    const bgGrad = c.createLinearGradient(0, 0, 0, h);
-    bgGrad.addColorStop(0, '#113e2b');
-    bgGrad.addColorStop(0.56, '#072016');
-    bgGrad.addColorStop(1, '#03100b');
-    c.fillStyle = bgGrad;
-    c.fillRect(0, 0, w, h);
+    // Jednotná botanicko-smaragdová scénická kulisa pro plátno odměny;
+    // v režimu preview prosvítá plynulý gradient .deed-preview-stage bez viditelného švu pod .preview-hud
+    if (!isPreview) {
+      const bgGrad = c.createLinearGradient(0, 0, 0, h);
+      bgGrad.addColorStop(0, '#113e2b');
+      bgGrad.addColorStop(0.56, '#072016');
+      bgGrad.addColorStop(1, '#03100b');
+      c.fillStyle = bgGrad;
+      c.fillRect(0, 0, w, h);
+    }
 
     // Měkká středová záře reagující na proměnu skutku i na hover anticipaci
-    const auraAlpha = isPreview ? 0.08 + p * 0.45 : 0.10 + p * 0.16 + burstEnergy * 0.14;
-    drawGlow(c, cx, cy + 2, Math.min(96, w * 0.34), cs[0] || '#34d399', auraAlpha);
+    const auraAlpha = isPreview ? 0.15 + p * 0.48 : 0.10 + p * 0.16 + burstEnergy * 0.14;
+    drawGlow(c, cx, cy + 2, Math.min(104, w * 0.36), cs[0] || '#34d399', auraAlpha);
 
     // Jemný horizont krajiny u paty scény
     c.fillStyle = 'rgba(2, 12, 8, 0.55)';
