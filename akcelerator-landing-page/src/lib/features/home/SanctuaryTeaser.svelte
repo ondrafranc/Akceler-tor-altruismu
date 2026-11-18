@@ -110,6 +110,7 @@
     background: var(--bg-surface, #ffffff);
     color: var(--ink-primary, #14281d);
     border: 1px solid var(--border-subtle, #dce3dd);
+    border-top: 3px solid var(--forest-canopy, #173829);
     box-shadow: var(--shadow-md, 0 8px 20px -6px rgba(18, 42, 30, 0.08));
     overflow: hidden;
   }
@@ -339,6 +340,92 @@
     background: var(--accent-primary, #1b5e42);
     border-color: var(--accent-primary, #1b5e42);
     color: #ffffff;
+  }
+
+  @media (min-width: 961px) {
+    .sanctuary-portal-card {
+      background: var(--forest-deep, #11291e);
+      color: #f4f7f3;
+      border: 1px solid #224433;
+      box-shadow: 0 14px 34px -12px rgba(14, 34, 24, 0.22),
+        0 2px 8px rgba(14, 34, 24, 0.08);
+    }
+
+    .stage-kicker {
+      background: rgba(254, 246, 232, 0.1);
+      border-color: rgba(245, 207, 139, 0.32);
+      color: #f5cf8b;
+    }
+
+    .sanctuary-copy h2 {
+      color: #f4f7f3;
+    }
+
+    .serif-gold {
+      color: #ebc983;
+    }
+
+    .sanctuary-copy p {
+      color: #d2e1d8;
+    }
+
+    .feature-tag {
+      background: rgba(231, 239, 234, 0.1);
+      border-color: rgba(200, 215, 205, 0.24);
+      color: #dfebe4;
+    }
+
+    .sanctuary-open-btn {
+      background: #e8f1ec;
+      border-color: #e8f1ec;
+      color: #11291e;
+    }
+
+    .sanctuary-open-btn:hover {
+      background: #ffffff;
+      border-color: #ffffff;
+      color: #0c1f16;
+    }
+
+    .sanctuary-breath-link {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(200, 215, 205, 0.3);
+      color: #f3f6f2;
+    }
+
+    .sanctuary-breath-link:hover {
+      background: rgba(255, 255, 255, 0.16);
+      border-color: #9ad4b5;
+    }
+
+    .breath-icon {
+      color: #9ad4b5;
+    }
+
+    .breath-pill-time {
+      background: rgba(12, 28, 20, 0.55);
+      border-color: rgba(200, 215, 205, 0.26);
+      color: #dfebe4;
+    }
+
+    .sanctuary-preview-window {
+      border-color: rgba(200, 215, 205, 0.28);
+      background: #0e2118;
+    }
+
+    .sanctuary-preview-window:hover {
+      border-color: #9ad4b5;
+    }
+
+    .spw-live-pill {
+      background: rgba(17, 41, 30, 0.9);
+      border-color: rgba(231, 239, 234, 0.26);
+      color: #f3f6f2;
+    }
+
+    .live-pulse-dot {
+      background: #7be0ad;
+    }
   }
 
   @media (max-width: 960px) {

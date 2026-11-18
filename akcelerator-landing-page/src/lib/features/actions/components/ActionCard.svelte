@@ -304,7 +304,7 @@
       status: "Větev zatím tichá",
     },
     zvire_v_nouzi: {
-      promise: "774 155 155 · 34 záchranných stanic v ČR",
+      promise: "Linka 774 155 155 · 34 stanic v ČR",
       status: "Pohotovost v kapse",
     },
     aplikace_zachranka: {
@@ -579,7 +579,7 @@
         <canvas
           class="preview-diorama-canvas"
           width="380"
-          height="86"
+          height="92"
           use:impactCanvas={{
             action,
             preview: true,
@@ -951,8 +951,14 @@
         <a
           bind:this={primaryBtnNode}
           href={action.url}
-          target="_blank"
-          rel="noopener noreferrer"
+          target={action.url?.startsWith("tel:") ||
+          action.url?.startsWith("mailto:")
+            ? undefined
+            : "_blank"}
+          rel={action.url?.startsWith("tel:") ||
+          action.url?.startsWith("mailto:")
+            ? undefined
+            : "noopener noreferrer"}
           class="btn-studio-primary btn-gold-action cta primary"
           class:cta-nudged={previewNudged}
           data-hold-spark="true"
@@ -1089,21 +1095,23 @@
     flex-direction: column;
     width: 100%;
     height: auto;
-    margin: 0 0 0.6rem 0;
+    margin: 0 0 0.65rem 0;
     border-radius: 16px;
     overflow: hidden;
     cursor: default;
     user-select: none;
     background: var(--bg-subtle, #edf2ee);
-    border: 1px solid var(--border-subtle, #dce3dd);
-    box-shadow: none;
+    border: 1px solid var(--border-strong, #c2cec5);
+    box-shadow: 0 4px 14px -6px rgba(17, 41, 30, 0.1);
     transition:
       border-color 0.2s ease,
+      box-shadow 0.2s ease,
       transform 0.2s ease;
   }
 
   .deed-preview-stage.is-primed {
     border-color: var(--accent-primary, #1b5e42);
+    box-shadow: 0 6px 18px -6px rgba(17, 41, 30, 0.16);
   }
 
   .deed-preview-stage.is-nudged {
@@ -1116,7 +1124,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.45rem;
-    padding: 0.36rem 0.62rem;
+    padding: 0.36rem 0.7rem;
     background: var(--bg-surface, #ffffff);
     border-bottom: 1px solid var(--border-subtle, #dce3dd);
     pointer-events: none;
@@ -1180,7 +1188,7 @@
   .preview-diorama-canvas {
     display: block;
     width: 100%;
-    height: 64px;
+    height: 92px;
     background: #14281d;
     pointer-events: none;
   }
@@ -2060,10 +2068,11 @@
       height: auto;
       margin: 0 0 0.18rem 0;
       border-radius: 13px;
+      box-shadow: none;
     }
 
     .preview-hud {
-      padding: 0.26rem 0.48rem;
+      padding: 0.2rem 0.48rem;
       gap: 0.28rem;
     }
 
@@ -2082,7 +2091,7 @@
     }
 
     .preview-diorama-canvas {
-      height: 46px;
+      height: 50px;
     }
 
     .action-meta-line {
@@ -2241,7 +2250,7 @@
     }
 
     .preview-hud {
-      padding: 0.22rem 0.44rem;
+      padding: 0.18rem 0.44rem;
     }
 
     .preview-promise-pill {
@@ -2249,7 +2258,7 @@
     }
 
     .preview-diorama-canvas {
-      height: 42px;
+      height: 46px;
     }
   }
 </style>

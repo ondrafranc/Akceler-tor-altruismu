@@ -24,7 +24,8 @@ import {
   AA_DONE_FOR_TODAY_PREFIX,
   AA_MOLLY_HINT_PREFIX,
   AA_MOLLY_HINTS_KEY,
-  AA_MOLLY_NUDGES_KEY
+  AA_MOLLY_NUDGES_KEY,
+  AA_HOME_DECK_STATE_KEY
 } from '../../src/lib/storage/index.js';
 
 describe('Storage Subsystem Unit Tests (src/lib/storage/)', () => {
@@ -44,7 +45,7 @@ describe('Storage Subsystem Unit Tests (src/lib/storage/)', () => {
   });
 
   describe('1. Canonical Key Registry Integrity', () => {
-    it('exports all 17 canonical keys as non-empty strings', () => {
+    it('exports all 18 canonical keys as non-empty strings', () => {
       const keys = [
         AA_COMPLETED_STEPS_KEY,
         AA_SANCTUARY_WISHES_KEY,
@@ -61,7 +62,8 @@ describe('Storage Subsystem Unit Tests (src/lib/storage/)', () => {
         AA_SOUND_MUTED_KEY,
         AA_PARTNER_RETURN_KEY,
         AA_MOLLY_HINTS_KEY,
-        AA_MOLLY_NUDGES_KEY
+        AA_MOLLY_NUDGES_KEY,
+        AA_HOME_DECK_STATE_KEY
       ];
       for (const k of keys) {
         expect(typeof k).toBe('string');
@@ -215,6 +217,28 @@ describe('Storage Subsystem Unit Tests (src/lib/storage/)', () => {
 
       // getStoredItem must return the NEW value from memory, NOT the stale native value
       expect(getStoredItem(AA_COMPLETED_STEPS_KEY, 'local')).toBe('new_updated_value');
+    });
+  });
+
+  describe('7. Home Deck State Persistence Key (AA_HOME_DECK_STATE_KEY)', () => {
+    it('round-trips serialized HomeDeckState safely in SSR and browser storage', () => {
+      delete globalThis.window;
+      const payload = JSON.stringify({
+        energyMode: 'focus',
+        actionId: 'zvire_v_nouzi',
+        index: 2,
+        excludeQuickId: '',
+        usePersonalValues: false
+      });
+      safeSetItem(AA_HOME_DECK_STATE_KEY, payload, 'local');
+      const restored = safeGetItem(AA_HOME_DECK_STATE_KEY, 'local');
+      expect(restored).toBe(payload);
+      const parsed = JSON.parse(restored || '{}');
+      expect(parsed.energyMode).toBe('focus');
+      expect(parsed.actionId).toBe('zvire_v_nouzi');
+      expect(parsed.index).toBe(2);
+      safeRemoveItem(AA_HOME_DECK_STATE_KEY, 'local');
+      expect(safeGetItem(AA_HOME_DECK_STATE_KEY, 'local')).toBeNull();
     });
   });
 });

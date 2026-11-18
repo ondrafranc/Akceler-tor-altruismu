@@ -36,16 +36,16 @@ export function mountImpactCanvas(cv, o = {}) {
   const cs = spec.colors || ['#34d399', '#10b981', '#fbbf24', '#38bdf8'];
   const isPreview = Boolean(o.preview);
   let isPrimed = Boolean(o.primed);
-  const h = isPreview ? 86 : 92;
-  const cy = isPreview ? h * 0.58 : h * 0.5 + 2;
-  const by = isPreview ? h - 7 : h - 11;
+  const h = isPreview ? 82 : 92;
+  const cy = isPreview ? 43 : h * 0.5 + 2;
+  const by = isPreview ? h - 8 : h - 11;
   const red = prefersReducedMotion();
 
   let currentW = isPreview ? 380 : 300;
   let currentCssH =
     cv?.getBoundingClientRect?.()?.height > 28
       ? cv.getBoundingClientRect().height
-      : cv?.height || (isPreview ? 86 : 92);
+      : cv?.height || (isPreview ? 92 : 92);
   let gx = 0;
   let py = 0.5;
   let id = 0;
@@ -77,12 +77,12 @@ export function mountImpactCanvas(cv, o = {}) {
   // HiDPI / Retina škálování zachovávající přesný poměr stran bez deformace kruhů a hranolů
   const syncCanvasDpr = () => {
     const rect = cv?.getBoundingClientRect?.();
-    const ch = rect?.height > 28 ? rect.height : cv?.height || (isPreview ? 86 : 112);
+    const ch = rect?.height > 28 ? rect.height : cv?.height || (isPreview ? 92 : 112);
     currentCssH = ch;
     if (!win() || !cv) return;
     const dpr = Math.min(window.devicePixelRatio || 1, getCanvasDprCap());
     const cw = rect?.width > 40 ? rect.width : cv.width || (isPreview ? 380 : 320);
-    const minH = isPreview ? 50 : 72;
+    const minH = isPreview ? 46 : 72;
     const effDpr = Math.max(dpr, minH / Math.max(1, ch));
     const targetW = Math.max(240, Math.round(cw * effDpr));
     const targetH = Math.max(minH, Math.round(ch * effDpr));
@@ -110,7 +110,7 @@ export function mountImpactCanvas(cv, o = {}) {
   // Jemné světlušky v botanické smaragdové scéně (normalizované napříč šířkou plátna)
   const stars = Array.from({ length: isPreview ? 16 : 22 }, (_, i) => ({
     nx: ((i * 53 + 17) % 293) / 293,
-    ny: (isPreview ? 0.30 : 0.10) + (((i * 29 + 11) % 100) / 100) * (isPreview ? 0.58 : 0.76),
+    ny: (isPreview ? 0.14 : 0.10) + (((i * 29 + 11) % 100) / 100) * (isPreview ? 0.70 : 0.76),
     r: 0.75 + (i % 3) * 0.45,
     phase: i * 0.7,
     col: i % 2 === 0 ? '#fde68a' : '#6ee7b7'
@@ -309,11 +309,11 @@ export function mountImpactCanvas(cv, o = {}) {
     }
     c.globalAlpha = 1.0;
 
-    // Vykreslení 2fázové poetické scény skutku (v náhledu s dynamickou rezervou pod horními HUD pilulkami i na 52px mobilu)
+    // Vykreslení 2fázové poetické scény skutku (responzivní měřítko zvlášť pro galerijní PC a kompaktní mobil)
     if (isPreview) {
-      const previewScale = currentCssH <= 62 ? 0.64 : 0.76;
+      const previewScale = currentCssH < 72 ? 0.88 : 0.96;
       c.save();
-      c.translate(cx, by + 1);
+      c.translate(cx, by - 1);
       c.scale(previewScale, previewScale);
       c.translate(-cx, -by);
       drawPoeticDeedScene(c, mode, p, time, cx, cy, by, w, h, cs, red, frame, gx, py);

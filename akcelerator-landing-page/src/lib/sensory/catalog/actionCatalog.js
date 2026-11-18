@@ -48,11 +48,12 @@ export const ACTION_EFFECT_CATALOG = {
   zvire_v_nouzi: {
     mode: 'wildlife_rescue',
     asmr: 'birds',
-    icon: 'squirrel',
+    icon: 'phone',
     target: 34,
     label: 'Pohotovost záchranných stanic',
     colors: ['#fbbf24', '#34d399', '#10b981', '#fde68a'],
-    format: (v) => `${v} ${pl(v, 'stanice', 'stanice', 'stanic')} v pohotovosti`
+    format: (v) => `${v} ${pl(v, 'stanice', 'stanice', 'stanic')} v pohotovosti`,
+    staticMetric: true
   },
   aplikace_zachranka: {
     mode: 'ecg_rescue',

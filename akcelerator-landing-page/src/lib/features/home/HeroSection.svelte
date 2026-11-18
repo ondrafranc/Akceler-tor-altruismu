@@ -207,6 +207,48 @@
     border-color: var(--accent-primary, #1b5e42);
   }
 
+  @media (min-width: 960px) {
+    .hero-stage {
+      background: linear-gradient(
+        180deg,
+        var(--forest-wash, #e7efea) 0%,
+        var(--forest-wash-soft, #eef4f0) 56%,
+        var(--bg-canvas, #f6f7f3) 100%
+      );
+      border-bottom-color: var(--border-forest, #c8d7cd);
+    }
+
+    .hero-overline {
+      background: var(--forest-deep, #11291e);
+      border-color: var(--forest-canopy, #173829);
+      color: #eef4f0;
+    }
+
+    .live-dot {
+      background: #7be0ad;
+    }
+
+    .hero-btn.primary {
+      background: var(--forest-canopy, #173829);
+      border-color: var(--forest-deep, #11291e);
+    }
+
+    .hero-btn.primary:hover {
+      background: var(--forest-deep, #11291e);
+      border-color: var(--forest-deep, #11291e);
+    }
+
+    .sanctuary-hero-btn {
+      border-color: var(--border-forest-strong, #aebfb4);
+      color: var(--forest-deep, #11291e);
+    }
+
+    .sanctuary-hero-btn:hover {
+      background: var(--forest-wash, #e7efea);
+      border-color: var(--forest-canopy, #173829);
+    }
+  }
+
   @media (max-width: 1024px) {
     .hero-inner {
       grid-template-columns: minmax(0, 1fr);

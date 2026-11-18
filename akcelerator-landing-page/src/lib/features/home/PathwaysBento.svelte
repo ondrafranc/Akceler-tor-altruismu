@@ -132,11 +132,16 @@
     margin-bottom: 1.05rem;
   }
 
-  .bento-icon-wrap.pine,
+  .bento-icon-wrap.pine {
+    background: var(--forest-deep, #11291e);
+    color: #eef4f0;
+    border: 1px solid var(--forest-canopy, #173829);
+  }
+
   .bento-icon-wrap.forest {
-    background: var(--bg-subtle, #edf2ee);
-    color: var(--accent-primary, #1b5e42);
-    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--forest-wash, #e7efea);
+    color: var(--forest-canopy, #173829);
+    border: 1px solid var(--border-forest, #c8d7cd);
   }
 
   .bento-icon-wrap.warm {
@@ -167,6 +172,20 @@
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
+  }
+
+  @media (min-width: 960px) {
+    .bento-card {
+      border-color: var(--border-forest, #c8d7cd);
+    }
+
+    .bento-card:hover {
+      border-color: var(--forest-canopy, #173829);
+    }
+
+    .bento-cta {
+      color: var(--forest-canopy, #173829);
+    }
   }
 
   @media (max-width: 860px) {

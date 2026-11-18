@@ -21,6 +21,7 @@ export const AA_DONE_FOR_TODAY_PREFIX = 'aa_done_for_today_' as const;
 export const AA_MOLLY_HINT_PREFIX = 'aa_molly_hint_' as const;
 export const AA_MOLLY_HINTS_KEY = 'aa_molly_hints_v1' as const;
 export const AA_MOLLY_NUDGES_KEY = 'aa_molly_nudges_v1' as const;
+export const AA_HOME_DECK_STATE_KEY = 'aa_home_deck_state_v1' as const;
 
 export type StorageKey =
   | typeof AA_COMPLETED_STEPS_KEY
@@ -39,5 +40,6 @@ export type StorageKey =
   | typeof AA_PARTNER_RETURN_KEY
   | typeof AA_MOLLY_HINTS_KEY
   | typeof AA_MOLLY_NUDGES_KEY
+  | typeof AA_HOME_DECK_STATE_KEY
   | `${typeof AA_DONE_FOR_TODAY_PREFIX}${string}`
   | `${typeof AA_MOLLY_HINT_PREFIX}${string}`;

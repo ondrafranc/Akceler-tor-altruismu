@@ -375,14 +375,14 @@ describe('Poetic 2-Phase Deed Transformations & Preview Diorama', () => {
       (o) => o.op === 'stroke' && rainbowColors.includes(o.strokeStyle)
     );
     expect(leakedRainbow.length).toBe(0);
-    // Compact mobile preview (52px) uses smaller dynamic scale (0.64) so .preview-hud never overlaps motifs
-    expect(previewPrism.ops.some((o) => o.op === 'scale' && Math.abs(o.sx - 0.64) < 0.01)).toBe(
+    // Compact mobile preview (< 72px) uses legible centered scale (0.88) while desktop (>= 72px) uses gallery scale (0.96)
+    expect(previewPrism.ops.some((o) => o.op === 'scale' && Math.abs(o.sx - 0.88) < 0.01)).toBe(
       true
     );
     cleanPrism();
 
     const naOvoce = MICRO_ACTIONS.find((a) => a.id === 'na_ovoce_strom');
-    const previewTree = createMockCanvas(380, 86);
+    const previewTree = createMockCanvas(380, 92);
     const cleanTree = Sensory.mountImpactCanvas(previewTree, {
       action: naOvoce,
       preview: true,
@@ -390,6 +390,9 @@ describe('Poetic 2-Phase Deed Transformations & Preview Diorama', () => {
       silent: true
     });
     stepFrames(15);
+    expect(previewTree.ops.some((o) => o.op === 'scale' && Math.abs(o.sx - 0.96) < 0.01)).toBe(
+      true
+    );
     const canopyCols = ['#10b981', '#059669', '#34d399'];
     const leakedCanopy = previewTree.ops.filter(
       (o) => o.op === 'fill' && canopyCols.includes(o.fillStyle)
@@ -579,5 +582,95 @@ describe('Poetic 2-Phase Deed Transformations & Preview Diorama', () => {
     expect(galaxySpecificStars.length).toBe(13); // 13 in white/gold/cyan/rose + 1 in #fde68a = 14 pinpoint stars!
     expect(pinpointStars.length).toBeGreaterThanOrEqual(14);
     cleanZooClimax();
+  });
+
+  it('renders zvire_v_nouzi (wildlife_rescue) cleanly across preview, started, and climax states with static 34-station metric and zero spine-face or underground clipping bugs', () => {
+    const zvire = MICRO_ACTIONS.find((a) => a.id === 'zvire_v_nouzi');
+    expect(zvire).toBeDefined();
+
+    const spec = Sensory.ACTION_EFFECT_CATALOG.zvire_v_nouzi;
+    expect(spec.mode).toBe('wildlife_rescue');
+    expect(spec.staticMetric).toBe(true);
+    expect(spec.format(34)).toBe('34 stanic v pohotovosti');
+
+    const assertSaveRestoreBalanced = (ops) => {
+      const saves = ops.filter((o) => o.op === 'save').length;
+      const restores = ops.filter((o) => o.op === 'restore').length;
+      expect(saves).toBeGreaterThan(0);
+      expect(saves).toBe(restores);
+    };
+
+    // 1. Mobile compact preview (46px) & Desktop preview (92px): hedgehog + bird rest above ground, zero premature climax heart
+    for (const previewH of [46, 92]) {
+      const prevCv = createMockCanvas(380, previewH);
+      const cleanPrev = Sensory.mountImpactCanvas(prevCv, {
+        action: zvire,
+        preview: true,
+        primed: false,
+        silent: true
+      });
+      assertSaveRestoreBalanced(prevCv.ops);
+      expect(prevCv.classList.contains('impact-payoff-canvas')).toBe(false);
+      expect(prevCv.getAttribute('data-molly-mini')).toBeNull();
+
+      // Verify zero spines plunge below hedgehog ground origin (y > 2 in local hedgehog coords)
+      const undergroundSpineVertices = prevCv.ops.filter(
+        (o) => o.op === 'lineTo' && typeof o.y === 'number' && o.y > 4 && o.y < 25
+      );
+      expect(undergroundSpineVertices.length).toBe(0);
+
+      cleanPrev.setPrimed(true);
+      prevCv.ops.length = 0;
+      stepFrames(12);
+      assertSaveRestoreBalanced(prevCv.ops);
+      cleanPrev();
+    }
+
+    // 2. Started state (climax: false): reports full 34 stations immediately (never stuck at 22)
+    const startedMetrics = [];
+    const startedCv = createMockCanvas(320, 118, ['impact-payoff-canvas']);
+    const startedHandle = Sensory.impactCanvas(startedCv, {
+      action: zvire,
+      climax: false,
+      silent: true,
+      onWeightUpdate: (val, formatted) => startedMetrics.push({ val, formatted })
+    });
+    stepFrames(80);
+    expect(startedMetrics.length).toBeGreaterThan(0);
+    expect(startedMetrics.every((m) => m.val === 34 && m.formatted === '34 stanic v pohotovosti')).toBe(
+      true
+    );
+    assertSaveRestoreBalanced(startedCv.ops);
+    startedHandle.destroy();
+
+    // 3. Climax state (p = 1 via reduced motion): uncurled hedgehog with paws, separate eye/nose subpaths, bird, and rescue heart
+    globalThis.window = /** @type {Window & typeof globalThis} */ (/** @type {unknown} */ ({
+      devicePixelRatio: 1,
+      matchMedia: (q) => ({ matches: q.includes('prefers-reduced-motion') }),
+      addEventListener: () => {}
+    }));
+
+    const climaxCv = createMockCanvas(320, 118, ['impact-payoff-canvas']);
+    const cleanClimax = Sensory.mountImpactCanvas(climaxCv, {
+      action: zvire,
+      climax: true
+    });
+    assertSaveRestoreBalanced(climaxCv.ops);
+
+    // Every arc call must follow its own beginPath (never two consecutive arcs in one subpath)
+    for (let i = 1; i < climaxCv.ops.length; i++) {
+      if (climaxCv.ops[i].op === 'arc') {
+        expect(climaxCv.ops[i - 1].op).toBe('beginPath');
+      }
+    }
+
+    // Hedgehog paws (#d97706) + sanctuary cradle strokes + warm yellow heart (#fde047) are all rendered
+    const pawFills = climaxCv.ops.filter((o) => o.op === 'fill' && o.fillStyle === '#d97706');
+    expect(pawFills.length).toBe(2);
+    const cradleStrokes = climaxCv.ops.filter(
+      (o) => o.op === 'stroke' && String(o.strokeStyle).startsWith('rgba(110, 231, 183')
+    );
+    expect(cradleStrokes.length).toBe(2);
+    cleanClimax();
   });
 });

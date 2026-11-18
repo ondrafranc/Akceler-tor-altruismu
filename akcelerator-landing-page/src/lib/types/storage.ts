@@ -17,6 +17,16 @@ export interface PartnerReturnState {
   [key: string]: unknown;
 }
 
+export type HomeEnergyMode = 'couch' | 'focus' | 'walk' | 'people';
+
+export interface HomeDeckState {
+  energyMode: HomeEnergyMode;
+  actionId: string;
+  index?: number;
+  excludeQuickId?: string;
+  usePersonalValues?: boolean;
+}
+
 export interface StorageSchemaMap {
   'aa_completed_steps_v2': CompletedStep[];
   'aa_sanctuary_wishes_v1': SanctuaryWish[];
@@ -33,6 +43,7 @@ export interface StorageSchemaMap {
   'aa_pending_return_v1': PartnerReturnState;
   'aa_molly_hints_v1': string[];
   'aa_molly_nudges_v1': string[];
+  'aa_home_deck_state_v1': HomeDeckState;
   [key: `aa_done_for_today_${string}`]: '0' | '1';
   [key: `aa_molly_hint_${string}`]: string;
 }

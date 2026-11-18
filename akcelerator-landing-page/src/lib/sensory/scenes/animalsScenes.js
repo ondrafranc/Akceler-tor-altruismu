@@ -252,88 +252,227 @@ export function renderShelterCare(c, { p, prep, wt, cx, cy, by, w, h, cs, red, f
     }
 }
 
-export function renderWildlifeRescue(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-    // 🦔 Zvíře v nouzi: Pevně schoulené klubíčko ježka v trávě -> Ochranná náruč a rozvinutý spokojený ježek
-    const groundY = by - 5;
-    const uncurl = easeOut(subP(p, 0.15, 0.95));
-    const handP = easeOut(subP(p, 0.02, 0.65));
+export function renderWildlifeRescue(c, { p, prep, wt, cx, by, red }) {
+    // Zvire v nouzi (774 155 155): Schoulene klubicko jezka a ptacek v trave -> Ochranna naruc stanice, spokojeny jezek a vzletajici ptacek
+    const groundY = by - 3;
+    const uncurl = easeOut(subP(p, 0.02, 0.90));
+    const handP = easeOut(subP(p, 0.01, 0.62));
+    const birdP = easeOut(subP(p, 0.06, 0.94));
+    const breath = red ? 0 : Math.sin(wt * 2.2) * 0.6;
+    const twitch = red ? 0 : Math.sin(wt * 3.6) * (0.4 + prep * 0.9) * (1 - uncurl * 0.5);
 
-    // Trsy noční trávy po stranách (čitelný kontext i při p = 0)
-    c.strokeStyle = handP > 0.2 ? '#10b981' : 'rgba(52, 211, 153, 0.38)';
+    // 1. Jemna predzvestna zare pri najeti mysi (prep) a hrejiva ochranna kupole po akci (handP)
+    if (prep > 0.02 || handP > 0.02) {
+      const glowR = 24 + prep * 8 + handP * 22;
+      const glowA = 0.08 * prep + 0.28 * handP;
+      drawGlow(c, cx, groundY - 12, glowR, handP > 0.15 ? '#34d399' : '#fde68a', glowA);
+    }
+
+    // 2. Trsy nocni travy po vnejsich stranach (citelny kontext i pri p = 0, bez prekryvu se zviratky)
+    c.save();
+    c.strokeStyle = handP > 0.2 ? '#10b981' : 'rgba(52, 211, 153, 0.44)';
     c.lineWidth = 1.6;
     c.lineCap = 'round';
-    [-38, -32, 32, 38].forEach((gxOff, idx) => {
+    [-52, -45, 45, 52].forEach((gxOff, idx) => {
+      const sway = red ? 0 : Math.sin(wt * 1.8 + idx) * 1.1;
+      const lean = idx < 2 ? -4 : 4;
+      const tipH = idx % 2 === 0 ? 12 : 9.5;
       c.beginPath();
-      c.moveTo(cx + gxOff, groundY + 2);
-      c.quadraticCurveTo(cx + gxOff + (idx < 2 ? -3 : 3), groundY - 7, cx + gxOff + (idx % 2 === 0 ? -5 : 5), groundY - 12);
+      c.moveTo(cx + gxOff, groundY + 1.5);
+      c.quadraticCurveTo(cx + gxOff + lean * 0.5, groundY - tipH * 0.55, cx + gxOff + lean + sway, groundY - tipH);
       c.stroke();
     });
+    c.restore();
 
-    // Ochranné zlatosmaragdové dlaně / kupole záchranné stanice
+    // 3. Ochranne smaragdovo-zlate dlane / klenba zachranne stanice po obvodu sceny (nikdy neprotina telicko)
     if (handP > 0.02) {
-      drawGlow(c, cx, groundY - 12, 34 * handP, '#34d399', 0.3 * handP);
-      c.strokeStyle = `rgba(110, 231, 183, ${0.35 + handP * 0.55})`;
-      c.lineWidth = 2.4;
+      c.save();
+      c.strokeStyle = `rgba(110, 231, 183, ${(0.34 + handP * 0.56).toFixed(3)})`;
+      c.lineWidth = 2.3;
+      c.lineCap = 'round';
       [-1, 1].forEach((dir) => {
+        const baseX = cx + dir * 36;
+        const ctrlX = cx + dir * (44 + 8 * handP);
+        const tipX = cx + dir * lerp(40, 26, handP);
+        const tipY = groundY - 6 - 24 * handP;
         c.beginPath();
-        c.moveTo(cx + dir * 10, groundY + 2);
-        c.quadraticCurveTo(
-          cx + dir * (36 * handP + 12),
-          groundY - 6,
-          cx + dir * (28 * handP + 6),
-          groundY - 27 * handP
-        );
+        c.moveTo(baseX, groundY + 1);
+        c.quadraticCurveTo(ctrlX, groundY - 10 * handP - 3, tipX, tipY);
         c.stroke();
       });
+      c.restore();
     }
 
-    // Ježek: p = 0 zřetelné dvoubarevné klubíčko bodlinek -> p = 1 vykoukne čumáček, očko a tlapky
+    // 4. Jezek vlevo od stredu: p = 0 utulne schoulene klubicko NA zemi -> p = 1 vykoukne cumacek, ocko, ousko a tlapky
+    const hx = cx - 15 - uncurl * 2;
+    const hy = groundY - 0.5;
     c.save();
-    c.translate(cx - uncurl * 4, groundY - 8);
-    const spineStart = lerp(0, Math.PI * 0.8, uncurl);
-    const spineEnd = lerp(Math.PI * 2, Math.PI * 2.1, uncurl);
-    for (let s = 0; s < 16; s++) {
-      const a = lerp(spineStart, spineEnd, s / 15);
-      const rIn = 8.5;
-      const rOut = 15.5 + (s % 2) * 2.6;
-      c.fillStyle = s % 2 === 0 ? (uncurl > 0.15 ? '#b45309' : '#a8a29e') : uncurl > 0.15 ? '#fde68a' : '#78716c';
+    c.translate(hx, hy);
+
+    // Mekky stin pod jezkem
+    c.fillStyle = 'rgba(0, 0, 0, 0.36)';
+    c.beginPath();
+    c.ellipse(1 + uncurl * 1.5, 1.5, 13.5 + uncurl * 2.5, 2.8, 0, 0, Math.PI * 2);
+    c.fill();
+
+    // Tlapky (vykouknou na trave pri rozbaleni klubicka)
+    if (uncurl > 0.12) {
+      const pawP = easeOut(subP(uncurl, 0.12, 0.75));
+      c.fillStyle = '#d97706';
       c.beginPath();
-      c.moveTo(Math.cos(a - 0.13) * rIn, Math.sin(a - 0.13) * rIn);
-      c.lineTo(Math.cos(a) * rOut, Math.sin(a) * rOut);
-      c.lineTo(Math.cos(a + 0.13) * rIn, Math.sin(a + 0.13) * rIn);
+      c.ellipse(-5.5, -0.8, Math.max(0.25, 2.9 * pawP), Math.max(0.2, 1.6 * pawP), 0, 0, Math.PI * 2);
+      c.fill();
+      c.beginPath();
+      c.ellipse(5.2, -0.8, Math.max(0.25, 3.1 * pawP), Math.max(0.2, 1.6 * pawP), 0, 0, Math.PI * 2);
+      c.fill();
+    }
+
+    // Bodlinky vyhradne po horni klenbe zad (p = 0: 0.96*PI .. 1.92*PI nad zemi; p = 1: 0.94*PI .. 1.64*PI za ouskem, nula prekryvu s oblicejem)
+    const domeX = -1.8;
+    const domeY = -6.8 + breath * 0.4;
+    const spineStart = lerp(Math.PI * 0.96, Math.PI * 0.94, uncurl);
+    const spineEnd = lerp(Math.PI * 1.92, Math.PI * 1.64, uncurl);
+    const spineCount = 15;
+    for (let s = 0; s < spineCount; s++) {
+      const u = s / (spineCount - 1);
+      const a = lerp(spineStart, spineEnd, u);
+      const rIn = 6.8;
+      const rOut = 13.4 + (s % 2) * 2.1;
+      const warmQuill = uncurl > 0.12 || prep > 0.25;
+      c.fillStyle =
+        s % 2 === 0
+          ? warmQuill
+            ? '#b45309'
+            : '#a8a29e'
+          : warmQuill
+            ? '#fde68a'
+            : '#d6d3d1';
+      c.beginPath();
+      c.moveTo(domeX + Math.cos(a - 0.12) * rIn, domeY + Math.sin(a - 0.12) * rIn);
+      c.lineTo(domeX + Math.cos(a) * rOut, domeY + Math.sin(a) * rOut);
+      c.lineTo(domeX + Math.cos(a + 0.12) * rIn, domeY + Math.sin(a + 0.12) * rIn);
       c.closePath();
       c.fill();
     }
 
-    c.fillStyle = uncurl > 0.15 ? '#92400e' : '#57534e';
-    c.strokeStyle = 'rgba(253, 230, 138, 0.35)';
-    c.lineWidth = 1;
+    // Spodni teple brisko a kozisek jezka (plocha spodni hrana lezici na trave, zadny obrys presekavajici cumacek)
+    c.fillStyle = uncurl > 0.12 ? '#78350f' : '#57534e';
     c.beginPath();
-    c.ellipse(0, 1, 11 + uncurl * 2.5, 8.5, 0, 0, Math.PI * 2);
+    c.ellipse(-1.2, -5.8 + breath * 0.35, 10.6 + uncurl * 1.4, 6.2, 0, Math.PI * 0.94, Math.PI * 2.06);
+    c.quadraticCurveTo(4, -0.6, -1.2, -0.6);
+    c.quadraticCurveTo(-8, -0.6, -11.6, -4.6);
+    c.closePath();
     c.fill();
-    c.stroke();
 
-    if (uncurl > 0.1) {
-      const snP = subP(uncurl, 0.1, 1.0);
-      c.fillStyle = '#fde68a';
+    // Hlava a cumacek jezka: pri p = 0 jemne schovany cumacek u klubicka -> pri p = 1 radostne vysunuty svetly cumacek
+    const snoutReach = lerp(9.8 + prep * 1.1 + twitch * 0.5, 16.8, uncurl);
+    const snoutTipY = lerp(-3.6, -5.8, uncurl) + breath * 0.3;
+    c.fillStyle = uncurl > 0.08 ? '#fde68a' : '#e7e5e4';
+    c.beginPath();
+    c.moveTo(2.5, -9.6 + breath * 0.3);
+    c.quadraticCurveTo(9.2 + uncurl * 3.2, -9.2 + breath * 0.3, snoutReach, snoutTipY);
+    c.quadraticCurveTo(9.5 + uncurl * 2.5, -1.0, 2.2, -1.2);
+    c.closePath();
+    c.fill();
+
+    // Kulate ousko
+    const earScale = 0.45 + 0.55 * uncurl;
+    c.fillStyle = uncurl > 0.12 ? '#92400e' : '#78716c';
+    c.beginPath();
+    c.ellipse(3.6, -10.2 + breath * 0.3, 2.4 * earScale, 2.9 * earScale, -0.2, 0, Math.PI * 2);
+    c.fill();
+
+    // Tmavy koralkovy cumacek (samostatna subpath bez spojovaci cary k oku)
+    const noseR = lerp(1.25, 1.65, uncurl);
+    c.fillStyle = '#0f172a';
+    c.beginPath();
+    c.arc(snoutReach + 0.3, snoutTipY, noseR, 0, Math.PI * 2);
+    c.fill();
+
+    // Ocko jezka (samostatna subpath s bilym odleskem)
+    const eyeX = lerp(6.8, 9.8, uncurl);
+    const eyeY = lerp(-5.0, -6.2, uncurl) + breath * 0.3;
+    if (uncurl < 0.18) {
+      c.strokeStyle = '#1e293b';
+      c.lineWidth = 1.2;
+      c.lineCap = 'round';
       c.beginPath();
-      c.moveTo(6, -4);
-      c.quadraticCurveTo(12 * snP + 6, -3, 7 + 12 * snP, 1.5);
-      c.quadraticCurveTo(12 * snP + 5, 6, 6, 6.5);
-      c.closePath();
-      c.fill();
-
+      c.arc(eyeX, eyeY, 1.35, 0.15, Math.PI - 0.15);
+      c.stroke();
+    } else {
+      const eyeR = 1.15 + 0.3 * uncurl;
       c.fillStyle = '#0f172a';
       c.beginPath();
-      c.arc(7 + 12 * snP, 1.2, 1.7 * snP, 0, Math.PI * 2);
-      c.arc(10 * snP + 2.5, -0.8, 1.4 * snP, 0, Math.PI * 2);
+      c.arc(eyeX, eyeY, eyeR, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = '#ffffff';
+      c.beginPath();
+      c.arc(eyeX - 0.35, eyeY - 0.35, 0.48, 0, Math.PI * 2);
       c.fill();
     }
     c.restore();
 
-    if (p > 0.48) {
-      const hP = subP(p, 0.48, 1.0);
-      drawHeart(c, cx + 18, groundY - 25 - hP * 4, 5.4 * hP, '#fde047');
+    // 5. Drobny ptacek vpravo (pro zranene jezky a ptaky): p = 0 schouleny v trave -> p = 1 uzdraveny vzleta s rozepjatymi kridly
+    const flutter = red ? 0 : Math.sin(wt * 5.4) * (0.4 + birdP * 1.8);
+    const bx = cx + 21 + birdP * 4;
+    const byBird = groundY - 4.5 - birdP * 12 + flutter * 0.45;
+    c.save();
+    c.translate(bx, byBird);
+    c.rotate(lerp(0.08, -0.16, birdP));
+
+    // Ocasek ptacka
+    c.strokeStyle = birdP > 0.15 ? '#059669' : '#64748b';
+    c.lineWidth = 2.1;
+    c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(5.5, 1);
+    c.lineTo(10.5, lerp(2.8, -0.5, birdP));
+    c.stroke();
+
+    // Telicko ptacka
+    c.fillStyle = birdP > 0.15 ? '#34d399' : '#94a3b8';
+    c.beginPath();
+    c.ellipse(0, 0.5, 6.2, 4.4, -0.12, 0, Math.PI * 2);
+    c.fill();
+
+    // Hrud a hlavicka
+    const headLift = prep * 1.0 + birdP * 1.8;
+    c.fillStyle = birdP > 0.15 ? '#fde047' : '#cbd5e1';
+    c.beginPath();
+    c.arc(-4.8, -2.6 - headLift * 0.45, 3.5, 0, Math.PI * 2);
+    c.fill();
+
+    // Kridelko (slozene u tela pri p = 0 -> radostne mavajici pri p -> 1)
+    const wingLift = birdP * 6.5 + (birdP > 0.2 ? Math.abs(flutter) * 1.4 : 0);
+    c.fillStyle = birdP > 0.15 ? '#10b981' : '#64748b';
+    c.beginPath();
+    c.moveTo(-1.5, -0.5);
+    c.quadraticCurveTo(2.5, -4.2 - wingLift, 5.2, -1.2 - wingLift * 0.75);
+    c.quadraticCurveTo(2.2, 2.2, -1.5, 1.2);
+    c.closePath();
+    c.fill();
+
+    // Zobacek a ocko ptacka
+    c.fillStyle = '#f59e0b';
+    c.beginPath();
+    c.moveTo(-7.8, -3.2 - headLift * 0.45);
+    c.lineTo(-10.8, -2.5 - headLift * 0.45);
+    c.lineTo(-7.8, -1.7 - headLift * 0.45);
+    c.closePath();
+    c.fill();
+
+    c.fillStyle = '#0f172a';
+    c.beginPath();
+    c.arc(-5.4, -3.0 - headLift * 0.45, 0.95, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+
+    // 6. Hrejive srdce zachrany mezi jezkem a ptackem pri dokonceni
+    if (p > 0.42) {
+      const hP = easeOut(subP(p, 0.42, 1.0));
+      if (hP > 0.02) {
+        drawHeart(c, cx + 3, groundY - 24 - hP * 4, 5.4 * hP, '#fde047');
+      }
     }
 }
 

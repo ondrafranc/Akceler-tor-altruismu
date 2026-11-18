@@ -85,6 +85,14 @@
   --accent-warm: #b8651b;
   --accent-warm-tint: #fef6e8;
 
+  /* Subtle Botanical Deep-Forest Accents (Desktop Grounding) */
+  --forest-deep: #11291e;
+  --forest-canopy: #173829;
+  --forest-wash: #e7efea;
+  --forest-wash-soft: #eef4f0;
+  --border-forest: #c8d7cd;
+  --border-forest-strong: #aebfb4;
+
   /* Typography Families */
   --font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-serif: 'Instrument Serif', Georgia, serif;
@@ -240,6 +248,12 @@ h4 {
   padding: 1.5rem 0 1.25rem;
   margin-bottom: 1.35rem;
   border-bottom: 1px solid var(--border-subtle);
+}
+
+@media (min-width: 960px) {
+  .page-header {
+    border-bottom-color: var(--border-forest);
+  }
 }
 
 .page-header-kicker {
@@ -401,6 +415,18 @@ h4 {
   border-radius: 999px;
   background: var(--bg-subtle);
   border: 1px solid var(--border-subtle);
+}
+
+@media (min-width: 960px) {
+  .calm-drawer {
+    border-color: var(--border-forest);
+  }
+
+  .calm-drawer > summary::after {
+    background: var(--forest-wash);
+    border-color: var(--border-forest);
+    color: var(--forest-canopy);
+  }
 }
 
 .calm-drawer[open] > summary::after {

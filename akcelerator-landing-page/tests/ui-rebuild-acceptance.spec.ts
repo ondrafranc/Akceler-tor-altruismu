@@ -1215,6 +1215,11 @@ test.describe('Tier 2: Breakpoints, Fold Budget, Touch Targets & Mobile Inputs',
 
       const collisions = await detectHeaderAndMollyCollisions(page);
       expect(collisions, `Deck wrap @ ${vp.name}: ${JSON.stringify(collisions)}`).toEqual([]);
+
+      // Wrap forwards from N / N -> 1 / N (resets deck position cleanly for next viewport)
+      await page.locator('.deck-nav-next').first().click();
+      await page.waitForTimeout(200);
+      await expect(indicator).toContainText(`1 / ${total}`);
     }
 
     assertZeroRuntimeErrors(errors, 'T2-5');
@@ -2179,6 +2184,249 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
     }
 
     assertZeroRuntimeErrors(errors, 'T3-14');
+  });
+
+  test('T3-15: (Desktop 1440x900 & 1280x800 @ scrollY === 0) Roaming Molly immediately visible in initial viewport without scrolling', async ({
+    page
+  }) => {
+    test.setTimeout(90_000);
+    const errors = await setupPageEnvironment(page);
+    const desktopRoutes = ['/', '/app/guided', '/app/online', '/near', '/submit'] as const;
+
+    for (const vp of [
+      { width: 1440, height: 900, label: '1440x900' },
+      { width: 1280, height: 800, label: '1280x800' }
+    ]) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+
+      for (const routePath of desktopRoutes) {
+        await gotoHydrated(page, routePath);
+
+        const mollyState = await page.evaluate(() => {
+          const scrollY = window.scrollY;
+          const layer = document.querySelector('.molly-companion-layer');
+          const actor = document.querySelector('.molly-roaming-actor') as HTMLElement | null;
+          const canvas = actor?.querySelector('canvas') as HTMLCanvasElement | null;
+          if (!actor || !canvas) {
+            return {
+              scrollY,
+              mode: layer?.getAttribute('data-molly-mode') ?? 'missing',
+              visible: false,
+              opacity: 0,
+              inViewport: false,
+              rect: null
+            };
+          }
+          const cs = window.getComputedStyle(actor);
+          const r = actor.getBoundingClientRect();
+          const opacity = parseFloat(cs.opacity);
+          const visible =
+            cs.display !== 'none' &&
+            cs.visibility !== 'hidden' &&
+            opacity >= 0.8 &&
+            !actor.classList.contains('is-docked') &&
+            r.width >= 40 &&
+            r.height >= 40;
+          const inViewport =
+            r.left >= -2 &&
+            r.top >= -2 &&
+            r.right <= window.innerWidth + 2 &&
+            r.bottom <= window.innerHeight + 2;
+          return {
+            scrollY,
+            mode: layer?.getAttribute('data-molly-mode') ?? '',
+            visible,
+            opacity,
+            inViewport,
+            rect: {
+              left: Math.round(r.left),
+              top: Math.round(r.top),
+              right: Math.round(r.right),
+              bottom: Math.round(r.bottom),
+              width: Math.round(r.width),
+              height: Math.round(r.height)
+            }
+          };
+        });
+
+        expect(mollyState.scrollY, `${routePath} @ ${vp.label}: scrollY must stay 0`).toBe(0);
+        expect(mollyState.mode, `${routePath} @ ${vp.label}: default Molly mode`).toBe('roaming');
+        expect(
+          mollyState.visible,
+          `${routePath} @ ${vp.label}: roaming Molly must be immediately visible at scrollY===0 (${JSON.stringify(mollyState)})`
+        ).toBe(true);
+        expect(
+          mollyState.inViewport,
+          `${routePath} @ ${vp.label}: roaming Molly must sit inside initial viewport (${JSON.stringify(mollyState)})`
+        ).toBe(true);
+
+        const allCollisions = await detectHeaderAndMollyCollisions(page);
+        const roamingCollisions =
+          vp.width >= 1440
+            ? allCollisions
+            : allCollisions.filter((c) => !c.pair.startsWith('molly:div.molly-pelisek-dock'));
+        expect(roamingCollisions, `${routePath} @ ${vp.label}: Molly collisions`).toEqual([]);
+      }
+    }
+
+    assertZeroRuntimeErrors(errors, 'T3-15');
+  });
+
+  test('T3-16: (/ Reload Persistence) Advancing to 3 / 45 and switching tabs survive page.reload(), while ?action= deep links & fresh starts work', async ({
+    page
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const errors = await setupPageEnvironment(page);
+    await gotoHydrated(page, '/');
+
+    const indicator = page.locator('.deck-indicator').first();
+    const cardTitle = page.locator('.instant-card h2, .instant-card h3, .instant-card .action-title').first();
+    await expect(indicator).toContainText(/^1\s*\/\s*45\b/);
+
+    // Advance twice: 1 / 45 -> 2 / 45 -> 3 / 45
+    await page.locator('.deck-nav-next').first().click();
+    await page.waitForTimeout(150);
+    await page.locator('.deck-nav-next').first().click();
+    await page.waitForTimeout(150);
+    await expect(indicator).toContainText(/^3\s*\/\s*45\b/);
+    const thirdDeedTitle = (await cardTitle.innerText()).trim();
+    expect(thirdDeedTitle.length).toBeGreaterThan(3);
+
+    // Reload / -> must stay on 3 / 45 and show the exact same deed
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 20_000 });
+    await page.waitForTimeout(300);
+    await expect(indicator).toContainText(/^3\s*\/\s*45\b/);
+    expect((await cardTitle.innerText()).trim()).toBe(thirdDeedTitle);
+
+    // Switch energy tab ("Mám 15 min"), advance to 2nd card, and reload -> preserves tab + position
+    const focusTab = page.locator('.energy-tab', { hasText: /15 min/i }).first();
+    if (await focusTab.isVisible()) {
+      await focusTab.click();
+      await page.waitForTimeout(150);
+      await page.locator('.deck-nav-next').first().click();
+      await page.waitForTimeout(150);
+      const focusIndicatorText = (await indicator.innerText()).trim();
+      expect(focusIndicatorText).toMatch(/^2\s*\/\s*\d+\b/);
+      const focusDeedTitle = (await cardTitle.innerText()).trim();
+
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 20_000 });
+      await page.waitForTimeout(300);
+      expect((await indicator.innerText()).trim()).toBe(focusIndicatorText);
+      expect((await cardTitle.innerText()).trim()).toBe(focusDeedTitle);
+    }
+
+    // Explicit deep link /?action=s_barvou_ven MUST override stored state
+    await gotoHydrated(page, '/?action=s_barvou_ven');
+    await expect(page.locator('.instant-card').first()).toContainText(/S barvou ven/i);
+
+    // Clearing storage returns a fresh session cleanly to 1 / 45
+    await page.evaluate(() => {
+      window.localStorage.clear();
+      window.sessionStorage.setItem('__pw_clean_bootstrapped', '1');
+    });
+    await gotoHydrated(page, '/');
+    await expect(indicator).toContainText(/^1\s*\/\s*45\b/);
+
+    assertZeroRuntimeErrors(errors, 'T3-16');
+  });
+
+  test('T3-17: (/?action=zvire_v_nouzi & Preview Diorama Sizing) Responsive desktop vs mobile stage, fold budget with pagination, and clean completion', async ({
+    page
+  }) => {
+    const errors = await setupPageEnvironment(page);
+
+    // 1. Mobile fold budget (360x800 & 375x667): preview stage compact & non-intrusive, zero .impact-payoff-canvas class,
+    //    AND both primary CTA + "1 / 45" pagination fit above the fold!
+    const mobileHeights: number[] = [];
+    for (const vp of [
+      { width: 360, height: 800, label: '360x800' },
+      { width: 375, height: 667, label: '375x667' }
+    ]) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await gotoHydrated(page, '/');
+
+      const metrics = await page.evaluate(() => {
+        const stage = document.querySelector('.instant-card .deed-preview-stage');
+        const cv = document.querySelector('.instant-card canvas.preview-diorama-canvas');
+        const hud = document.querySelector('.instant-card .preview-hud');
+        const cta = document.querySelector('.instant-card .btn-studio-primary');
+        const indicator = document.querySelector('.deck-indicator');
+        if (!stage || !cv || !hud || !cta || !indicator) return null;
+        const cvR = cv.getBoundingClientRect();
+        const hudR = hud.getBoundingClientRect();
+        const hudOverlapsCanvas =
+          Math.min(hudR.right, cvR.right) - Math.max(hudR.left, cvR.left) > 1 &&
+          Math.min(hudR.bottom, cvR.bottom) - Math.max(hudR.top, cvR.top) > 1;
+        return {
+          stageHeight: Math.round(stage.getBoundingClientRect().height),
+          canvasHeight: Math.round(cvR.height),
+          hasPayoffClass: cv.classList.contains('impact-payoff-canvas'),
+          hasMollyMiniAttr: cv.hasAttribute('data-molly-mini'),
+          hudOverlapsCanvas,
+          ctaBottom: Math.round(cta.getBoundingClientRect().bottom),
+          indicatorBottom: Math.round(indicator.getBoundingClientRect().bottom),
+          indicatorText: (indicator.textContent || '').trim()
+        };
+      });
+
+      expect(metrics, `${vp.label} preview metrics`).not.toBeNull();
+      expect(metrics!.hasPayoffClass, `${vp.label}: preview canvas must not have .impact-payoff-canvas`).toBe(false);
+      expect(metrics!.hasMollyMiniAttr, `${vp.label}: preview canvas must not have data-molly-mini`).toBe(false);
+      expect(metrics!.hudOverlapsCanvas, `${vp.label}: .preview-hud must not overlap canvas`).toBe(false);
+      expect(metrics!.stageHeight, `${vp.label}: mobile preview stage compact <= 82px`).toBeLessThanOrEqual(82);
+      expect(metrics!.ctaBottom, `${vp.label}: CTA above fold`).toBeLessThanOrEqual(vp.height);
+      expect(metrics!.indicatorBottom, `${vp.label}: 1 / 45 pagination above fold`).toBeLessThanOrEqual(vp.height);
+      expect(metrics!.indicatorText).toMatch(/^1\s*\/\s*45\b/);
+      mobileHeights.push(metrics!.canvasHeight);
+    }
+
+    // 2. Desktop (1440x900) & zvire_v_nouzi end-to-end check: noticeably larger gallery preview stage + clean completion
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await gotoHydrated(page, '/?action=zvire_v_nouzi');
+
+    const card = page.locator('.instant-card').first();
+    await expect(card).toContainText(/774\s*155\s*155|zraněné ježky a ptáky/i);
+
+    const desktopPreview = await page.evaluate(() => {
+      const stage = document.querySelector('.instant-card .deed-preview-stage');
+      const cv = document.querySelector('.instant-card canvas.preview-diorama-canvas') as HTMLCanvasElement | null;
+      const hud = document.querySelector('.instant-card .preview-hud');
+      if (!stage || !cv || !hud) return null;
+      const cvR = cv.getBoundingClientRect();
+      const hudR = hud.getBoundingClientRect();
+      const hudOverlapsCanvas =
+        Math.min(hudR.right, cvR.right) - Math.max(hudR.left, cvR.left) > 1 &&
+        Math.min(hudR.bottom, cvR.bottom) - Math.max(hudR.top, cvR.top) > 1;
+      return {
+        stageHeight: Math.round(stage.getBoundingClientRect().height),
+        canvasHeight: Math.round(cvR.height),
+        hasPayoffClass: cv.classList.contains('impact-payoff-canvas'),
+        hudOverlapsCanvas
+      };
+    });
+
+    expect(desktopPreview).not.toBeNull();
+    expect(desktopPreview!.hasPayoffClass).toBe(false);
+    expect(desktopPreview!.hudOverlapsCanvas).toBe(false);
+    expect(desktopPreview!.canvasHeight).toBeGreaterThanOrEqual(84);
+    expect(desktopPreview!.canvasHeight).toBeGreaterThan(Math.max(...mobileHeights) + 25);
+
+    // Start & complete zvire_v_nouzi cleanly
+    await card.locator('.btn-studio-primary').click();
+    const doneBtn = card.locator('.btn-studio-done');
+    await expect(doneBtn).toBeVisible();
+    await expect(card.locator('canvas.impact-payoff-canvas')).toBeVisible();
+    await expect(card.locator('.card-effect-stage')).toContainText(/34 stanic/i);
+
+    await doneBtn.click();
+    await page.waitForTimeout(300);
+    await expect(card.locator('.inline-celebration-card, .molly-celebration-note').first()).toBeVisible();
+
+    expect(await scanForbiddenEmojis(page)).toEqual([]);
+    expect(await detectHeaderAndMollyCollisions(page)).toEqual([]);
+    assertZeroRuntimeErrors(errors, 'T3-17');
   });
 });
 

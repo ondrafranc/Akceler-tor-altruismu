@@ -815,7 +815,106 @@
     color: #ffffff;
   }
 
+  @media (min-width: 960px) {
+    .app-shell {
+      border-top: 3px solid var(--forest-deep, #11291e);
+    }
+
+    .site-footer {
+      background: #e5eee8;
+      border-top: 2px solid var(--forest-canopy, #173829);
+      color: #2e473a;
+    }
+
+    .footer-brand {
+      color: var(--forest-deep, #11291e);
+    }
+
+    .footer-dot {
+      background: var(--forest-deep, #11291e);
+    }
+
+    .footer-subbrand,
+    .footer-desc {
+      color: #2e473a;
+    }
+
+    .footer-trust {
+      color: #174d35;
+    }
+
+    .footer-heading {
+      color: #2b4638;
+    }
+
+    .footer-links a {
+      color: var(--forest-deep, #11291e);
+    }
+
+    .footer-calm-actions {
+      border-top-color: var(--border-forest, #c8d7cd);
+    }
+
+    .fc-btn {
+      border-color: var(--border-forest-strong, #aebfb4);
+    }
+
+    .fc-btn.active {
+      background: var(--forest-canopy, #173829);
+      border-color: var(--forest-deep, #11291e);
+      color: #ffffff;
+    }
+  }
+
   @media (min-width: 1025px) {
+    .nav-capsule {
+      background: rgba(255, 255, 255, 0.97);
+      border-color: var(--border-forest-strong, #aebfb4);
+      box-shadow: 0 6px 20px -8px rgba(17, 41, 30, 0.12),
+        0 1px 3px rgba(17, 41, 30, 0.05);
+    }
+
+    .brand-mark {
+      background: var(--forest-deep, #11291e);
+      border-color: var(--forest-canopy, #173829);
+      color: #e8f2ec;
+    }
+
+    .nav-pill:hover {
+      background: var(--forest-wash, #e7efea);
+      color: var(--forest-deep, #11291e);
+    }
+
+    .nav-pill.world-pill {
+      background: var(--forest-wash, #e7efea);
+      border-color: var(--border-forest, #c8d7cd);
+      color: var(--forest-canopy, #173829);
+    }
+
+    .nav-pill.world-pill:hover {
+      background: #dce8e0;
+      border-color: var(--border-forest-strong, #aebfb4);
+      color: var(--forest-deep, #11291e);
+    }
+
+    .nav-pill.add-tip {
+      border-color: var(--border-forest, #c8d7cd);
+    }
+
+    .nav-pill.add-tip:hover {
+      background: var(--forest-wash, #e7efea);
+      border-color: var(--border-forest-strong, #aebfb4);
+      color: var(--forest-deep, #11291e);
+    }
+
+    .nav-pill.active,
+    .nav-pill.world-pill.active,
+    .nav-pill.add-tip.active {
+      background: var(--forest-canopy, #173829);
+      border-color: var(--forest-deep, #11291e);
+      color: #ffffff;
+    }
+
     .site-footer {
       padding-bottom: 5.25rem;
     }

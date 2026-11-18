@@ -21,7 +21,12 @@
     consumePendingPartnerReturn,
   } from "../lib/features/actions/services/partnerReturnService.js";
   import { cleanTitle } from "../lib/utils.js";
-  import { safeGetItem, AA_USER_TOPICS_KEY } from "../lib/storage/index.js";
+  import {
+    safeGetItem,
+    safeSetItem,
+    AA_USER_TOPICS_KEY,
+    AA_HOME_DECK_STATE_KEY,
+  } from "../lib/storage/index.js";
   import AppIcon from "$lib/components/AppIcon.svelte";
   import HeroSection from "../lib/features/home/HeroSection.svelte";
   import QuickStartSection from "../lib/features/home/QuickStartSection.svelte";
@@ -32,6 +37,7 @@
   import PortalsDrawer from "../lib/features/home/PortalsDrawer.svelte";
   import SwipeDeck from "../lib/features/actions/components/SwipeDeck.svelte";
 
+  /** @type {Record<import('$lib/types').HomeEnergyMode, { icon: string, label: string, hint: string, timeBucket: string, mode: string, social: string, cost: string, commitment: string }>} */
   const HOME_MODES = {
     couch: {
       icon: "armchair",
@@ -75,30 +81,203 @@
     },
   };
 
+  /** @type {Record<string, string>} */
   const ACTION_ALIASES = {
     "click-and-feed": "zvirata_utulek_online",
     click_and_feed: "zvirata_utulek_online",
     mapswipe: "missing_maps",
   };
 
+  /** @type {import('$lib/types').HomeEnergyMode} */
   let energyMode = "couch";
   let suggestionIndex = 0;
   let lastQuickActionId = "";
   let excludeQuickId = "";
   let pinnedActionId = "";
   let hopeIdx = 0;
+  /** @type {string[]} */
   let savedValues = [];
   let usePersonalValues = false;
+  let hasMountedHome = false;
+  let lastAppliedUrlKey = "";
 
   let awaitingPartnerReturn = false;
   let partnerLeaveTimestamp = 0;
   let partnerReturnPromptVisible = false;
   let justCompleted = false;
   let copiedDirectLink = false;
+  /** @type {ReturnType<typeof setTimeout> | null} */
   let copyLinkTimer = null;
   let soundMuted = false;
   let showEffectPreview = false;
 
+  /**
+   * @param {unknown} val
+   * @returns {val is Record<string, unknown>}
+   */
+  function isPlainRecord(val) {
+    return Object.prototype.toString.call(val) === "[object Object]";
+  }
+
+  /**
+   * @param {unknown} val
+   * @returns {val is import('$lib/types').HomeEnergyMode}
+   */
+  function isHomeEnergyMode(val) {
+    return (
+      val === "couch" ||
+      val === "focus" ||
+      val === "walk" ||
+      val === "people"
+    );
+  }
+
+  /**
+   * @param {import('$lib/types').HomeEnergyMode} mode
+   * @param {boolean} personalFilter
+   * @param {string[]} values
+   * @param {Array<{ id: string }>} completedList
+   * @param {string} excludedId
+   * @returns {import('$lib/types').MicroAction[]}
+   */
+  function buildQuickPool(
+    mode,
+    personalFilter,
+    values,
+    completedList,
+    excludedId,
+  ) {
+    const cfg = HOME_MODES[mode] || HOME_MODES.couch;
+    return recommendActions({
+      values: personalFilter ? values : [],
+      timeBucket: cfg.timeBucket,
+      cost: cfg.cost,
+      mode: cfg.mode,
+      social: cfg.social,
+      commitment: cfg.commitment,
+      completedIds: (completedList || []).map((s) => s.id),
+      excludeIds: excludedId ? [excludedId] : [],
+      seed: `home:${mode}:0`,
+    });
+  }
+
+  /**
+   * @param {import('$lib/types').HomeDeckState} state
+   */
+  function saveHomeDeckState(state) {
+    try {
+      safeSetItem(AA_HOME_DECK_STATE_KEY, JSON.stringify(state), "local");
+    } catch {}
+  }
+
+  function syncDeckPersistence() {
+    const pool = buildQuickPool(
+      energyMode,
+      usePersonalValues,
+      savedValues,
+      $completedSteps || [],
+      excludeQuickId,
+    );
+    const deck = pool.length > 0 ? pool : (MICRO_ACTIONS || []).slice(0, 5);
+    const total = deck.length;
+    const normalizedIdx =
+      total > 0 ? ((suggestionIndex % total) + total) % total : 0;
+    const activeAction = total > 0 ? deck[normalizedIdx] : null;
+    if (activeAction?.id) {
+      lastQuickActionId = activeAction.id;
+    }
+    saveHomeDeckState({
+      energyMode,
+      actionId: activeAction?.id || "",
+      index: normalizedIdx,
+      excludeQuickId,
+      usePersonalValues,
+    });
+  }
+
+  /**
+   * Restores persisted home deck tab & deed position when no URL deep link overrides it.
+   * Validates stored JSON defensively and clamps/falls back to index 0 if action ID is absent.
+   * @returns {boolean}
+   */
+  function restoreHomeDeckState() {
+    try {
+      const raw = safeGetItem(AA_HOME_DECK_STATE_KEY, "local");
+      if (!raw || typeof raw !== "string") return false;
+      /** @type {unknown} */
+      const parsed = JSON.parse(raw);
+      if (!isPlainRecord(parsed)) return false;
+
+      const restoredMode = isHomeEnergyMode(parsed.energyMode)
+        ? parsed.energyMode
+        : "couch";
+      const restoredPersonal =
+        parsed.usePersonalValues === true && savedValues.length > 0;
+      const rawExcludeId =
+        typeof parsed.excludeQuickId === "string"
+          ? parsed.excludeQuickId.trim()
+          : "";
+      let validExcludeId =
+        rawExcludeId && MICRO_ACTIONS.some((a) => a.id === rawExcludeId)
+          ? rawExcludeId
+          : "";
+
+      const rawActionId =
+        typeof parsed.actionId === "string" ? parsed.actionId.trim() : "";
+
+      let pool = buildQuickPool(
+        restoredMode,
+        restoredPersonal,
+        savedValues,
+        $completedSteps || [],
+        validExcludeId,
+      );
+      let deck = pool.length > 0 ? pool : (MICRO_ACTIONS || []).slice(0, 5);
+
+      let nextIndex = 0;
+      if (rawActionId.length > 0) {
+        const foundIdx = deck.findIndex((a) => a.id === rawActionId);
+        if (foundIdx !== -1) {
+          nextIndex = foundIdx;
+        } else {
+          validExcludeId = "";
+          pool = buildQuickPool(
+            restoredMode,
+            restoredPersonal,
+            savedValues,
+            $completedSteps || [],
+            "",
+          );
+          deck = pool.length > 0 ? pool : (MICRO_ACTIONS || []).slice(0, 5);
+          nextIndex = 0;
+        }
+      } else if (
+        typeof parsed.index === "number" &&
+        Number.isInteger(parsed.index) &&
+        parsed.index >= 0 &&
+        deck.length > 0
+      ) {
+        nextIndex = parsed.index < deck.length ? parsed.index : 0;
+      }
+
+      energyMode = restoredMode;
+      usePersonalValues = restoredPersonal;
+      excludeQuickId = validExcludeId;
+      pinnedActionId = "";
+      suggestionIndex = nextIndex;
+      if (deck[nextIndex]?.id) {
+        lastQuickActionId = deck[nextIndex].id;
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * @param {string | null | undefined} rawParam
+   * @returns {import('$lib/types').MicroAction | null}
+   */
   function resolveActionFromParam(rawParam) {
     if (!rawParam) return null;
     const cleaned = String(rawParam)
@@ -118,6 +297,10 @@
     );
   }
 
+  /**
+   * @param {{ commitment?: string, mode?: string, timeMinutes?: number | string } | null | undefined} action
+   * @returns {import('$lib/types').HomeEnergyMode}
+   */
   function inferEnergyModeForAction(action) {
     if (!action) return "couch";
     if (action.commitment === "long_term") return "people";
@@ -126,6 +309,11 @@
     return "couch";
   }
 
+  /**
+   * @param {URL} [targetUrl]
+   * @param {boolean} [preferHash=false]
+   * @returns {boolean}
+   */
   function applyUrlDeepLink(targetUrl, preferHash = false) {
     try {
       const url =
@@ -134,10 +322,13 @@
           : typeof window !== "undefined"
             ? new URL(window.location.href)
             : null;
-      if (!url) return;
+      if (!url) return false;
       const intentParam = url.searchParams.get("intent");
-      if (intentParam && HOME_MODES[intentParam]) {
+      const hasValidIntent = isHomeEnergyMode(intentParam);
+      if (hasValidIntent) {
         energyMode = intentParam;
+        excludeQuickId = "";
+        suggestionIndex = 0;
       }
 
       const queryAction = url.searchParams.get("action");
@@ -145,6 +336,7 @@
         (targetUrl instanceof URL ? targetUrl.hash : "") ||
         (typeof window !== "undefined" ? window.location.hash : "") ||
         "";
+      /** @type {string | null} */
       let hashAction = null;
       if (rawHash) {
         const hashRaw = rawHash.replace(/^#/, "");
@@ -158,11 +350,12 @@
 
       const actionParam = preferHash
         ? hashAction || queryAction
-        : hashAction || queryAction;
+        : queryAction || hashAction;
       if (actionParam) {
         const matched = resolveActionFromParam(actionParam);
         if (matched) {
           energyMode = inferEnergyModeForAction(matched);
+          excludeQuickId = "";
           pinnedActionId = matched.id;
           lastQuickActionId = matched.id;
           suggestionIndex = 0;
@@ -170,33 +363,74 @@
           partnerReturnPromptVisible = false;
           justCompleted = false;
           consumePendingPartnerReturn(0);
+          return true;
         }
-      } else {
         pinnedActionId = "";
+        suggestionIndex = 0;
+        return true;
       }
-    } catch {}
+
+      pinnedActionId = "";
+      return hasValidIntent;
+    } catch {
+      return false;
+    }
   }
 
-  $: if ($page?.url) {
-    applyUrlDeepLink($page.url);
+  $: {
+    const urlKey = $page?.url
+      ? `${$page.url.pathname}${$page.url.search}${$page.url.hash}`
+      : "";
+    if ($page?.url && urlKey !== lastAppliedUrlKey) {
+      lastAppliedUrlKey = urlKey;
+      const hadDeepLink = applyUrlDeepLink($page.url);
+      if (!hadDeepLink && hasMountedHome) {
+        if (!restoreHomeDeckState()) {
+          energyMode = "couch";
+          excludeQuickId = "";
+          suggestionIndex = 0;
+        }
+      }
+    }
   }
 
   onMount(() => {
     try {
       const raw = safeGetItem(AA_USER_TOPICS_KEY, "local");
       if (raw) {
+        /** @type {unknown} */
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          savedValues = parsed;
+        if (Array.isArray(parsed)) {
+          const cleanTopics = parsed.filter(
+            /** @param {unknown} v @returns {v is string} */
+            (v) => typeof v === "string" && v.length > 0,
+          );
+          if (cleanTopics.length > 0) {
+            savedValues = cleanTopics;
+          }
         }
       }
     } catch {}
 
-    applyUrlDeepLink();
+    const hasExplicitUrlTarget = applyUrlDeepLink();
+    if (!hasExplicitUrlTarget) {
+      restoreHomeDeckState();
+    }
+    hasMountedHome = true;
     soundMuted = isSoundMuted();
 
+    /** @type {ReturnType<typeof setTimeout> | null} */
     let returnDelayTimer = null;
-    const handleHashChange = () => applyUrlDeepLink(undefined, true);
+    const handleHashChange = () => {
+      const hadHashTarget = applyUrlDeepLink(undefined, true);
+      if (!hadHashTarget && hasMountedHome) {
+        if (!restoreHomeDeckState()) {
+          energyMode = "couch";
+          excludeQuickId = "";
+          suggestionIndex = 0;
+        }
+      }
+    };
 
     const triggerPartnerReturnIfReady = () => {
       if (justCompleted || partnerReturnPromptVisible) return;
@@ -260,19 +494,13 @@
     };
   });
 
-  $: activeModeCfg = HOME_MODES[energyMode] || HOME_MODES.couch;
-
-  $: quickPool = recommendActions({
-    values: usePersonalValues ? savedValues : [],
-    timeBucket: activeModeCfg.timeBucket,
-    cost: activeModeCfg.cost,
-    mode: activeModeCfg.mode,
-    social: activeModeCfg.social,
-    commitment: activeModeCfg.commitment,
-    completedIds: ($completedSteps || []).map((s) => s.id),
-    excludeIds: excludeQuickId ? [excludeQuickId] : [],
-    seed: `home:${energyMode}:0`,
-  });
+  $: quickPool = buildQuickPool(
+    energyMode,
+    usePersonalValues,
+    savedValues,
+    $completedSteps || [],
+    excludeQuickId,
+  );
 
   $: pinnedAction = pinnedActionId
     ? MICRO_ACTIONS.find((a) => a.id === pinnedActionId) || null
@@ -300,6 +528,9 @@
       $startedActionIds.includes(currentQuickAction.id),
   );
 
+  /**
+   * @param {import('$lib/types').HomeEnergyMode} mode
+   */
   function setEnergyMode(mode) {
     if (energyMode === mode) {
       nextQuickIdea();
@@ -312,6 +543,7 @@
     excludeQuickId = lastQuickActionId;
     energyMode = mode;
     suggestionIndex = 0;
+    syncDeckPersistence();
     trackEvent("aa_home_energy_mode", { mode });
     trackFunnel("intent_selected", { surface: "home_instant", mode });
     trackFunnel("recommendation_shown", {
@@ -344,6 +576,7 @@
     } else {
       suggestionIndex += 1;
     }
+    syncDeckPersistence();
     trackEvent("aa_home_next_idea", {
       mode: energyMode,
       index: suggestionIndex,
@@ -368,6 +601,7 @@
     } else if (quickDeckActions.length > 0) {
       suggestionIndex = quickDeckActions.length - 1;
     }
+    syncDeckPersistence();
     trackEvent("aa_home_prev_idea", {
       mode: energyMode,
       index: suggestionIndex,
@@ -417,9 +651,23 @@
       suggestionIndex = 0;
     }
 
+    syncDeckPersistence();
     trackEvent("aa_home_session_reopened", {
       mode: energyMode,
       index: suggestionIndex,
+    });
+  }
+
+  function handleTogglePersonalValues() {
+    pinnedActionId = "";
+    awaitingPartnerReturn = false;
+    partnerReturnPromptVisible = false;
+    justCompleted = false;
+    usePersonalValues = !usePersonalValues;
+    suggestionIndex = 0;
+    syncDeckPersistence();
+    trackEvent("aa_home_personal_filter", {
+      enabled: usePersonalValues,
     });
   }
 
@@ -428,17 +676,26 @@
     trackEvent("aa_sound_toggle", { muted: soundMuted });
   }
 
+  /**
+   * @param {import('$lib/types').MicroAction | null | undefined} action
+   */
   function handleStartQuickAction(action) {
     if (!action) return;
     awaitingPartnerReturn = true;
     partnerLeaveTimestamp = Date.now();
     partnerReturnPromptVisible = false;
     justCompleted = false;
+    if (!pinnedActionId) {
+      syncDeckPersistence();
+    }
     savePendingPartnerReturn(action);
     markActionStarted(action.id, "home_instant");
     trackEvent("aa_clickout", { surface: "home_instant", id: action.id });
   }
 
+  /**
+   * @param {import('$lib/types').MicroAction | null | undefined} action
+   */
   function completeQuickAction(action) {
     if (!action) return;
     pinnedActionId = action.id;
@@ -447,6 +704,13 @@
     awaitingPartnerReturn = false;
     partnerReturnPromptVisible = false;
     consumePendingPartnerReturn(0);
+    saveHomeDeckState({
+      energyMode,
+      actionId: "",
+      index: 0,
+      excludeQuickId: "",
+      usePersonalValues,
+    });
     try {
       if (typeof navigator !== "undefined" && navigator.vibrate) {
         navigator.vibrate(40);
@@ -466,6 +730,9 @@
     });
   }
 
+  /**
+   * @param {import('$lib/types').MicroAction | null | undefined} action
+   */
   async function shareDirectActionLink(action) {
     if (!action || typeof window === "undefined") return;
     const shareUrl = `${window.location.origin}/?action=${encodeURIComponent(action.id)}`;
@@ -591,17 +858,7 @@
                 url: act.url,
               })}
             onToggleSound={handleToggleSound}
-            onTogglePersonalValues={() => {
-              pinnedActionId = "";
-              awaitingPartnerReturn = false;
-              partnerReturnPromptVisible = false;
-              justCompleted = false;
-              usePersonalValues = !usePersonalValues;
-              suggestionIndex = 0;
-              trackEvent("aa_home_personal_filter", {
-                enabled: usePersonalValues,
-              });
-            }}
+            onTogglePersonalValues={handleTogglePersonalValues}
             onNextIdea={nextQuickIdea}
             onPrevIdea={prevQuickIdea}
             onCloseSession={() => {
