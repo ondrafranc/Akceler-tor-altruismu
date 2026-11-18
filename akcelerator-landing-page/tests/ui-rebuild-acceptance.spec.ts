@@ -2624,6 +2624,8 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
     const errors = await setupPageEnvironment(page);
 
     for (const vp of [
+      { width: 2560, height: 1440, label: '2560x1440' },
+      { width: 1920, height: 1080, label: '1920x1080' },
       { width: 1440, height: 900, label: '1440x900' },
       { width: 1280, height: 800, label: '1280x800' },
       { width: 1025, height: 800, label: '1025x800' },
@@ -2699,6 +2701,18 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
         const waveRect = waveSvg.getBoundingClientRect();
         const mollyRect = molly?.getBoundingClientRect();
         const dockRect = headerDock?.getBoundingClientRect();
+        const cardRect = document.querySelector('.instant-card')?.getBoundingClientRect();
+        const cycleBtn = document.querySelector('.cycle-link') as HTMLElement | null;
+        const visibleFireflies = fireflies
+          .filter((f) => window.getComputedStyle(f).display !== 'none')
+          .map((f) => {
+            const r = f.getBoundingClientRect();
+            const coveredByCard = cardRect
+              ? r.left >= cardRect.left && r.right <= cardRect.right && r.top >= cardRect.top && r.bottom <= cardRect.bottom
+              : false;
+            const relTopRatio = (r.top - stageRect.top) / Math.max(1, stageRect.height);
+            return { coveredByCard, relTopRatio };
+          });
 
         const toRel = (r: DOMRect, insetX = 0, insetY = 0) => ({
           x: Math.max(0, r.left - stageRect.left + insetX),
@@ -2720,6 +2734,9 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
           scrimDisplay: scrimCs.display,
           firefliesDisplay: window.getComputedStyle(firefliesLayer).display,
           fireflyCount: fireflies.length,
+          occludedFireflies: visibleFireflies.filter((f) => f.coveredByCard).length,
+          upperSkyFireflies: visibleFireflies.filter((f) => !f.coveredByCard && f.relTopRatio < 0.8).length,
+          cycleBtnHeight: cycleBtn ? Math.round(cycleBtn.getBoundingClientRect().height) : 0,
           waveWidth: Math.round(waveRect.width),
           waveHeight: Math.round(waveRect.height),
           waveAtBottom: Math.abs(waveRect.bottom - stageRect.bottom) <= 2,
@@ -2753,11 +2770,11 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
 
       expect(layoutMetrics, `${vp.label}: hero metrics`).not.toBeNull();
       expect(layoutMetrics!.stageTop, `${vp.label}: heroStage.top <= 0 (no exposed light strip at y=0)`).toBeLessThanOrEqual(0);
-      expect(layoutMetrics!.stageBgImg, `${vp.label}: dark forest gradient`).toContain('rgb(11, 38, 27)');
-      expect(layoutMetrics!.stageBgImg, `${vp.label}: mid forest gradient`).toContain('rgb(18, 58, 41)');
+      expect(layoutMetrics!.stageBgImg, `${vp.label}: sunlit forest gradient`).toContain('rgb(14, 51, 35)');
+      expect(layoutMetrics!.stageBgImg, `${vp.label}: mid emerald forest gradient`).toContain('rgb(22, 75, 52)');
       expect(layoutMetrics!.stageBorderBottom, `${vp.label}: zero seam border-bottom`).toBe('0px');
       expect(layoutMetrics!.backdropDisplay).not.toBe('none');
-      expect(layoutMetrics!.backdropOpacity).toBeGreaterThan(0.2);
+      expect(layoutMetrics!.backdropOpacity).toBeGreaterThan(0.3);
       expect(layoutMetrics!.backdropBgImg).toContain('/art/sanctuary-dawn');
       expect(layoutMetrics!.auroraDisplay).not.toBe('none');
       expect(layoutMetrics!.scrimDisplay).not.toBe('none');
@@ -2773,8 +2790,13 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
       expect(layoutMetrics!.scrollY).toBe(0);
       if (vp.width > 1024) {
         expect(layoutMetrics!.mollyVisible, `${vp.label}: Molly visible at scrollY === 0`).toBe(true);
+        expect(layoutMetrics!.upperSkyFireflies, `${vp.label}: open sky/lake fireflies visible`).toBeGreaterThanOrEqual(4);
       } else {
         expect(layoutMetrics!.headerDockVisible, `${vp.label}: Molly header dock visible`).toBe(true);
+        expect(layoutMetrics!.cycleBtnHeight, `${vp.label}: tablet .cycle-link >= 44px touch target`).toBeGreaterThanOrEqual(44);
+      }
+      if (vp.width >= 1440) {
+        expect(layoutMetrics!.occludedFireflies, `${vp.label}: zero fireflies hidden behind .instant-card`).toBe(0);
       }
 
       // Sample actual rendered composited background pixels behind each Hero copy/CTA element
@@ -2882,9 +2904,9 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
             overline: worstCaseContrast(rects.overline, [parseRgba(colors.overline)]),
             title: worstCaseContrast(rects.title, [parseRgba(colors.title)]),
             serif: worstCaseContrast(rects.serif, [
-              { r: 254, g: 243, b: 199, a: 1 },
+              { r: 253, g: 230, b: 138, a: 1 },
               { r: 167, g: 243, b: 208, a: 1 },
-              { r: 253, g: 230, b: 138, a: 1 }
+              { r: 253, g: 224, b: 71, a: 1 }
             ]),
             lead: worstCaseContrast(rects.lead, [parseRgba(colors.lead)]),
             leadStrong: worstCaseContrast(rects.leadStrong, [parseRgba(colors.leadStrong)]),
@@ -2943,7 +2965,7 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
     await expect(stage).toBeVisible();
     await expect(cta).toBeVisible();
 
-    // 1. Resting state keeps Daylight Editorial light frame with zero .is-primed and ::after opacity 0
+    // 1. Resting state renders unified radiant emerald sanctuary diorama (no stark white HUD strip) with ::after opacity 0
     const resting = await stage.evaluate((el) => {
       const hud = el.querySelector('.preview-hud') as HTMLElement | null;
       const cs = window.getComputedStyle(el);
@@ -2951,7 +2973,7 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
       const hudCs = hud ? window.getComputedStyle(hud) : null;
       return {
         isPrimed: el.classList.contains('is-primed'),
-        bg: cs.backgroundColor,
+        bgImg: cs.backgroundImage,
         borderColor: cs.borderColor,
         boxShadow: cs.boxShadow,
         hudBg: hudCs?.backgroundColor || '',
@@ -2960,8 +2982,9 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
       };
     });
     expect(resting.isPrimed).toBe(false);
-    expect(resting.bg).toBe('rgb(237, 242, 238)');
-    expect(resting.hudBg).toBe('rgb(255, 255, 255)');
+    expect(resting.bgImg).toContain('radial-gradient');
+    expect(resting.bgImg).toContain('linear-gradient');
+    expect(resting.hudBg).toBe('rgba(0, 0, 0, 0)');
     expect(resting.afterOpacity).toBe(0);
 
     // 2. Hover over .deed-preview-stage at two distinct pointer coordinates
@@ -3046,6 +3069,134 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
     await page.mouse.move(10, 10);
     await page.waitForTimeout(100);
     expect(await stage.evaluate((el) => el.classList.contains('is-primed'))).toBe(false);
+
+    // 5. Rendered-pixel WCAG >= 4.5:1 contrast on .preview-hud pills across rest, top-right hover, and nudge
+    const sampleHudContrast = async () => {
+      const hudInfo = await stage.evaluate((el) => {
+        const pPill = el.querySelector('.preview-promise-pill') as HTMLElement;
+        const sPill = el.querySelector('.preview-status-pill') as HTMLElement;
+        const pSpan = pPill.querySelector('span:last-child') as HTMLElement;
+        const sSpan = sPill.querySelector('span:last-child') as HTMLElement;
+        const sr = el.getBoundingClientRect();
+        const pr = pSpan.getBoundingClientRect();
+        const stR = sSpan.getBoundingClientRect();
+        return {
+          sw: Math.round(sr.width),
+          sh: Math.round(sr.height),
+          pColor: window.getComputedStyle(pPill).color,
+          sColor: window.getComputedStyle(sPill).color,
+          pTextOverflow: window.getComputedStyle(pSpan).textOverflow,
+          sTextOverflow: window.getComputedStyle(sSpan).textOverflow,
+          pRect: { x: pr.left - sr.left, y: pr.top - sr.top, w: pr.width, h: pr.height },
+          sRect: { x: stR.left - sr.left, y: stR.top - sr.top, w: stR.width, h: stR.height }
+        };
+      });
+      await page.evaluate(() => {
+        const s = document.createElement('style');
+        s.id = 't320-hud-probe';
+        s.textContent = `
+          .preview-hud > span > span, .preview-hud svg, .preview-status-dot { color: transparent !important; opacity: 0 !important; }
+          .preview-promise-pill, .preview-status-pill { color: transparent !important; }
+        `;
+        document.head.appendChild(s);
+      });
+      let buf: Buffer;
+      try {
+        buf = await stage.screenshot({ type: 'png', animations: 'disabled' });
+      } finally {
+        await page.evaluate(() => document.getElementById('t320-hud-probe')?.remove());
+      }
+      return page.evaluate(
+        async ({ b64, hudInfo }) => {
+          function parseRgb(str: string) {
+            const m = str.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)/i)!;
+            return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]) };
+          }
+          function lum(c: { r: number; g: number; b: number }) {
+            const lin = (v: number) => {
+              const s = v / 255;
+              return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+            };
+            return 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b);
+          }
+          function ratio(c1: { r: number; g: number; b: number }, c2: { r: number; g: number; b: number }) {
+            const l1 = lum(c1);
+            const l2 = lum(c2);
+            return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+          }
+          const img = new Image();
+          img.src = `data:image/png;base64,${b64}`;
+          await new Promise<void>((res) => (img.onload = () => res()));
+          const cv = document.createElement('canvas');
+          cv.width = img.width;
+          cv.height = img.height;
+          const ctx = cv.getContext('2d')!;
+          ctx.drawImage(img, 0, 0);
+          const sx = img.width / Math.max(1, hudInfo.sw);
+          const sy = img.height / Math.max(1, hudInfo.sh);
+          function minContrast(rect: { x: number; y: number; w: number; h: number }, fg: { r: number; g: number; b: number }) {
+            const data = ctx.getImageData(
+              Math.max(0, Math.floor(rect.x * sx)),
+              Math.max(0, Math.floor(rect.y * sy)),
+              Math.max(1, Math.floor(rect.w * sx)),
+              Math.max(1, Math.floor(rect.h * sy))
+            ).data;
+            let min = Infinity;
+            for (let i = 0; i < data.length; i += 8) {
+              const bg = { r: data[i], g: data[i + 1], b: data[i + 2] };
+              const r = ratio(fg, bg);
+              if (r < min) min = r;
+            }
+            return min;
+          }
+          return {
+            pTextOverflow: hudInfo.pTextOverflow,
+            sTextOverflow: hudInfo.sTextOverflow,
+            promise: minContrast(hudInfo.pRect, parseRgb(hudInfo.pColor)),
+            status: minContrast(hudInfo.sRect, parseRgb(hudInfo.sColor))
+          };
+        },
+        { b64: buf.toString('base64'), hudInfo }
+      );
+    };
+
+    const restHud = await sampleHudContrast();
+    expect(restHud.pTextOverflow).toBe('ellipsis');
+    expect(restHud.sTextOverflow).toBe('ellipsis');
+    expect(restHud.promise).toBeGreaterThanOrEqual(4.5);
+    expect(restHud.status).toBeGreaterThanOrEqual(4.5);
+
+    await page.mouse.move(box!.x + box!.width * 0.85, box!.y + 16, { steps: 3 });
+    await page.waitForTimeout(260);
+    const hoverTopRightHud = await sampleHudContrast();
+    expect(hoverTopRightHud.promise).toBeGreaterThanOrEqual(4.5);
+    expect(hoverTopRightHud.status).toBeGreaterThanOrEqual(4.5);
+
+    await stage.click();
+    await page.waitForTimeout(260);
+    const nudgedHud = await sampleHudContrast();
+    expect(nudgedHud.promise).toBeGreaterThanOrEqual(4.5);
+    expect(nudgedHud.status).toBeGreaterThanOrEqual(4.5);
+
+    // 6. Directory cards on /app/online keep block ellipsis on .quick-tags-pill with zero mid-word clipping on 1440x900
+    await gotoHydrated(page, '/app/online');
+    const dirTags = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('.directory-card .quick-tags-pill')).map((el) => {
+        const h = el as HTMLElement;
+        const cs = window.getComputedStyle(h);
+        return {
+          display: cs.display,
+          textOverflow: cs.textOverflow,
+          overflows: h.scrollWidth > h.clientWidth + 1
+        };
+      })
+    );
+    expect(dirTags.length).toBeGreaterThanOrEqual(3);
+    for (const dt of dirTags) {
+      expect(dt.display).toBe('block');
+      expect(dt.textOverflow).toBe('ellipsis');
+      expect(dt.overflows).toBe(false);
+    }
 
     assertZeroRuntimeErrors(errors, 'T3-20');
   });

@@ -4,15 +4,17 @@
   import { MICRO_ACTIONS } from '$lib/data/czech-actions.js';
 
   export let microActionsCount = MICRO_ACTIONS.length;
-  /** @type {Array<{ left: string; top: string; size: number; delay: string; dur: string; gold: boolean }>} */
+  /** @type {Array<{ left: string; top: string; size: number; delay: string; dur: string; gold: boolean; sky?: boolean }>} */
   export let fireflies = [
-    { left: "8%", top: "24%", size: 5, delay: "0s", dur: "7.5s", gold: true },
-    { left: "19%", top: "68%", size: 4, delay: "1.4s", dur: "8.8s", gold: false },
-    { left: "34%", top: "20%", size: 5, delay: "2.6s", dur: "7.2s", gold: true },
-    { left: "48%", top: "74%", size: 6, delay: "0.8s", dur: "9.1s", gold: true },
-    { left: "64%", top: "18%", size: 5, delay: "1.9s", dur: "8.3s", gold: false },
-    { left: "81%", top: "22%", size: 7, delay: "2.2s", dur: "9.4s", gold: true },
-    { left: "90%", top: "60%", size: 5, delay: "1.5s", dur: "7.1s", gold: false },
+    { left: "5%", top: "12.5%", size: 6, delay: "0s", dur: "7.6s", gold: true, sky: true },
+    { left: "24%", top: "12%", size: 5, delay: "1.6s", dur: "8.2s", gold: true, sky: true },
+    { left: "44%", top: "14%", size: 6, delay: "2.5s", dur: "7.4s", gold: false, sky: true },
+    { left: "calc(50% + 38px)", top: "46%", size: 5, delay: "0.9s", dur: "8.5s", gold: true, sky: true },
+    { left: "calc(50% - 30px)", top: "73%", size: 6, delay: "0.4s", dur: "9.0s", gold: true, sky: true },
+    { left: "12%", top: "86%", size: 6, delay: "1.2s", dur: "8.1s", gold: true, sky: false },
+    { left: "31%", top: "87%", size: 5, delay: "2.0s", dur: "7.7s", gold: false, sky: false },
+    { left: "95.5%", top: "24%", size: 6, delay: "2.2s", dur: "9.1s", gold: true, sky: false },
+    { left: "94%", top: "64%", size: 5, delay: "1.5s", dur: "7.3s", gold: false, sky: false },
   ];
 </script>
 
@@ -24,6 +26,7 @@
       <span
         class="firefly"
         class:gold={f.gold}
+        class:sky-corridor={Boolean(f.sky)}
         style="left:{f.left}; top:{f.top}; width:{f.size}px; height:{f.size}px; animation-delay:{f.delay}; animation-duration:{f.dur};"
       ></span>
     {/each}
@@ -70,7 +73,7 @@
           class="hero-btn sanctuary-hero-btn"
           on:click={() => trackEvent("aa_launch", { from: "hero_svet" })}
         >
-          <AppIcon name="trees" size={17} strokeWidth={2} />
+          <AppIcon name="sparkles" size={17} strokeWidth={2} />
           <span>Krajina dobra</span>
         </a>
       </div>
@@ -246,16 +249,23 @@
       padding: 7.35rem 1.25rem 5.5rem;
       background:
         radial-gradient(
-          90% 88% at 78% 24%,
-          rgba(28, 108, 73, 0.82) 0%,
-          transparent 62%
+          92% 88% at 78% 24%,
+          rgba(38, 144, 97, 0.88) 0%,
+          rgba(26, 104, 70, 0.42) 48%,
+          transparent 70%
         ),
         radial-gradient(
-          65% 70% at 15% 15%,
-          rgba(251, 191, 36, 0.18) 0%,
-          transparent 58%
+          68% 74% at 12% 14%,
+          rgba(251, 191, 36, 0.3) 0%,
+          rgba(52, 211, 153, 0.16) 38%,
+          transparent 64%
         ),
-        linear-gradient(160deg, #0b261b 0%, #123a29 50%, #174934 100%);
+        radial-gradient(
+          64% 58% at 44% 78%,
+          rgba(245, 158, 11, 0.22) 0%,
+          transparent 62%
+        ),
+        linear-gradient(158deg, #0e3323 0%, #164b34 50%, #1e6043 100%);
       color: #f8faf8;
       border-bottom: none;
       overflow: hidden;
@@ -264,38 +274,44 @@
     .hero-painted-backdrop {
       position: absolute;
       inset: 0;
-      background: url("/art/sanctuary-dawn.jpg") center 42% / cover no-repeat;
-      opacity: 0.36;
+      background: url("/art/sanctuary-dawn.jpg") center 43% / cover no-repeat;
+      opacity: 0.43;
       mask-image: linear-gradient(
         90deg,
-        rgba(0, 0, 0, 0.24) 0%,
-        rgba(0, 0, 0, 0.8) 58%,
-        rgba(0, 0, 0, 0.94) 100%
+        rgba(0, 0, 0, 0.56) 0%,
+        rgba(0, 0, 0, 0.86) 56%,
+        rgba(0, 0, 0, 0.96) 100%
       );
       -webkit-mask-image: linear-gradient(
         90deg,
-        rgba(0, 0, 0, 0.24) 0%,
-        rgba(0, 0, 0, 0.8) 58%,
-        rgba(0, 0, 0, 0.94) 100%
+        rgba(0, 0, 0, 0.56) 0%,
+        rgba(0, 0, 0, 0.86) 56%,
+        rgba(0, 0, 0, 0.96) 100%
       );
       pointer-events: none;
     }
 
     .hero-aurora {
       position: absolute;
-      inset: -20% -10% 0 -10%;
+      inset: -18% -10% 0 -10%;
       background:
         radial-gradient(
-          circle at 72% 38%,
-          rgba(52, 211, 153, 0.2) 0%,
-          transparent 42%
+          circle at 15% 18%,
+          rgba(253, 224, 71, 0.22) 0%,
+          rgba(52, 211, 153, 0.14) 32%,
+          transparent 54%
         ),
         radial-gradient(
-          circle at 62% 24%,
-          rgba(251, 191, 36, 0.15) 0%,
-          transparent 34%
+          circle at 72% 38%,
+          rgba(52, 211, 153, 0.28) 0%,
+          transparent 44%
+        ),
+        radial-gradient(
+          circle at 58% 24%,
+          rgba(251, 191, 36, 0.24) 0%,
+          transparent 36%
         );
-      filter: blur(28px);
+      filter: blur(26px);
       pointer-events: none;
     }
 
@@ -313,10 +329,10 @@
       pointer-events: none;
       background: linear-gradient(
         90deg,
-        rgba(8, 29, 20, 0.56) 0%,
-        rgba(9, 32, 22, 0.62) 54%,
-        rgba(10, 35, 24, 0.24) 70%,
-        rgba(10, 35, 24, 0.04) 100%
+        rgba(7, 27, 18, 0.34) 0%,
+        rgba(9, 32, 22, 0.36) 54%,
+        rgba(10, 35, 24, 0.06) 72%,
+        transparent 100%
       );
     }
 
@@ -324,13 +340,13 @@
       position: absolute;
       border-radius: 50%;
       background: #6ee7b7;
-      box-shadow: 0 0 14px 3px rgba(52, 211, 153, 0.55);
+      box-shadow: 0 0 16px 4px rgba(52, 211, 153, 0.62);
       animation: floatFirefly 8s ease-in-out infinite;
     }
 
     .firefly.gold {
-      background: #fde68a;
-      box-shadow: 0 0 16px 4px rgba(251, 191, 36, 0.62);
+      background: #fef08a;
+      box-shadow: 0 0 18px 5px rgba(251, 191, 36, 0.72);
     }
 
     .hero-inner {
@@ -348,7 +364,7 @@
       border-radius: 0;
       background: transparent;
       border: none;
-      color: #a7f3d0;
+      color: #d1fae5;
       font-size: 0.82rem;
       font-weight: 600;
       letter-spacing: 0.02em;
@@ -356,7 +372,7 @@
 
     .live-dot {
       background: #34d399;
-      box-shadow: 0 0 10px #34d399;
+      box-shadow: 0 0 12px 2px rgba(52, 211, 153, 0.85);
     }
 
     .hero-title {
@@ -370,21 +386,21 @@
       font-size: clamp(2.45rem, 4.6vw, 4.05rem);
       line-height: 1.05;
       color: #fde68a;
-      background: linear-gradient(120deg, #fef3c7 0%, #a7f3d0 55%, #fde68a 100%);
+      background: linear-gradient(118deg, #fde68a 0%, #a7f3d0 54%, #fde047 100%);
       -webkit-background-clip: text;
       background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
     .hero-lead {
-      color: #eef8f2;
+      color: #f0fdf4;
       font-size: 1.06rem;
       line-height: 1.65;
       margin: 0 0 1.75rem 0;
     }
 
     .hero-lead strong {
-      color: #fde68a;
+      color: #fef08a;
     }
 
     .hero-btn {
@@ -393,30 +409,34 @@
     }
 
     .hero-btn.primary {
-      background: linear-gradient(135deg, #34d399 0%, #fde68a 100%);
+      background: linear-gradient(135deg, #34d399 0%, #a7f3d0 48%, #fde68a 100%);
       color: #051810;
       border-color: transparent;
-      box-shadow: 0 14px 32px -6px rgba(52, 211, 153, 0.42);
+      box-shadow:
+        0 14px 32px -6px rgba(52, 211, 153, 0.48),
+        0 0 0 1px rgba(254, 243, 199, 0.42);
     }
 
     .hero-btn.primary:hover {
-      background: linear-gradient(135deg, #34d399 0%, #fde68a 100%);
+      background: linear-gradient(135deg, #34d399 0%, #bbf7d0 48%, #fef08a 100%);
       border-color: transparent;
       transform: translateY(-2px);
-      box-shadow: 0 18px 36px -6px rgba(52, 211, 153, 0.55);
+      box-shadow:
+        0 18px 38px -6px rgba(52, 211, 153, 0.6),
+        0 0 0 1px rgba(254, 243, 199, 0.6);
     }
 
     .sanctuary-hero-btn {
-      background: rgba(8, 31, 22, 0.76);
-      color: #fde68a;
-      border: 1px solid rgba(253, 230, 138, 0.48);
+      background: rgba(11, 42, 29, 0.68);
+      color: #fef08a;
+      border: 1px solid rgba(253, 230, 138, 0.52);
       backdrop-filter: blur(10px);
-      box-shadow: none;
+      box-shadow: 0 8px 22px -8px rgba(4, 18, 12, 0.3);
     }
 
     .sanctuary-hero-btn:hover {
-      background: rgba(14, 48, 34, 0.82);
-      border-color: rgba(253, 230, 138, 0.68);
+      background: rgba(16, 58, 40, 0.82);
+      border-color: rgba(254, 240, 138, 0.78);
       color: #ffffff;
       transform: translateY(-2px);
     }
@@ -445,19 +465,23 @@
     }
 
     .hero-painted-backdrop {
-      opacity: 0.24;
+      opacity: 0.32;
     }
 
     .hero-aurora {
-      opacity: 0.6;
+      opacity: 0.72;
+    }
+
+    .firefly.sky-corridor {
+      display: none;
     }
 
     .hero-scrim {
       background: linear-gradient(
         180deg,
-        rgba(8, 29, 20, 0.72) 0%,
-        rgba(9, 32, 22, 0.68) 65%,
-        rgba(11, 38, 27, 0.52) 100%
+        rgba(7, 27, 19, 0.65) 0%,
+        rgba(9, 33, 23, 0.62) 46%,
+        rgba(12, 42, 29, 0.22) 100%
       );
     }
   }

@@ -795,8 +795,8 @@
             class:active={energyMode === "couch"}
             on:click={() => setEnergyMode("couch")}
           >
-            <span class="tab-icon" aria-hidden="true">
-              <AppIcon name={HOME_MODES.couch.icon} size={14} strokeWidth={2} />
+            <span class="tab-icon tab-icon-couch" aria-hidden="true">
+              <AppIcon name={HOME_MODES.couch.icon} size={14} strokeWidth={2.1} />
             </span>
             <span>{HOME_MODES.couch.label}</span>
           </button>
@@ -806,8 +806,8 @@
             class:active={energyMode === "focus"}
             on:click={() => setEnergyMode("focus")}
           >
-            <span class="tab-icon" aria-hidden="true">
-              <AppIcon name={HOME_MODES.focus.icon} size={14} strokeWidth={2} />
+            <span class="tab-icon tab-icon-focus" aria-hidden="true">
+              <AppIcon name={HOME_MODES.focus.icon} size={14} strokeWidth={2.1} />
             </span>
             <span>{HOME_MODES.focus.label}</span>
           </button>
@@ -817,8 +817,8 @@
             class:active={energyMode === "walk"}
             on:click={() => setEnergyMode("walk")}
           >
-            <span class="tab-icon" aria-hidden="true">
-              <AppIcon name={HOME_MODES.walk.icon} size={14} strokeWidth={2} />
+            <span class="tab-icon tab-icon-walk" aria-hidden="true">
+              <AppIcon name={HOME_MODES.walk.icon} size={14} strokeWidth={2.1} />
             </span>
             <span>{HOME_MODES.walk.label}</span>
           </button>
@@ -828,8 +828,8 @@
             class:active={energyMode === "people"}
             on:click={() => setEnergyMode("people")}
           >
-            <span class="tab-icon" aria-hidden="true">
-              <AppIcon name={HOME_MODES.people.icon} size={14} strokeWidth={2} />
+            <span class="tab-icon tab-icon-people" aria-hidden="true">
+              <AppIcon name={HOME_MODES.people.icon} size={14} strokeWidth={2.1} />
             </span>
             <span>{HOME_MODES.people.label}</span>
           </button>
@@ -901,7 +901,7 @@
     box-sizing: border-box;
   }
 
-  /* EDITORIAL DAYLIGHT INSTANT CARD */
+  /* INSTANT CARD */
   .instant-card {
     position: relative;
     min-width: 0;
@@ -914,6 +914,27 @@
     padding: 1.1rem 1.35rem 0.95rem;
     box-shadow: var(--shadow-md, 0 8px 20px -6px rgba(18, 42, 30, 0.08));
     scroll-margin-top: 2rem;
+  }
+
+  @media (min-width: 681px) {
+    .home-sections {
+      background:
+        linear-gradient(180deg, var(--surface-page, #f6f7f3) 0px, rgba(246, 247, 243, 0) 96px),
+        radial-gradient(56% 420px at 14% 210px, rgba(167, 243, 208, 0.32) 0%, transparent 72%),
+        radial-gradient(56% 420px at 86% 230px, rgba(254, 243, 199, 0.38) 0%, transparent 72%);
+    }
+
+    .instant-card {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(246, 252, 248, 0.99) 100%);
+      border: 1px solid rgba(253, 230, 138, 0.46);
+      border-radius: 26px;
+      padding: 1.14rem 1.42rem 0.98rem;
+      box-shadow:
+        0 28px 56px -14px rgba(4, 18, 12, 0.42),
+        0 0 40px -6px rgba(52, 211, 153, 0.28),
+        0 0 22px -6px rgba(251, 191, 36, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    }
   }
 
   .studio-head {
@@ -940,7 +961,8 @@
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: var(--accent-primary, #1b5e42);
+    background: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
     flex-shrink: 0;
   }
 
@@ -949,9 +971,9 @@
     align-items: center;
     justify-content: center;
     gap: 0.35rem;
-    border: 1px solid var(--border-subtle, #dce3dd);
-    background: var(--bg-subtle, #edf2ee);
-    color: var(--accent-primary, #1b5e42);
+    border: 1px solid rgba(16, 185, 129, 0.22);
+    background: rgba(16, 185, 129, 0.08);
+    color: #065f46;
     font-family: var(--font-sans);
     font-size: 0.8rem;
     font-weight: 700;
@@ -968,9 +990,9 @@
   }
 
   .cycle-link:hover {
-    background: #e1eae4;
-    border-color: var(--accent-primary, #1b5e42);
-    color: var(--accent-primary-hover, #144732);
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.38);
+    color: #044e36;
   }
 
   .cycle-link:active {
@@ -983,8 +1005,8 @@
     gap: 0.24rem;
     padding: 0.24rem;
     border-radius: 999px;
-    background: var(--bg-subtle, #edf2ee);
-    border: 1px solid var(--border-subtle, #dce3dd);
+    background: #e8f2ec;
+    border: 1px solid rgba(16, 82, 54, 0.1);
     margin-bottom: 0.68rem;
   }
 
@@ -1007,7 +1029,7 @@
     justify-content: center;
     text-align: center;
     box-sizing: border-box;
-    transition: background-color 0.18s var(--ease-gentle), color 0.18s var(--ease-gentle);
+    transition: background-color 0.18s var(--ease-gentle), color 0.18s var(--ease-gentle), box-shadow 0.18s ease;
   }
 
   .tab-icon {
@@ -1016,14 +1038,58 @@
     flex-shrink: 0;
   }
 
+  .tab-icon-couch {
+    color: #d97706;
+  }
+
+  .tab-icon-focus {
+    color: #4f46e5;
+  }
+
+  .tab-icon-walk {
+    color: #e11d48;
+  }
+
+  .tab-icon-people {
+    color: #059669;
+  }
+
   .energy-tab:hover {
     color: var(--ink-primary, #14281d);
     background: rgba(255, 255, 255, 0.72);
   }
 
   .energy-tab.active {
-    background: var(--accent-primary, #1b5e42);
+    background: linear-gradient(135deg, #0d3322 0%, #17563b 100%);
     color: #ffffff;
+    box-shadow:
+      0 4px 12px rgba(9, 29, 20, 0.2),
+      inset 0 1px 0 rgba(253, 230, 138, 0.26);
+  }
+
+  .energy-tab.active .tab-icon-couch {
+    color: #fde68a;
+  }
+
+  .energy-tab.active .tab-icon-focus {
+    color: #bfdbfe;
+  }
+
+  .energy-tab.active .tab-icon-walk {
+    color: #fecdd3;
+  }
+
+  .energy-tab.active .tab-icon-people {
+    color: #6ee7b7;
+  }
+
+  @media (max-width: 1024px) {
+    .cycle-link {
+      min-height: 44px;
+      min-width: 44px;
+      margin: -5px 0;
+      padding: 0.36rem 0.72rem;
+    }
   }
 
   @media (max-width: 680px) {
