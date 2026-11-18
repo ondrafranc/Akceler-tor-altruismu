@@ -290,7 +290,6 @@ describe('Milestone 3: In-Situ Reward, Swipe Deck, Session Closure & Offline PWA
         blinkProgress: 0,
         firefly: null,
         hearts: [{ x: 10, y: 10, vx: 0, vy: -1, alpha: 0.8, scale: 1, color: '#f59e0b' }],
-        stardust: [{ x: 20, y: 20, vx: 0, vy: -0.5, alpha: 0.9, size: 2, twinkle: 0, color: '#fde68a' }],
         frameK: 1,
         isFollowingMouse: false
       };
@@ -298,11 +297,17 @@ describe('Milestone 3: In-Situ Reward, Swipe Deck, Session Closure & Offline PWA
       expect(mockCtx.clearRect).toHaveBeenCalled();
       expect(mockCtx.save).toHaveBeenCalled();
       expect(mockCtx.restore).toHaveBeenCalled();
+
+      const rendererSource = readFileSync(path.resolve(__dirname, '../../src/lib/molly/mollyCatRenderer.js'), 'utf8');
+      expect(rendererSource).not.toContain('stardust');
+      expect(rendererSource).not.toContain('4-point diamond star sparkle');
     });
 
     it('MollyCompanion.svelte does not contain duplicate drawMollyCat and actively calls renderProceduralMollyCat', () => {
       const source = readFileSync(path.resolve(__dirname, '../../src/components/MollyCompanion.svelte'), 'utf8');
       expect(source).not.toContain('function drawMollyCat(');
+      expect(source).not.toContain('molly-chased-star');
+      expect(source).not.toContain('stardust');
       expect(source).toContain("import { drawMollyCat as renderProceduralMollyCat } from '$lib/molly/mollyCatRenderer.js';");
       expect(source).toContain('renderProceduralMollyCat(catCtx, LOGICAL_W, LOGICAL_H, nowSec, {');
     });

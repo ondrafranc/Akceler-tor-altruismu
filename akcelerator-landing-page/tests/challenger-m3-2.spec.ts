@@ -85,24 +85,25 @@ test.describe('Challenger M3-2: Guided Help State Stress, Filter Combinations & 
     });
     expect(finalOverflow).toBe(false);
 
-    // Verify DOM order on mobile: .compass-foundations precedes #personal-plan, which precedes .adaptive-step-block
-    const orderEvaluation = await page.evaluate(() => {
+    // Verify visual vertical geometry on mobile: .compass-foundations (containing .adaptive-step-block) precedes #personal-plan
+    const geometryEvaluation = await page.evaluate(() => {
       const foundations = document.querySelector('.compass-foundations');
       const plan = document.getElementById('personal-plan');
       const adaptive = document.querySelector('.adaptive-step-block');
       if (!foundations || !plan || !adaptive) return null;
 
-      // In flex column order on mobile:
-      const fOrder = parseInt(window.getComputedStyle(foundations).order || '0', 10);
-      const pOrder = parseInt(window.getComputedStyle(plan).order || '0', 10);
-      const aOrder = parseInt(window.getComputedStyle(adaptive).order || '0', 10);
-      return { fOrder, pOrder, aOrder };
+      const fBox = foundations.getBoundingClientRect();
+      const pBox = plan.getBoundingClientRect();
+      const aBox = adaptive.getBoundingClientRect();
+      return { fBox, pBox, aBox };
     });
 
-    expect(orderEvaluation).not.toBeNull();
-    if (orderEvaluation) {
-      expect(orderEvaluation.fOrder).toBeLessThan(orderEvaluation.pOrder);
-      expect(orderEvaluation.pOrder).toBeLessThan(orderEvaluation.aOrder);
+    expect(geometryEvaluation).not.toBeNull();
+    if (geometryEvaluation) {
+      expect(geometryEvaluation.fBox.top).toBeLessThan(geometryEvaluation.pBox.top);
+      expect(geometryEvaluation.fBox.bottom).toBeLessThanOrEqual(geometryEvaluation.pBox.top + 2);
+      expect(geometryEvaluation.aBox.top).toBeGreaterThanOrEqual(geometryEvaluation.fBox.top);
+      expect(geometryEvaluation.aBox.bottom).toBeLessThanOrEqual(geometryEvaluation.pBox.top + 2);
     }
   });
 
@@ -155,8 +156,9 @@ test.describe('Challenger M3-2: Guided Help State Stress, Filter Combinations & 
 
       const summary = drawer.locator('summary');
       await expect(summary).toBeVisible();
-      // Verify summary contains gear emoji and required text
-      await expect(summary).toContainText('⚙️');
+      // Verify summary contains SVG icon (no native gear emoji) and required text
+      await expect(summary.locator('svg').first()).toBeVisible();
+      expect(await summary.innerText()).not.toContain('⚙️');
       await expect(summary).toContainText('Upřesnit další volby');
 
       // Drawer is initially collapsed
@@ -372,7 +374,11 @@ test.describe('Challenger M3-2: Guided Help State Stress, Filter Combinations & 
     const mapTab = page.locator('.mobile-tabs button').filter({ hasText: 'Mapa' });
     const cards = page.locator('.place-card');
 
+    const filtersDrawer = page.locator('details.near-filters-drawer');
+    await expect(filtersDrawer).not.toHaveAttribute('open', '');
     await expect(searchInput).toBeVisible();
+    await filtersDrawer.locator('> summary.near-filters-summary').click();
+    await expect(filtersDrawer).toHaveAttribute('open', '');
     await expect(citySelect).toBeVisible();
     await expect(radius15).toBeVisible();
 
@@ -473,8 +479,10 @@ test.describe('Challenger M3-2: Guided Help State Stress, Filter Combinations & 
       // MUST preserve exact string "Molly"
       expect(noteText).toContain('Molly');
 
-      // Verify tone is supportive, warm and empathetic (not cringe)
-      expect(noteText).toMatch(/🐾|děkuje|odměna|krok/i);
+      // Verify tone is supportive, warm and empathetic (with SVG paw icon, no native emoji)
+      expect(noteText).not.toContain('🐾');
+      expect(noteText).toMatch(/děkuje|odměna|krok|pamlsek/i);
+      await expect(celebrationNote.locator('svg')).toBeVisible();
 
       // Reset for next mode by clicking next idea
       const nextBtn = page.locator('.inline-celebration-next');

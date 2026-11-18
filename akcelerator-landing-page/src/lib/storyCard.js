@@ -355,7 +355,7 @@ export async function renderStoryCardPng(opts = {}) {
   ctx.textAlign = 'center';
   ctx.fillStyle = '#fde68a';
   ctx.font = '800 22px "Plus Jakarta Sans", system-ui, sans-serif';
-  ctx.fillText('✦  AKCELERÁTOR ALTRUISMU • POMÁHÁME LIDEM POMÁHAT', 540, 129);
+  ctx.fillText('AKCELERÁTOR ALTRUISMU · POMÁHÁME LIDEM POMÁHAT', 540, 129);
 
   // 6. Main Headline
   ctx.fillStyle = '#ffffff';
@@ -402,7 +402,7 @@ export async function renderStoryCardPng(opts = {}) {
     ctx.fillStyle = 'rgba(209, 250, 229, 0.88)';
     ctx.font = '600 24px "Plus Jakarta Sans", system-ui, sans-serif';
     ctx.fillText(
-      '✨ Ověřené způsoby, jak snadno pomoci lidem, zvířatům i přírodě',
+      'Ověřené způsoby, jak snadno pomoci lidem, zvířatům i přírodě',
       540,
       cardY + cardH - 34
     );
@@ -438,7 +438,7 @@ export async function renderStoryCardPng(opts = {}) {
     typeof window !== 'undefined' && window.location.host && !window.location.host.includes('localhost')
       ? window.location.host
       : 'akcelerator-altruismu.cz';
-  ctx.fillText(`🌿 ${hostLabel}`, 540, 1752);
+  ctx.fillText(`${hostLabel}`, 540, 1752);
 
   ctx.fillStyle = 'rgba(167, 243, 208, 0.85)';
   ctx.font = '600 22px "Plus Jakarta Sans", system-ui, sans-serif';

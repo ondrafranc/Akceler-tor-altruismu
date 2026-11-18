@@ -164,7 +164,7 @@ export function calculateMatchScore(rawAction, prefsOrCapacity = {}, situation, 
   if (selectedValues.length > 0) {
     if (matchedValues.length > 0) {
       score += 52 + (matchedValues.length - 1) * 18;
-      reasons.push('🎯 přesně pro vybrané téma');
+      reasons.push('přesně pro vybrané téma');
     } else {
       score -= 48;
     }
@@ -207,7 +207,7 @@ export function calculateMatchScore(rawAction, prefsOrCapacity = {}, situation, 
   if (timeBucket === '5') {
     if (action.timeBucket === '5') {
       score += 42;
-      reasons.push('⚡ do 5 minut');
+      reasons.push('do 5 minut');
     } else if (action.timeBucket === '15') {
       score -= 14;
     } else {
@@ -216,7 +216,7 @@ export function calculateMatchScore(rawAction, prefsOrCapacity = {}, situation, 
   } else if (timeBucket === '15') {
     if (action.timeBucket === '15') {
       score += 46;
-      reasons.push('⏱️ klidných 10–15 minut');
+      reasons.push('klidných 10–15 minut');
     } else if (action.timeBucket === '5') {
       score -= 10;
     } else {
@@ -225,7 +225,7 @@ export function calculateMatchScore(rawAction, prefsOrCapacity = {}, situation, 
   } else if (timeBucket === '45') {
     if (action.timeBucket === '45') {
       score += 48;
-      reasons.push('🌱 hlubší zapojení');
+      reasons.push('hlubší zapojení');
     } else if (action.timeBucket === '15' && action.mode === 'local') {
       score += 12;
     } else {
@@ -233,14 +233,14 @@ export function calculateMatchScore(rawAction, prefsOrCapacity = {}, situation, 
     }
   } else if (action.timeBucket === '5') {
     score += 8;
-    reasons.push('⚡ rychlý start');
+    reasons.push('rychlý start');
   }
 
   // 3. Režim prostředí (online vs. venku vs. doma)
   if (mode === 'local') {
     if (action.mode === 'local') {
       score += 52;
-      reasons.push('🚶 venku mimo obrazovky');
+      reasons.push('venku mimo obrazovky');
     } else if (action.mode === 'home') {
       score -= 16;
     } else {
@@ -249,17 +249,17 @@ export function calculateMatchScore(rawAction, prefsOrCapacity = {}, situation, 
   } else if (mode === 'online') {
     if (action.mode === 'online') {
       score += 38;
-      reasons.push('💻 hned z mobilu/PC');
+      reasons.push('hned z mobilu/PC');
     } else if (action.mode === 'home') {
       score += 24;
-      reasons.push('🏠 v klidu z domova');
+      reasons.push('v klidu z domova');
     } else {
       score -= 38;
     }
   } else if (mode === 'home') {
     if (action.mode === 'home') {
       score += 42;
-      reasons.push('🏠 v klidu doma');
+      reasons.push('v klidu doma');
     } else if (action.mode === 'online') {
       score += 22;
     } else {
@@ -271,14 +271,14 @@ export function calculateMatchScore(rawAction, prefsOrCapacity = {}, situation, 
   if (cost === 'free') {
     if (action.cost === 'free') {
       score += 36;
-      reasons.push('💸 0 Kč');
+      reasons.push('0 Kč');
     } else {
       score -= 85;
     }
   } else if (cost === 'donation') {
     if (action.cost === 'donation') {
       score += 68;
-      reasons.push('💚 přímý drobný dar');
+      reasons.push('přímý drobný dar');
     } else {
       score -= 35;
     }
@@ -290,14 +290,14 @@ export function calculateMatchScore(rawAction, prefsOrCapacity = {}, situation, 
   if (social === 'group') {
     if (action.social === 'group') {
       score += 56;
-      reasons.push('🤝 mezi fajn lidmi');
+      reasons.push('mezi fajn lidmi');
     } else {
       score -= 26;
     }
   } else if (social === 'solo') {
     if (action.social === 'solo') {
       score += 22;
-      reasons.push('🧘 bez nutnosti volat');
+      reasons.push('bez nutnosti volat');
     } else {
       score -= 28;
     }
@@ -307,14 +307,14 @@ export function calculateMatchScore(rawAction, prefsOrCapacity = {}, situation, 
   if (commitment === 'one_off') {
     if (action.commitment === 'one_off') {
       score += 45;
-      reasons.push('⚡ jednorázově bez závazku');
+      reasons.push('jednorázově bez závazku');
     } else {
       score -= 55;
     }
   } else if (commitment === 'long_term') {
     if (action.commitment === 'long_term') {
       score += 85;
-      reasons.push('🌱 dlouhodobá cesta');
+      reasons.push('dlouhodobá cesta');
     } else {
       score -= 65;
     }
@@ -324,14 +324,14 @@ export function calculateMatchScore(rawAction, prefsOrCapacity = {}, situation, 
   if (contactLevel === 'anonymous') {
     if (action.contactLevel === 'anonymous') {
       score += 55;
-      reasons.push('🔒 zcela anonymně');
+      reasons.push('zcela anonymně');
     } else {
       score -= 65;
     }
   } else if (contactLevel === 'contact_ok') {
     if (action.contactLevel === 'contact_ok') {
       score += 65;
-      reasons.push('👋 osobní kontakt');
+      reasons.push('osobní kontakt');
     } else {
       score -= 55;
     }
@@ -343,10 +343,10 @@ export function calculateMatchScore(rawAction, prefsOrCapacity = {}, situation, 
       score += 75;
       const macroLabel =
         recipientMacro === 'people'
-          ? '👥 pomoc lidem'
+          ? 'pomoc lidem'
           : recipientMacro === 'animals'
-            ? '🐾 pomoc zvířatům'
-            : '🌿 pomoc přírodě';
+            ? 'pomoc zvířatům'
+            : 'pomoc přírodě';
       reasons.push(macroLabel);
     } else {
       score -= 65;
@@ -357,7 +357,7 @@ export function calculateMatchScore(rawAction, prefsOrCapacity = {}, situation, 
   if (evidenceTier !== 'any') {
     if (action.impactEvidence === evidenceTier) {
       score += 140;
-      reasons.push(`Důkazy ${evidenceTier}`);
+      reasons.push(`Ověřený dopad (${evidenceTier})`);
     } else {
       score -= 140;
     }

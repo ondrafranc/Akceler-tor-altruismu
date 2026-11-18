@@ -5,6 +5,9 @@
   import { trackEvent } from "../../lib/analytics.js";
   import { safeText } from "../../lib/validation.js";
   import { firstText } from "../../lib/utils.js";
+  import PageHeader from "$lib/components/PageHeader.svelte";
+  import AppIcon from "$lib/components/AppIcon.svelte";
+  import { resolveIconKey } from "$lib/icons/iconRegistry.js";
   import {
     safeGetItem,
     safeSetItem,
@@ -17,12 +20,12 @@
   const MY_PENDING_KEY = AA_MY_PENDING_SUBMISSIONS_KEY;
 
   const QUICK_CATEGORIES = [
-    "🐾 Zvířata a útulky",
-    "🥫 Potraviny a šatníky",
-    "📚 Knihobudka / druhá šance věcí",
-    "🤝 Komunita a sousedé",
-    "👴 Senioři",
-    "🌱 Příroda a úklid",
+    { icon: "paw", label: "Zvířata a útulky" },
+    { icon: "utensils", label: "Potraviny a šatníky" },
+    { icon: "book-open", label: "Knihobudka / druhá šance věcí" },
+    { icon: "handshake", label: "Komunita a sousedé" },
+    { icon: "users", label: "Senioři" },
+    { icon: "sprout", label: "Příroda a úklid" },
   ];
 
   const TOP_CITIES = CZECH_CITIES.slice(0, 6);
@@ -291,16 +294,13 @@
 </svelte:head>
 
 <div class="page">
-  <header class="subpage-hero header">
-    <div class="hero-kicker">SPOLEČNÁ MAPA POMOCI</div>
-    <h1 class="title">
-      Přidej místo nebo akci, <span class="serif-accent">kde se dá pomoct</span>
-    </h1>
-    <p class="subtitle">
-      Víš o útulku, komunitním šatníku, knihobudce nebo sousedské brigádě? Stačí
-      název a obec.
-    </p>
-  </header>
+  <PageHeader
+    class="submit-page-header"
+    kicker="SPOLEČNÁ MAPA POMOCI"
+    title="Přidej místo nebo akci, "
+    titleAccent="kde se dá pomoct"
+    subtitle="Víš o útulku, komunitním šatníku, knihobudce nebo sousedské brigádě? Stačí název a obec."
+  />
 
   <div class="submit-layout">
     <!-- CLEAN FOCUSED FORM -->
@@ -312,7 +312,8 @@
           type="button"
           on:click={() => (kind = "org")}
         >
-          📍 Místo / spolek
+          <AppIcon name="map-pin" size={15} strokeWidth={2} />
+          <span>Místo / spolek</span>
         </button>
         <button
           class="tab"
@@ -320,7 +321,8 @@
           type="button"
           on:click={() => (kind = "event")}
         >
-          📅 Sousedská akce
+          <AppIcon name="calendar" size={15} strokeWidth={2} />
+          <span>Sousedská akce</span>
         </button>
       </div>
 
@@ -337,89 +339,94 @@
           />
         </div>
 
-        <div class="field wide">
-          <label for="name">Název místa nebo akce *</label>
-          <input
-            id="name"
-            name="place_name"
-            autocomplete="off"
-            data-molly-guide="true"
-            type="text"
-            bind:value={name}
-            placeholder="Např. Knihobudka v parku"
-            maxlength="120"
-          />
-        </div>
-
-        <div class="field loc-field">
-          <label for="loc">Kde to je? *</label>
-          <div class="loc-search">
+        <div class="name-loc-grid">
+          <div class="field">
+            <label for="name">Název místa nebo akce *</label>
             <input
-              id="loc"
-              name="location_query"
+              id="name"
+              name="place_name"
               autocomplete="off"
+              data-molly-guide="true"
               type="text"
-              bind:value={locationQuery}
-              placeholder="Město, obec nebo ulice"
-              on:input={() => {
-                geoResults = [];
-                geoMessage = "";
-                geoStatus = "idle";
-              }}
-              on:keydown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  searchLocation();
-                }
-              }}
-              disabled={geoStatus === "loading"}
+              bind:value={name}
+              placeholder="Např. Knihobudka v parku"
+              maxlength="120"
             />
-            <button
-              class="btn secondary"
-              type="button"
-              on:click={searchLocation}
-              disabled={geoStatus === "loading" ||
-                locationQuery.trim().length < 2}
-            >
-              {geoStatus === "loading" ? "Hledám…" : "Najít"}
-            </button>
           </div>
 
-          <div class="quick-pills">
-            {#each TOP_CITIES as city}
+          <div class="field loc-field">
+            <label for="loc">Kde to je? *</label>
+            <div class="loc-search">
+              <input
+                id="loc"
+                name="location_query"
+                autocomplete="off"
+                type="text"
+                bind:value={locationQuery}
+                placeholder="Město, obec nebo ulice"
+                on:input={() => {
+                  geoResults = [];
+                  geoMessage = "";
+                  geoStatus = "idle";
+                }}
+                on:keydown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    searchLocation();
+                  }
+                }}
+                disabled={geoStatus === "loading"}
+              />
               <button
+                class="btn secondary"
                 type="button"
-                class="q-pill"
-                class:active={addressLabel === city.name}
-                on:click={() => pickQuickCity(city)}
+                on:click={searchLocation}
+                disabled={geoStatus === "loading" ||
+                  locationQuery.trim().length < 2}
               >
-                {city.name}
+                {geoStatus === "loading" ? "Hledám…" : "Najít"}
               </button>
-            {/each}
+            </div>
           </div>
 
-          {#if geoResults.length}
-            <div class="geo-results">
-              {#each geoResults as r}
+          <div class="loc-extras">
+            <div class="quick-pills">
+              {#each TOP_CITIES as city}
                 <button
-                  class="geo-item"
                   type="button"
-                  on:click={() => pickLocation(r)}
+                  class="q-pill"
+                  class:active={addressLabel === city.name}
+                  on:click={() => pickQuickCity(city)}
                 >
-                  <span class="geo-title">{firstText(r.label)}</span>
-                  <span class="geo-sub">{r.label}</span>
+                  {city.name}
                 </button>
               {/each}
             </div>
-          {/if}
 
-          {#if lat != null && lon != null && addressLabel}
-            <div class="picked">
-              ✓ Poloha vybrána: <strong>{addressLabel}</strong>
-            </div>
-          {:else if geoMessage}
-            <div class="geo-hint">{geoMessage}</div>
-          {/if}
+            {#if geoResults.length}
+              <div class="geo-results">
+                {#each geoResults as r}
+                  <button
+                    class="geo-item"
+                    type="button"
+                    on:click={() => pickLocation(r)}
+                  >
+                    <span class="geo-title">{firstText(r.label)}</span>
+                    <span class="geo-sub">{r.label}</span>
+                  </button>
+                {/each}
+              </div>
+            {/if}
+
+            {#if lat != null && lon != null && addressLabel}
+              <div class="picked">
+                <AppIcon name="check" size={15} strokeWidth={2.2} />
+                <span>Poloha vybrána: <strong>{addressLabel}</strong></span>
+              </div>
+            {:else if geoMessage}
+              <div class="geo-hint">{geoMessage}</div>
+            {/if}
+          </div>
         </div>
 
         <div class="field">
@@ -429,15 +436,15 @@
             name="description"
             autocomplete="off"
             bind:value={description}
-            rows="3"
+            rows="2"
             maxlength="600"
             placeholder="Např. Berou čisté zimní oblečení, nebo mají od 14:00 veřejné venčení psů…"
           ></textarea>
         </div>
 
         {#if kind === "event"}
-          <div class="grid">
-            <div class="field wide">
+          <div class="grid event-fields-box">
+            <div class="field wide event-url-field">
               <label for="event_url">Odkaz na událost / detail *</label>
               <input
                 id="event_url"
@@ -486,10 +493,11 @@
                   <button
                     type="button"
                     class="q-pill"
-                    class:active={category === qc}
-                    on:click={() => (category = qc)}
+                    class:active={category === qc.label}
+                    on:click={() => (category = qc.label)}
                   >
-                    {qc}
+                    <AppIcon name={resolveIconKey(qc.icon)} size={14} strokeWidth={2} />
+                    <span>{qc.label}</span>
                   </button>
                 {/each}
               </div>
@@ -525,7 +533,8 @@
 
         <div class="actions">
           <button class="btn submit-btn" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Ukládám…" : "✦ Připnout tip na mapu"}
+            <AppIcon name="plus" size={16} strokeWidth={2.2} />
+            <span>{isSubmitting ? "Ukládám…" : "Připnout tip na mapu"}</span>
           </button>
         </div>
 
@@ -533,9 +542,10 @@
           <div class={"banner " + submitStatus} aria-live="polite">
             <div>{submitMessage}</div>
             {#if submitStatus === "success"}
-              <a href={submittedMapUrl} class="map-jump-link"
-                >Ukázat místo na mapě →</a
-              >
+              <a href={submittedMapUrl} class="map-jump-link">
+                <span>Ukázat místo na mapě</span>
+                <AppIcon name="arrow-right" size={15} strokeWidth={2} />
+              </a>
             {/if}
           </div>
         {/if}
@@ -544,7 +554,10 @@
 
     <!-- SINGLE CALM SIDEBAR CARD -->
     <aside class="side-note">
-      <span class="board-kicker">🌿 INSPIRACE Z OKOLÍ</span>
+      <span class="board-kicker">
+        <AppIcon name="leaf" size={14} strokeWidth={2} />
+        <span>INSPIRACE Z OKOLÍ</span>
+      </span>
       <h3>Co sem lidé nejčastěji přidávají?</h3>
       <ul class="idea-list">
         <li>
@@ -569,42 +582,49 @@
 
 <style>
   .page {
-    max-width: 1080px;
+    width: 100%;
+    max-width: 1140px;
     margin: 0 auto;
-    padding: 0.75rem 1.25rem 3.5rem;
+    box-sizing: border-box;
+    padding: 0.25rem 1.25rem 2.5rem;
   }
 
-  .header {
-    text-align: center;
-  }
+  @media (min-width: 681px) {
+    :global(.page-header.submit-page-header) {
+      padding: 0.65rem 0 0.7rem;
+      margin-bottom: 0.85rem;
+    }
 
-  .hero-kicker {
-    font-size: 0.74rem;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    color: #fde68a;
-    margin-bottom: 0.35rem;
-  }
+    :global(.page-header.submit-page-header .page-header-kicker) {
+      margin-bottom: 0.22rem;
+    }
 
-  .title {
-    font-family: var(--font-sans);
-    font-weight: 800;
-    color: #ffffff;
-    font-size: clamp(1.95rem, 3.4vw, 2.7rem);
-    margin: 0;
-    letter-spacing: -0.03em;
-  }
+    :global(.page-header.submit-page-header .page-header-subtitle) {
+      margin-top: 0.28rem;
+    }
 
-  .title .serif-accent {
-    color: #fde68a;
-    font-weight: 400;
-  }
+    .name-loc-grid {
+      display: grid;
+      grid-template-columns: 0.9fr 1.1fr;
+      gap: 0.45rem 0.75rem;
+      align-items: end;
+    }
 
-  .subtitle {
-    color: rgba(236, 248, 241, 0.9);
-    margin: 0.55rem auto 0;
-    max-width: 52ch;
-    line-height: 1.58;
+    .name-loc-grid .field {
+      min-width: 0;
+    }
+
+    .name-loc-grid .loc-extras {
+      grid-column: 1 / -1;
+    }
+
+    .name-loc-grid .loc-search {
+      flex-wrap: nowrap;
+    }
+
+    .name-loc-grid .loc-search input {
+      min-width: 0;
+    }
   }
 
   .submit-layout {
@@ -615,11 +635,11 @@
   }
 
   .card {
-    background: rgba(255, 255, 255, 0.96);
-    border: 1px solid rgba(22, 66, 48, 0.1);
-    border-radius: 26px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 22px;
     box-shadow: var(--shadow-sm);
-    padding: 1.85rem;
+    padding: 1.15rem 1.4rem;
   }
 
   .tabs {
@@ -627,11 +647,18 @@
     gap: 0.3rem;
     padding: 0.26rem;
     border-radius: 999px;
-    background: #eef3ef;
-    margin-bottom: 1.35rem;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-subtle);
+    margin-bottom: 0.75rem;
   }
 
   .tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.38rem;
+    min-height: 44px;
+    min-width: 44px;
     border-radius: 999px;
     border: none;
     background: transparent;
@@ -640,20 +667,24 @@
     font-family: var(--font-sans);
     font-weight: 700;
     font-size: 0.85rem;
-    color: var(--text-secondary);
-    transition: all 0.16s ease;
+    color: var(--ink-secondary);
+    transition: background-color 0.16s ease, color 0.16s ease;
+  }
+
+  .tab:hover {
+    color: var(--ink-primary);
   }
 
   .tab.active {
-    background: #0d2b1f;
+    background: var(--accent-primary);
     color: #ffffff;
-    box-shadow: 0 4px 10px rgba(9, 29, 20, 0.16);
+    box-shadow: var(--shadow-sm);
   }
 
   .form {
     display: flex;
     flex-direction: column;
-    gap: 1.05rem;
+    gap: 0.68rem;
   }
 
   .grid {
@@ -669,7 +700,7 @@
   .field {
     display: flex;
     flex-direction: column;
-    gap: 0.38rem;
+    gap: 0.28rem;
   }
 
   .field.wide {
@@ -680,21 +711,24 @@
   .label {
     font-size: 0.86rem;
     font-weight: 700;
-    color: var(--text-primary);
+    color: var(--ink-primary);
   }
 
   input,
   textarea {
-    padding: 0.68rem 0.88rem;
+    padding: 0.56rem 0.85rem;
     border-radius: 12px;
-    border: 1px solid rgba(22, 66, 48, 0.15);
-    background: #ffffff;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-surface);
+    color: var(--ink-primary);
     font-family: inherit;
     font-size: 0.92rem;
+    min-height: 44px;
   }
 
   textarea {
     resize: vertical;
+    min-height: 66px;
   }
 
   .loc-search {
@@ -711,34 +745,44 @@
 
   .quick-pills {
     display: flex;
-    gap: 0.35rem;
+    gap: 0.4rem;
     flex-wrap: wrap;
-    margin-top: 0.15rem;
+    margin-top: 0.14rem;
+  }
+
+  .calm-drawer.optional-fields {
+    padding: 0.5rem 1rem;
   }
 
   .q-pill {
-    padding: 0.3rem 0.68rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.42rem 0.78rem;
     border-radius: 999px;
-    border: 1px solid rgba(22, 66, 48, 0.11);
-    background: #f5f9f6;
-    color: var(--text-secondary);
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-subtle);
+    color: var(--ink-secondary);
     font-family: var(--font-sans);
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   }
 
   .q-pill:hover {
-    background: #ffffff;
-    border-color: rgba(16, 185, 129, 0.4);
-    color: var(--text-primary);
+    background: var(--bg-surface);
+    border-color: var(--accent-primary);
+    color: var(--ink-primary);
   }
 
   .q-pill.active {
-    background: #0d2b1f;
-    color: #fde68a;
-    border-color: #0d2b1f;
+    background: var(--accent-primary);
+    color: #ffffff;
+    border-color: var(--accent-primary);
   }
 
   .geo-results {
@@ -748,37 +792,47 @@
   }
 
   .geo-item {
+    min-height: 44px;
+    min-width: 44px;
     text-align: left;
-    padding: 0.55rem 0.75rem;
+    padding: 0.55rem 0.8rem;
     border-radius: 12px;
-    border: 1px solid rgba(22, 66, 48, 0.12);
-    background: #ffffff;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
     cursor: pointer;
+  }
+
+  .geo-item:hover {
+    border-color: var(--accent-primary);
+    background: var(--bg-subtle);
   }
 
   .geo-title {
     display: block;
     font-weight: 800;
-    color: var(--text-primary);
+    color: var(--ink-primary);
     font-size: 0.88rem;
   }
 
   .geo-sub {
     display: block;
     font-size: 0.78rem;
-    color: var(--text-muted);
+    color: var(--ink-secondary, #3f574a);
   }
 
   .picked {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
     margin-top: 0.25rem;
-    color: #065f46;
+    color: var(--accent-primary);
     font-size: 0.86rem;
     font-weight: 600;
   }
 
   .geo-hint {
     margin-top: 0.25rem;
-    color: var(--text-muted);
+    color: var(--ink-muted);
     font-size: 0.82rem;
   }
 
@@ -788,28 +842,40 @@
     font-family: var(--font-sans);
     font-weight: 700;
     cursor: pointer;
-    border: 1px solid rgba(22, 66, 48, 0.14);
+    border: 1px solid var(--border-strong);
   }
 
   .btn.secondary {
-    background: #f5f9f6;
-    color: var(--text-primary);
-    padding: 0.68rem 1rem;
+    min-height: 44px;
+    min-width: 44px;
+    background: var(--bg-subtle);
+    color: var(--ink-primary);
+    padding: 0.62rem 1.05rem;
     border-radius: 12px;
   }
 
+  .btn.secondary:hover:not(:disabled) {
+    background: var(--bg-surface);
+    border-color: var(--accent-primary);
+  }
+
   .submit-btn {
-    background: linear-gradient(135deg, #0f3626 0%, #1b573e 100%);
-    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 44px;
+    min-width: 44px;
+    background: var(--accent-primary);
+    border: 1px solid var(--accent-primary);
     color: #ffffff;
     font-size: 0.94rem;
-    padding: 0.88rem 1.4rem;
-    box-shadow: 0 10px 22px -6px rgba(14, 40, 28, 0.32);
-    transition: transform 0.18s ease;
+    padding: 0.78rem 1.45rem;
+    transition: background-color 0.18s ease;
   }
 
   .submit-btn:hover:not(:disabled) {
-    transform: translateY(-2px);
+    background: var(--accent-primary-hover);
   }
 
   .btn:disabled {
@@ -819,26 +885,37 @@
 
   .banner {
     margin-top: 0.4rem;
-    padding: 0.7rem 0.9rem;
+    padding: 0.75rem 0.95rem;
     border-radius: 12px;
     font-size: 0.88rem;
   }
 
   .banner.error {
     background: #fef2f2;
+    border: 1px solid #fecaca;
     color: #991b1b;
   }
 
   .banner.success {
-    background: #ecfdf5;
-    color: #065f46;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-strong);
+    color: var(--ink-primary);
   }
 
   .map-jump-link {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 44px;
+    min-width: 44px;
     margin-top: 0.35rem;
     font-weight: 800;
-    color: #065f46;
+    color: var(--accent-primary);
+    text-decoration: none;
+  }
+
+  .map-jump-link:hover {
+    text-decoration: underline;
   }
 
   .hp {
@@ -847,24 +924,28 @@
 
   /* Single Calm Sidebar Note */
   .side-note {
-    padding: 1.55rem;
-    border-radius: 24px;
-    background: rgba(255, 255, 255, 0.88);
-    border: 1px solid rgba(22, 66, 48, 0.09);
+    padding: 1.45rem;
+    border-radius: 20px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-sm);
   }
 
   .board-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.1em;
-    color: var(--emerald-600);
+    color: #8f4b0e;
   }
 
   .side-note h3 {
-    margin: 0.35rem 0 0.8rem;
-    font-size: 1.08rem;
+    margin: 0.4rem 0 0.8rem;
+    font-size: 1.06rem;
     font-weight: 800;
-    color: var(--text-primary);
+    color: var(--ink-primary);
   }
 
   .idea-list {
@@ -872,7 +953,7 @@
     padding-left: 1.15rem;
     font-size: 0.86rem;
     line-height: 1.6;
-    color: var(--text-secondary);
+    color: var(--ink-secondary);
   }
 
   .idea-list li {
@@ -880,43 +961,32 @@
   }
 
   .idea-list strong {
-    color: var(--text-primary);
+    color: var(--ink-primary);
   }
 
   @media (min-width: 681px) {
-    .page {
-      padding: 0.45rem 1.25rem 5rem;
+    textarea#desc {
+      min-height: 52px;
     }
 
-    .subpage-hero.header {
-      padding: 1rem 1.4rem !important;
-      margin-bottom: 0.6rem !important;
+    .grid.event-fields-box {
+      grid-template-columns: 1.3fr 1fr 1fr;
+      gap: 0.65rem;
     }
 
-    .title {
-      font-size: clamp(1.75rem, 3vw, 2.3rem);
+    .event-fields-box .field.event-url-field {
+      grid-column: auto;
     }
 
-    .subtitle {
-      margin-top: 0.35rem;
-      font-size: 0.9rem;
+    .event-fields-box .field {
+      min-width: 0;
     }
 
-    .card {
-      padding: 1.2rem 1.45rem;
-    }
-
-    .tabs {
-      margin-bottom: 0.8rem;
-    }
-
-    .form {
-      gap: 0.72rem;
-    }
-
-    input,
-    textarea {
-      padding: 0.52rem 0.78rem;
+    .event-fields-box input {
+      min-width: 0;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.56rem 0.65rem;
     }
   }
 
@@ -924,30 +994,15 @@
     .submit-layout {
       grid-template-columns: 1fr;
     }
-    .grid {
+    .grid,
+    .grid.event-fields-box {
       grid-template-columns: 1fr;
     }
   }
 
   @media (max-width: 680px) {
     .page {
-      padding: 0.3rem 0.65rem calc(6.5rem + env(safe-area-inset-bottom, 0px));
-    }
-
-    .subpage-hero.header {
-      padding: 0.5rem 0.75rem !important;
-      margin-bottom: 0.4rem !important;
-      border-radius: 16px;
-    }
-
-    .hero-kicker,
-    .subtitle {
-      display: none !important;
-    }
-
-    .title {
-      font-size: 1.12rem;
-      line-height: 1.18;
+      padding: 0.5rem 0.75rem 2.25rem;
     }
 
     .submit-layout {
@@ -960,7 +1015,7 @@
     }
 
     .card {
-      padding: 0.9rem 0.92rem;
+      padding: 0.95rem;
       border-radius: 18px;
       min-width: 0;
       max-width: 100%;
@@ -968,20 +1023,21 @@
     }
 
     .tabs {
-      margin-bottom: 0.65rem;
+      margin-bottom: 0.75rem;
       max-width: 100%;
     }
 
     .tab {
       min-height: 44px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      min-width: 44px;
       box-sizing: border-box;
     }
 
-    .form {
-      gap: 0.66rem;
+    .form,
+    .name-loc-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.72rem;
       min-width: 0;
     }
 
@@ -1004,10 +1060,10 @@
     }
 
     textarea {
-      min-height: 82px;
+      min-height: 84px;
     }
 
-    .loc-field > .quick-pills {
+    .loc-extras > .quick-pills {
       flex-wrap: wrap;
       gap: 0.35rem;
     }
@@ -1016,10 +1072,8 @@
       flex: 0 0 auto;
       white-space: nowrap;
       min-height: 44px;
-      padding: 0.4rem 0.75rem;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      min-width: 44px;
+      padding: 0.42rem 0.78rem;
       box-sizing: border-box;
     }
 
@@ -1027,9 +1081,6 @@
     .submit-btn {
       min-height: 48px;
       width: 100%;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
       box-sizing: border-box;
     }
 

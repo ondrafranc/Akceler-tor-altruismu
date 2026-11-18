@@ -35,6 +35,8 @@
     AA_GUIDED_VALUES_KEY,
   } from "../../../lib/storage/index.js";
   import ActionCard from "$lib/features/actions/components/ActionCard.svelte";
+  import AppIcon from "$lib/components/AppIcon.svelte";
+  import PageHeader from "$lib/components/PageHeader.svelte";
 
   let activeFilter = "all";
   let searchQuery = "";
@@ -52,15 +54,16 @@
   let awaitingReturnAction = null;
   let leaveTimestamp = 0;
 
+  /** @type {Array<{ id: string, label: string, icon: string }>} */
   const FILTERS = [
-    { id: "all", label: "✨ Doporučené" },
-    { id: "free", label: "Zdarma" },
-    { id: "fast", label: "Do 5 min" },
-    { id: "writing", label: "Z gauče" },
-    { id: "outdoor", label: "Venku" },
-    { id: "tutoring", label: "U počítače" },
-    { id: "donation", label: "Drobný dar" },
-    { id: "evidenceA", label: "✦ Ověřený dopad (A)" },
+    { id: "all", label: "Doporučené", icon: "sparkles" },
+    { id: "free", label: "Zdarma", icon: "heart" },
+    { id: "fast", label: "Do 5 min", icon: "clock" },
+    { id: "writing", label: "Z gauče", icon: "armchair" },
+    { id: "outdoor", label: "Venku", icon: "trees" },
+    { id: "tutoring", label: "U počítače", icon: "laptop" },
+    { id: "donation", label: "Drobný dar", icon: "gift" },
+    { id: "evidenceA", label: "Ověřený dopad (A)", icon: "shield-check" },
   ];
 
   onMount(() => {
@@ -283,22 +286,18 @@
 </svelte:head>
 
 <div class="page">
-  <header class="subpage-hero header">
-    <div class="hero-kicker">
-      DROBNÉ SKUTKY NA DÁLKU I VENKU · {MICRO_ACTIONS.length} OVĚŘENÝCH PROJEKTŮ
-    </div>
-    <h1 class="title">
-      Drobné skutky, které zvládneš <span class="serif-accent"
-        >během pár minut</span
-      >
-    </h1>
-    <p class="subtitle">
-      Začínáme třemi lehkými tipy — další si kdykoliv rozbalíš nebo vyhledáš
-      podle nálady.
-    </p>
-
+  <PageHeader
+    class="online-page-header"
+    kicker={`Drobné skutky na dálku i venku · ${MICRO_ACTIONS.length} ověřených projektů`}
+    title="Drobné skutky, které zvládneš "
+    titleAccent="během pár minut"
+    subtitle="Začínáme třemi lehkými tipy — další si kdykoliv rozbalíš nebo vyhledáš podle nálady."
+  >
     <div class="hero-tools-row">
       <div class="search-wrap">
+        <span class="search-icon" aria-hidden="true">
+          <AppIcon name="search" size={16} strokeWidth={2} />
+        </span>
         <input
           type="search"
           id="online-search"
@@ -310,10 +309,11 @@
         />
       </div>
       <button type="button" class="btn-random-spark" on:click={pickRandomSpark}>
-        ✨ Náhodný tip
+        <AppIcon name="sparkles" size={15} strokeWidth={2} />
+        <span>Náhodný tip</span>
       </button>
     </div>
-  </header>
+  </PageHeader>
 
   {#if returnPromptAction}
     <div
@@ -324,8 +324,10 @@
     >
       <div class="return-dopamine-head">
         <span class="return-dopamine-title">
-          ✨ Vítej zpět z projektu {cleanTitle(returnPromptAction.title)}!
-          Povedlo se?
+          <AppIcon name="sparkles" size={16} strokeWidth={2} />
+          <span>
+            Vítej zpět z projektu {cleanTitle(returnPromptAction.title)}! Povedlo se?
+          </span>
         </span>
         <span class="impact-payoff-badge">
           {getActionEffectMeta(returnPromptAction, returnMetric, {
@@ -360,7 +362,8 @@
             });
           }}
         >
-          ✓ Hotovo – rozsvítit stopu
+          <AppIcon name="check" size={15} strokeWidth={2.2} />
+          <span>Hotovo – rozsvítit stopu</span>
         </button>
         <button
           type="button"
@@ -390,7 +393,8 @@
           trackFunnel("intent_selected", { surface: "online", filter: f.id });
         }}
       >
-        {f.label}
+        <AppIcon name={f.icon} size={14} strokeWidth={2} />
+        <span>{f.label}</span>
       </button>
     {/each}
   </div>
@@ -470,19 +474,32 @@
   {/if}
 
   <details class="calm-drawer online-methodology-drawer">
-    <summary>⚖️ Jak hodnotíme účinnost a důkazy dopadu (A / B / C)?</summary>
+    <summary>
+      <span class="summary-label">
+        <AppIcon name="scale" size={16} strokeWidth={1.9} />
+        <span>Jak hodnotíme účinnost a dopad (A / B / C)?</span>
+      </span>
+    </summary>
     <div class="om-body">
       <p>{EVIDENCE_METHODOLOGY.intro}</p>
       <div class="om-tiers">
         {#each Object.values(EVIDENCE_TIERS) as t}
-          <div><strong>Důkazy {t.tier} ({t.shortLabel}):</strong> {t.desc}</div>
+          <div>
+            <strong>
+              Ověřený dopad ({t.tier}){t.tier === "A"
+                ? ""
+                : ` (${t.shortLabel})`}:
+            </strong>
+            {t.desc}
+          </div>
         {/each}
       </div>
       <div class="om-links">
         {#each EVIDENCE_METHODOLOGY.sources as s}
-          <a href={s.url} target="_blank" rel="noopener noreferrer"
-            >{s.label} ↗</a
-          >
+          <a href={s.url} target="_blank" rel="noopener noreferrer">
+            <span>{s.label}</span>
+            <AppIcon name="arrow-up-right" size={13} strokeWidth={2} />
+          </a>
         {/each}
       </div>
     </div>
@@ -491,132 +508,168 @@
 
 <style>
   .page {
+    width: 100%;
     max-width: 1140px;
+    box-sizing: border-box;
     margin: 0 auto;
-    padding: 0.45rem 1.25rem 5rem;
-  }
-
-  .subpage-hero.header {
-    text-align: center;
-    padding: 0.85rem 1.4rem !important;
-    margin-bottom: 0.45rem !important;
-  }
-
-  .hero-kicker {
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    color: #fde68a;
-    margin-bottom: 0.25rem;
-  }
-
-  .title {
-    font-family: var(--font-sans);
-    font-weight: 800;
-    color: #ffffff;
-    font-size: clamp(1.65rem, 2.8vw, 2.2rem);
-    margin: 0;
-    letter-spacing: -0.03em;
-    line-height: 1.12;
-  }
-
-  .title .serif-accent {
-    color: #fde68a;
-    font-weight: 400;
-  }
-
-  .subtitle {
-    color: rgba(236, 248, 241, 0.9);
-    margin: 0.28rem auto 0;
-    max-width: 52ch;
-    font-size: 0.88rem;
-    line-height: 1.44;
+    padding: 0.5rem 1.25rem 3rem;
   }
 
   .hero-tools-row {
-    margin: 0.55rem auto 0;
+    margin: 0;
     max-width: 640px;
     display: flex;
     gap: 0.55rem;
     flex-wrap: wrap;
-    justify-content: center;
+    align-items: center;
   }
 
   .search-wrap {
+    position: relative;
     flex: 1;
     min-width: 240px;
   }
 
+  .search-icon {
+    position: absolute;
+    left: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    color: var(--ink-secondary, #3f574a);
+    pointer-events: none;
+  }
+
   .search-wrap input {
     width: 100%;
-    padding: 0.72rem 1.1rem;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding: 0.62rem 1rem 0.62rem 2.35rem;
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    background: rgba(255, 255, 255, 0.96);
-    color: #0e281c;
+    border: 1px solid var(--border-strong, #c2cec5);
+    background: var(--bg-surface, #ffffff);
+    color: var(--ink-primary, #14281d);
     font-family: var(--font-sans);
-    font-size: 0.9rem;
+    font-size: 0.92rem;
   }
 
   .search-wrap input::placeholder {
-    color: #567063;
+    color: var(--ink-secondary, #3f574a);
   }
 
   .btn-random-spark {
-    padding: 0.72rem 1.15rem;
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.42rem;
+    padding: 0.62rem 1.1rem;
     border-radius: 999px;
-    border: none;
-    background: linear-gradient(135deg, #fde68a 0%, #6ee7b7 100%);
-    color: #062016;
+    border: 1px solid var(--border-strong, #c2cec5);
+    background: var(--bg-surface, #ffffff);
+    color: var(--ink-primary, #14281d);
     font-family: var(--font-sans);
-    font-weight: 800;
+    font-weight: 700;
     font-size: 0.86rem;
     cursor: pointer;
-    transition: transform 0.18s ease;
+    box-shadow: var(--shadow-sm);
+    transition:
+      background-color 0.18s ease,
+      border-color 0.18s ease;
   }
 
   .btn-random-spark:hover {
-    transform: translateY(-2px);
+    background: var(--bg-subtle, #edf2ee);
+    border-color: var(--accent-primary, #1b5e42);
+  }
+
+  .return-dopamine-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.42rem;
+  }
+
+  .btn-return-complete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
   }
 
   .filters-bar {
     display: flex;
-    gap: 0.4rem;
-    justify-content: center;
+    gap: 0.45rem;
+    justify-content: flex-start;
     flex-wrap: wrap;
-    margin: 0.45rem 0 0.65rem;
+    margin: 0.25rem 0 0.85rem;
   }
 
   .filter-chip {
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.36rem;
     padding: 0.5rem 0.95rem;
     border-radius: 999px;
-    border: 1px solid rgba(22, 66, 48, 0.1);
-    background: rgba(255, 255, 255, 0.92);
-    color: var(--text-primary);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bg-surface, #ffffff);
+    color: var(--ink-primary, #14281d);
     font-family: var(--font-sans);
     font-weight: 700;
     font-size: 0.84rem;
     cursor: pointer;
-    transition: all 0.18s ease;
+    transition:
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      color 0.18s ease;
   }
 
   .filter-chip:hover {
-    border-color: rgba(16, 185, 129, 0.38);
-    background: #ffffff;
+    border-color: var(--accent-primary, #1b5e42);
+    background: var(--bg-subtle, #edf2ee);
   }
 
   .filter-chip.active {
-    background: var(--forest-850);
-    color: #fde68a;
-    border-color: var(--forest-850);
+    background: var(--accent-primary, #1b5e42);
+    color: #ffffff;
+    border-color: var(--accent-primary, #1b5e42);
   }
 
   .empty-box {
     text-align: center;
-    padding: 2.4rem 1.5rem;
-    background: rgba(255, 255, 255, 0.94);
-    border-radius: 24px;
-    border: 1px solid rgba(22, 66, 48, 0.09);
+    padding: 2.2rem 1.5rem;
+    background: var(--bg-surface, #ffffff);
+    border-radius: 18px;
+    border: 1px solid var(--border-subtle, #dce3dd);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .empty-box p {
+    margin: 0 0 1rem;
+    color: var(--ink-secondary, #3f574a);
+    font-weight: 600;
+  }
+
+  .empty-box .cta.primary {
+    padding: 0.72rem 1.35rem;
+    border-radius: 999px;
+    border: 1px solid var(--accent-primary, #1b5e42);
+    background: var(--accent-primary, #1b5e42);
+    color: #ffffff;
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  .empty-box .cta.primary:hover {
+    background: var(--accent-primary-hover, #144732);
   }
 
   .grid {
@@ -629,13 +682,22 @@
     margin-top: 1.25rem;
   }
 
+  .summary-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+    flex: 1;
+    text-align: left;
+  }
+
   .om-body {
     margin-top: 0.65rem;
     display: flex;
     flex-direction: column;
     gap: 0.65rem;
     font-size: 0.85rem;
-    color: var(--text-secondary);
+    color: var(--ink-secondary, #3f574a);
     line-height: 1.55;
   }
 
@@ -646,35 +708,58 @@
   .om-tiers {
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
+    gap: 0.35rem;
   }
 
   .om-links {
     display: flex;
-    gap: 0.75rem;
+    gap: 0.5rem;
     flex-wrap: wrap;
   }
 
   .om-links a {
-    color: var(--emerald-600);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.35rem 0.65rem;
+    box-sizing: border-box;
+    color: var(--accent-primary, #1b5e42);
     font-weight: 700;
     text-decoration: none;
+    border-radius: 10px;
   }
 
   .om-links a:hover {
     text-decoration: underline;
+    background: var(--bg-subtle, #edf2ee);
+  }
+
+  .calm-more-hint {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.25rem;
   }
 
   .link-show-all {
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: none;
     background: transparent;
-    color: var(--emerald-600);
+    color: var(--accent-primary, #1b5e42);
     font-family: inherit;
-    font-weight: 800;
-    font-size: 0.82rem;
+    font-weight: 700;
+    font-size: 0.84rem;
     cursor: pointer;
     text-decoration: underline;
-    padding: 0 0.25rem;
+    padding: 0.35rem 0.65rem;
   }
 
   :global(.grid .card .cta),
@@ -696,32 +781,24 @@
 
   @media (max-width: 680px) {
     .page {
-      padding: 0.35rem 0.65rem calc(5.2rem + env(safe-area-inset-bottom, 0px));
+      padding: 0.25rem 0.75rem 2rem;
       overflow-x: hidden;
       width: 100%;
       box-sizing: border-box;
     }
 
-    .subpage-hero.header {
-      padding: 0.7rem 0.8rem 0.65rem;
-      margin-bottom: 0.45rem;
-      border-radius: 18px;
+    :global(.online-page-header.page-header) {
+      padding: 0.55rem 0 0.65rem;
+      margin-bottom: 0.55rem;
     }
 
-    .header .hero-kicker,
-    .header .subtitle {
-      display: none !important;
-    }
-
-    .header .title {
-      font-size: 1.18rem;
-      line-height: 1.18;
-      margin: 0;
+    :global(.online-page-header .page-header-tools) {
+      margin-top: 0.65rem;
     }
 
     .hero-tools-row {
-      margin-top: 0.45rem;
-      gap: 0.35rem;
+      margin-top: 0;
+      gap: 0.4rem;
       flex-wrap: nowrap;
     }
 
@@ -730,9 +807,13 @@
       min-width: 0;
     }
 
+    .search-icon {
+      left: 0.72rem;
+    }
+
     .search-wrap input {
       min-height: 44px;
-      padding: 0.45rem 0.72rem;
+      padding: 0.45rem 0.75rem 0.45rem 2.25rem;
       font-size: 1rem;
       border-radius: 12px;
       box-sizing: border-box;
@@ -740,11 +821,12 @@
 
     .btn-random-spark {
       min-height: 44px;
+      min-width: 44px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 0.45rem 0.75rem;
-      font-size: 0.78rem;
+      padding: 0.45rem 0.78rem;
+      font-size: 0.8rem;
       border-radius: 12px;
       white-space: nowrap;
       flex-shrink: 0;

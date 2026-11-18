@@ -1,5 +1,7 @@
 <script>
-  import { trackEvent } from '../lib/analytics.js';
+  import { trackEvent } from "$lib/analytics.js";
+  import AppIcon from "$lib/components/AppIcon.svelte";
+  import PageHeader from "$lib/components/PageHeader.svelte";
 </script>
 
 <svelte:head>
@@ -7,23 +9,29 @@
 </svelte:head>
 
 <div class="error-wrap">
-  <div class="subpage-hero error-card">
-    <div class="kicker">TICHÁ ODBOČKA</div>
-    <h1>Tady zrovna nic není, ale <span class="serif-accent">naděje nekončí</span>.</h1>
-    <p>
-      Možná šlo o starší odkaz. Pojďme tě rovnou vrátit tam, kde během minuty najdeš jeden lehký, skutečný krok v Česku.
-    </p>
+  <div class="error-card">
+    <PageHeader
+      kicker="Tichá odbočka"
+      title="Tady zrovna nic není, ale "
+      titleAccent="naděje nekončí"
+      titleSuffix="."
+      subtitle="Možná šlo o starší odkaz. Pojďme tě rovnou vrátit tam, kde během minuty najdeš jeden lehký, skutečný krok v Česku."
+      align="center"
+    />
 
     <div class="error-actions">
       <a
         href="/"
-        class="btn-primary"
-        on:click={() => trackEvent('aa_launch', { from: 'error_page' })}
+        class="error-btn-primary"
+        onclick={() => trackEvent("aa_launch", { from: "error_page" })}
       >
-        Zpět na Rychlý start →
+        <AppIcon name="zap" size={16} strokeWidth={2} />
+        <span>Zpět na Rychlý start</span>
+        <AppIcon name="arrow-right" size={16} strokeWidth={2} />
       </a>
-      <a href="/near" class="btn-glass">
-        Otevřít mapu v okolí
+      <a href="/near" class="error-btn-secondary">
+        <AppIcon name="map-pin" size={16} strokeWidth={2} />
+        <span>Otevřít mapu v okolí</span>
       </a>
     </div>
   </div>
@@ -31,44 +39,20 @@
 
 <style>
   .error-wrap {
+    width: 100%;
     max-width: 760px;
+    box-sizing: border-box;
     margin: 2rem auto 4rem;
     padding: 0 1.25rem;
   }
 
   .error-card {
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    border-radius: 20px;
+    padding: 2rem 1.75rem 2.35rem;
+    box-shadow: var(--shadow-sm, 0 2px 8px rgba(18, 42, 30, 0.05));
     text-align: center;
-    padding: 3.5rem 2rem;
-  }
-
-  .kicker {
-    font-size: 0.76rem;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    color: #fde68a;
-    margin-bottom: 0.5rem;
-  }
-
-  h1 {
-    font-family: var(--font-sans);
-    font-size: clamp(1.85rem, 3.4vw, 2.6rem);
-    font-weight: 800;
-    color: #ffffff;
-    margin: 0 0 0.85rem;
-    letter-spacing: -0.03em;
-    line-height: 1.12;
-  }
-
-  h1 .serif-accent {
-    color: #fde68a;
-    font-weight: 400;
-  }
-
-  p {
-    color: rgba(236, 248, 241, 0.9);
-    line-height: 1.6;
-    max-width: 50ch;
-    margin: 0 auto 1.8rem;
   }
 
   .error-actions {
@@ -76,35 +60,56 @@
     gap: 0.75rem;
     justify-content: center;
     flex-wrap: wrap;
+    margin-top: 1.5rem;
   }
 
-  .btn-primary {
-    padding: 0.82rem 1.35rem;
+  .error-btn-primary,
+  .error-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.75rem 1.3rem;
     border-radius: 14px;
-    background: linear-gradient(135deg, #fde68a 0%, #6ee7b7 100%);
-    color: #072116;
-    font-weight: 800;
-    text-decoration: none;
-    transition: transform 0.18s ease;
-  }
-
-  .btn-primary:hover {
-    transform: translateY(-2px);
-  }
-
-  .btn-glass {
-    padding: 0.82rem 1.35rem;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.14);
-    border: 1px solid rgba(255, 255, 255, 0.28);
-    color: #f4faf6;
     font-weight: 700;
+    font-size: 0.94rem;
     text-decoration: none;
-    backdrop-filter: blur(8px);
-    transition: background 0.18s ease;
+    box-sizing: border-box;
+    transition: background-color 0.18s ease, border-color 0.18s ease;
   }
 
-  .btn-glass:hover {
-    background: rgba(255, 255, 255, 0.22);
+  .error-btn-primary {
+    background: var(--accent-primary, #1b5e42);
+    color: #ffffff;
+    border: 1px solid var(--accent-primary, #1b5e42);
+  }
+
+  .error-btn-primary:hover {
+    background: var(--accent-primary-hover, #144732);
+    border-color: var(--accent-primary-hover, #144732);
+  }
+
+  .error-btn-secondary {
+    background: var(--bg-subtle, #edf2ee);
+    border: 1px solid var(--border-strong, #c2cec5);
+    color: var(--ink-primary, #14281d);
+  }
+
+  .error-btn-secondary:hover {
+    background: var(--bg-canvas, #f6f7f3);
+  }
+
+  @media (max-width: 680px) {
+    .error-wrap {
+      padding: 0 0.75rem;
+      margin: 1.25rem auto 2.5rem;
+    }
+
+    .error-card {
+      padding: 1.35rem 1rem 1.65rem;
+      border-radius: 16px;
+    }
   }
 </style>

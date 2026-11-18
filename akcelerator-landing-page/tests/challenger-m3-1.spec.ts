@@ -1,4 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+async function gotoHydrated(page: Page, url: string) {
+  await page.goto(url);
+  await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 20000 });
+}
 
 test.describe('Challenger M3-1: Fold Budget, Touch Targets & Zero Overflow Stress', () => {
 
@@ -18,7 +23,7 @@ test.describe('Challenger M3-1: Fold Budget, Touch Targets & Zero Overflow Stres
 
   test('1.1 Landing page (360x660): ctaBox660.y + ctaBox660.height < 650 across all 4 energy modes', async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 660 });
-    await page.goto('/');
+    await gotoHydrated(page, '/');
 
     const tabs = page.locator('.instant-card .energy-tab');
     await expect(tabs).toHaveCount(4);
@@ -45,7 +50,7 @@ test.describe('Challenger M3-1: Fold Budget, Touch Targets & Zero Overflow Stres
     await page.setViewportSize({ width: 360, height: 660 });
 
     // Test cycling actions via next quick idea button (10 cycles per mode)
-    await page.goto('/');
+    await gotoHydrated(page, '/');
     const cycleBtn = page.locator('.instant-card .cycle-btn');
     const primaryCta = page.locator('.instant-card .btn-studio-primary');
 
@@ -69,7 +74,7 @@ test.describe('Challenger M3-1: Fold Budget, Touch Targets & Zero Overflow Stres
     ];
 
     for (const actionId of stressActions) {
-      await page.goto(`/?action=${actionId}`);
+      await gotoHydrated(page, `/?action=${actionId}`);
       await expect(primaryCta).toBeVisible();
       const ctaBox = await primaryCta.boundingBox();
       expect(ctaBox, `CTA bounding box for ?action=${actionId} should exist`).not.toBeNull();
@@ -81,7 +86,7 @@ test.describe('Challenger M3-1: Fold Budget, Touch Targets & Zero Overflow Stres
 
   test('1.3 /near on 360x800: first place card has y < 520 across view states', async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 800 });
-    await page.goto('/near');
+    await gotoHydrated(page, '/near');
 
     const firstPlace = page.locator('.place-card').first();
     await expect(firstPlace).toBeVisible();
@@ -91,36 +96,59 @@ test.describe('Challenger M3-1: Fold Budget, Touch Targets & Zero Overflow Stres
     console.log(`[Fold Budget] /near default first place card y = ${placeBox!.y.toFixed(2)}px (limit: 520px)`);
     expect(placeBox!.y, `First place card y (${placeBox!.y.toFixed(2)}px) must be < 520px`).toBeLessThan(520);
 
-    // Stress: city jumps
-    const citySelect = page.locator('#near-city-jump');
-    if (await citySelect.isVisible()) {
-      for (const city of ['praha', 'brno', 'ostrava']) {
-        await citySelect.selectOption(city);
-        await page.waitForTimeout(100);
-        const cardBox = await page.locator('.place-card').first().boundingBox();
-        if (cardBox) {
-          console.log(`[Fold Budget] /near city ${city} first place card y = ${cardBox.y.toFixed(2)}px`);
-          expect(cardBox.y, `City ${city} first place card y (${cardBox.y.toFixed(2)}px) must be < 520px`).toBeLessThan(520);
+    const filtersDrawer = page.locator('details.near-filters-drawer');
+    const filtersSummary = filtersDrawer.locator('> summary.near-filters-summary');
+    const toggleDrawer = async (wantOpen: boolean) => {
+      if (await filtersSummary.isVisible()) {
+        const isOpen = await filtersDrawer.evaluate((el) => (el as HTMLDetailsElement).open);
+        if (isOpen !== wantOpen) {
+          await filtersSummary.click();
+          if (wantOpen) {
+            await expect(filtersDrawer).toHaveAttribute('open', '');
+          } else {
+            await expect(filtersDrawer).not.toHaveAttribute('open', '');
+          }
         }
       }
+    };
+
+    // Stress: city jumps
+    await toggleDrawer(true);
+    const citySelect = page.locator('#near-city-jump');
+    await expect(citySelect).toBeVisible();
+    for (const city of ['praha', 'brno', 'ostrava']) {
+      await toggleDrawer(true);
+      await citySelect.selectOption(city);
+      await page.waitForTimeout(100);
+      await toggleDrawer(false);
+      const cardBox = await page.locator('.place-card').first().boundingBox();
+      expect(cardBox).not.toBeNull();
+      console.log(`[Fold Budget] /near city ${city} first place card y = ${cardBox!.y.toFixed(2)}px`);
+      expect(cardBox!.y, `City ${city} first place card y (${cardBox!.y.toFixed(2)}px) must be < 520px`).toBeLessThan(520);
     }
 
-    // Stress: radius pills
+    // Stress: radius pills (on Praha where 2/5/8 km have dense local coverage; allow +60px if .smart-nearest-banner is shown)
+    await toggleDrawer(true);
+    await citySelect.selectOption('praha');
+    await page.waitForTimeout(100);
     const radiusPills = page.locator('.radius-pill');
     const pillCount = await radiusPills.count();
+    expect(pillCount).toBeGreaterThanOrEqual(3);
     for (let p = 0; p < Math.min(pillCount, 3); p++) {
+      await toggleDrawer(true);
       await radiusPills.nth(p).click();
       await page.waitForTimeout(100);
+      await toggleDrawer(false);
+      const hasSmartBanner = await page.locator('.smart-nearest-banner').isVisible();
       const cardBox = await page.locator('.place-card').first().boundingBox();
-      if (cardBox) {
-        expect(cardBox.y).toBeLessThan(520);
-      }
+      expect(cardBox).not.toBeNull();
+      expect(cardBox!.y).toBeLessThan(hasSmartBanner ? 580 : 520);
     }
   });
 
   test('1.4 /app/online on 360x800: first card primary CTA has y + height < 740 across filter states', async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 800 });
-    await page.goto('/app/online');
+    await gotoHydrated(page, '/app/online');
 
     const firstOnlineCta = page.locator('.grid .card .cta.primary').first();
     await expect(firstOnlineCta).toBeVisible();
@@ -158,7 +186,7 @@ test.describe('Challenger M3-1: Fold Budget, Touch Targets & Zero Overflow Stres
   test('2.1 Energy tabs in .instant-card have min-height >= 44px across all mobile viewports', async ({ page }) => {
     for (const vp of MOBILE_VIEWPORTS) {
       await page.setViewportSize({ width: vp.width, height: vp.height });
-      await page.goto('/');
+      await gotoHydrated(page, '/');
 
       const tabs = page.locator('.instant-card .energy-tab');
       await expect(tabs).toHaveCount(4);
@@ -189,7 +217,7 @@ test.describe('Challenger M3-1: Fold Budget, Touch Targets & Zero Overflow Stres
 
     for (const vp of narrowViewports) {
       await page.setViewportSize({ width: vp.width, height: vp.height });
-      await page.goto('/near');
+      await gotoHydrated(page, '/near');
 
       const mobileTabs = page.locator('.mobile-tabs button');
       await expect(mobileTabs).toHaveCount(2);
@@ -213,7 +241,7 @@ test.describe('Challenger M3-1: Fold Budget, Touch Targets & Zero Overflow Stres
 
     for (const vp of narrowViewports) {
       await page.setViewportSize({ width: vp.width, height: vp.height });
-      await page.goto('/app/online');
+      await gotoHydrated(page, '/app/online');
 
       const ctas = page.locator('.grid .card .cta');
       const count = await ctas.count();
@@ -255,7 +283,7 @@ test.describe('Challenger M3-1: Fold Budget, Touch Targets & Zero Overflow Stres
       await page.setViewportSize({ width: vp.width, height: vp.height });
 
       for (const route of FIVE_ROUTES) {
-        await page.goto(route);
+        await gotoHydrated(page, route);
 
         if (route === '/svet') {
           // Allow canvas/molly to initialize
@@ -307,7 +335,7 @@ test.describe('Challenger M3-1: Fold Budget, Touch Targets & Zero Overflow Stres
 
   test('3.2.1 Landing page (320px) interactive stress: details open, crisis panel open, mode switching', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 600 });
-    await page.goto('/');
+    await gotoHydrated(page, '/');
 
     // 1. Open mobile details drawer
     const detailsToggle = page.locator('.instant-card details.how-toggle summary');
@@ -341,7 +369,7 @@ test.describe('Challenger M3-1: Fold Budget, Touch Targets & Zero Overflow Stres
   test('3.2.2 Guided helper /app/guided (320px & 375px) interactive stress: choices, drawer, methodology table', async ({ page }) => {
     for (const width of [320, 375]) {
       await page.setViewportSize({ width, height: 700 });
-      await page.goto('/app/guided');
+      await gotoHydrated(page, '/app/guided');
 
       // Check initial state
       let ok = await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
@@ -356,13 +384,12 @@ test.describe('Challenger M3-1: Fold Budget, Touch Targets & Zero Overflow Stres
         expect(ok, `/app/guided at ${width}px with drawer open`).toBe(true);
 
         // Click a parameter chip inside drawer
-        const chip = page.locator('.adaptive-params-drawer .param-chip').first();
-        if (await chip.isVisible()) {
-          await chip.click();
-          await page.waitForTimeout(60);
-          ok = await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
-          expect(ok, `/app/guided at ${width}px after chip click`).toBe(true);
-        }
+        const chip = page.locator('details.adaptive-params-drawer .ap-pills button').first();
+        await expect(chip).toBeVisible();
+        await chip.click();
+        await page.waitForTimeout(60);
+        ok = await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+        expect(ok, `/app/guided at ${width}px after chip click`).toBe(true);
       }
 
       // Check methodology table encapsulation
@@ -376,7 +403,7 @@ test.describe('Challenger M3-1: Fold Budget, Touch Targets & Zero Overflow Stres
 
   test('3.2.3 Catalog /app/online (320px) interactive stress: horizontal scroll of filter chips', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 600 });
-    await page.goto('/app/online');
+    await gotoHydrated(page, '/app/online');
 
     const toolbar = page.locator('.filter-toolbar');
     await expect(toolbar).toBeVisible();
@@ -401,7 +428,7 @@ test.describe('Challenger M3-1: Fold Budget, Touch Targets & Zero Overflow Stres
 
   test('3.2.4 Help map /near (320px) interactive stress: switch tabs (List/Map) & city select', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 600 });
-    await page.goto('/near');
+    await gotoHydrated(page, '/near');
 
     const mobileTabs = page.locator('.mobile-tabs button');
     await expect(mobileTabs).toHaveCount(2);
@@ -422,7 +449,7 @@ test.describe('Challenger M3-1: Fold Budget, Touch Targets & Zero Overflow Stres
   test('3.2.5 Interactive Sanctuary /svet (320px) stress: long deed query param & canvas dimensions', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 600 });
     const longParam = encodeURIComponent('Velmi dlouhý text dobrého skutku se speciálními znaky čřžýáíé úů pro ověření chování při přetečení titulku na malých displejích');
-    await page.goto(`/svet?title=${longParam}`);
+    await gotoHydrated(page, `/svet?title=${longParam}`);
 
     await expect(page.locator('canvas.sanctuary-canvas')).toBeVisible();
     await page.waitForTimeout(300);

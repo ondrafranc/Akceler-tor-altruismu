@@ -40,13 +40,14 @@ describe('Milestone 3: Extracted Feature Components & UI Primitives', () => {
   });
 
   describe('Home Feature Components (src/lib/features/home/)', () => {
-    it('HeroSection.svelte compiles and contains hero stage and aurora', () => {
+    it('HeroSection.svelte compiles and contains editorial daylight hero stage without AI-look aurora', () => {
       const source = loadComponentSource('features/home/HeroSection.svelte');
       const compiled = compile(source, { generate: 'server' });
       expect(compiled.js.code).toBeDefined();
 
       expect(source).toContain('hero-stage');
-      expect(source).toContain('hero-aurora');
+      expect(source).not.toContain('hero-aurora');
+      expect(source).not.toContain('fireflies-layer');
       expect(source).toContain('hero-title');
     });
 
@@ -70,7 +71,7 @@ describe('Milestone 3: Extracted Feature Components & UI Primitives', () => {
       expect(source).toContain('CZECH_CITIES');
     });
 
-    it('SanctuaryTeaser.svelte compiles and links to /svet', () => {
+    it('SanctuaryTeaser.svelte compiles, links to /svet, and omits floating lantern/firefly overlays', () => {
       const source = loadComponentSource('features/home/SanctuaryTeaser.svelte');
       const compiled = compile(source, { generate: 'server' });
       expect(compiled.js.code).toBeDefined();
@@ -78,8 +79,8 @@ describe('Milestone 3: Extracted Feature Components & UI Primitives', () => {
       expect(source).toContain('href="/svet"');
       expect(source).toContain('href="/svet#dech"');
       expect(source).toContain('sanctuary-portal-card');
-      expect(source).toContain('living-lantern');
-      expect(source).toContain('living-firefly');
+      expect(source).not.toContain('living-lantern');
+      expect(source).not.toContain('living-firefly');
       expect(source).toContain('spw-live-pill');
     });
 

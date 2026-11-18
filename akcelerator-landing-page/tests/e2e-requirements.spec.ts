@@ -73,12 +73,15 @@ test.describe('Tier 1: Feature Coverage', () => {
       await expect(page.locator('.hero-stage')).toBeVisible();
     });
 
-    test('F1-2: Gold-green dawn backdrop and firefly particles are attached without visual defects', async ({ page }) => {
+    test('F1-2: Clean daylight editorial hero stage is visible without legacy backdrop, aurora, or fireflies', async ({ page }) => {
       await page.goto('/');
-      await expect(page.locator('.hero-painted-backdrop')).toBeAttached();
-      await expect(page.locator('.fireflies-layer')).toBeAttached();
-      const fireflies = page.locator('.fireflies-layer .firefly');
-      expect(await fireflies.count()).toBeGreaterThan(0);
+      await expect(page.locator('.hero-stage')).toBeVisible();
+      const heroInner = page.locator('.hero-inner');
+      await expect(heroInner).toBeVisible();
+      const innerBox = await heroInner.boundingBox();
+      expect(innerBox).not.toBeNull();
+      expect(innerBox!.width).toBeLessThanOrEqual(1140);
+      await expect(page.locator('.hero-painted-backdrop, .hero-aurora, .fireflies-layer')).toHaveCount(0);
     });
 
     test('F1-3: Primary hero CTAs link directly to /near (map) and /svet (Krajina dobra)', async ({ page }) => {
@@ -161,11 +164,14 @@ test.describe('Tier 1: Feature Coverage', () => {
       await expect(page.locator('body')).toContainText('minuty z domova');
     });
 
-    test('F3-2: Recommendation highlight card is rendered with evidence tier badge', async ({ page }) => {
+    test('F3-2: Recommendation highlight card is rendered with evidence tier badge inside details', async ({ page }) => {
       await page.goto('/app/guided');
       const highlight = page.locator('.highlight-card, .plan-section');
       await expect(highlight.first()).toBeVisible();
-      await expect(page.locator('.tier-A, .tier-B, .tier-C').first()).toBeVisible();
+      await page.locator('.highlight-card details.how-toggle summary').click();
+      const badge = page.locator('.highlight-card .tier-A, .highlight-card .tier-B, .highlight-card .tier-C').first();
+      await expect(badge).toBeVisible();
+      await expect(badge).toContainText('Ověřený dopad');
     });
 
     test('F3-3: Advanced parameters are tucked inside collapsible drawer', async ({ page }) => {
@@ -415,15 +421,34 @@ test.describe('Tier 1: Feature Coverage', () => {
       await expect(layer).toHaveAttribute('data-molly-mode', 'roaming');
     });
 
-    test('F8-2: Molly roaming actor coordinates stay within viewport bounds', async ({ page }) => {
+    test('F8-2: Molly roaming actor stays within viewport bounds or safely docks when crowded', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
       await page.goto('/');
       const actor = page.locator('.molly-roaming-actor');
-      await expect(actor).toBeVisible();
-      const box = await actor.boundingBox();
-      expect(box).not.toBeNull();
-      expect(box!.x).toBeGreaterThanOrEqual(-10);
-      expect(box!.x + box!.width).toBeLessThanOrEqual(385);
+      await expect(actor).toBeAttached();
+      const isDocked = await actor.evaluate((el) => el.classList.contains('is-docked'));
+      if (isDocked) {
+        const dock = page.locator('.molly-pelisek-dock.is-header-dock');
+        await expect(dock).toBeVisible();
+        const headerOverlap = await page.evaluate(() => {
+          const brand = document.querySelector('.nav-capsule a.brand')?.getBoundingClientRect();
+          const dockR = document.querySelector('.nav-capsule .molly-pelisek-dock.is-header-dock')?.getBoundingClientRect();
+          const toggle = document.querySelector('.nav-capsule .mobile-nav-toggle')?.getBoundingClientRect();
+          const ov = (a?: DOMRect, b?: DOMRect) => {
+            if (!a || !b) return false;
+            return Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1.5 &&
+              Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1.5;
+          };
+          return ov(brand, dockR) || ov(dockR, toggle) || ov(brand, toggle);
+        });
+        expect(headerOverlap).toBe(false);
+      } else {
+        await expect(actor).toBeVisible();
+        const box = await actor.boundingBox();
+        expect(box).not.toBeNull();
+        expect(box!.x).toBeGreaterThanOrEqual(-10);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(385);
+      }
     });
 
     test('F8-3: Docked mode tucks Molly neatly into bottom pelíšek dock', async ({ page }) => {
@@ -548,6 +573,7 @@ test.describe('Tier 1: Feature Coverage', () => {
         await page.goto(route);
         await expect(page.locator('.top-nav')).toBeVisible();
         await expect(page.locator('.crisis-pill')).toBeVisible();
+        await expect(page.locator('.footer-calm-actions .fc-crisis')).toBeVisible();
       }
     });
   });
@@ -588,14 +614,18 @@ test.describe('Tier 2: Boundary & Corner Cases', () => {
       await checkZeroHorizontalOverflow(page, 'home-320x568');
     });
 
-    test('F1-B5: Hero painted backdrop is present and covers full width without white side gutters', async ({ page }) => {
+    test('F1-B5: Hero stage covers full width with unified <= 1140px inner container and zero legacy backdrop', async ({ page }) => {
       await page.setViewportSize({ width: 1024, height: 768 });
       await page.goto('/');
-      const backdrop = page.locator('.hero-painted-backdrop');
-      await expect(backdrop).toBeVisible();
-      const box = await backdrop.boundingBox();
+      const stage = page.locator('.hero-stage');
+      await expect(stage).toBeVisible();
+      const box = await stage.boundingBox();
       expect(box).not.toBeNull();
       expect(box!.width).toBeGreaterThanOrEqual(1024);
+      const innerBox = await page.locator('.hero-inner').boundingBox();
+      expect(innerBox).not.toBeNull();
+      expect(innerBox!.width).toBeLessThanOrEqual(1140);
+      await expect(page.locator('.hero-painted-backdrop')).toHaveCount(0);
       await checkZeroHorizontalOverflow(page, 'home-1024x768');
     });
   });
@@ -672,15 +702,13 @@ test.describe('Tier 2: Boundary & Corner Cases', () => {
       await expect(drawer).not.toHaveAttribute('open', '');
     });
 
-    test('F3-B4: Mobile preview bar displays cleanly on 390px viewport', async ({ page }) => {
+    test('F3-B4: Guided foundations and recommendation highlight display cleanly on 390px viewport', async ({ page }) => {
       await page.setViewportSize({ width: 390, height: 844 });
       await page.goto('/app/guided');
-      const previewBar = page.locator('.mobile-guided-preview-bar');
-      if (await previewBar.isVisible()) {
-        await expect(previewBar).toContainText('Doporučení');
-      } else {
-        await expect(page.locator('.plan-section')).toBeVisible();
-      }
+      await expect(page.locator('.compass-foundations')).toBeVisible();
+      await expect(page.locator('#personal-plan')).toBeVisible();
+      await expect(page.locator('#personal-plan .highlight-card')).toBeVisible();
+      await checkZeroHorizontalOverflow(page, 'guided-390x844');
     });
 
     test('F3-B5: Direct navigation to /app/guided with query params initializes correctly', async ({ page }) => {
@@ -884,14 +912,34 @@ test.describe('Tier 2: Boundary & Corner Cases', () => {
 
   // --- F8 Boundaries ---
   test.describe('F8 Boundaries: Companion Roaming Clamping & Docking', () => {
-    test('F8-B1: Viewport resize from 1280px to 360px clamps roaming Molly within bounds', async ({ page }) => {
+    test('F8-B1: Viewport resize from 1280px to 360px clamps roaming Molly within bounds or parks safely', async ({ page }) => {
       await page.setViewportSize({ width: 1280, height: 900 });
       await page.goto('/');
       await page.setViewportSize({ width: 360, height: 800 });
-      const actorBox = await page.locator('.molly-roaming-actor').boundingBox();
-      expect(actorBox).not.toBeNull();
-      expect(actorBox!.x).toBeGreaterThanOrEqual(-10);
-      expect(actorBox!.x + actorBox!.width).toBeLessThanOrEqual(370);
+      await page.waitForTimeout(200);
+      const actor = page.locator('.molly-roaming-actor');
+      await expect(actor).toBeAttached();
+      const isDocked = await actor.evaluate((el) => el.classList.contains('is-docked'));
+      if (isDocked) {
+        await expect(page.locator('.molly-pelisek-dock.is-header-dock')).toBeVisible();
+        const headerOverlap = await page.evaluate(() => {
+          const brand = document.querySelector('.nav-capsule a.brand')?.getBoundingClientRect();
+          const dockR = document.querySelector('.nav-capsule .molly-pelisek-dock.is-header-dock')?.getBoundingClientRect();
+          const toggle = document.querySelector('.nav-capsule .mobile-nav-toggle')?.getBoundingClientRect();
+          const ov = (a?: DOMRect, b?: DOMRect) => {
+            if (!a || !b) return false;
+            return Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1.5 &&
+              Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1.5;
+          };
+          return ov(brand, dockR) || ov(dockR, toggle) || ov(brand, toggle);
+        });
+        expect(headerOverlap).toBe(false);
+      } else {
+        const actorBox = await actor.boundingBox();
+        expect(actorBox).not.toBeNull();
+        expect(actorBox!.x).toBeGreaterThanOrEqual(-10);
+        expect(actorBox!.x + actorBox!.width).toBeLessThanOrEqual(370);
+      }
     });
 
     test('F8-B2: Rapid toggling of Pelíšek dock maintains valid data-molly-mode', async ({ page }) => {
@@ -1078,10 +1126,14 @@ test.describe('Tier 3: Cross-Feature Combinations', () => {
     }
   });
 
-  test('T3-3: Mobile home navigation (F1) -> transition to /svet on mobile (F6) -> walking Molly (F7)', async ({ page }) => {
+  test('T3-3: Mobile home navigation (F1) -> top drawer to /svet on mobile (F6) -> walking Molly (F7)', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
-    await page.locator('a[href="/svet"]:visible').first().click();
+    await page.locator('.mobile-nav-toggle').click();
+    const drawer = page.locator('#mobile-top-nav-drawer');
+    await expect(drawer).toBeVisible();
+    await drawer.locator('a[href="/svet"]').click();
+    await expect(page).toHaveURL(/\/svet/);
     await expect(page.locator('canvas.sanctuary-canvas')).toHaveAttribute('data-sanctuary-molly', 'ready');
     await checkZeroHorizontalOverflow(page, 'svet-t3-3');
   });
@@ -1098,21 +1150,27 @@ test.describe('Tier 3: Cross-Feature Combinations', () => {
     }
   });
 
-  test('T3-5: Catalog filtering on /app/online (F4) -> celebrate -> Molly note renders exact Molly string (F10)', async ({ page }) => {
+  test('T3-5: Catalog filtering on /app/online (F4) -> start & complete -> Molly celebration modal renders exact Molly string (F10)', async ({ page }) => {
     await page.goto('/app/online');
     await page.locator('.filter-chip').nth(1).click();
-    const doneBtn = page.locator('.btn-done-step, .btn-studio-done').first();
-    if (await doneBtn.isVisible()) {
-      await doneBtn.click();
-      await expect(page.locator('body')).toContainText('Molly');
-    } else {
-      await expect(page.locator('.filter-toolbar')).toBeVisible();
-    }
+    const firstCard = page.locator('.grid .card').first();
+    await firstCard.locator('.cta.primary').dispatchEvent('click');
+    const doneBtn = firstCard.locator('.btn-studio-done, .cta.secondary').first();
+    await expect(doneBtn).toBeVisible();
+    await doneBtn.click();
+    const modal = page.locator('.celebration-backdrop');
+    await expect(modal).toBeVisible();
+    await expect(modal).toContainText('Molly');
   });
 
   test('T3-6: Map search on /near (F4) -> city jump -> zero overflow (F1/F4) -> return home -> card stable (F2)', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/near');
+    const filtersDrawer = page.locator('details.near-filters-drawer');
+    if (!(await filtersDrawer.evaluate((el) => (el as HTMLDetailsElement).open))) {
+      await filtersDrawer.locator('> summary.near-filters-summary').click();
+    }
+    await expect(filtersDrawer).toHaveAttribute('open', '');
     await page.locator('#near-city-jump').selectOption({ label: 'Brno' });
     await checkZeroHorizontalOverflow(page, 'near-brno-375px');
 
@@ -1133,9 +1191,11 @@ test.describe('Tier 4: Real-World Application Scenarios', () => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/');
 
-    // 1. Wow effect: warm hero backdrop, title, and serif accent
-    await expect(page.locator('.hero-painted-backdrop')).toBeAttached();
-    await expect(page.locator('.hero-title')).toContainText('Pomáhat může být lehké');
+    // 1. Clean editorial hero stage & mobile claim
+    await expect(page.locator('.hero-stage')).toBeVisible();
+    await expect(page.locator('.hero-painted-backdrop, .hero-aurora, .fireflies-layer')).toHaveCount(0);
+    await expect(page.locator('.hero-mobile-claim')).toBeVisible();
+    await expect(page.locator('.hero-mobile-claim')).toContainText('Jeden ověřený dobrý skutek');
 
     // 2. Zero horizontal overflow
     await checkZeroHorizontalOverflow(page, 'scenario-1-first-load');
@@ -1149,10 +1209,13 @@ test.describe('Tier 4: Real-World Application Scenarios', () => {
     await card.locator('.energy-tab').nth(1).click();
     await expect(card.locator('.action-title')).toBeVisible();
 
-    // 5. Check primary CTA button
+    // 5. Check primary CTA button above the 667px fold
     const cta = card.locator('.btn-studio-primary');
     await expect(cta).toBeVisible();
-    await expect(cta).toContainText(/Nakrmit útulek teď|Začít pomáhat/);
+    await expect(cta).toContainText(/Nakrmit útulek teď|Začít/);
+    const ctaBox = await cta.boundingBox();
+    expect(ctaBox).not.toBeNull();
+    expect(ctaBox!.y + ctaBox!.height).toBeLessThanOrEqual(667);
   });
 
   test('Scenario 2: Mobile user finds deed via Guided Help without 40-button overload (F3, F9) [390x844]', async ({ page }) => {

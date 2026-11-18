@@ -42,47 +42,40 @@ test.describe('Challenger M1-2: Responsiveness, Visual Stability & Sensory Engin
     await expect(img).toHaveAttribute('src', '/art/sanctuary-dawn.jpg');
     await expect(img).toHaveAttribute('alt', 'Malovaná česká tůň zalitá zlatým svítáním s plovoucími lucernami dobrých skutků');
 
-    // Verify image actually loads
-    const imgLoaded = await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0);
-    expect(imgLoaded).toBe(true);
+    // Verify image actually loads (scroll into view for loading="lazy")
+    await img.scrollIntoViewIfNeeded();
+    await expect.poll(
+      async () => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0),
+      { timeout: 10000 }
+    ).toBe(true);
 
-    // Decorative atmosphere & live pill
-    await expect(section.locator('.preview-atmosphere')).toHaveAttribute('aria-hidden', 'true');
+    // Clean editorial preview overlay & feature tags (zero floating lanterns/fireflies/emojis)
+    await expect(section.locator('.preview-atmosphere, .living-lantern, .living-firefly')).toHaveCount(0);
     await expect(section.locator('.spw-live-pill')).toBeVisible();
-    await expect(section.locator('.spw-enter')).toContainText('Vstoupit do tůně →');
+    await expect(section.locator('.spw-live-pill')).toHaveAttribute('aria-hidden', 'true');
 
-    // Keyframes check: floating lanterns & fireflies
-    const lanterns = section.locator('.living-lantern');
-    await expect(lanterns).toHaveCount(3);
+    const spwEnter = section.locator('.spw-enter');
+    await expect(spwEnter).toContainText('Vstoupit do tůně');
+    expect(await spwEnter.innerText()).not.toContain('→');
+    await expect(spwEnter.locator('svg')).toBeVisible();
+
+    const featuresStrip = section.locator('.sanctuary-features-strip');
+    await expect(featuresStrip).toHaveAttribute('aria-hidden', 'true');
+    const featureTags = featuresStrip.locator('.feature-tag');
+    await expect(featureTags).toHaveCount(3);
+    await expect(featureTags.nth(0)).toContainText('Plovoucí lucerny');
+    await expect(featureTags.nth(1)).toContainText('Zářící hvězdy');
+    await expect(featureTags.nth(2)).toContainText('Klidný dech');
     for (let i = 0; i < 3; i++) {
-      await expect(lanterns.nth(i)).toHaveAttribute('aria-hidden', 'true');
+      await expect(featureTags.nth(i).locator('svg')).toBeVisible();
     }
-
-    const fireflies = section.locator('.living-firefly');
-    await expect(fireflies).toHaveCount(4);
-    for (let i = 0; i < 4; i++) {
-      await expect(fireflies.nth(i)).toHaveAttribute('aria-hidden', 'true');
-    }
-
-    // Inspect CSS animation names
-    const lanternAnim = await lanterns.first().evaluate((el) => window.getComputedStyle(el).animationName);
-    expect(lanternAnim).toContain('lanternBob');
-
-    const fireflyAnim = await fireflies.first().evaluate((el) => window.getComputedStyle(el).animationName);
-    expect(fireflyAnim).toContain('fireflyDrift');
-
-    const glowAnim = await section.locator('.lantern-glow').first().evaluate((el) => window.getComputedStyle(el).animationName);
-    expect(glowAnim).toContain('lanternPulse');
-
-    const dotAnim = await section.locator('.live-pulse-dot').evaluate((el) => window.getComputedStyle(el).animationName);
-    expect(dotAnim).toContain('livePulse');
 
     // Verify reduced motion compliance
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    const reducedLanternAnim = await lanterns.first().evaluate((el) => window.getComputedStyle(el).animationName);
-    const reducedFireflyAnim = await fireflies.first().evaluate((el) => window.getComputedStyle(el).animationName);
-    expect(reducedLanternAnim).toBe('none');
-    expect(reducedFireflyAnim).toBe('none');
+    const previewLink = section.locator('a.sanctuary-preview-window');
+    await previewLink.hover();
+    const reducedTransform = await previewLink.evaluate((el) => window.getComputedStyle(el).transform);
+    expect(reducedTransform).toBe('none');
 
     // Reset reduced motion
     await page.emulateMedia({ reducedMotion: 'no-preference' });
@@ -96,7 +89,6 @@ test.describe('Challenger M1-2: Responsiveness, Visual Stability & Sensory Engin
     await expect(breathBtn).toHaveAttribute('href', '/svet#dech');
     await expect(breathBtn).toContainText('Dechové zastavení');
 
-    const previewLink = section.locator('a.sanctuary-preview-window');
     await expect(previewLink).toHaveAttribute('href', '/svet');
     await expect(previewLink).toHaveAttribute('aria-label', 'Otevřít živou Krajinu dobra');
 
@@ -148,13 +140,13 @@ test.describe('Challenger M1-2: Responsiveness, Visual Stability & Sensory Engin
     expect(consoleErrors).toHaveLength(0);
   });
 
-  test('3. Tablet Header Nav Bar Stress: .world-pill layout & zero overflow (681px to 1024px)', async ({ page }) => {
+  test('3. Tablet Header Nav Bar Stress: Top-only drawer & zero overflow (681px to 1024px)', async ({ page }) => {
     const tabletViewports = [1024, 900, 834, 768, 720, 681];
 
     for (const vp of tabletViewports) {
       await page.setViewportSize({ width: vp, height: 800 });
       await page.goto('/');
-      await page.waitForLoadState('domcontentloaded');
+      await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 20000 });
 
       const topNav = page.locator('.top-nav');
       await expect(topNav).toBeVisible();
@@ -162,71 +154,123 @@ test.describe('Challenger M1-2: Responsiveness, Visual Stability & Sensory Engin
       const navCapsule = page.locator('.nav-capsule');
       await expect(navCapsule).toBeVisible();
 
-      // Verify .world-pill is present in DOM
-      const worldPill = page.locator('.nav-pill.world-pill');
-      await expect(worldPill).toBeAttached();
-      await expect(worldPill).toContainText('Krajina dobra');
+      // Legacy .mobile-bottom-nav must not exist; .nav-links and .brand-sub are hidden <= 1024px
+      await expect(page.locator('.mobile-bottom-nav')).toHaveCount(0);
+      await expect(page.locator('.nav-links')).toBeHidden();
+      await expect(page.locator('.brand-sub')).toBeHidden();
 
-      // Detailed telemetry on nav items
+      const navToggle = page.locator('.mobile-nav-toggle');
+      await expect(navToggle).toBeVisible();
+      const toggleBox = await navToggle.boundingBox();
+      expect(toggleBox).not.toBeNull();
+      expect(toggleBox!.width).toBeGreaterThanOrEqual(43.5);
+      expect(toggleBox!.height).toBeGreaterThanOrEqual(43.5);
+
+      await expect(page.locator('.molly-pelisek-dock.is-header-dock')).toBeVisible();
+
       const navDetails = await page.evaluate(() => {
-        const topNav = document.querySelector('.top-nav') as HTMLElement;
-        const capsule = document.querySelector('.nav-capsule') as HTMLElement;
-        const links = document.querySelector('.nav-links') as HTMLElement;
-        const world = document.querySelector('.nav-pill.world-pill') as HTMLElement;
         const doc = document.documentElement;
-
-        const pills = Array.from(document.querySelectorAll('.nav-links .nav-pill')).map(p => {
-          const el = p as HTMLElement;
-          const rect = el.getBoundingClientRect();
-          return {
-            text: el.innerText.trim(),
-            display: window.getComputedStyle(el).display,
-            rect: { left: rect.left, right: rect.right, width: rect.width }
-          };
-        });
-
-        const worldRect = world.getBoundingClientRect();
-
+        const brand = document.querySelector('.nav-capsule a.brand') as HTMLElement | null;
+        const dock = document.querySelector('.nav-capsule .molly-pelisek-dock') as HTMLElement | null;
+        const toggle = document.querySelector('.nav-capsule button.mobile-nav-toggle') as HTMLElement | null;
+        const toRect = (el: HTMLElement | null) => {
+          if (!el || window.getComputedStyle(el).display === 'none') return null;
+          const r = el.getBoundingClientRect();
+          return { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+        };
+        const overlaps = (
+          a: { left: number; top: number; right: number; bottom: number } | null,
+          b: { left: number; top: number; right: number; bottom: number } | null
+        ) => {
+          if (!a || !b) return false;
+          const w = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+          const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+          return w > 1.5 && h > 1.5;
+        };
+        const bRect = toRect(brand);
+        const dRect = toRect(dock);
+        const tRect = toRect(toggle);
         return {
           windowWidth: window.innerWidth,
           docScrollWidth: doc.scrollWidth,
           hasDocHScroll: doc.scrollWidth > window.innerWidth,
-          capsuleWidth: capsule.clientWidth,
-          linksWidth: links.clientWidth,
-          linksScrollWidth: links.scrollWidth,
-          linksOverflowing: links.scrollWidth > links.clientWidth,
-          worldRect: { left: worldRect.left, right: worldRect.right, width: worldRect.width },
-          pills
+          brandDockOverlap: overlaps(bRect, dRect),
+          brandToggleOverlap: overlaps(bRect, tRect),
+          dockToggleOverlap: overlaps(dRect, tRect)
         };
       });
 
       console.log(`[Viewport ${vp}px] navDetails:`, JSON.stringify(navDetails));
-
-      // Global page overflow MUST NEVER occur
       expect(navDetails.hasDocHScroll).toBe(false);
+      expect(navDetails.brandDockOverlap).toBe(false);
+      expect(navDetails.brandToggleOverlap).toBe(false);
+      expect(navDetails.dockToggleOverlap).toBe(false);
 
-      // Header nav links MUST NEVER overflow (zero hidden overflow on tablet viewports)
-      expect(navDetails.linksOverflowing).toBe(false);
-
-      // Verify add-tip is hidden at tablet widths <= 1024px
-      const addTip = page.locator('.nav-pill.add-tip');
-      await expect(addTip).toBeHidden();
-
-      // Verify brand-sub is hidden to preserve space
-      const brandSub = page.locator('.brand-sub');
-      await expect(brandSub).toBeHidden();
-
-      // Verify flex-wrap on .nav-links is nowrap
-      const navLinksWrap = await page.locator('.nav-links').evaluate((el) => {
-        return window.getComputedStyle(el).flexWrap;
-      });
-      expect(navLinksWrap).toBe('nowrap');
+      // Opening top drawer reveals all 6 routes including Krajina dobra (/svet)
+      await navToggle.click();
+      const drawer = page.locator('#mobile-top-nav-drawer');
+      await expect(drawer).toBeVisible();
+      const worldLink = drawer.locator('a[href="/svet"]');
+      await expect(worldLink).toBeVisible();
+      await expect(worldLink).toContainText('Krajina dobra');
+      await navToggle.click();
+      await expect(drawer).toBeHidden();
     }
   });
 
   test('4. Sensory Engine: ResizeObserver Dynamic Wake-up & Blank Frame Prevention', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
+    await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 20000 });
+
+    // Phase 1 (before start): preview diorama canvas is mounted without data-molly-mini
+    const previewCanvas = page.locator('.instant-card canvas.preview-diorama-canvas');
+    await expect(previewCanvas).toBeVisible();
+    expect(await previewCanvas.getAttribute('data-molly-mini')).toBeNull();
+    const previewPixels = await previewCanvas.evaluate((cv: HTMLCanvasElement) => {
+      const ctx = cv.getContext('2d');
+      if (!ctx) return 0;
+      const imgData = ctx.getImageData(0, 0, cv.width, cv.height);
+      let nonZero = 0;
+      for (let i = 3; i < imgData.data.length; i += 4) {
+        if (imgData.data[i] > 10) nonZero++;
+      }
+      return nonZero;
+    });
+    expect(previewPixels).toBeGreaterThan(100);
+
+    for (const w of [420, 560, 340, 720]) {
+      await page.evaluate((targetWidth) => {
+        const card = document.querySelector('.instant-card') as HTMLElement;
+        if (card) {
+          card.style.width = `${targetWidth}px`;
+          card.style.maxWidth = `${targetWidth}px`;
+        }
+      }, w);
+      await page.waitForTimeout(60);
+      const resizedPreviewPixels = await previewCanvas.evaluate((cv: HTMLCanvasElement) => {
+        const ctx = cv.getContext('2d');
+        if (!ctx) return 0;
+        const imgData = ctx.getImageData(0, 0, cv.width, cv.height);
+        let nonZero = 0;
+        for (let i = 3; i < imgData.data.length; i += 4) {
+          if (imgData.data[i] > 10) nonZero++;
+        }
+        return nonZero;
+      });
+      expect(resizedPreviewPixels).toBeGreaterThan(100);
+    }
+
+    // Reset inline card width before starting Phase 2
+    await page.evaluate(() => {
+      const card = document.querySelector('.instant-card') as HTMLElement;
+      if (card) {
+        card.style.width = '';
+        card.style.maxWidth = '';
+      }
+    });
+
+    // Phase 2: Start action via primary CTA -> payoff canvas mounts with Mini-Molly
+    await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
 
     // Locate payoff canvas in instant card
     const canvas = page.locator('.instant-card canvas.impact-payoff-canvas');
@@ -298,60 +342,76 @@ test.describe('Challenger M1-2: Responsiveness, Visual Stability & Sensory Engin
     }
   });
 
-  test('5. Nav Pill Gap Diagnosis & Verified Mitigation (681px–767px)', async ({ page }) => {
-    // 1. Verify zero overflow at 681px with verified mitigation active
-    await page.setViewportSize({ width: 681, height: 800 });
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
+  test('5. Nav Breakpoint Boundary Verification (681px, 1024px, 1025px, 1160px)', async ({ page }) => {
+    for (const vp of [681, 1024]) {
+      await page.setViewportSize({ width: vp, height: 800 });
+      await page.goto('/');
+      await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 20000 });
 
-    const layoutState = await page.evaluate(() => {
-      const links = document.querySelector('.nav-links') as HTMLElement;
-      const world = document.querySelector('.nav-pill.world-pill') as HTMLElement;
-      const worldRect = world.getBoundingClientRect();
-      return {
-        linksWidth: links.clientWidth,
-        linksScrollWidth: links.scrollWidth,
-        linksOverflowing: links.scrollWidth > links.clientWidth,
-        overflowPixels: Math.max(0, links.scrollWidth - links.clientWidth),
-        worldRight: worldRect.right
-      };
-    });
+      await expect(page.locator('.mobile-bottom-nav')).toHaveCount(0);
+      await expect(page.locator('.mobile-nav-toggle')).toBeVisible();
+      await expect(page.locator('.nav-links')).toBeHidden();
 
-    console.log('[681px Fixed Layout State]:', JSON.stringify(layoutState));
-    expect(layoutState.linksOverflowing).toBe(false);
-    expect(layoutState.overflowPixels).toBe(0);
-    expect(layoutState.worldRight).toBeLessThanOrEqual(681);
+      const compactState = await page.evaluate((width) => {
+        const doc = document.documentElement;
+        const brand = document.querySelector('.nav-capsule a.brand') as HTMLElement | null;
+        const dock = document.querySelector('.nav-capsule .molly-pelisek-dock') as HTMLElement | null;
+        const toggle = document.querySelector('.nav-capsule button.mobile-nav-toggle') as HTMLElement | null;
+        const r = (el: HTMLElement | null) => (el ? el.getBoundingClientRect() : null);
+        const ov = (a: DOMRect | null, b: DOMRect | null) => {
+          if (!a || !b) return false;
+          return Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1.5 &&
+            Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1.5;
+        };
+        const bR = r(brand);
+        const dR = r(dock);
+        const tR = r(toggle);
+        return {
+          hasDocHScroll: doc.scrollWidth > width,
+          overlap: ov(bR, dR) || ov(bR, tR) || ov(dR, tR)
+        };
+      }, vp);
 
-    // 2. Test Mitigation: Either raising mobile bottom nav to 768px OR icon-only compacting for intermediate tablets
-    const iconCompactMitigation = await page.evaluate(() => {
-      const style = document.createElement('style');
-      style.id = 'icon-compact-style';
-      style.textContent = `
-        @media (max-width: 767px) {
-          .nav-capsule { padding: 0.35rem 0.5rem !important; }
-          .nav-pill span { display: none !important; }
-          .nav-pill.world-pill span { display: inline !important; font-size: 0.72rem !important; }
-          .nav-pill { padding: 0.32rem 0.44rem !important; }
-        }
-      `;
-      document.head.appendChild(style);
+      expect(compactState.hasDocHScroll).toBe(false);
+      expect(compactState.overlap).toBe(false);
+    }
 
-      const links = document.querySelector('.nav-links') as HTMLElement;
-      const world = document.querySelector('.nav-pill.world-pill') as HTMLElement;
-      const worldRect = world.getBoundingClientRect();
+    for (const vp of [1025, 1160]) {
+      await page.setViewportSize({ width: vp, height: 800 });
+      await page.goto('/');
+      await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 20000 });
 
-      return {
-        linksWidth: links.clientWidth,
-        linksScrollWidth: links.scrollWidth,
-        linksOverflowing: links.scrollWidth > links.clientWidth,
-        worldRight: worldRect.right,
-        windowWidth: window.innerWidth
-      };
-    });
+      await expect(page.locator('.mobile-bottom-nav')).toHaveCount(0);
+      await expect(page.locator('.mobile-nav-toggle')).toBeHidden();
+      await expect(page.locator('.nav-links')).toBeVisible();
 
-    console.log('[681px Icon-Compact Mitigation]:', JSON.stringify(iconCompactMitigation));
-    expect(iconCompactMitigation.linksOverflowing).toBe(false);
-    expect(iconCompactMitigation.worldRight).toBeLessThanOrEqual(681);
+      const desktopState = await page.evaluate((width) => {
+        const doc = document.documentElement;
+        const brand = document.querySelector('.nav-capsule a.brand') as HTMLElement;
+        const links = document.querySelector('.nav-links') as HTMLElement;
+        const pills = Array.from(document.querySelectorAll('.nav-links .nav-pill')) as HTMLElement[];
+        const maxPillRight = Math.max(...pills.map((p) => p.getBoundingClientRect().right));
+        const brandRect = brand.getBoundingClientRect();
+        const linksRect = links.getBoundingClientRect();
+        const brandLinksOverlap =
+          Math.min(brandRect.right, linksRect.right) - Math.max(brandRect.left, linksRect.left) > 1.5 &&
+          Math.min(brandRect.bottom, linksRect.bottom) - Math.max(brandRect.top, linksRect.top) > 1.5;
+        return {
+          hasDocHScroll: doc.scrollWidth > width,
+          flexWrap: window.getComputedStyle(links).flexWrap,
+          linksOverflowing: links.scrollWidth > links.clientWidth,
+          maxPillRight,
+          brandLinksOverlap
+        };
+      }, vp);
+
+      console.log(`[${vp}px Desktop Nav State]:`, JSON.stringify(desktopState));
+      expect(desktopState.hasDocHScroll).toBe(false);
+      expect(desktopState.flexWrap).toBe('nowrap');
+      expect(desktopState.linksOverflowing).toBe(false);
+      expect(desktopState.maxPillRight).toBeLessThanOrEqual(vp);
+      expect(desktopState.brandLinksOverlap).toBe(false);
+    }
   });
 
 });

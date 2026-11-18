@@ -6,14 +6,16 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { feedbackReportRequest } from '../lib/analytics.js';
+  import AppIcon from '$lib/components/AppIcon.svelte';
   import {
+    cleanTitle,
     isFeedbackOpen,
     feedbackPrefill,
     openFeedbackModal,
     closeFeedbackModal
   } from '../lib/utils.js';
 
-  let modalTitle = '💬 Zpětná vazba';
+  let modalTitle = 'Zpětná vazba';
   let feedback = '';
   let rating = 0;
   let isSubmitting = false;
@@ -26,10 +28,10 @@
   $: if ($feedbackPrefill) {
     const prefillVal = $feedbackPrefill;
     if (typeof prefillVal === 'string') {
-      modalTitle = '💬 Nahlásit nefunkční údaj';
+      modalTitle = 'Nahlásit nefunkční údaj';
       feedback = prefillVal;
     } else if (typeof prefillVal === 'object' && prefillVal !== null) {
-      modalTitle = prefillVal.title || '💬 Zpětná vazba';
+      modalTitle = cleanTitle(prefillVal.title || '') || 'Zpětná vazba';
       if (prefillVal.prefill) {
         feedback = prefillVal.prefill;
       }
@@ -41,7 +43,7 @@
 
   $: if ($feedbackReportRequest?.open) {
     openFeedbackModal({
-      title: $feedbackReportRequest.title || '💬 Nahlásit nefunkční údaj',
+      title: cleanTitle($feedbackReportRequest.title || '') || 'Nahlásit nefunkční údaj',
       prefill: $feedbackReportRequest.prefill || ''
     });
     feedbackReportRequest.set(null);
@@ -58,7 +60,7 @@
   };
 
   function openModal() {
-    openFeedbackModal({ title: '💬 Zpětná vazba' });
+    openFeedbackModal({ title: 'Zpětná vazba' });
   }
 
   function closeModal() {
@@ -134,7 +136,7 @@
   on:click={openModal}
   aria-label="Otevřít formulář zpětné vazby"
 >
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  <AppIcon name="message-circle" size={15} strokeWidth={2} />
   <span class="fb-label">Zpětná vazba</span>
 </button>
 
@@ -151,8 +153,13 @@
   >
     <div class="modal-card">
       <div class="modal-head">
-        <h2 id="fb-title">{modalTitle}</h2>
-        <button type="button" class="close-btn" on:click={closeModal} aria-label="Zavřít">✕</button>
+        <h2 id="fb-title" class="modal-title">
+          <AppIcon name="message-circle" size={20} strokeWidth={2} />
+          <span>{modalTitle}</span>
+        </h2>
+        <button type="button" class="close-btn" on:click={closeModal} aria-label="Zavřít">
+          <AppIcon name="x" size={18} strokeWidth={2} />
+        </button>
       </div>
 
       <p class="modal-sub">
@@ -184,7 +191,7 @@
                 on:click={() => (rating = s)}
                 aria-label={`${s} z 5 hvězd`}
               >
-                ★
+                <AppIcon name="star" size={22} strokeWidth={1.85} />
               </button>
             {/each}
             {#if rating > 0}
@@ -210,41 +217,40 @@
 <style>
   .feedback-pill {
     position: fixed;
-    bottom: 52px;
-    right: 12px;
+    bottom: 66px;
+    right: 14px;
     left: auto;
     z-index: 90;
     display: inline-flex;
     align-items: center;
-    gap: 0.38rem;
-    padding: 0.38rem 0.72rem;
+    justify-content: center;
+    gap: 0.42rem;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding: 0.45rem 0.85rem;
     border-radius: 999px;
-    border: 1px solid rgba(22, 82, 56, 0.16);
-    background: rgba(253, 255, 253, 0.94);
-    color: #143324;
+    border: 1px solid var(--border-strong, #c2cec5);
+    background: var(--bg-surface, #ffffff);
+    color: var(--ink-primary, #14281d);
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 0.75rem;
+    font-size: 0.78rem;
     cursor: pointer;
-    box-shadow: 0 10px 24px -8px rgba(12, 38, 26, 0.18);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    transition: all 0.18s ease;
+    box-shadow: var(--shadow-md, 0 8px 20px -6px rgba(18, 42, 30, 0.08));
+    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
   }
 
   .feedback-pill:hover {
-    background: #ffffff;
-    border-color: rgba(5, 150, 105, 0.38);
-    color: #065f46;
-    transform: translateY(-1px);
+    background: var(--bg-subtle, #edf2ee);
+    border-color: var(--accent-primary, #1b5e42);
+    color: var(--accent-primary, #1b5e42);
   }
 
   .modal-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 200;
-    background: rgba(20, 32, 21, 0.45);
-    backdrop-filter: blur(4px);
+    z-index: 1050;
+    background: rgba(20, 40, 29, 0.52);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -254,43 +260,60 @@
   .modal-card {
     width: 100%;
     max-width: 460px;
-    background: white;
+    background: var(--bg-surface, #ffffff);
     border-radius: 20px;
-    border: 1px solid rgba(44, 62, 45, 0.15);
+    border: 1px solid var(--border-subtle, #dce3dd);
     padding: 1.35rem;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
+    box-shadow: var(--shadow-xl, 0 20px 44px -12px rgba(18, 42, 30, 0.16));
   }
 
   .modal-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 0.4rem;
+    gap: 0.75rem;
+    margin-bottom: 0.45rem;
   }
 
-  .modal-head h2 {
+  .modal-head h2,
+  .modal-title {
     margin: 0;
-    font-family: 'Inter', sans-serif;
-    font-size: 1.25rem;
-    color: var(--czech-forest);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: var(--font-sans);
+    font-size: 1.2rem;
+    color: var(--ink-primary, #14281d);
   }
 
   .close-btn {
-    border: none;
-    background: rgba(242, 247, 242, 0.9);
-    width: 30px;
-    height: 30px;
+    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bg-subtle, #edf2ee);
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 999px;
     cursor: pointer;
-    font-weight: 800;
-    color: var(--text-secondary);
+    color: var(--ink-secondary, #3f574a);
+    flex-shrink: 0;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  .close-btn:hover {
+    background: var(--border-subtle, #dce3dd);
+    color: var(--ink-primary, #14281d);
   }
 
   .modal-sub {
     margin: 0 0 1rem 0;
-    color: var(--text-secondary);
+    color: var(--ink-secondary, #3f574a);
     font-size: 0.92rem;
-    line-height: 1.45;
+    line-height: 1.48;
   }
 
   .fb-form {
@@ -302,16 +325,20 @@
   .field-label {
     font-size: 0.88rem;
     font-weight: 700;
-    color: var(--czech-forest);
+    color: var(--ink-primary, #14281d);
   }
 
   textarea {
     width: 100%;
+    box-sizing: border-box;
     padding: 0.65rem 0.75rem;
     border-radius: 12px;
-    border: 1px solid rgba(44, 62, 45, 0.2);
+    border: 1px solid var(--border-strong, #c2cec5);
+    background: var(--bg-surface, #ffffff);
+    color: var(--ink-primary, #14281d);
     font-family: inherit;
-    font-size: 0.94rem;
+    font-size: 1rem;
+    line-height: 1.45;
     resize: vertical;
   }
 
@@ -324,58 +351,86 @@
   .stars {
     display: flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.25rem;
     flex-wrap: wrap;
   }
 
   .star-btn {
-    border: none;
-    background: none;
-    font-size: 1.45rem;
-    color: #d1d5db;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--ink-muted, #61786b);
     cursor: pointer;
-    padding: 0 0.15rem;
-    line-height: 1;
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+    border-radius: 10px;
+    transition: color 0.15s ease, background-color 0.15s ease;
+  }
+
+  .star-btn:hover {
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--ink-primary, #14281d);
   }
 
   .star-btn.active {
-    color: #f59e0b;
+    color: #8f4b0e;
+    background: var(--accent-warm-tint, #fef6e8);
+    border-color: rgba(143, 75, 14, 0.24);
+  }
+
+  .star-btn.active :global(svg) {
+    fill: currentColor;
   }
 
   .rating-text {
     font-size: 0.84rem;
-    color: var(--text-secondary);
+    color: var(--ink-secondary, #3f574a);
     margin-left: 0.35rem;
     font-weight: 600;
   }
 
   .status-box {
-    padding: 0.6rem 0.75rem;
+    padding: 0.65rem 0.8rem;
     border-radius: 10px;
     font-size: 0.9rem;
     font-weight: 600;
   }
+
   .status-box.success {
-    background: rgba(236, 253, 245, 0.9);
-    color: #065f46;
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--accent-primary, #1b5e42);
   }
+
   .status-box.error {
-    background: rgba(254, 242, 242, 0.9);
+    background: #fef2f2;
     color: #991b1b;
   }
 
   .submit-btn {
     width: 100%;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 0.75rem 1rem;
     border-radius: 12px;
     border: none;
-    background: var(--czech-forest);
-    color: white;
-    font-family: 'Inter', sans-serif;
+    background: var(--accent-primary, #1b5e42);
+    color: #ffffff;
+    font-family: var(--font-sans);
     font-weight: 700;
     font-size: 0.95rem;
     cursor: pointer;
+    transition: background-color 0.15s ease;
   }
+
+  .submit-btn:hover:not(:disabled) {
+    background: var(--accent-primary-hover, #144732);
+  }
+
   .submit-btn:disabled {
     opacity: 0.55;
     cursor: not-allowed;
@@ -387,7 +442,6 @@
     }
 
     .modal-backdrop {
-      z-index: 990;
       align-items: flex-end;
       padding: 0;
     }

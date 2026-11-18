@@ -32,23 +32,23 @@ describe('recommendationEngine: scoring & ranking algorithms', () => {
     const resultsAnimals = recommendActions({ values: ['animals'] });
     const topAnimals = resultsAnimals[0];
     expect(topAnimals.values).toContain('animals');
-    expect(topAnimals.reasons).toContain('🎯 přesně pro vybrané téma');
+    expect(topAnimals.reasons).toContain('přesně pro vybrané téma');
 
     const resultsEnvironment = recommendActions({ values: ['environment'] });
     const topEnvironment = resultsEnvironment[0];
     expect(topEnvironment.values).toContain('environment');
-    expect(topEnvironment.reasons).toContain('🎯 přesně pro vybrané téma');
+    expect(topEnvironment.reasons).toContain('přesně pro vybrané téma');
   });
 
   it('boosts actions matching the requested time bucket', () => {
     const results5 = recommendActions({ timeBucket: '5' });
     expect(results5[0].timeBucket).toBe('5');
-    expect(results5[0].reasons).toContain('⚡ do 5 minut');
+    expect(results5[0].reasons).toContain('do 5 minut');
 
     const results15 = recommendActions({ timeBucket: '15' });
     const top15 = results15.find((a) => a.timeBucket === '15');
     expect(top15).toBeDefined();
-    expect(top15?.reasons).toContain('⏱️ klidných 10–15 minut');
+    expect(top15?.reasons).toContain('klidných 10–15 minut');
   });
 
   it('penalizes financial donations when cost is free', () => {
@@ -67,7 +67,7 @@ describe('recommendationEngine: scoring & ranking algorithms', () => {
 
     const local = recommendActions({ mode: 'local' });
     expect(local[0].mode).toBe('local');
-    expect(local[0].reasons).toContain('🚶 venku mimo obrazovky');
+    expect(local[0].reasons).toContain('venku mimo obrazovky');
   });
 
   it('penalizes completed and excluded actions', () => {

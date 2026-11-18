@@ -73,8 +73,9 @@ test('all core routes return 200, render Krajina dobra navigation, and contain z
 test('home mood tabs start with shelter bowl, rotate 4 distinct actions, and connect to deed-lit Krajina dobra + breathing', async ({ page }) => {
   await page.goto('/');
 
-  // Painterly backdrop present & old fate slider absent
-  await expect(page.locator('.hero-painted-backdrop')).toBeAttached();
+  // Editorial daylight hero stage present & old backdrops/aurora/fireflies/fate slider absent
+  await expect(page.locator('.hero-stage')).toBeVisible();
+  await expect(page.locator('.hero-painted-backdrop, .hero-aurora, .fireflies-layer')).toHaveCount(0);
   await expect(page.locator('.fate-compare')).toHaveCount(0);
 
   // External portals are tucked inside a closed drawer by default
@@ -155,10 +156,16 @@ test('near map renders OpenStreetMap tiles, displays curated pins, and limits in
   await expect(page.locator('.leaflet-container')).toBeVisible({ timeout: 10000 });
   await expect(page.locator('.aa-map-pin').first()).toBeVisible({ timeout: 10000 });
 
-  // Verify compact Desktop header keeps .split-layout high above the fold (y < 245)
+  // Verify .split-layout sits cleanly below .controls-card and map renders above the 900px desktop fold
+  const controlsBox = await page.locator('.controls-card').boundingBox();
   const splitBox = await page.locator('.split-layout').boundingBox();
+  const mapBox = await page.locator('.map-frame').boundingBox();
+  expect(controlsBox).not.toBeNull();
   expect(splitBox).not.toBeNull();
-  expect(splitBox!.y).toBeLessThan(245);
+  expect(mapBox).not.toBeNull();
+  expect(splitBox!.y).toBeGreaterThanOrEqual(controlsBox!.y + controlsBox!.height - 1);
+  expect(splitBox!.y).toBeLessThan(620);
+  expect(mapBox!.y).toBeLessThan(900);
 
   // Progressive disclosure: 3 place cards shown initially until user asks for more
   await expect(page.locator('.places-stack .place-card')).toHaveCount(3);
@@ -197,17 +204,17 @@ test('near map renders OpenStreetMap tiles, displays curated pins, and limits in
   await expect(page.locator('.place-card').first().locator('.pcd-visit-badge')).toBeVisible();
   await expect(page.locator('.source-tier-bar .source-chip')).toHaveCount(4);
 
-  // Verify "📚 Knihobudky a sousedé" preset surfaces self-service bookcase with Mapy.cz navigation CTA
+  // Verify "Knihobudky a sousedé" preset surfaces self-service bookcase with Mapy.cz navigation CTA
   await page.locator('.preset-pill', { hasText: 'Knihobudky a sousedé' }).click();
   const bookcaseCard = page.locator('.place-card', { hasText: 'Knihobudka' }).first();
   await expect(bookcaseCard).toBeVisible();
   await expect(bookcaseCard.locator('.pc-actions .pc-btn.primary')).toContainText('Mapy.cz');
 
-  // Verify "🥫 Jídlo a šatníky" preset never matches "Veřejná knihobudka"
+  // Verify "Jídlo a šatníky" preset never matches "Veřejná knihobudka"
   await page.locator('.preset-pill', { hasText: 'Jídlo a šatníky' }).click();
   await expect(page.locator('.place-card', { hasText: 'Veřejná knihobudka' })).toHaveCount(0);
 
-  // Verify "🐾 Útulky a zvířata" preset in Prague has >= 3 local animal places within 8 km without fallback banner
+  // Verify "Útulky a zvířata" preset in Prague has >= 3 local animal places within 8 km without fallback banner
   await page.locator('.preset-pill', { hasText: 'Útulky a zvířata' }).click();
   await expect(page.locator('.places-stack .place-card')).toHaveCount(3);
   await expect(page.locator('.smart-nearest-banner')).toHaveCount(0);
@@ -218,7 +225,7 @@ test('near map renders OpenStreetMap tiles, displays curated pins, and limits in
   await page.locator('.btn-find').click();
   await expect(page.locator('.place-card', { hasText: 'Tábor' }).first()).toBeVisible();
 
-  // Verify Tablet (820x960) & Mobile (360x800) [📋 Seznam] / [🗺️ Mapa] switcher and floating active sheet
+  // Verify Tablet (820x960) & Mobile (360x800) Seznam / Mapa switcher and floating active sheet
   await page.setViewportSize({ width: 820, height: 960 });
   await expect(page.locator('.mobile-tabs')).toBeVisible();
   await page.locator('.place-card').first().locator('button', { hasText: 'Na mapě' }).click();
@@ -293,9 +300,9 @@ test('calm UX guard: zero stacked callout clutter on cards and interactive Kraji
   await page.goto('/svet');
   // Dawn mode active by default
   await expect(page.locator('img.art-layer.dawn')).toHaveAttribute('style', /opacity:\s*0\.88/);
-  // Switch to Hvězdná noc -> dawn layer fades to 0, aurora & stars canvas renders cleanly
+  // Switch to Hvězdná noc -> dawn layer fades to 0.14, aurora & stars canvas renders cleanly
   await page.locator('button:has-text("Hvězdná noc")').click();
-  await expect(page.locator('img.art-layer.dawn')).toHaveAttribute('style', /opacity:\s*0(?:\b|;)/);
+  await expect(page.locator('img.art-layer.dawn')).toHaveAttribute('style', /opacity:\s*0\.14/);
 
   // Quick deed whisper chip triggers light bloom & toast without errors
   await page.locator('.qd-chip').first().click();
@@ -316,7 +323,7 @@ test('standardized GoodAction cards, Evidence A/B/C badges, verified sources, an
 
   // Standardized 6-part card metadata on homepage (secondary metadata folded inside how-toggle)
   await page.locator('.instant-card details.how-toggle summary').click();
-  await expect(page.locator('.instant-card .evidence-pill')).toContainText('Důkazy');
+  await expect(page.locator('.instant-card .evidence-pill')).toContainText('Ověřený dopad');
   await expect(page.locator('.instant-card .impact-benefit-line')).toContainText('Přínos');
   await expect(page.locator('.instant-card .partner-trust-line')).toContainText('Bez registrace na našem webu');
   await expect(page.locator('.instant-card .action-verify-footer')).toContainText('Ověřeno:');
@@ -362,8 +369,8 @@ test('/near never renders 0 míst v okolí, preserves verified orgs with website
   await expect(countHeading).not.toContainText('0 míst v okolí');
   await expect(page.locator('.place-card .pc-verified').first()).toContainText('Ověřená organizace');
 
-  // Clicking "⚡ S přímým webem" still keeps verified organizations visible (never 0)
-  await page.locator('button:has-text("⚡ S přímým webem")').click();
+  // Clicking "S přímým webem" still keeps verified organizations visible (never 0)
+  await page.locator('button.preset-pill:has-text("S přímým webem")').click();
   await expect(page.locator('.places-stack .place-card').first()).toBeVisible();
   await expect(countHeading).not.toContainText('0 míst v okolí');
 
@@ -398,10 +405,10 @@ test('/app/guided adaptive parameters, Evidence Tier A filter, and methodology t
   // Open adaptive parameters drawer and filter by Evidence Tier A and C
   const paramsDrawer = page.locator('details.adaptive-params-drawer');
   await paramsDrawer.locator('summary').click();
-  await paramsDrawer.locator('button:has-text("A · Silné důkazy")').click();
-  await expect(page.locator('.highlight-card .rec-evidence-pill')).toContainText('Důkazy A');
-  await paramsDrawer.locator('button:has-text("C · Komunitní smysl")').click();
-  await expect(page.locator('.highlight-card .rec-evidence-pill')).toContainText('Důkazy C');
+  await paramsDrawer.locator('button:has-text("Ověřený dopad (A)")').click();
+  await expect(page.locator('.highlight-card .rec-evidence-pill')).toContainText('Ověřený dopad (A)');
+  await paramsDrawer.locator('button:has-text("Ověřený dopad (C)")').click();
+  await expect(page.locator('.highlight-card .rec-evidence-pill')).toContainText('Ověřený dopad (C)');
 
   // Methodology drawer has 5-row table & GiveWell / EA CZ links
   const methDrawer = page.locator('details.methodology-drawer');
@@ -430,8 +437,8 @@ test('/app/guided adaptive parameters, Evidence Tier A filter, and methodology t
 
 test('/app/online Evidence A filter and /svet 3 semantic light types + post-deed rest reassurance work', async ({ page }) => {
   await page.goto('/app/online');
-  await page.locator('.filters-bar .filter-chip:has-text("Ověřený dopad (A)"), .filters-bar .filter-chip:has-text("Důkazy A")').click();
-  await expect(page.locator('.grid .card .card-evidence-badge').first()).toContainText('Důkazy A');
+  await page.locator('.filters-bar .filter-chip:has-text("Ověřený dopad (A)")').click();
+  await expect(page.locator('.grid .card .card-evidence-badge').first()).toContainText('Ověřený dopad (A)');
   await expect(page.locator('.grid .card .card-verify-footer').first()).toContainText('Ověřeno:');
 
   await page.goto('/svet');
@@ -460,12 +467,12 @@ test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #actio
     expect(buf.slice(0, 4).toString('hex')).toBe('89504e47');
   }
 
-  // Desktop (1280x800) and Unfolded OnePlus Open (820x960) keep .mobile-bottom-nav hidden
+  // Desktop (1280x800) and Unfolded OnePlus Open (820x960) never mount legacy .mobile-bottom-nav
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto('/');
-  await expect(page.locator('.mobile-bottom-nav')).toBeHidden();
+  await expect(page.locator('.mobile-bottom-nav')).toHaveCount(0);
   await page.setViewportSize({ width: 820, height: 960 });
-  await expect(page.locator('.mobile-bottom-nav')).toBeHidden();
+  await expect(page.locator('.mobile-bottom-nav')).toHaveCount(0);
 
   // 2. Mobile 360x800 & 360x660 (In-App Browser) viewport checks
   await page.setViewportSize({ width: 360, height: 660 });
@@ -492,10 +499,18 @@ test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #actio
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto('/');
 
-  // Bottom nav is visible with 5 tabs; floating feedback/crisis pills are hidden
-  const bottomNav = page.locator('.mobile-bottom-nav');
-  await expect(bottomNav).toBeVisible();
-  await expect(bottomNav.locator('.mb-tab')).toHaveCount(5);
+  // Top-only mobile drawer replaces legacy .mobile-bottom-nav; floating feedback/crisis pills are hidden
+  await expect(page.locator('.mobile-bottom-nav')).toHaveCount(0);
+  const navToggle = page.locator('.mobile-nav-toggle');
+  await expect(navToggle).toBeVisible();
+  await navToggle.click();
+  const navDrawer = page.locator('#mobile-top-nav-drawer');
+  await expect(navDrawer).toBeVisible();
+  await expect(navDrawer.locator('.mobile-drawer-link')).toHaveCount(6);
+  await expect(navDrawer).toContainText('Tichá opora 24/7');
+  await expect(navDrawer).toContainText('Napsat názor');
+  await navToggle.click();
+  await expect(navDrawer).toBeHidden();
   await expect(page.locator('.feedback-pill')).toBeHidden();
   await expect(page.locator('.crisis-pill')).toBeHidden();
 
@@ -569,7 +584,9 @@ test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #actio
   const shareBtn = page.locator('.instant-card .mobile-details-extra .mde-share-btn');
   await expect(shareBtn).toBeVisible();
   await shareBtn.click();
-  await expect(shareBtn).toContainText('✓ Odkaz zkopírován');
+  await expect(shareBtn).toContainText('Odkaz zkopírován');
+  await expect(shareBtn.locator('svg')).toBeVisible();
+  expect(await shareBtn.innerText()).not.toContain('✓');
   await page.locator('.instant-card details.how-toggle summary').click();
 
   // 4. Return-tab instant dopamine prompt on visibilitychange (with >3s guard + 2D canvas kibble physics)
@@ -651,14 +668,15 @@ test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #actio
   expect(placeBox).not.toBeNull();
   expect(placeBox!.y).toBeLessThan(520);
 
-  // 7. /app/guided on 360x800: .situation-grid is a compact 2-column CSS grid & preview bar is visible
+  // 7. /app/guided on 360x800: .situation-grid is a compact 2-column CSS grid & foundations + #personal-plan render cleanly
   await page.goto('/app/guided');
   const sitGridDisplay = await page.locator('.situation-grid').evaluate((el) => getComputedStyle(el).display);
   expect(sitGridDisplay).toBe('grid');
   const sitGridBox = await page.locator('.situation-grid').boundingBox();
   expect(sitGridBox).not.toBeNull();
   expect(sitGridBox!.height).toBeLessThan(180);
-  await expect(page.locator('.mobile-guided-preview-bar')).toBeVisible();
+  await expect(page.locator('.compass-foundations')).toBeVisible();
+  await expect(page.locator('#personal-plan .highlight-card')).toBeVisible();
 
   // 8. /app/online on 360x800: first card primary CTA is visible above the fold (y + height < 740)
   await page.goto('/app/online');
@@ -682,7 +700,7 @@ test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #actio
   await expect(page.locator('.seed-ceremony-banner')).toContainText('Pomoc sousedovi s nakupem');
   await page.goto(
     '/svet?seed=custom&title=' +
-      encodeURIComponent('Velmi dlouhý název dobrého skutku pro kontrolu zalomení textu bez přetékání na úzkém displeji 320px')
+    encodeURIComponent('Velmi dlouhý název dobrého skutku pro kontrolu zalomení textu bez přetékání na úzkém displeji 320px')
   );
   const narrowSeedBox = await page.locator('.seed-ceremony-banner').boundingBox();
   expect(narrowSeedBox).not.toBeNull();
@@ -696,6 +714,7 @@ test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #actio
 test('bespoke 2D Canvas + Web Audio special effects work for all activity types across Desktop, Tablet, and Mobile and all surfaces (/, /app/online, /app/guided, /near, SmallWinCelebration)', async ({
   page
 }) => {
+  test.setTimeout(90_000);
   // 1. Verify bespoke scenes and dynamic Czech badges across diverse activities
   const activityExpectations = [
     { id: 'zvirata_utulek_online', scene: 'kibble', badgePart: 'v misce' },
@@ -740,7 +759,7 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
   await expect(page.locator('.instant-card .card-effect-stage')).toHaveCount(0);
   await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
   await expect(page.locator('.instant-card .card-effect-stage')).toBeVisible();
-  // Wait for initial progress ramp, then verify clicking ✨ Impuls or tapping canvas increments live badge counter
+  // Wait for initial progress ramp, then verify clicking Impuls or tapping canvas increments live badge counter
   await page.waitForTimeout(700);
   const badgeBefore = await page.locator('.instant-card .card-effect-stage .impact-payoff-badge').innerText();
   const numBefore = Number((badgeBefore.match(/\d+/) || ['0'])[0]);
@@ -816,7 +835,7 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
     await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
     await expect(page.locator('.instant-card .card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
 
-    // A) /app/online: Hold-to-Spark attribute, ✨ effect stage after start, ambient pulse, and SmallWinCelebration canvas
+    // A) /app/online: Hold-to-Spark attribute, effect stage after start, ambient pulse, and SmallWinCelebration canvas
     await page.goto('/app/online');
     const firstCard = page.locator('.grid .card').first();
     await expect(firstCard.locator('.cta.primary')).toHaveAttribute('data-hold-spark', 'true');
@@ -843,23 +862,21 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
     await modal.locator('.btn-more').click();
     await expect(modal).toBeHidden();
 
-    // B) /app/guided: Hold-to-Spark attribute, ✨ effect stage after start, ambient pulse, partner-return strip
+    // B) /app/guided: Hold-to-Spark attribute, effect stage after start, ambient pulse, partner-return strip
     await page.goto('/app/guided');
     const highlightCard = page.locator('.highlight-card');
     await expect(highlightCard.locator('.btn-gold-action')).toHaveAttribute('data-hold-spark', 'true');
     await expect(highlightCard.locator('.ambient-pulse-pill')).toHaveCount(0);
     await expect(highlightCard.locator('.rec-top-actions .effect-spark-btn')).toHaveCount(0);
     await highlightCard.locator('.btn-gold-action').dispatchEvent('click');
-    if (!(await highlightCard.locator('.card-effect-stage').isVisible())) {
-      await page.evaluate(() => {});
-    }
+    await expect(highlightCard.locator('.card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
 
     const guidedOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth
     );
     expect(guidedOverflow, `Overflow on /app/guided (${vp.name})`).toBe(false);
 
-    // C) /near: Hold-to-Spark attribute, ✨ effect stage on place cards after start, direct place share, ambient pulse
+    // C) /near: Hold-to-Spark attribute, effect stage on place cards after start, direct place share, ambient pulse
     await page.goto('/near');
     const firstPlaceCard = page.locator('.place-card').first();
     await expect(firstPlaceCard).toBeVisible();
@@ -871,7 +888,9 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
     await expect(firstPlaceCard.locator('.card-effect-stage canvas.impact-payoff-canvas')).toBeVisible();
     await expect(page.locator('.ambient-pulse-pill')).toHaveCount(0);
     await firstPlaceCard.locator('.pc-share-btn').click();
-    await expect(firstPlaceCard.locator('.pc-share-btn')).toContainText('✓ Odkaz zkopírován');
+    await expect(firstPlaceCard.locator('.pc-share-btn')).toContainText('Odkaz zkopírován');
+    await expect(firstPlaceCard.locator('.pc-share-btn svg')).toBeVisible();
+    expect(await firstPlaceCard.locator('.pc-share-btn').innerText()).not.toContain('✓');
 
     const nearOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth
@@ -954,12 +973,12 @@ test('Molly tortoiseshell cat companion, action-driven feeding, in-canvas Mini-M
   const arcsCount = Number((await homeCanvas.getAttribute('data-molly-arcs')) || '0');
   expect(arcsCount).toBeGreaterThan(0);
 
-  // Petting Molly via dock pet button triggers purring mood & Czech whisper bubble
+  // Petting Molly via dock pet button triggers purring mood & Czech whisper (floating bubble or dock whisper when parked)
   await page.locator('.molly-pelisek-dock .molly-dock-pet-btn').click();
   await expect(page.locator('.molly-companion-layer')).toHaveAttribute('data-molly-mood', 'purring');
-  await expect(page.locator('.molly-whisper-bubble')).toBeVisible();
-  // Bublina musí být skutečně na obrazovce (dřív se CSS bottom/left sčítalo s inline transformací → top ≈ 1500 px)
-  await expect(page.locator('.molly-whisper-bubble')).toBeInViewport();
+  const petWhisper = page.locator('.molly-whisper-bubble, .molly-dock-whisper').first();
+  await expect(petWhisper).toBeVisible();
+  await expect(petWhisper).toBeInViewport();
 
   // Completing an action feeds Molly and displays her celebration note
   await page.locator('.instant-card .btn-studio-done').click();
@@ -973,14 +992,20 @@ test('Molly tortoiseshell cat companion, action-driven feeding, in-canvas Mini-M
   await page.locator('.molly-pelisek-dock .molly-dock-toggle-btn').click();
   await expect(page.locator('.molly-companion-layer')).toHaveAttribute('data-molly-mode', 'roaming');
 
-  // Dynamic resize from Desktop (1280x900) to Mobile (360x800) clamps Molly inside mobile viewport
-  // and allows mobile pointer tap on .molly-dock-toggle-btn when no interactive page element is underneath
+  // Dynamic resize from Desktop (1280x900) to Mobile (360x800) either clamps roaming Molly inside mobile viewport
+  // or safely parks her into the compact header dock (.is-docked) with zero nav overlap
   await page.setViewportSize({ width: 360, height: 800 });
   await page.waitForTimeout(200);
-  const mobileActorBox = await page.locator('.molly-roaming-actor').boundingBox();
-  expect(mobileActorBox).not.toBeNull();
-  expect(mobileActorBox!.x).toBeGreaterThanOrEqual(-5);
-  expect(mobileActorBox!.x + mobileActorBox!.width).toBeLessThanOrEqual(365);
+  const mobileActor = page.locator('.molly-roaming-actor');
+  const mobileIsDocked = await mobileActor.evaluate((el) => el.classList.contains('is-docked'));
+  if (mobileIsDocked) {
+    await expect(page.locator('.molly-pelisek-dock.is-header-dock')).toBeVisible();
+  } else {
+    const mobileActorBox = await mobileActor.boundingBox();
+    expect(mobileActorBox).not.toBeNull();
+    expect(mobileActorBox!.x).toBeGreaterThanOrEqual(-5);
+    expect(mobileActorBox!.x + mobileActorBox!.width).toBeLessThanOrEqual(365);
+  }
   await page.evaluate(() => window.scrollTo(0, 0));
   const toggleBox = await page.locator('.molly-pelisek-dock .molly-dock-toggle-btn').boundingBox();
   expect(toggleBox).not.toBeNull();
@@ -1036,7 +1061,7 @@ test('Molly never pushes an unrequested tip over mobile controls: blocked tip wa
   test.setTimeout(45_000);
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto('/submit');
-  // /submit na 360 px: nad spodní lištou jsou čipy měst — bublina by je zakryla
+  // /submit na 360 px: na obrazovce jsou čipy a ovládací prvky — nechtěná bublina by je zakryla
   const covering = async () =>
     page.evaluate(() => {
       const b = document.querySelector('.molly-whisper-bubble:not(.is-travelling)');
@@ -1045,7 +1070,7 @@ test('Molly never pushes an unrequested tip over mobile controls: blocked tip wa
       if (r.bottom < 0 || r.top > innerHeight) return 0;
       let area = 0;
       for (const el of document.querySelectorAll('a[href], button, input, select, textarea')) {
-        if (el.closest('.molly-companion-layer, .mobile-bottom-nav, .top-nav')) continue;
+        if (el.closest('.molly-companion-layer, .top-nav')) continue;
         const t = el.getBoundingClientRect();
         const w = Math.min(r.right, t.right) - Math.max(r.left, t.left);
         const h = Math.min(r.bottom, t.bottom) - Math.max(r.top, t.top);
@@ -1109,7 +1134,9 @@ test('Round 3 geometry, zero bubble/body/dock overlap across 360x800, 820x1180, 
         const bubble = document.querySelector('.molly-whisper-bubble, .molly-dock-whisper');
         const actor = document.querySelector('.molly-roaming-actor');
         const dock = document.querySelector('.molly-pelisek-dock');
-        const nav = document.querySelector('.mobile-bottom-nav');
+        const bottomNavCount = document.querySelectorAll('.mobile-bottom-nav').length;
+        const brandEl = document.querySelector('.nav-capsule a.brand');
+        const toggleEl = document.querySelector('.nav-capsule button.mobile-nav-toggle');
         const crisisEl = Array.from(document.querySelectorAll('.crisis-widget > button, .crisis-mobile-fab')).find(
           (el) => {
             const r = el.getBoundingClientRect();
@@ -1124,7 +1151,8 @@ test('Round 3 geometry, zero bubble/body/dock overlap across 360x800, 820x1180, 
         const isDockedActor = actor ? actor.classList.contains('is-docked') : currentRoute === '/svet';
         const aRect = actor && !isDockedActor ? actor.getBoundingClientRect() : null;
         const dRect = dock ? dock.getBoundingClientRect() : null;
-        const nRect = nav && getComputedStyle(nav).display !== 'none' ? nav.getBoundingClientRect() : null;
+        const brandRect = brandEl && getComputedStyle(brandEl).display !== 'none' ? brandEl.getBoundingClientRect() : null;
+        const toggleRect = toggleEl && getComputedStyle(toggleEl).display !== 'none' ? toggleEl.getBoundingClientRect() : null;
         const cRect = crisisEl ? crisisEl.getBoundingClientRect() : null;
         const fRect =
           fbEl && getComputedStyle(fbEl).display !== 'none' && fbEl.getBoundingClientRect().width > 0
@@ -1134,14 +1162,17 @@ test('Round 3 geometry, zero bubble/body/dock overlap across 360x800, 820x1180, 
         // Visual body rect inside canvas (excluding transparent margins)
         const catVisual = aRect
           ? {
-              left: aRect.left + aRect.width * 0.14,
-              right: aRect.right - aRect.width * 0.14,
-              top: aRect.top + aRect.height * 0.12,
-              bottom: aRect.bottom - 2
-            }
+            left: aRect.left + aRect.width * 0.14,
+            right: aRect.right - aRect.width * 0.14,
+            top: aRect.top + aRect.height * 0.12,
+            bottom: aRect.bottom - 2
+          }
           : null;
 
-        const actorNavOverlap = aRect && nRect ? overlap(aRect, nRect) : 0;
+        const navCapsuleOverlap =
+          (brandRect && dRect && dock?.classList.contains('is-header-dock') ? overlap(brandRect, dRect) : 0) +
+          (brandRect && toggleRect ? overlap(brandRect, toggleRect) : 0) +
+          (dRect && toggleRect && dock?.classList.contains('is-header-dock') ? overlap(dRect, toggleRect) : 0);
         const actorTop = aRect ? Math.round(aRect.top) : window.innerHeight - 96;
         const bubbleCatOverlap = bRect && catVisual ? overlap(bRect, catVisual) : 0;
         const bubbleDockOverlap = bRect && dRect ? overlap(bRect, dRect) : 0;
@@ -1159,7 +1190,8 @@ test('Round 3 geometry, zero bubble/body/dock overlap across 360x800, 820x1180, 
           bTop: bRect ? Math.round(bRect.top) : 0,
           bBottom: bRect ? Math.round(bRect.bottom) : 0,
           actorTop,
-          actorNavOverlap,
+          bottomNavCount,
+          navCapsuleOverlap,
           bubbleCatOverlap,
           bubbleDockOverlap,
           bubbleCrisisOverlap,
@@ -1177,7 +1209,8 @@ test('Round 3 geometry, zero bubble/body/dock overlap across 360x800, 820x1180, 
       expect(report.bTop, `Whisper bubble top below .top-nav on ${route} (${vp.label})`).toBeGreaterThanOrEqual(60);
       expect(report.bBottom, `Whisper bubble bottom inside viewport on ${route} (${vp.label})`).toBeLessThanOrEqual(vp.height - 6);
       expect(report.actorTop, `Molly must stay on groundLine on ${route} (${vp.label})`).toBeGreaterThanOrEqual(vp.height - 170);
-      expect(report.actorNavOverlap, `Actor canvas overlaps bottom nav on ${route} (${vp.label})`).toBe(0);
+      expect(report.bottomNavCount, `Legacy .mobile-bottom-nav must be absent on ${route} (${vp.label})`).toBe(0);
+      expect(report.navCapsuleOverlap, `Header .nav-capsule children overlap on ${route} (${vp.label})`).toBe(0);
       expect(report.bubbleCatOverlap, `Whisper bubble overlaps Molly sprite on ${route} (${vp.label})`).toBe(0);
       expect(report.bubbleDockOverlap, `Whisper bubble overlaps dock on ${route} (${vp.label})`).toBe(0);
       expect(report.bubbleCrisisOverlap, `Whisper bubble overlaps crisis pill on ${route} (${vp.label})`).toBe(0);
@@ -1187,7 +1220,7 @@ test('Round 3 geometry, zero bubble/body/dock overlap across 360x800, 820x1180, 
     }
   }
 
-  // Check /svet at 360x800: Opora 24/7 does not cover "🏮 Rozsvítit lucernu", Czech copy polish, and /svet route hint marks aa_molly_hints_v1
+  // Check /svet at 360x800: Opora 24/7 does not cover "Rozsvítit lucernu", Czech copy polish, and /svet route hint marks aa_molly_hints_v1
   await page.setViewportSize({ width: 360, height: 800 });
   await page.evaluate(() => sessionStorage.removeItem('aa_molly_hints_v1'));
   await page.goto('/svet');
@@ -1220,8 +1253,9 @@ test('Round 3 geometry, zero bubble/body/dock overlap across 360x800, 820x1180, 
     await expect(page.locator(detailsSel)).toHaveAttribute('open', '');
     if (midRoute === '/submit') {
       await expect(page.locator('details.optional-fields .quick-pills')).toContainText(
-        '📚 Knihobudka / druhá šance věcí'
+        'Knihobudka / druhá šance věcí'
       );
+      await expect(page.locator('details.optional-fields .quick-pills svg').first()).toBeVisible();
       await expect(page.locator('details.optional-fields .quick-pills')).not.toContainText('ReUse');
     }
     await page.evaluate(() => window.scrollTo({ top: 120, behavior: 'instant' }));
@@ -1237,26 +1271,34 @@ test('Round 3 geometry, zero bubble/body/dock overlap across 360x800, 820x1180, 
         const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
         return w > 0 && h > 0 ? Math.round(w * h) : 0;
       };
-      const bubble = document.querySelector('.molly-whisper-bubble');
+      const bubble = document.querySelector('.molly-whisper-bubble, .molly-dock-whisper');
       const actor = document.querySelector('.molly-roaming-actor');
       const dock = document.querySelector('.molly-pelisek-dock');
-      const nav = document.querySelector('.mobile-bottom-nav');
+      const bottomNavCount = document.querySelectorAll('.mobile-bottom-nav').length;
+      const brandEl = document.querySelector('.nav-capsule a.brand');
+      const toggleEl = document.querySelector('.nav-capsule button.mobile-nav-toggle');
       const crisisEl = document.querySelector('.crisis-mobile-fab');
       const bRect = bubble ? bubble.getBoundingClientRect() : null;
-      const aRect = actor ? actor.getBoundingClientRect() : null;
+      const isDockedActor = actor ? actor.classList.contains('is-docked') : false;
+      const aRect = actor && !isDockedActor ? actor.getBoundingClientRect() : null;
       const dRect = dock ? dock.getBoundingClientRect() : null;
-      const nRect = nav && getComputedStyle(nav).display !== 'none' ? nav.getBoundingClientRect() : null;
+      const brandRect = brandEl && getComputedStyle(brandEl).display !== 'none' ? brandEl.getBoundingClientRect() : null;
+      const toggleRect = toggleEl && getComputedStyle(toggleEl).display !== 'none' ? toggleEl.getBoundingClientRect() : null;
       const cRect = crisisEl ? crisisEl.getBoundingClientRect() : null;
       const catVisual = aRect
         ? {
-            left: aRect.left + aRect.width * 0.14,
-            right: aRect.right - aRect.width * 0.14,
-            top: aRect.top + aRect.height * 0.12,
-            bottom: aRect.bottom - 2
-          }
+          left: aRect.left + aRect.width * 0.14,
+          right: aRect.right - aRect.width * 0.14,
+          top: aRect.top + aRect.height * 0.12,
+          bottom: aRect.bottom - 2
+        }
         : null;
-      const actorNavOverlap = aRect && nRect ? overlap(aRect, nRect) : 0;
-      const actorTop = aRect ? Math.round(aRect.top) : 0;
+      const navCapsuleOverlap =
+        (brandRect && dRect && dock?.classList.contains('is-header-dock') ? overlap(brandRect, dRect) : 0) +
+        (brandRect && toggleRect ? overlap(brandRect, toggleRect) : 0) +
+        (dRect && toggleRect && dock?.classList.contains('is-header-dock') ? overlap(dRect, toggleRect) : 0);
+      const actorTop = aRect ? Math.round(aRect.top) : 800 - 96;
+      const dockVisible = Boolean(dRect && dRect.width > 0 && dRect.height > 0);
       const bTop = bRect ? Math.round(bRect.top) : 0;
       const bLeft = bRect ? Math.round(bRect.left) : 0;
       const bRight = bRect ? Math.round(bRect.right) : 0;
@@ -1264,7 +1306,10 @@ test('Round 3 geometry, zero bubble/body/dock overlap across 360x800, 820x1180, 
       const bubbleDockOverlap = bRect && dRect ? overlap(bRect, dRect) : 0;
       const bubbleCrisisOverlap = bRect && cRect ? overlap(bRect, cRect) : 0;
       return {
-        actorNavOverlap,
+        bottomNavCount,
+        navCapsuleOverlap,
+        isDockedActor,
+        dockVisible,
         actorTop,
         bTop,
         bLeft,
@@ -1274,8 +1319,13 @@ test('Round 3 geometry, zero bubble/body/dock overlap across 360x800, 820x1180, 
         bubbleCrisisOverlap
       };
     });
-    expect(midScrollReport.actorNavOverlap, `Mid-scroll actorNavOverlap on ${midRoute}`).toBe(0);
-    expect(midScrollReport.actorTop, `Mid-scroll Molly stays on groundLine on ${midRoute}`).toBeGreaterThanOrEqual(800 - 170);
+    expect(midScrollReport.bottomNavCount, `Mid-scroll legacy bottom nav count on ${midRoute}`).toBe(0);
+    expect(midScrollReport.navCapsuleOverlap, `Mid-scroll header overlap on ${midRoute}`).toBe(0);
+    if (midScrollReport.isDockedActor) {
+      expect(midScrollReport.dockVisible, `Mid-scroll header dock visible when Molly parked on ${midRoute}`).toBe(true);
+    } else {
+      expect(midScrollReport.actorTop, `Mid-scroll Molly stays on groundLine on ${midRoute}`).toBeGreaterThanOrEqual(800 - 170);
+    }
     expect(midScrollReport.bTop, `Mid-scroll bubble below .top-nav on ${midRoute}`).toBeGreaterThanOrEqual(60);
     expect(midScrollReport.bLeft, `Mid-scroll bubble left inside viewport on ${midRoute}`).toBeGreaterThanOrEqual(6);
     expect(midScrollReport.bRight, `Mid-scroll bubble right inside viewport on ${midRoute}`).toBeLessThanOrEqual(360 - 6);
@@ -1299,7 +1349,7 @@ test('Round 3 geometry, zero bubble/body/dock overlap across 360x800, 820x1180, 
     if (b) {
       const r = b.getBoundingClientRect();
       for (const el of document.querySelectorAll('a[href], button, input, select, textarea')) {
-        if (el.closest('.molly-companion-layer, .mobile-bottom-nav, .top-nav, .crisis-widget, .feedback-pill, .hp')) continue;
+        if (el.closest('.molly-companion-layer, .top-nav, .crisis-widget, .feedback-pill, .hp')) continue;
         const closedDetails = el.closest('details:not([open])');
         if (closedDetails && !el.closest('summary')) continue;
         const t = el.getBoundingClientRect();

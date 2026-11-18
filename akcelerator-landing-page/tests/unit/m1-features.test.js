@@ -84,15 +84,16 @@ describe('Milestone 1: Core Implementation F1-F11 Verification', () => {
   });
 
   describe('F5: Fix HTTP 404 for Icons & Manifest', () => {
-    it('app.html, +layout.svelte, and service-worker.js use canonical root paths for icons', () => {
+    it('app.html and service-worker.js use canonical root paths without duplicate layout links', () => {
       const appHtml = readFileSync(path.resolve(srcDir, 'app.html'), 'utf8');
       expect(appHtml).toContain('href="/favicon-czech.png"');
       expect(appHtml).toContain('href="/apple-touch-icon-czech.png"');
       expect(appHtml).toContain('href="/manifest.webmanifest"');
 
       const layout = readSource('routes/+layout.svelte');
-      expect(layout).toContain('href="/favicon-czech.png"');
-      expect(layout).toContain('href="/apple-touch-icon-czech.png"');
+      expect(layout).not.toContain('href="/favicon-czech.png"');
+      expect(layout).not.toContain('href="/apple-touch-icon-czech.png"');
+      expect(layout).not.toContain('href="/manifest.webmanifest"');
 
       const sw = readSource('service-worker.js');
       expect(sw).toContain("'/favicon-czech.png'");
@@ -123,12 +124,17 @@ describe('Milestone 1: Core Implementation F1-F11 Verification', () => {
   });
 
   describe('F8: Molly Dock Ergonomics & 44px Touch Targets', () => {
-    it('MollyCompanion.svelte suppresses dock on /svet, hides on mobile, and has 44px touch targets', () => {
-      const source = readSource('components/MollyCompanion.svelte');
-      expect(source).toMatch(/\{#if\s+!atHome[\s\S]*?molly-pelisek-dock/);
-      expect(source).toMatch(/\.molly-pelisek-dock\s*\{[\s\S]*?display:\s*none\s*!important;\s*\}/);
-      expect(source).toMatch(/\.molly-dock-pet-btn[\s\S]*?min-width:\s*44px/);
-      expect(source).toMatch(/\.molly-dock-pet-btn[\s\S]*?min-height:\s*44px/);
+    it('MollyDock.svelte suppresses toggle/follow on /svet, stays visible on mobile, and has 44px touch targets', () => {
+      const dockSource = readSource('components/MollyDock.svelte');
+      const compiled = compile(dockSource, { generate: 'server' });
+      expect(compiled.js.code).toBeDefined();
+
+      expect(dockSource).toMatch(/\{#if\s+!\$mollyDockBridge\.atHome\}[\s\S]*?molly-dock-toggle-btn/);
+      expect(dockSource).not.toMatch(/\.molly-pelisek-dock(?:\.[a-z-]+)?\s*\{[^}]*display:\s*none/);
+      expect(dockSource).toMatch(/\.molly-dock-pet-btn[\s\S]*?min-width:\s*44px/);
+      expect(dockSource).toMatch(/\.molly-dock-pet-btn[\s\S]*?min-height:\s*44px/);
+      expect(dockSource).toMatch(/\.molly-dock-toggle-btn[\s\S]*?min-width:\s*44px/);
+      expect(dockSource).toMatch(/\.molly-dock-toggle-btn[\s\S]*?min-height:\s*44px/);
     });
   });
 
@@ -175,8 +181,8 @@ describe('Milestone 1: Core Implementation F1-F11 Verification', () => {
       expect(fetchCount).toBe(1);
     });
 
-    it('HeroSection.svelte provides WebP responsive backdrop', () => {
-      const source = readSource('lib/features/home/HeroSection.svelte');
+    it('SanctuaryTeaser.svelte provides WebP responsive backdrop', () => {
+      const source = readSource('lib/features/home/SanctuaryTeaser.svelte');
       expect(source).toContain('/art/sanctuary-dawn-800.webp');
     });
 

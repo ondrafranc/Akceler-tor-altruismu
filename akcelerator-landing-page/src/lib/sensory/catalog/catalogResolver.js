@@ -79,7 +79,7 @@ export function getActionEffectMeta(action, currentVal, opts = {}) {
       : spec.target;
   const badge = spec.format(val);
   const isKibble = spec.mode === 'kibble' || spec.mode === 'shelter_care';
-  const returnBadge = isKibble ? badge : `${badge} · ✨ Světelná stopa`;
+  const returnBadge = isKibble ? badge : `${badge} · Světelná stopa`;
   const mollyTreat = spec.mollyTreat || resolveMollyTreat(spec);
   return {
     ...spec,

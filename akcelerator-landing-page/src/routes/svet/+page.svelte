@@ -22,17 +22,17 @@
     playMollyPurr,
     playMollyCrunch,
     playMollyMeow,
-    playSanctuaryChime
+    playSanctuaryChime,
   } from "../../lib/audio/presets.js";
   import {
     isSoundMuted,
-    toggleSoundMuted
+    toggleSoundMuted,
   } from "../../lib/audio/audioContext.js";
   import {
     isLowPowerDevice,
     getCanvasDprCap,
     optimizeCanvasContext,
-    frameStep
+    frameStep,
   } from "../../lib/core/device.js";
   import {
     mollyState,
@@ -47,12 +47,14 @@
   import RitualBar from "$lib/features/sanctuary/components/RitualBar.svelte";
   import BreathingPacer from "$lib/features/sanctuary/components/BreathingPacer.svelte";
   import ProgressDashboard from "$lib/features/sanctuary/components/ProgressDashboard.svelte";
+  import AppIcon from "$lib/components/AppIcon.svelte";
+  import { resolveIconKey } from "$lib/icons/iconRegistry.js";
   import {
     drawLakeMist,
     drawBreathingPondAura,
     drawStarLakeReflection,
     drawWaterRipples,
-    drawLanternWaterReflection
+    drawLanternWaterReflection,
   } from "$lib/features/sanctuary/services/sanctuaryLakeRenderer.js";
 
   /** @type {Record<string, typeof SANCTUARY_ELEMENTS[0]>} */
@@ -142,13 +144,16 @@
   let ritualMode = "water";
   let ritualInput = "";
   let gentleToast = "";
+  let gentleToastPaw = false;
   let toastTimer = null;
 
-  function showGentleToast(msg) {
+  function showGentleToast(msg, withPaw = false) {
     gentleToast = msg;
+    gentleToastPaw = withPaw;
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
       gentleToast = "";
+      gentleToastPaw = false;
     }, 4400);
   }
 
@@ -348,8 +353,8 @@
    * @returns {'water' | 'sky'}
    */
   function resolveSanctuaryZone(zone, y = 0) {
-    if (zone === 'water' || zone === 'sky') return zone;
-    return (typeof y === 'number' && y >= 0.53) ? 'water' : 'sky';
+    if (zone === "water" || zone === "sky") return zone;
+    return typeof y === "number" && y >= 0.53 ? "water" : "sky";
   }
 
   $: seededDeedLights = INSPIRING_DEED_SEEDS.filter(
@@ -574,7 +579,8 @@
         lineWidth: 2.0,
       });
       showGentleToast(
-        "🐾 Patronka Molly spokojeně přede u břehu tůně a chroupe zasloužený pamlsek.",
+        "Patronka Molly spokojeně přede u břehu tůně a chroupe zasloužený pamlsek.",
+        true,
       );
     } else {
       petMolly();
@@ -594,7 +600,8 @@
         mollyLakeHearts.splice(0, mollyLakeHearts.length - 32);
       }
       showGentleToast(
-        "🐾 Patronka Molly spokojeně přede. Za každý dokončený dobrý skutek v aplikaci dostane do mističky pamlsek.",
+        "Patronka Molly spokojeně přede. Za každý dokončený dobrý skutek v aplikaci dostane do mističky pamlsek.",
+        true,
       );
     }
   }
@@ -1483,7 +1490,15 @@
           }
 
           // 4. Drifting Lake Mist Over the Mirror Pond (Modular Lake Renderer)
-          drawLakeMist(ctx, { mistClouds, width, height, t, k, isNight, reducedMotion });
+          drawLakeMist(ctx, {
+            mistClouds,
+            width,
+            height,
+            t,
+            k,
+            isNight,
+            reducedMotion,
+          });
 
           // 5. Breathing Sanctuary Aura on the Pond (Modular Lake Renderer)
           if (breathingActive) {
@@ -1644,7 +1659,14 @@
             );
 
             // Shimmering water-stroke column reflection on the pond (Modular Lake Renderer)
-            drawStarLakeReflection(ctx, { sx, height, t, i, hScale, starY: st.y });
+            drawStarLakeReflection(ctx, {
+              sx,
+              height,
+              t,
+              i,
+              hScale,
+              starY: st.y,
+            });
           }
 
           // 9. Concentric Bioluminescent Water Ripples (Modular Lake Renderer)
@@ -1691,7 +1713,15 @@
 
             // Soft translucent warm underwater reflection pool & shimmering strokes (Modular Lake Renderer)
             const poolR = (wl.isMine ? 40 : 32) * totalScale * flicker;
-            drawLanternWaterReflection(ctx, { bobX, bobY, poolR, totalScale, t, i, meta });
+            drawLanternWaterReflection(ctx, {
+              bobX,
+              bobY,
+              poolR,
+              totalScale,
+              t,
+              i,
+              meta,
+            });
 
             if (wl.lightType === "wave") {
               // Semantic Wave ("Vlna · Pomoc druhému"): 3 expanding concentric bioluminescent pond rings + droplet core
@@ -2583,32 +2613,61 @@
           Klikni na kterékoliv světlo pro inspiraci na dnešní skutek — nebo
           klikni na hladinu či oblohu a rozsviť ten svůj.
         </p>
-        <div class="sanctuary-orientation-block" role="region" aria-label="Klíč ke Krajině dobra">
+        <div
+          class="sanctuary-orientation-block"
+          role="region"
+          aria-label="Klíč ke Krajině dobra"
+        >
           <div class="sanctuary-legend-strip">
-            <span class="legend-chip legend-star" title="Klikni na hvězdu na obloze pro tip na ověřený skutek">
-              <span class="chip-symbol" aria-hidden="true">✦</span>
-              <span class="chip-text"><strong>Hvězdy</strong> · Inspirace</span>
-            </span>
-            <span class="legend-chip legend-lantern" title="Dokončený skutek se rozsvítí jako plovoucí lucerna">
-              <span class="chip-symbol" aria-hidden="true">🏮</span>
-              <span class="chip-text"><strong>Lucerny</strong> · Tvé skutky</span>
-            </span>
-            <span class="legend-chip legend-molly" title="Patronka Molly na břehu dostane za každý skutek pamlsek">
-              <span class="chip-symbol chip-symbol-svg" aria-hidden="true">
-                <svg class="sanctuary-paw-svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="7.5" cy="9.5" r="2.3" />
-                  <circle cx="12" cy="7" r="2.3" />
-                  <circle cx="16.5" cy="9.5" r="2.3" />
-                  <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
-                </svg>
+            <span
+              class="legend-chip legend-star"
+              title="Klikni na hvězdu na obloze pro tip na ověřený skutek"
+            >
+              <span class="chip-symbol" aria-hidden="true">
+                <AppIcon name="star" size={13} strokeWidth={2} />
               </span>
-              <span class="chip-text"><strong>Molly</strong> · Pamlsek</span>
+              <span class="chip-text"
+                ><strong>Hvězdy</strong><span class="chip-sub">
+                  · Inspirace</span
+                ></span
+              >
+            </span>
+            <span
+              class="legend-chip legend-lantern"
+              title="Dokončený skutek se rozsvítí jako plovoucí lucerna"
+            >
+              <span class="chip-symbol" aria-hidden="true">
+                <AppIcon name="flame" size={13} strokeWidth={2} />
+              </span>
+              <span class="chip-text"
+                ><strong>Lucerny</strong><span class="chip-sub">
+                  · Tvé skutky</span
+                ></span
+              >
+            </span>
+            <span
+              class="legend-chip legend-molly"
+              title="Patronka Molly na břehu dostane za každý skutek pamlsek"
+            >
+              <span class="chip-symbol chip-symbol-svg" aria-hidden="true">
+                <AppIcon name="paw" size={13} class="sanctuary-paw-svg" />
+              </span>
+              <span class="chip-text"
+                ><strong>Molly</strong><span class="chip-sub">
+                  · Pamlsek</span
+                ></span
+              >
             </span>
 
             <details class="sanctuary-guide-toggle">
-              <summary class="guide-toggle-summary" aria-controls="sanctuary-guide-panel">
+              <summary
+                class="guide-toggle-summary"
+                aria-controls="sanctuary-guide-panel"
+              >
                 <span class="guide-pill-face">
-                  <span class="guide-chevron" aria-hidden="true">▸</span>
+                  <span class="guide-chevron" aria-hidden="true">
+                    <AppIcon name="chevron-right" size={13} strokeWidth={2.2} />
+                  </span>
                   <span>Jak to funguje</span>
                 </span>
               </summary>
@@ -2621,27 +2680,41 @@
                 <span class="guide-num">1</span>
                 <div>
                   <strong>Vyber si světlo v krajině</strong>
-                  <p>Kliknutím na hvězdu na obloze otevřeš ověřený český skutek na 2–15 minut.</p>
+                  <p>
+                    Kliknutím na hvězdu na obloze otevřeš ověřený český skutek
+                    na 2–15 minut.
+                  </p>
                 </div>
               </div>
               <div class="guide-step">
                 <span class="guide-num">2</span>
                 <div>
                   <strong>Udělej dobrý skutek</strong>
-                  <p>Pomoz zdarma online, v okolí nebo si zapiš vlastní dobrý skutek do tůně.</p>
+                  <p>
+                    Pomoz zdarma online, v okolí nebo si zapiš vlastní dobrý
+                    skutek do tůně.
+                  </p>
                 </div>
               </div>
               <div class="guide-step">
                 <span class="guide-num">3</span>
                 <div>
                   <strong>Rozsviť světlo a potěš Molly</strong>
-                  <p>Tvé světlo zůstane svítit v krajině a patronka Molly dostane zasloužený pamlsek.</p>
+                  <p>
+                    Tvé světlo zůstane svítit v krajině a patronka Molly dostane
+                    zasloužený pamlsek.
+                  </p>
                 </div>
               </div>
             </div>
             <div class="guide-cta-row">
-              <button type="button" class="guide-action-btn" on:click={openRandomInspiringDeed}>
-                ✨ Otevřít náhodný skutek na 2 minuty
+              <button
+                type="button"
+                class="guide-action-btn"
+                on:click={openRandomInspiringDeed}
+              >
+                <AppIcon name="sparkles" size={14} strokeWidth={2} />
+                <span>Otevřít náhodný skutek na 2 minuty</span>
               </button>
             </div>
           </div>
@@ -2663,7 +2736,8 @@
             on:click={() => (atmosphereMode = "dawn")}
             aria-pressed={atmosphereMode === "dawn"}
           >
-            🌅 Zlaté svítání
+            <AppIcon name="sunrise" size={15} strokeWidth={2} />
+            <span>Zlaté svítání</span>
           </button>
           <button
             type="button"
@@ -2672,7 +2746,8 @@
             on:click={() => (atmosphereMode = "night")}
             aria-pressed={atmosphereMode === "night"}
           >
-            🌌 Hvězdná noc
+            <AppIcon name="moon" size={15} strokeWidth={2} />
+            <span>Hvězdná noc</span>
           </button>
         </div>
 
@@ -2683,7 +2758,8 @@
             on:click={openRandomInspiringDeed}
             title="Inspirace náhodným dobrým skutkem"
           >
-            ✨ Náhodný skutek
+            <AppIcon name="sparkles" size={15} strokeWidth={2} />
+            <span>Náhodný skutek</span>
           </button>
           <button
             type="button"
@@ -2693,156 +2769,166 @@
             title={soundEnabled ? "Vypnout tóny" : "Zapnout jemné tóny"}
             aria-pressed={soundEnabled}
           >
-            {soundEnabled ? "🎐 Tóny: zapnuto" : "🔇 Jemné tóny"}
+            <AppIcon
+              name={soundEnabled ? "volume-2" : "volume-x"}
+              size={15}
+              strokeWidth={2}
+            />
+            <span>{soundEnabled ? "Tóny: zapnuto" : "Jemné tóny"}</span>
           </button>
         </div>
       </div>
-      <!-- svelte-ignore a11y-click-events-have-key-events -->
-      <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-      <div
-        class="sanctuary-viewport"
-        bind:this={stageWrapEl}
-        on:click={handleStageClick}
-        on:pointermove={handlePointerMove}
-        on:pointerleave={handlePointerLeave}
-        role="application"
-        aria-label="Krajina dobra: výběrem světla zobrazíš konkrétní dobrý skutek, dotykem hladiny nebo oblohy rozsvítíš vlastní skutek"
-      >
-        <div class="art-parallax-wrap" bind:this={parallaxEl}>
-          <picture>
-            <source
-              type="image/webp"
-              srcset="/art/sanctuary-twilight-800.webp 800w, /art/sanctuary-twilight.webp 1400w"
-              sizes="100vw"
-            />
-            <img
-              src="/art/sanctuary-twilight.jpg"
-              alt="Šumavské údolí s lesní tůní a světly dobrých skutků"
-              class="art-layer twilight"
-              decoding="async"
-              draggable="false"
-            />
-          </picture>
-
-          <picture>
-            <source
-              type="image/webp"
-              srcset="/art/sanctuary-dawn-800.webp 800w, /art/sanctuary-dawn.webp 1400w"
-              sizes="100vw"
-            />
-            <img
-              src="/art/sanctuary-dawn.jpg"
-              alt=""
-              aria-hidden="true"
-              class="art-layer dawn"
-              fetchpriority="high"
-              decoding="async"
-              style={`opacity: ${dawnLayerOpacity.toFixed(2)};`}
-              draggable="false"
-            />
-          </picture>
-        </div>
-
-        <canvas bind:this={canvasEl} class="sanctuary-canvas world-canvas"
-        ></canvas>
-
-        <!-- MAGNETIC HOVER TOOLTIP PREVIEW -->
-        {#if hoveredLight && (!selectedLight || selectedLight.uid !== hoveredLight.uid)}
-          {@const hMeta =
-            ELEMENT_MAP[hoveredLight.element] || SANCTUARY_ELEMENTS[3]}
-          <div
-            class="light-hover-pill"
-            style={`left: ${Math.min(86, Math.max(14, hoveredLight.x * 100)).toFixed(1)}%; top: ${Math.max(10, hoveredLight.y * 100 - 6).toFixed(1)}%;`}
-          >
-            {#if hMeta.icon === "🐾"}
-              <svg class="sanctuary-paw-svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <circle cx="7.5" cy="9.5" r="2.3" />
-                <circle cx="12" cy="7" r="2.3" />
-                <circle cx="16.5" cy="9.5" r="2.3" />
-                <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
-              </svg>
-            {:else}
-              <span>{hMeta.icon}</span>
-            {/if}
-            <strong>{cleanTitle(hoveredLight.title)}</strong>
-            <span class="hp-hint">· klikni</span>
-          </div>
-        {/if}
-
-        {#if gentleToast}
-          <div class="gentle-toast" role="status">
-            {#if gentleToast.includes("🐾")}
-              <svg class="sanctuary-paw-svg toast-paw-svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <circle cx="7.5" cy="9.5" r="2.3" />
-                <circle cx="12" cy="7" r="2.3" />
-                <circle cx="16.5" cy="9.5" r="2.3" />
-                <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
-              </svg>
-              <span>{gentleToast.replace(/\s*🐾\s*/g, "").trim()}</span>
-            {:else}
-              {gentleToast}
-            {/if}
-          </div>
-        {/if}
-
-        <button
-          type="button"
-          class="molly-sanctuary-pill"
-          on:click|stopPropagation={() => feedSanctuaryMolly(0.24, 0.72)}
-          title={$mollyState.availableTreats > 0
-            ? "Dát patronce Molly zasloužený pamlsek do mističky u jezera"
-            : "Pohladit patronku Molly u jezera"}
-          aria-label={$mollyState.availableTreats > 0
-            ? "Dát patronce Molly pamlsek"
-            : "Pohladit patronku Molly"}
+      <div class="sanctuary-viewport-frame">
+        <!-- svelte-ignore a11y-click-events-have-key-events -->
+        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+        <div
+          class="sanctuary-viewport"
+          bind:this={stageWrapEl}
+          on:click={handleStageClick}
+          on:pointermove={handlePointerMove}
+          on:pointerleave={handlePointerLeave}
+          role="application"
+          aria-label="Krajina dobra: výběrem světla zobrazíš konkrétní dobrý skutek, dotykem hladiny nebo oblohy rozsvítíš vlastní skutek"
         >
-          <svg class="sanctuary-paw-svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <circle cx="7.5" cy="9.5" r="2.3" />
-            <circle cx="12" cy="7" r="2.3" />
-            <circle cx="16.5" cy="9.5" r="2.3" />
-            <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
-          </svg>
-          {#if $mollyState.availableTreats > 0}
-            <span>Dát Molly pamlsek ({$mollyState.availableTreats} {$mollyState.lastTreat?.icon || "🐟"})</span>
-          {:else}
-            <span>Pohladit Molly ({$mollyState.treatsFedTotal} {$mollyState.lastTreat?.icon || "🐟"})</span>
-          {/if}
-        </button>
-      </div>
+          <div class="art-parallax-wrap" bind:this={parallaxEl}>
+            <picture>
+              <source
+                type="image/webp"
+                srcset="/art/sanctuary-twilight-800.webp 800w, /art/sanctuary-twilight.webp 1400w"
+                sizes="100vw"
+              />
+              <img
+                src="/art/sanctuary-twilight.jpg"
+                alt="Šumavské údolí s lesní tůní a světly dobrých skutků"
+                class="art-layer twilight"
+                decoding="async"
+                draggable="false"
+              />
+            </picture>
 
-      {#if nextSeedToPlant}
-        <div class="seed-ceremony-banner">
-          <div class="seed-orb" aria-hidden="true">✦</div>
-          <div class="seed-copy">
-            <span class="seed-tag">TVŮJ DOKONČENÝ SKUTEK</span>
-            <strong>{cleanTitle(nextSeedToPlant.title)}</strong>
-            <span
-              >Klikni na oblohu (hvězda) nebo na hladinu (lucerna) a rozsviť ho
-              v krajině.</span
-            >
+            <picture>
+              <source
+                type="image/webp"
+                srcset="/art/sanctuary-dawn-800.webp 800w, /art/sanctuary-dawn.webp 1400w"
+                sizes="100vw"
+              />
+              <img
+                src="/art/sanctuary-dawn.jpg"
+                alt=""
+                aria-hidden="true"
+                class="art-layer dawn"
+                fetchpriority="high"
+                decoding="async"
+                style={`opacity: ${dawnLayerOpacity.toFixed(2)};`}
+                draggable="false"
+              />
+            </picture>
           </div>
+
+          <canvas bind:this={canvasEl} class="sanctuary-canvas world-canvas"
+          ></canvas>
+
+          <!-- MAGNETIC HOVER TOOLTIP PREVIEW -->
+          {#if hoveredLight && (!selectedLight || selectedLight.uid !== hoveredLight.uid)}
+            {@const hMeta =
+              ELEMENT_MAP[hoveredLight.element] || SANCTUARY_ELEMENTS[3]}
+            <div
+              class="light-hover-pill"
+              style={`left: ${Math.min(86, Math.max(14, hoveredLight.x * 100)).toFixed(1)}%; top: ${Math.max(10, hoveredLight.y * 100 - 6).toFixed(1)}%;`}
+            >
+              <AppIcon
+                name={resolveIconKey(hMeta.icon)}
+                size={13}
+                strokeWidth={2}
+                class={hMeta.icon === "paw" ? "sanctuary-paw-svg" : ""}
+              />
+              <strong>{cleanTitle(hoveredLight.title)}</strong>
+              <span class="hp-hint">· klikni</span>
+            </div>
+          {/if}
+
+          {#if gentleToast}
+            <div class="gentle-toast" role="status">
+              {#if gentleToastPaw}
+                <AppIcon
+                  name="paw"
+                  size={14}
+                  class="sanctuary-paw-svg toast-paw-svg"
+                />
+              {/if}
+              <span>{gentleToast}</span>
+            </div>
+          {/if}
+
           <button
             type="button"
-            class="seed-auto-btn"
-            on:click|stopPropagation={() => {
-              plantActiveSeed(nextSeedToPlant, { x: 0.48, y: 0.24 });
-              triggerLightBloom(0.48, 0.24, "#fde68a", false, true);
-              playChime("sky");
-            }}
+            class="molly-sanctuary-pill"
+            on:click|stopPropagation={() => feedSanctuaryMolly(0.24, 0.72)}
+            title={$mollyState.availableTreats > 0
+              ? "Dát patronce Molly zasloužený pamlsek do mističky u jezera"
+              : "Pohladit patronku Molly u jezera"}
+            aria-label={$mollyState.availableTreats > 0
+              ? "Dát patronce Molly pamlsek"
+              : "Pohladit patronku Molly"}
           >
-            ✨ Rozsvítit hvězdu
+            <AppIcon name="paw" size={14} class="sanctuary-paw-svg" />
+            {#if $mollyState.availableTreats > 0}
+              <span class="molly-pill-label"
+                >Dát Molly pamlsek ({$mollyState.availableTreats}&nbsp;<AppIcon
+                  name={resolveIconKey($mollyState.lastTreat?.icon || "fish")}
+                  size={13}
+                  strokeWidth={2}
+                />)</span
+              >
+            {:else}
+              <span class="molly-pill-label"
+                >Pohladit Molly ({$mollyState.treatsFedTotal}&nbsp;<AppIcon
+                  name={resolveIconKey($mollyState.lastTreat?.icon || "fish")}
+                  size={13}
+                  strokeWidth={2}
+                />)</span
+              >
+            {/if}
           </button>
         </div>
-      {/if}
 
-      {#if selectedLight}
-        <DeedInspectorModal
-          {selectedLight}
-          elementMap={ELEMENT_MAP}
-          onClose={() => (selectedLight = null)}
-          onMarkDone={markDeedLightDone}
-        />
-      {/if}
+        {#if nextSeedToPlant}
+          <div class="seed-ceremony-banner">
+            <div class="seed-orb" aria-hidden="true">
+              <AppIcon name="sparkles" size={16} strokeWidth={2} />
+            </div>
+            <div class="seed-copy">
+              <span class="seed-tag">TVŮJ DOKONČENÝ SKUTEK</span>
+              <strong>{cleanTitle(nextSeedToPlant.title)}</strong>
+              <span
+                >Klikni na oblohu (hvězda) nebo na hladinu (lucerna) a rozsviť
+                ho v krajině.</span
+              >
+            </div>
+            <button
+              type="button"
+              class="seed-auto-btn"
+              on:click|stopPropagation={() => {
+                plantActiveSeed(nextSeedToPlant, { x: 0.48, y: 0.24 });
+                triggerLightBloom(0.48, 0.24, "#fde68a", false, true);
+                playChime("sky");
+              }}
+            >
+              <AppIcon name="sparkles" size={14} strokeWidth={2} />
+              <span>Rozsvítit hvězdu</span>
+            </button>
+          </div>
+        {/if}
+
+        {#if selectedLight}
+          <DeedInspectorModal
+            {selectedLight}
+            elementMap={ELEMENT_MAP}
+            onClose={() => (selectedLight = null)}
+            onMarkDone={markDeedLightDone}
+          />
+        {/if}
+      </div>
     </div>
 
     <!-- SLEEK COMPACT DEED DOCK -->
@@ -2880,22 +2966,28 @@
         class="qp-next"
         on:click={() => (proofIndex = (proofIndex + 1) % HOPE_PROOFS.length)}
       >
-        ↻ Další dobrá zpráva
+        <AppIcon name="refresh-cw" size={14} strokeWidth={2} />
+        <span>Další dobrá zpráva</span>
       </button>
       {#if currentProof.sourceUrl}
-        <span>·</span>
+        <span class="qp-sep" aria-hidden="true">·</span>
         <a
           href={currentProof.sourceUrl}
           target="_blank"
           rel="noopener noreferrer"
           class="qp-link"
         >
-          Ověřeno {currentProof.verifiedAt || "2026"} · Zdroj: {currentProof.sourceLabel}
-          ↗
+          <span
+            >Ověřeno {currentProof.verifiedAt || "2026"} · Zdroj: {currentProof.sourceLabel}</span
+          >
+          <AppIcon name="arrow-up-right" size={14} strokeWidth={2} />
         </a>
       {/if}
-      <span>·</span>
-      <a href="/app/guided" class="qp-link">Vybrat si dnešní skutek →</a>
+      <span class="qp-sep" aria-hidden="true">·</span>
+      <a href="/app/guided" class="qp-link">
+        <span>Vybrat si dnešní skutek</span>
+        <AppIcon name="arrow-right" size={14} strokeWidth={2} />
+      </a>
     </div>
   </section>
 
@@ -2909,29 +3001,26 @@
 
 <style>
   .sanctuary-page {
+    width: 100%;
     max-width: 1140px;
     margin: 0 auto;
-    padding: 0.65rem 1.25rem 5.25rem;
+    box-sizing: border-box;
+    padding: 0.75rem 1.25rem 3rem;
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 1.75rem;
   }
 
   /* =========================================================================
-     1. IMMERSIVE KRAJINA DOBRA STAGE
+     1. IMMERSIVE KRAJINA DOBRA STAGE (EDITORIAL DAYLIGHT)
      ========================================================================= */
   .sanctuary-stage {
-    border-radius: 32px;
-    padding: 1rem 1.4rem 0.92rem;
-    background: radial-gradient(
-        90% 90% at 80% 10%,
-        rgba(251, 191, 36, 0.16) 0%,
-        transparent 55%
-      ),
-      linear-gradient(165deg, #092117 0%, #103425 55%, #0b261b 100%);
-    color: #f8faf8;
-    box-shadow: 0 28px 60px -18px rgba(8, 28, 19, 0.3);
-    border: 1px solid rgba(167, 243, 208, 0.2);
+    border-radius: 24px;
+    padding: 1.25rem 1.4rem 1.15rem;
+    background: var(--bg-surface);
+    color: var(--ink-primary);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-subtle);
   }
 
   .sanctuary-top {
@@ -2940,146 +3029,174 @@
     align-items: flex-end;
     gap: 1rem;
     flex-wrap: wrap;
-    margin-bottom: 0.65rem;
+    margin-bottom: 0.75rem;
   }
 
   .sanctuary-intro {
     flex: 1 1 auto;
-    max-width: 520px;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: clip;
   }
 
   .kicker {
-    font-size: 0.7rem;
+    font-size: 0.72rem;
     font-weight: 800;
-    letter-spacing: 0.12em;
-    color: #fde68a;
-    margin-bottom: 0.2rem;
+    letter-spacing: 0.1em;
+    color: #8f4b0e;
+    margin-bottom: 0.24rem;
   }
 
   h1 {
-    margin: 0 0 0.28rem 0;
-    font-size: clamp(1.75rem, 2.9vw, 2.35rem);
+    margin: 0 0 0.32rem 0;
+    font-size: clamp(1.7rem, 2.9vw, 2.3rem);
     font-weight: 800;
     letter-spacing: -0.03em;
-    line-height: 1.08;
-    color: #ffffff;
+    line-height: 1.1;
+    color: var(--ink-primary);
   }
 
   h1 .serif-accent {
-    color: #fde68a;
+    color: var(--accent-primary);
     font-weight: 400;
   }
 
   .lead {
     margin: 0;
-    color: rgba(230, 245, 236, 0.86);
-    font-size: 0.88rem;
-    line-height: 1.45;
+    max-width: 58ch;
+    color: var(--ink-secondary);
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+
+  .sanctuary-canvas-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    max-width: 100%;
   }
 
   .sanctuary-canvas-shell .atmosphere-controls {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    z-index: 10;
-    display: inline-flex;
+    position: static;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.38rem;
-    padding: 0.24rem 0.34rem;
-    border-radius: 999px;
-    background: rgba(5, 20, 14, 0.72);
-    border: 1px solid rgba(167, 243, 208, 0.22);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.45);
-    flex-shrink: 0;
-    pointer-events: none;
-  }
-
-  .atmosphere-controls button {
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.38rem 0.48rem;
+    border-radius: 16px;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-subtle);
+    box-shadow: none;
     pointer-events: auto;
   }
 
   .atmo-pill-group {
     display: inline-flex;
-    padding: 0.16rem;
+    padding: 0.18rem;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    gap: 0.14rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    gap: 0.16rem;
   }
 
   .atmo-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 44px;
+    min-width: 44px;
     border: none;
     border-radius: 999px;
-    padding: 0.36rem 0.72rem;
+    padding: 0.42rem 0.85rem;
     background: transparent;
-    color: rgba(236, 253, 245, 0.85);
+    color: var(--ink-secondary);
     font-family: inherit;
-    font-size: 0.76rem;
+    font-size: 0.78rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition:
+      background-color 0.18s ease,
+      color 0.18s ease;
     white-space: nowrap;
   }
 
+  .atmo-btn:hover {
+    color: var(--ink-primary);
+  }
+
   .atmo-btn.active {
-    background: linear-gradient(135deg, #fde68a 0%, #6ee7b7 100%);
-    color: #061b12;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    background: var(--accent-primary);
+    color: #ffffff;
+    box-shadow: var(--shadow-sm);
   }
 
   .hud-actions-group {
     display: inline-flex;
     align-items: center;
-    gap: 0.32rem;
+    gap: 0.4rem;
+    flex-wrap: wrap;
   }
 
   .explore-deed-btn,
   .sound-btn {
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 44px;
+    min-width: 44px;
+    border: 1px solid var(--border-strong);
     border-radius: 999px;
-    padding: 0.36rem 0.72rem;
-    background: rgba(255, 255, 255, 0.07);
-    color: rgba(240, 253, 246, 0.92);
+    padding: 0.42rem 0.85rem;
+    background: var(--bg-surface);
+    color: var(--ink-primary);
     font-family: inherit;
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: 0.78rem;
+    font-weight: 700;
     cursor: pointer;
     white-space: nowrap;
-    transition: all 0.2s ease;
+    transition:
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      color 0.18s ease;
   }
 
   .explore-deed-btn:hover,
   .sound-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    transform: translateY(-1px);
+    background: var(--bg-canvas);
+    border-color: var(--accent-primary);
   }
 
   .sound-btn.on {
-    background: rgba(52, 211, 153, 0.22);
-    border-color: rgba(110, 231, 183, 0.52);
-    color: #fde68a;
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: #ffffff;
   }
 
-  .sanctuary-canvas-shell {
+  .sanctuary-viewport-frame {
     position: relative;
-    max-width: 100%;
-    overflow: hidden;
-    border-radius: 24px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
   .sanctuary-viewport {
     position: relative;
     width: 100%;
-    aspect-ratio: 16 / 8.2;
-    max-height: 41dvh;
-    min-height: 295px;
-    border-radius: 24px;
+    aspect-ratio: auto;
+    height: clamp(360px, 45dvh, 430px);
+    min-height: 360px;
+    max-height: 430px;
+    border-radius: 20px;
     overflow: hidden;
     cursor: pointer;
-    border: 1px solid rgba(253, 230, 138, 0.28);
-    box-shadow: 0 24px 52px -14px rgba(3, 12, 8, 0.65);
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-md);
     user-select: none;
   }
 
@@ -3108,8 +3225,7 @@
     display: block;
   }
 
-  /* Překryvy nad animovaným plátnem záměrně BEZ backdrop-filter: rozmazání by se muselo přepočítat
-     v každém snímku plátna (60×/s) a na mobilech způsobovalo sekání. Vyšší krytí pozadí to vyváží. */
+  /* Překryvy nad animovaným plátnem záměrně BEZ backdrop-filter kvůli plynulosti na mobilu */
   .light-hover-pill {
     position: absolute;
     transform: translate(-50%, -100%);
@@ -3138,7 +3254,7 @@
   }
 
   .hp-hint {
-    color: #6ee7b7;
+    color: #a7f3d0;
     font-weight: 700;
   }
 
@@ -3150,9 +3266,10 @@
     max-width: 620px;
     margin: 0 auto;
     padding: 0.72rem 1rem;
-    border-radius: 18px;
-    background: rgba(8, 30, 21, 0.95);
-    border: 1px solid rgba(253, 230, 138, 0.48);
+    border-radius: 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-lg);
     display: flex;
     align-items: center;
     gap: 0.8rem;
@@ -3160,15 +3277,14 @@
   }
 
   .seed-orb {
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
-    background: rgba(253, 230, 138, 0.22);
-    color: #fde68a;
+    background: var(--accent-warm-tint);
+    color: #8f4b0e;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1rem;
     flex-shrink: 0;
   }
 
@@ -3180,11 +3296,12 @@
     display: flex;
     flex-direction: column;
     gap: 0.08rem;
-    font-size: 0.79rem;
-    color: rgba(236, 253, 245, 0.9);
+    font-size: 0.8rem;
+    color: var(--ink-secondary);
   }
 
   .seed-copy strong {
+    color: var(--ink-primary);
     overflow-wrap: anywhere;
   }
 
@@ -3192,38 +3309,50 @@
     font-size: 0.66rem;
     font-weight: 800;
     letter-spacing: 0.08em;
-    color: #fde68a;
+    color: #8f4b0e;
   }
 
   .seed-auto-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 44px;
+    min-width: 44px;
     border: none;
     border-radius: 999px;
-    padding: 0.48rem 0.9rem;
-    background: linear-gradient(135deg, #fde68a 0%, #6ee7b7 100%);
-    color: #061b12;
+    padding: 0.5rem 0.95rem;
+    background: var(--accent-primary);
+    color: #ffffff;
     font-family: inherit;
-    font-weight: 800;
-    font-size: 0.78rem;
+    font-weight: 700;
+    font-size: 0.8rem;
     cursor: pointer;
     white-space: nowrap;
+    transition: background-color 0.16s ease;
+  }
+
+  .seed-auto-btn:hover {
+    background: var(--accent-primary-hover);
   }
 
   .gentle-toast {
     position: absolute;
-    bottom: 1rem;
+    top: 0.75rem;
+    bottom: auto;
     left: 50%;
     transform: translateX(-50%);
-    padding: 0.52rem 1.1rem;
+    padding: 0.52rem 1.05rem;
     border-radius: 999px;
-    background: rgba(8, 30, 21, 0.96);
-    border: 1px solid rgba(253, 230, 138, 0.48);
+    background: rgba(8, 30, 21, 0.95);
+    border: 1px solid rgba(253, 230, 138, 0.45);
     color: #fef3c7;
-    font-size: 0.84rem;
+    font-size: 0.83rem;
     font-weight: 600;
     z-index: 5;
     pointer-events: none;
     text-align: center;
-    max-width: calc(100% - 2rem);
+    max-width: calc(100% - 1.5rem);
   }
 
   /* =========================================================================
@@ -3231,236 +3360,95 @@
      ========================================================================= */
   .quiet-proof {
     text-align: center;
-    max-width: 680px;
+    max-width: 700px;
     margin: 0 auto;
     padding: 0.35rem 0;
+  }
+
+  .sec-kicker {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: #8f4b0e;
+    margin-bottom: 0.3rem;
   }
 
   .qp-text {
     margin: 0.25rem 0 0.7rem;
     font-size: 0.96rem;
     line-height: 1.62;
-    color: var(--text-secondary);
+    color: var(--ink-secondary);
   }
 
   .qp-text strong {
-    color: var(--text-primary);
+    color: var(--ink-primary);
   }
 
   .qp-actions {
     display: inline-flex;
     align-items: center;
-    gap: 0.55rem;
+    gap: 0.35rem;
     flex-wrap: wrap;
     justify-content: center;
-    font-size: 0.85rem;
-    color: var(--text-muted);
+    font-size: 0.84rem;
+    color: var(--ink-secondary, #3f574a);
   }
 
   .qp-next {
-    border: none;
-    background: transparent;
-    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 44px;
+    min-width: 44px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    background: var(--bg-surface);
+    color: var(--ink-secondary);
     font-family: inherit;
     font-weight: 700;
-    font-size: 0.85rem;
+    font-size: 0.84rem;
     cursor: pointer;
-    padding: 0;
+    padding: 0.45rem 0.85rem;
+    transition:
+      border-color 0.16s ease,
+      color 0.16s ease;
   }
 
   .qp-next:hover {
-    color: var(--text-primary);
+    border-color: var(--accent-primary);
+    color: var(--ink-primary);
   }
 
   .qp-link {
-    color: var(--emerald-600);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.45rem 0.75rem;
+    border-radius: 999px;
+    color: var(--accent-primary);
     font-weight: 800;
     text-decoration: none;
   }
 
   .qp-link:hover {
     text-decoration: underline;
+    background: var(--bg-subtle);
   }
 
-  @media (max-width: 900px) {
-    .sanctuary-stage {
-      padding: 1.4rem 1.15rem 1.2rem;
-      border-radius: 26px;
-    }
-    .atmosphere-controls {
-      align-items: flex-start;
-    }
-    .sanctuary-viewport {
-      aspect-ratio: 4 / 3;
-    }
-  }
-
-  @media (max-width: 680px) {
-    .sanctuary-page {
-      padding: 0.35rem 0.6rem 2rem;
-      gap: 1.2rem;
-    }
-
-    .sanctuary-stage {
-      padding: 0.7rem 0.75rem 0.8rem;
-      border-radius: 20px;
-    }
-
-    .sanctuary-top {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 0.42rem;
-      margin-bottom: 0.52rem;
-    }
-
-    .kicker {
-      font-size: 0.65rem;
-      margin-bottom: 0.1rem;
-    }
-
-    h1 {
-      font-size: 1.32rem;
-      margin: 0;
-    }
-
-    .sanctuary-intro .lead {
-      font-size: 0.80rem;
-      line-height: 1.35;
-      margin: 0.25rem 0 0.4rem;
-      color: rgba(220, 252, 231, 0.9);
-    }
-
-    .legend-chip {
-      font-size: 0.68rem;
-      min-height: 30px;
-      padding: 0.22rem 0.48rem;
-    }
-
-    .sanctuary-canvas-shell .atmosphere-controls {
-      top: 8px;
-      right: 8px;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      background: transparent;
-      border: none;
-      box-shadow: none;
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
-      padding: 0;
-      gap: 0.25rem;
-      max-width: calc(100% - 16px);
-      box-sizing: border-box;
-    }
-
-    .atmo-pill-group {
-      background: rgba(5, 20, 14, 0.82);
-      border: 1px solid rgba(167, 243, 208, 0.22);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border-radius: 999px;
-      padding: 0.12rem;
-      gap: 0.1rem;
-      max-width: 100%;
-      box-sizing: border-box;
-    }
-
-    .atmo-btn {
-      padding: 0.22rem 0.44rem;
-      font-size: 0.68rem;
-      white-space: nowrap;
-    }
-
-    .hud-actions-group {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.2rem;
-      flex-wrap: nowrap;
-      max-width: 100%;
-    }
-
-    .explore-deed-btn,
-    .sound-btn {
-      background: rgba(5, 20, 14, 0.82);
-      border: 1px solid rgba(167, 243, 208, 0.22);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border-radius: 999px;
-      padding: 0.22rem 0.44rem;
-      font-size: 0.68rem;
-      white-space: nowrap;
-    }
-
-    .sanctuary-canvas-shell {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .sanctuary-viewport {
-      min-height: 205px;
-      height: 31dvh;
-      max-height: 245px;
-      aspect-ratio: auto;
-      border-radius: 16px;
-    }
-
-    .seed-ceremony-banner {
-      position: relative !important;
-      top: auto !important;
-      bottom: auto !important;
-      left: auto !important;
-      right: auto !important;
-      transform: none !important;
-      width: 100% !important;
-      max-width: 100% !important;
-      margin: 0 !important;
-      box-sizing: border-box;
-    }
-
-    .seed-ceremony-banner {
-      display: flex;
-      flex-direction: column;
-      align-items: stretch;
-      padding: 0.75rem 0.85rem;
-      gap: 0.5rem;
-    }
-
-    .seed-ceremony-banner .seed-orb {
-      display: none;
-    }
-
-    .seed-ceremony-banner .seed-auto-btn {
-      width: 100%;
-      text-align: center;
-      justify-content: center;
-    }
-
-    .molly-sanctuary-pill {
-      bottom: 0.38rem;
-      left: 0.45rem;
-      min-height: 44px;
-      min-width: 44px;
-      padding: 0.4rem 0.68rem;
-      font-size: 0.7rem;
-      max-width: calc(100% - 0.9rem);
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      box-sizing: border-box;
-    }
-  }
-
-  .sanctuary-intro {
-    min-width: 0;
-    max-width: 100%;
-    overflow-x: clip;
+  .qp-sep {
+    color: var(--ink-secondary, #3f574a);
   }
 
   /* =========================================================================
      SANCTUARY ORIENTATION BLOCK & ONBOARDING (R3)
      ========================================================================= */
   .sanctuary-orientation-block {
-    margin-top: 0.48rem;
+    margin-top: 0.6rem;
     display: block;
     max-width: 100%;
     box-sizing: border-box;
@@ -3479,22 +3467,16 @@
     display: inline-flex;
     align-items: center;
     gap: 0.32rem;
-    padding: 0.22rem 0.56rem;
+    padding: 0.26rem 0.6rem;
     border-radius: 999px;
-    background: rgba(16, 185, 129, 0.12);
-    border: 1px solid rgba(110, 231, 183, 0.24);
-    color: #e6fcf5;
-    font-size: 0.72rem;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-subtle);
+    color: var(--ink-secondary);
+    font-size: 0.74rem;
     line-height: 1.2;
     cursor: default;
     user-select: none;
     box-sizing: border-box;
-    transition: background 0.2s ease, border-color 0.2s ease;
-  }
-
-  .legend-chip:hover {
-    background: rgba(16, 185, 129, 0.2);
-    border-color: rgba(110, 231, 183, 0.4);
   }
 
   .legend-chip .chip-symbol {
@@ -3506,24 +3488,30 @@
   }
 
   .legend-chip.legend-star .chip-symbol {
-    color: #fde68a;
+    color: #8f4b0e;
   }
 
   .legend-chip.legend-lantern .chip-symbol {
-    color: #fb923c;
+    color: #8f4b0e;
   }
 
   .legend-chip.legend-molly .chip-symbol {
-    color: #fde68a;
+    color: var(--accent-primary);
   }
 
-  .sanctuary-paw-svg {
+  .legend-chip.legend-molly :global(.sanctuary-paw-svg) {
+    color: var(--accent-primary);
+    filter: none;
+  }
+
+  .molly-sanctuary-pill :global(.sanctuary-paw-svg),
+  .gentle-toast :global(.sanctuary-paw-svg),
+  .light-hover-pill :global(.sanctuary-paw-svg) {
     color: #fde68a;
     flex-shrink: 0;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
   }
 
-  .toast-paw-svg {
+  :global(.toast-paw-svg) {
     display: inline-block;
     vertical-align: -2px;
     margin-right: 0.28rem;
@@ -3531,7 +3519,7 @@
 
   .legend-chip .chip-text strong {
     font-weight: 700;
-    color: #ffffff;
+    color: var(--ink-primary);
   }
 
   .sanctuary-guide-toggle {
@@ -3565,77 +3553,250 @@
   .guide-pill-face {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
-    padding: 0.22rem 0.62rem;
+    gap: 0.28rem;
+    padding: 0.26rem 0.64rem;
     border-radius: 999px;
-    background: rgba(253, 230, 138, 0.12);
-    border: 1px solid rgba(253, 230, 138, 0.42);
-    color: #fde68a;
-    font-size: 0.72rem;
+    background: var(--accent-warm-tint);
+    border: 1px solid rgba(184, 101, 27, 0.35);
+    color: #8f4b0e;
+    font-size: 0.74rem;
     font-weight: 700;
     line-height: 1.2;
     box-sizing: border-box;
-    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+    transition:
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      color 0.18s ease;
   }
 
   .guide-toggle-summary:hover .guide-pill-face {
-    background: rgba(253, 230, 138, 0.22);
-    border-color: rgba(253, 230, 138, 0.68);
-    color: #fef3c7;
+    background: var(--bg-subtle);
+    border-color: var(--accent-warm);
   }
 
   .sanctuary-guide-toggle[open] .guide-pill-face {
-    background: rgba(52, 211, 153, 0.2);
-    border-color: rgba(110, 231, 183, 0.5);
-    color: #d1fae5;
+    background: var(--bg-subtle);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
   }
 
   .guide-chevron {
-    display: inline-block;
-    font-size: 0.78rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     line-height: 1;
-    color: #fbbf24;
-    transition: transform 0.18s ease, color 0.18s ease;
+    color: #8f4b0e;
+    transition:
+      transform 0.18s ease,
+      color 0.18s ease;
   }
 
   .sanctuary-guide-toggle[open] .guide-chevron {
     transform: rotate(90deg);
-    color: #6ee7b7;
+    color: var(--accent-primary);
   }
 
   .guide-toggle-panel {
     display: none;
     width: 100%;
     box-sizing: border-box;
-    margin-top: 0.48rem;
+    margin-top: 0.55rem;
     flex-direction: column;
-    gap: 0.55rem;
-    background: rgba(9, 34, 24, 0.84);
-    border: 1px solid rgba(167, 243, 208, 0.34);
+    gap: 0.6rem;
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
     border-radius: 16px;
-    padding: 0.62rem 0.8rem 0.68rem;
+    padding: 0.78rem 0.92rem;
   }
 
-  .sanctuary-orientation-block:has(.sanctuary-guide-toggle[open]) .guide-toggle-panel {
+  .sanctuary-orientation-block:has(.sanctuary-guide-toggle[open])
+    .guide-toggle-panel {
     display: flex;
   }
 
   .guide-steps-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.65rem;
+    gap: 0.75rem;
+  }
+
+  .guide-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    font-size: 0.76rem;
+    line-height: 1.38;
+    color: var(--ink-secondary);
+  }
+
+  .guide-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-strong);
+    color: var(--accent-primary);
+    font-weight: 800;
+    font-size: 0.72rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 0.06rem;
+  }
+
+  .guide-step strong {
+    display: block;
+    color: var(--ink-primary);
+    font-weight: 700;
+    margin-bottom: 0.1rem;
+  }
+
+  .guide-step p {
+    margin: 0;
+    color: var(--ink-secondary);
+    font-size: 0.74rem;
+  }
+
+  .guide-cta-row {
+    margin-top: 0.25rem;
+    display: flex;
+  }
+
+  .guide-action-btn {
+    appearance: none;
+    min-height: 44px;
+    min-width: 44px;
+    border: 1px solid var(--accent-primary);
+    background: var(--accent-primary);
+    color: #ffffff;
+    border-radius: 999px;
+    padding: 0.5rem 1rem;
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.38rem;
+    transition: background-color 0.16s ease;
+  }
+
+  .guide-action-btn:hover {
+    background: var(--accent-primary-hover);
+  }
+
+  .molly-sanctuary-pill {
+    position: absolute;
+    bottom: 0.75rem;
+    left: 0.75rem;
+    z-index: 5;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.42rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid rgba(253, 230, 138, 0.55);
+    background: rgba(10, 30, 21, 0.92);
+    color: #fef3c7;
+    font-family: inherit;
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+    transition:
+      border-color 0.18s ease,
+      background-color 0.18s ease;
+  }
+
+  .molly-sanctuary-pill:hover {
+    border-color: rgba(253, 230, 138, 0.9);
+    background: rgba(14, 42, 29, 0.96);
+  }
+
+  .molly-pill-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+  }
+
+  @media (max-width: 900px) {
+    .sanctuary-stage {
+      padding: 1.15rem 1.05rem;
+      border-radius: 22px;
+    }
+
+    .sanctuary-viewport {
+      height: clamp(280px, 44dvh, 380px);
+      min-height: 280px;
+      max-height: 380px;
+    }
   }
 
   @media (max-width: 760px) {
     .guide-steps-grid {
       grid-template-columns: 1fr;
-      gap: 0.48rem;
+      gap: 0.5rem;
     }
   }
 
   @media (max-width: 680px) {
+    .sanctuary-page {
+      padding: 0.45rem 0.65rem 2rem;
+      gap: 1.25rem;
+    }
+
+    .sanctuary-stage {
+      padding: 0.75rem 0.65rem 0.9rem;
+      border-radius: 18px;
+    }
+
+    .sanctuary-top {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.42rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .kicker {
+      font-size: 0.66rem;
+      margin-bottom: 0.12rem;
+    }
+
+    h1 {
+      font-size: 1.32rem;
+      margin: 0;
+    }
+
+    .sanctuary-intro .lead {
+      font-size: 0.82rem;
+      line-height: 1.38;
+      margin: 0.25rem 0 0.45rem;
+    }
+
+    .sanctuary-legend-strip {
+      flex-wrap: nowrap;
+      gap: 0.2rem;
+    }
+
+    .chip-sub {
+      display: none;
+    }
+
+    .legend-chip {
+      font-size: 0.65rem;
+      min-height: 30px;
+      padding: 0.22rem 0.36rem;
+      gap: 0.2rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
     .sanctuary-guide-toggle {
       margin: -7px 0;
+      flex-shrink: 0;
     }
 
     .guide-toggle-summary {
@@ -3645,110 +3806,116 @@
 
     .guide-pill-face {
       min-height: 30px;
-      font-size: 0.68rem;
-      padding: 0.22rem 0.54rem;
+      font-size: 0.65rem;
+      padding: 0.22rem 0.44rem;
+      gap: 0.2rem;
+      white-space: nowrap;
     }
 
     .guide-action-btn {
       min-height: 44px;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .sanctuary-canvas-shell {
+      gap: 0.5rem;
+    }
+
+    .sanctuary-canvas-shell .atmosphere-controls {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.38rem;
+      padding: 0.35rem;
+      border-radius: 14px;
+    }
+
+    .atmo-pill-group {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .atmo-btn {
+      padding: 0.42rem 0.5rem;
+      font-size: 0.74rem;
+      min-height: 44px;
+    }
+
+    .hud-actions-group {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      width: 100%;
+      gap: 0.35rem;
+    }
+
+    .explore-deed-btn,
+    .sound-btn {
+      padding: 0.42rem 0.5rem;
+      font-size: 0.74rem;
+      min-height: 44px;
+    }
+
+    .sanctuary-viewport {
+      min-height: 220px;
+      height: 32dvh;
+      max-height: 260px;
+      aspect-ratio: auto;
+      border-radius: 16px;
+    }
+
+    .seed-ceremony-banner {
+      position: relative !important;
+      top: auto !important;
+      bottom: auto !important;
+      left: auto !important;
+      right: auto !important;
+      transform: none !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      padding: 0.75rem 0.85rem;
+      gap: 0.5rem;
+    }
+
+    .seed-ceremony-banner .seed-orb {
+      display: none;
+    }
+
+    .seed-ceremony-banner .seed-auto-btn {
+      width: 100%;
+      min-height: 44px;
+      text-align: center;
+      justify-content: center;
+    }
+
+    .molly-sanctuary-pill {
+      bottom: 0.45rem;
+      left: 0.45rem;
+      min-height: 44px;
+      min-width: 44px;
+      padding: 0.42rem 0.72rem;
+      font-size: 0.72rem;
+      max-width: calc(100% - 0.9rem);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      box-sizing: border-box;
+    }
+
+    .qp-sep {
+      display: none;
     }
   }
 
-  .guide-step {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.55rem;
-    font-size: 0.74rem;
-    line-height: 1.35;
-    color: #e2e8f0;
-  }
-
-  .guide-num {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: rgba(52, 211, 153, 0.25);
-    border: 1px solid rgba(52, 211, 153, 0.5);
-    color: #a7f3d0;
-    font-weight: 800;
-    font-size: 0.7rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    margin-top: 0.08rem;
-  }
-
-  .guide-step strong {
-    display: block;
-    color: #ffffff;
-    font-weight: 700;
-    margin-bottom: 0.08rem;
-  }
-
-  .guide-step p {
-    margin: 0;
-    color: #cbd5e1;
-    font-size: 0.71rem;
-  }
-
-  .guide-cta-row {
-    margin-top: 0.3rem;
-    display: flex;
-  }
-
-  .guide-action-btn {
-    appearance: none;
-    border: 1px solid rgba(253, 230, 138, 0.45);
-    background: linear-gradient(135deg, rgba(251, 191, 36, 0.22), rgba(245, 158, 11, 0.12));
-    color: #fef3c7;
-    border-radius: 999px;
-    padding: 0.4rem 0.85rem;
-    font-size: 0.74rem;
-    font-weight: 700;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
-  }
-
-  .guide-action-btn:hover {
-    transform: translateY(-1px);
-    background: linear-gradient(135deg, rgba(251, 191, 36, 0.32), rgba(245, 158, 11, 0.2));
-    border-color: rgba(253, 230, 138, 0.7);
-    color: #ffffff;
-  }
-
-  .molly-sanctuary-pill {
-    position: absolute;
-    bottom: 0.85rem;
-    left: 0.85rem;
-    z-index: 5;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.34rem 0.75rem;
-    border-radius: 999px;
-    border: 1px solid rgba(251, 191, 36, 0.5);
-    background: rgba(8, 28, 19, 0.88);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    color: #fef3c7;
-    font-family: inherit;
-    font-size: 0.75rem;
-    font-weight: 700;
-    cursor: pointer;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-    transition:
-      transform 0.18s ease,
-      border-color 0.18s ease,
-      box-shadow 0.18s ease;
-  }
-
-  .molly-sanctuary-pill:hover {
-    transform: translateY(-1px);
-    border-color: rgba(253, 230, 138, 0.85);
-    box-shadow: 0 6px 18px rgba(245, 158, 11, 0.3);
+  @media (max-width: 350px) {
+    .sanctuary-legend-strip {
+      flex-wrap: wrap;
+    }
   }
 </style>

@@ -60,7 +60,7 @@ async function checkZeroHorizontalOverflow(page: Page, label: string) {
 
 async function gotoHydrated(page: Page, path: string) {
   await page.goto(path);
-  await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 20000 }).catch(() => {});
+  await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 20000 }).catch(() => { });
   await page.waitForTimeout(250);
 }
 
@@ -80,7 +80,7 @@ test.describe('R2: Delayed Gratification (Molly Treat Economics)', () => {
   // DG-1: Empty clicking immunity
   // =========================================================================
 
-  test('DG-1.1: Clicking "✨ Impuls" button on / does NOT increment treats', async ({ page }) => {
+  test('DG-1.1: Clicking "Impuls" button on / does NOT increment treats', async ({ page }) => {
     await page.goto('/');
     const companion = page.locator('.molly-companion-layer');
     await expect(companion).toBeAttached();
@@ -96,7 +96,7 @@ test.describe('R2: Delayed Gratification (Molly Treat Economics)', () => {
     }
 
     const treatsAfterSparks = Number((await companion.getAttribute('data-molly-treats')) || '0');
-    expect(treatsAfterSparks, '✨ Impuls clicks must not award treats on empty clicking').toBe(initialTreats);
+    expect(treatsAfterSparks, 'Impuls clicks must not award treats on empty clicking').toBe(initialTreats);
   });
 
   test('DG-1.2: Direct canvas click on Molly at (0.24w, 0.72h) on /svet does NOT increment treats', async ({ page }) => {
@@ -459,11 +459,18 @@ test.describe('R1: Progressive Disclosure & UI Declutter', () => {
       if (vp.width >= 360) {
         expect(metaBox!.height, `verify-meta height (${metaBox!.height}px) must stay compact on ${vp.width}px`).toBeLessThan(42);
       }
-      // On desktop 1280x800, verify-meta and verify-footer-actions sit side-by-side on one single row
+      // On desktop 1280x800, verify-meta and verify-footer-actions sit cleanly inside .action-verify-footer without horizontal overlap
       if (vp.width === 1280) {
-        const metaCenterY = metaBox!.y + metaBox!.height / 2;
-        const actionsCenterY = actionsBox!.y + actionsBox!.height / 2;
-        expect(Math.abs(metaCenterY - actionsCenterY), 'Desktop 1280x800 verify-meta and share/report actions must sit on the same horizontal row').toBeLessThanOrEqual(8);
+        const footerBox = await verifyFooter.boundingBox();
+        expect(footerBox).not.toBeNull();
+        expect(footerBox!.height).toBeLessThan(105);
+        const horizontalOverlap =
+          metaBox!.x < actionsBox!.x + actionsBox!.width &&
+          metaBox!.x + metaBox!.width > actionsBox!.x;
+        const verticalOverlap =
+          metaBox!.y < actionsBox!.y + actionsBox!.height &&
+          metaBox!.y + metaBox!.height > actionsBox!.y;
+        expect(horizontalOverlap && verticalOverlap, 'verify-meta and verify-footer-actions must not overlap').toBe(false);
       }
       if (vp.width <= 680) {
         const brokenBox = await verifyFooter.locator('.mde-broken-btn').boundingBox();
@@ -562,24 +569,23 @@ test.describe('R1: Progressive Disclosure & UI Declutter', () => {
 
   test('PD-4.1: Mobile view switcher cleanly toggles between List and Map on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/near');
+    await gotoHydrated(page, '/near');
 
-    const switcher = page.locator('.mobile-view-toggle, .map-view-switcher');
-    if (await switcher.isVisible()) {
-      // Toggle to Map
-      const mapBtn = switcher.locator('button', { hasText: 'Mapa' });
-      await mapBtn.click();
-      await page.waitForTimeout(200);
+    const switcher = page.locator('.mobile-tabs');
+    await expect(switcher).toBeVisible();
+    // Toggle to Map
+    const mapBtn = switcher.locator('button', { hasText: 'Mapa' });
+    await mapBtn.click();
+    await page.waitForTimeout(200);
 
-      // Map container must be visible
-      await expect(page.locator('.map-container, #near-map')).toBeVisible();
+    // Map container must be visible
+    await expect(page.locator('.map-frame .map-canvas')).toBeVisible();
 
-      // Toggle back to List
-      const listBtn = switcher.locator('button', { hasText: 'Seznam' });
-      await listBtn.click();
-      await page.waitForTimeout(200);
-      await expect(page.locator('.place-card').first()).toBeVisible();
-    }
+    // Toggle back to List
+    const listBtn = switcher.locator('button', { hasText: 'Seznam' });
+    await listBtn.click();
+    await page.waitForTimeout(200);
+    await expect(page.locator('.place-card').first()).toBeVisible();
 
     await checkZeroHorizontalOverflow(page, 'near-mobile-switcher-375px');
   });
@@ -590,6 +596,11 @@ test.describe('R1: Progressive Disclosure & UI Declutter', () => {
       await page.goto('/near');
 
       await expect(page.locator('#near-location-query')).toBeVisible();
+      await checkZeroHorizontalOverflow(page, `near-compact-controls-closed-${vp.width}px`);
+      const filtersSummary = page.locator('details.near-filters-drawer > summary.near-filters-summary');
+      await expect(filtersSummary).toBeVisible();
+      const isOpen = await filtersSummary.evaluate((el) => Boolean((el.parentElement as HTMLDetailsElement | null)?.open));
+      if (!isOpen) await filtersSummary.click();
       await expect(page.locator('#near-city-jump')).toBeVisible();
       await checkZeroHorizontalOverflow(page, `near-compact-controls-${vp.width}px`);
     }
@@ -656,9 +667,10 @@ test.describe('R1: Progressive Disclosure & UI Declutter', () => {
     expect(summaryBox).not.toBeNull();
     expect(summaryBox!.width, 'Closed guide summary must be a compact pill, not full-width bar').toBeLessThan(200);
     expect(Math.abs(summaryBox!.y - starBox!.y), 'Guide pill must align in the same horizontal row as legend chips on 1280x800').toBeLessThanOrEqual(8);
-    await expect(guideSummary.locator('.guide-chevron')).toContainText('▸');
+    await expect(guideSummary.locator('.guide-chevron svg')).toBeVisible();
+    expect(await guideSummary.innerText()).not.toContain('▸');
 
-    // At scrollY = 0 on 1280x800, fixed .molly-pelisek-dock must NOT overlap 💡 Rychlé nápady or quick deed chips
+    // At scrollY = 0 on 1280x800, fixed .molly-pelisek-dock must NOT overlap Rychlé nápady or quick deed chips
     const dock = page.locator('.molly-pelisek-dock');
     const quickIdeasSummary = page.locator('.quick-ideas-summary');
     const firstQuickChip = page.locator('.qd-chip').first();

@@ -16,6 +16,7 @@
   import { notifyMollySpark } from "../../../../lib/mollyStore.js";
   import { cleanTitle, stripLeadingEmoji } from "../../../../lib/utils.js";
   import { VALUES } from "../../../data/values.js";
+  import AppIcon from "$lib/components/AppIcon.svelte";
   import EvidenceBadge from "./EvidenceBadge.svelte";
 
   /** @type {(import('$lib/types').MicroAction & Record<string, unknown>) | null} */
@@ -61,16 +62,12 @@
   let lastHoldActionId = null;
   let lastCelebratedActionId = null;
 
-  // Interactive anticipation diorama state (zero-reflow cached bounds)
-  /** @type {DOMRect | null} */
-  let previewBounds = null;
+  // Interactive anticipation diorama state (zero-reflow)
   let previewHovered = false;
   let ctaHovered = false;
   let previewNudged = false;
   /** @type {ReturnType<typeof setTimeout> | null} */
   let previewNudgeTimer = null;
-  let spotX = 50;
-  let spotY = 34;
 
   function endHoldSpark(released = false) {
     if (stopHoldSpark) {
@@ -90,36 +87,12 @@
     });
   }
 
-  function handlePreviewPointerEnter(e) {
-    previewBounds = e.currentTarget.getBoundingClientRect();
+  function handlePreviewPointerEnter() {
     previewHovered = true;
-  }
-
-  function handlePreviewPointerMove(e) {
-    if (!previewBounds) return;
-    const nx = Math.max(
-      0,
-      Math.min(
-        1,
-        (e.clientX - previewBounds.left) / Math.max(1, previewBounds.width),
-      ),
-    );
-    const ny = Math.max(
-      0,
-      Math.min(
-        1,
-        (e.clientY - previewBounds.top) / Math.max(1, previewBounds.height),
-      ),
-    );
-    spotX = Math.round(nx * 100);
-    spotY = Math.round(ny * 100);
   }
 
   function handlePreviewPointerLeave() {
     previewHovered = false;
-    previewBounds = null;
-    spotX = 50;
-    spotY = 34;
   }
 
   function handlePreviewNudge() {
@@ -512,16 +485,36 @@
     return { promise, status };
   }
 
-  function cleanPayoffBadge(raw) {
-    return raw
-      ? String(raw)
-          .replace(/\s*🐾\s*/g, "")
-          .trim()
-      : "";
+  function getCategoryIcon(theme) {
+    switch (theme) {
+      case "animals":
+        return "paw";
+      case "wildlife":
+        return "bird";
+      case "science":
+        return "compass";
+      case "community":
+        return "users";
+      case "care":
+        return "heart";
+      default:
+        return "leaf";
+    }
   }
 
-  function hasPawInBadge(raw) {
-    return Boolean(raw && String(raw).includes("🐾"));
+  function getCtaIcon(theme) {
+    switch (theme) {
+      case "animals":
+        return "paw";
+      case "wildlife":
+        return "bird";
+      case "nature":
+        return "leaf";
+      case "care":
+        return "heart";
+      default:
+        return "sparkles";
+    }
   }
 
   $: effectMeta = action
@@ -558,24 +551,28 @@
         class:is-primed={previewHovered || ctaHovered || previewNudged}
         class:is-nudged={previewNudged}
         data-scene={effectMeta?.scene || "default"}
-        style="--spot-x: {spotX}%; --spot-y: {spotY}%;"
         on:pointerenter={handlePreviewPointerEnter}
-        on:pointermove={handlePreviewPointerMove}
         on:pointerleave={handlePreviewPointerLeave}
         on:click={handlePreviewNudge}
       >
         <div class="preview-hud">
           <span class="preview-promise-pill">
-            <span class="preview-promise-spark" aria-hidden="true">✦</span>
+            <AppIcon
+              name={effectMeta?.icon || "sparkles"}
+              size={13}
+              strokeWidth={2.1}
+              class="preview-promise-spark"
+            />
             <span>{previewCue.promise}</span>
           </span>
           <span class="preview-status-pill" class:nudged={previewNudged}>
             <span class="preview-status-dot" aria-hidden="true"></span>
-            <span
-              >{previewNudged
-                ? "↓ Spusť tlačítkem níže"
-                : previewCue.status}</span
-            >
+            {#if previewNudged}
+              <AppIcon name="arrow-down" size={12} strokeWidth={2.2} />
+              <span>Spusť tlačítkem níže</span>
+            {:else}
+              <span>{previewCue.status}</span>
+            {/if}
           </span>
         </div>
 
@@ -602,96 +599,11 @@
           aria-label="Kategorie: {categoryAura.label}"
         >
           <span class="category-aura-icon" aria-hidden="true">
-            {#if categoryAura.theme === "animals"}
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <circle cx="7.5" cy="9.5" r="2.3" />
-                <circle cx="12" cy="7" r="2.3" />
-                <circle cx="16.5" cy="9.5" r="2.3" />
-                <path
-                  d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z"
-                />
-              </svg>
-            {:else if categoryAura.theme === "wildlife"}
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M3 14c3.5-4.5 7-4.5 9-1 2-3.5 5.5-3.5 9 1" />
-                <path d="M12 13v5" />
-              </svg>
-            {:else if categoryAura.theme === "science"}
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.4"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <circle cx="12" cy="12" r="9" />
-                <polygon
-                  points="16.2 7.8 14.1 14.1 7.8 16.2 9.9 9.9 16.2 7.8"
-                  fill="currentColor"
-                  stroke="none"
-                />
-              </svg>
-            {:else if categoryAura.theme === "community"}
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.4"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-              </svg>
-            {:else if categoryAura.theme === "care"}
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path
-                  d="M12 20.5s-7.5-4.6-9.3-9C1.4 8.2 3.6 4.5 7.3 4.5c2 0 3.6 1.1 4.7 2.6 1.1-1.5 2.7-2.6 4.7-2.6 3.7 0 5.9 3.7 4.6 7-1.8 4.4-9.3 9-9.3 9Z"
-                />
-              </svg>
-            {:else}
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path
-                  d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"
-                />
-                <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
-              </svg>
-            {/if}
+            <AppIcon
+              name={getCategoryIcon(categoryAura.theme)}
+              size={12}
+              strokeWidth={2.1}
+            />
           </span>
           <span class="category-aura-label">{categoryAura.shortLabel}</span>
         </span>
@@ -700,9 +612,15 @@
         {action.quickTagsLabel || "2 min · Zdarma · Online"}
       </span>
       {#if isCompleted}
-        <span class="done-dot done-inline">· ✓ Splněno</span>
+        <span class="done-dot done-inline">
+          <AppIcon name="check" size={12} strokeWidth={2.4} />
+          <span>Splněno</span>
+        </span>
       {/if}
-      {#if savedValues && savedValues.length > 0 && onTogglePersonalValues}
+    </div>
+
+    {#if savedValues && savedValues.length > 0 && onTogglePersonalValues}
+      <div class="card-personal-row">
         <button
           type="button"
           class="personal-values-pill"
@@ -710,12 +628,19 @@
           on:click={onTogglePersonalValues}
           title="Přizpůsobit podle témat vybraných v průvodci"
         >
-          {usePersonalValues
-            ? `✦ Tvoje témata (${getSavedValueLabels(savedValues)})`
-            : "🎯 Moje témata"}
+          <AppIcon
+            name={usePersonalValues ? "sparkles" : "target"}
+            size={13}
+            strokeWidth={2}
+          />
+          <span>
+            {usePersonalValues
+              ? `Tvoje témata (${getSavedValueLabels(savedValues)})`
+              : "Moje témata"}
+          </span>
         </button>
-      {/if}
-    </div>
+      </div>
+    {/if}
 
     <!-- 2. Název příležitosti -->
     <h2 class="action-title card-title rec-title">{actionTitle}</h2>
@@ -735,11 +660,20 @@
 
     <!-- 5. Sekundární metadata výhradně v rozbalovacím detailu -->
     <details class="how-toggle steps-inline">
-      <summary
-        >ℹ️ Jak to funguje ({action.steps?.length
-          ? `${action.steps.length} ${action.steps.length === 1 ? "krok" : action.steps.length < 5 ? "kroky" : "kroků"}`
-          : "důkazy a partner"})</summary
-      >
+      <summary>
+        <AppIcon
+          name="chevron-right"
+          size={14}
+          strokeWidth={2.3}
+          class="how-toggle-chevron"
+        />
+        <AppIcon name="info" size={14} strokeWidth={2.1} />
+        <span
+          >Jak to funguje ({action.steps?.length
+            ? `${action.steps.length} ${action.steps.length === 1 ? "krok" : action.steps.length < 5 ? "kroky" : "kroků"}`
+            : "důkazy a partner"})</span
+        >
+      </summary>
       <div class="how-details-content">
         <div class="detail-evidence-line">
           <EvidenceBadge
@@ -774,12 +708,16 @@
           <div class="impact-chain-row rec-impact-chain card-chain-line">
             <span><strong>Aktivita:</strong> {action.impactChain.activity}</span
             >
-            <span class="chain-arrow chain-sep">→</span>
+            <span class="chain-arrow chain-sep" aria-hidden="true">
+              <AppIcon name="arrow-right" size={12} strokeWidth={2.2} />
+            </span>
             <span
               ><strong>Výsledek:</strong>
               {action.impactChain.immediateOutput}</span
             >
-            <span class="chain-arrow chain-sep">→</span>
+            <span class="chain-arrow chain-sep" aria-hidden="true">
+              <AppIcon name="arrow-right" size={12} strokeWidth={2.2} />
+            </span>
             <span
               ><strong>Skutečný dopad:</strong>
               {action.impactChain.realImpact}</span
@@ -797,7 +735,8 @@
               rel="noopener noreferrer"
               class="verify-source-link card-source-link rec-source-link"
             >
-              {action.org} ↗
+              <span>{action.org}</span>
+              <AppIcon name="arrow-up-right" size={12} strokeWidth={2.2} />
             </a>
           </span>
           <div
@@ -810,7 +749,16 @@
                 on:click={() => onShare(action)}
                 title="Zkopírovat přímý odkaz na tento skutek pro sdílení v diskuzi nebo zprávě"
               >
-                {copiedDirectLink ? "✓ Odkaz zkopírován" : "🔗 Sdílet odkaz"}
+                <AppIcon
+                  name={copiedDirectLink ? "check" : "share-2"}
+                  size={13}
+                  strokeWidth={2.1}
+                />
+                <span
+                  >{copiedDirectLink
+                    ? "Odkaz zkopírován"
+                    : "Sdílet odkaz"}</span
+                >
               </button>
             {/if}
             <button
@@ -843,29 +791,18 @@
         data-scene={effectMeta?.scene || "default"}
       >
         <div class="inline-celebration-head">
-          <span class="kicker celebration-kicker"
-            >🎉 Skvělá práce! Dobrý skutek je hotový</span
-          >
+          <span class="kicker celebration-kicker">
+            <AppIcon name="sparkles" size={14} strokeWidth={2.1} />
+            <span>Skvělá práce! Dobrý skutek je hotový</span>
+          </span>
           {#if effectMeta?.badge}
             <span class="impact-payoff-badge">
-              <span>{cleanPayoffBadge(effectMeta.badge)}</span>
-              {#if hasPawInBadge(effectMeta.badge)}
-                <svg
-                  class="badge-paw-svg"
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <circle cx="7.5" cy="9.5" r="2.3" />
-                  <circle cx="12" cy="7" r="2.3" />
-                  <circle cx="16.5" cy="9.5" r="2.3" />
-                  <path
-                    d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z"
-                  />
-                </svg>
-              {/if}
+              <AppIcon
+                name={effectMeta?.icon || "sparkles"}
+                size={13}
+                strokeWidth={2.1}
+              />
+              <span>{effectMeta.badge}</span>
             </span>
           {/if}
         </div>
@@ -882,25 +819,23 @@
           aria-label="Fyzikální vizualizace dopadu dobrého skutku"
         ></canvas>
         <div class="in-situ-affirmation">
-          ✨ <strong>Dnes už tvůj dobrý skutek pomáhá.</strong> Můžeš pokračovat
-          dalším drobným skutkem, nebo dnešní seanci s klidem uzavřít.
+          <AppIcon
+            name="sparkles"
+            size={14}
+            strokeWidth={2.1}
+            class="affirmation-icon"
+          />
+          <span>
+            <strong>Dnes už tvůj dobrý skutek pomáhá.</strong> Můžeš pokračovat
+            dalším drobným skutkem, nebo dnešní seanci s klidem uzavřít.
+          </span>
         </div>
         <div class="molly-celebration-note">
-          <svg
+          <AppIcon
+            name="paw"
+            size={13}
             class="badge-paw-svg molly-note-paw-svg"
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <circle cx="7.5" cy="9.5" r="2.3" />
-            <circle cx="12" cy="7" r="2.3" />
-            <circle cx="16.5" cy="9.5" r="2.3" />
-            <path
-              d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z"
-            />
-          </svg>
+          />
           <strong>Molly děkuje a má radost!</strong> V
           <a href="/svet" class="molly-svet-inline-link">Krajině dobra</a> na ni
           za tvůj skutek čeká zasloužený pamlsek.
@@ -913,7 +848,8 @@
               on:click={onCloseSession}
               aria-label="Uzavřít dnešní seanci"
             >
-              🌿 Pro dnešek hotovo
+              <AppIcon name="leaf" size={14} strokeWidth={2.1} />
+              <span>Pro dnešek hotovo</span>
             </button>
           {/if}
           {#if onNextIdea}
@@ -923,7 +859,8 @@
               on:click={onNextIdea}
               aria-label="Ukázat další doporučený skutek"
             >
-              Další dobrý skutek →
+              <span>Další dobrý skutek</span>
+              <AppIcon name="arrow-right" size={14} strokeWidth={2.2} />
             </button>
           {/if}
         </div>
@@ -937,32 +874,24 @@
       >
         <div class="inline-celebration-head return-dopamine-head">
           <div class="return-dopamine-text return-dopamine-title">
-            ✨ <strong>Vítej zpět!</strong> Povedlo se ti dokončit skutek u partnera?
+            <AppIcon
+              name="sparkles"
+              size={14}
+              strokeWidth={2.1}
+              class="return-title-icon"
+            />
+            <span
+              ><strong>Vítej zpět!</strong> Povedlo se ti dokončit skutek u partnera?</span
+            >
           </div>
           {#if effectMeta?.returnBadge || effectMeta?.badge}
             <span class="impact-payoff-badge">
-              <span
-                >{cleanPayoffBadge(
-                  effectMeta.returnBadge || effectMeta.badge,
-                )}</span
-              >
-              {#if hasPawInBadge(effectMeta.returnBadge || effectMeta.badge)}
-                <svg
-                  class="badge-paw-svg"
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <circle cx="7.5" cy="9.5" r="2.3" />
-                  <circle cx="12" cy="7" r="2.3" />
-                  <circle cx="16.5" cy="9.5" r="2.3" />
-                  <path
-                    d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z"
-                  />
-                </svg>
-              {/if}
+              <AppIcon
+                name={effectMeta?.icon || "sparkles"}
+                size={13}
+                strokeWidth={2.1}
+              />
+              <span>{effectMeta.returnBadge || effectMeta.badge}</span>
             </span>
           {/if}
         </div>
@@ -978,7 +907,13 @@
           aria-label="Fyzikální vizualizace dopadu dobrého skutku"
         ></canvas>
         <div class="in-situ-affirmation">
-          🌿 Každý drobný krok má skutečný význam.
+          <AppIcon
+            name="leaf"
+            size={14}
+            strokeWidth={2.1}
+            class="affirmation-icon"
+          />
+          <span>Každý drobný krok má skutečný význam.</span>
         </div>
         <div class="return-dopamine-actions in-situ-actions">
           <button
@@ -986,7 +921,8 @@
             class="return-dopamine-btn btn-return-complete"
             on:click={() => onComplete && onComplete(action)}
           >
-            ✓ Ano, mám hotovo
+            <AppIcon name="check" size={14} strokeWidth={2.4} />
+            <span>Ano, mám hotovo</span>
           </button>
           {#if onCloseSession}
             <button
@@ -994,7 +930,8 @@
               class="btn-session-close return-dopamine-svet-link"
               on:click={onCloseSession}
             >
-              🌿 Pro dnešek hotovo
+              <AppIcon name="leaf" size={14} strokeWidth={2.1} />
+              <span>Pro dnešek hotovo</span>
             </button>
           {:else if onDismissReturn}
             <button
@@ -1036,107 +973,23 @@
             if (onStart) onStart(action);
           }}
         >
-          <!-- Vysoce kontrastní zlatavá vektorová ikona místo tmavě fialového OS emoji -->
-          {#if categoryAura?.theme === "animals"}
-            <svg
-              class="cta-lead-icon"
-              width="17"
-              height="17"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <circle cx="7.5" cy="9.5" r="2.2" />
-              <circle cx="12" cy="7" r="2.2" />
-              <circle cx="16.5" cy="9.5" r="2.2" />
-              <path
-                d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z"
-              />
-            </svg>
-          {:else if categoryAura?.theme === "wildlife"}
-            <svg
-              class="cta-lead-icon"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.3"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M3 14c3.5-4.5 7-4.5 9-1 2-3.5 5.5-3.5 9 1" />
-              <path d="M12 13v5" />
-            </svg>
-          {:else if categoryAura?.theme === "nature"}
-            <svg
-              class="cta-lead-icon"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.3"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path
-                d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"
-              />
-              <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
-            </svg>
-          {:else if categoryAura?.theme === "care"}
-            <svg
-              class="cta-lead-icon"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                d="M12 20.5s-7.5-4.6-9.3-9C1.4 8.2 3.6 4.5 7.3 4.5c2 0 3.6 1.1 4.7 2.6 1.1-1.5 2.7-2.6 4.7-2.6 3.7 0 5.9 3.7 4.6 7-1.8 4.4-9.3 9-9.3 9Z"
-              />
-            </svg>
-          {:else}
-            <svg
-              class="cta-lead-icon"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.4"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path
-                d="M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3L12 3z"
-              />
-            </svg>
-          {/if}
+          <AppIcon
+            name={getCtaIcon(categoryAura?.theme)}
+            size={16}
+            strokeWidth={2.1}
+            class="cta-lead-icon"
+          />
           <span
             >{action.id === "zvirata_utulek_online"
               ? "Nakrmit útulek teď"
               : action.cta || "Začít pomáhat"}</span
           >
-          <svg
+          <AppIcon
+            name="arrow-up-right"
+            size={15}
+            strokeWidth={2.3}
             class="cta-arrow-icon"
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.4"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M7 17L17 7M7 7h10v10" />
-          </svg>
+          />
         </a>
 
         {#if isStarted && !partnerReturnPromptVisible}
@@ -1146,19 +999,7 @@
             class:initiated={isStarted}
             on:click={() => onComplete && onComplete(action)}
           >
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.6"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
+            <AppIcon name="check" size={15} strokeWidth={2.5} />
             <span>{action.doneCta || "Dokončeno"}</span>
           </button>
         {/if}
@@ -1172,24 +1013,12 @@
           <div class="card-effect-head">
             {#if effectMeta?.badge}
               <span class="impact-payoff-badge">
-                <span>{cleanPayoffBadge(effectMeta.badge)}</span>
-                {#if hasPawInBadge(effectMeta.badge)}
-                  <svg
-                    class="badge-paw-svg"
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    aria-hidden="true"
-                  >
-                    <circle cx="7.5" cy="9.5" r="2.3" />
-                    <circle cx="12" cy="7" r="2.3" />
-                    <circle cx="16.5" cy="9.5" r="2.3" />
-                    <path
-                      d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z"
-                    />
-                  </svg>
-                {/if}
+                <AppIcon
+                  name={effectMeta?.icon || "sparkles"}
+                  size={13}
+                  strokeWidth={2.1}
+                />
+                <span>{effectMeta.badge}</span>
               </span>
             {/if}
             <div class="card-effect-controls">
@@ -1202,7 +1031,8 @@
                 aria-label="Jemná vizualizace proměny dopadu"
                 title="Přehrát vizualizaci proměny"
               >
-                ✨ Impuls
+                <AppIcon name="sparkles" size={13} strokeWidth={2.1} />
+                <span>Impuls</span>
               </button>
               {#if onToggleSound}
                 <button
@@ -1215,7 +1045,11 @@
                     : "Ztlumit zvuky"}
                   title={soundMuted ? "Zapnout jemné zvuky" : "Ztlumit zvuky"}
                 >
-                  {soundMuted ? "🔇" : "🔊"}
+                  <AppIcon
+                    name={soundMuted ? "volume-x" : "volume-2"}
+                    size={15}
+                    strokeWidth={2.1}
+                  />
                 </button>
               {/if}
             </div>
@@ -1247,140 +1081,107 @@
   }
 
   /* =========================================================================
-     ŽIVÁ SCÉNA OČEKÁVÁNÍ (IDLE ANTICIPATION DIORAMA)
+     ŽIVÁ SCÉNA OČEKÁVÁNÍ (DAYLIGHT BOTANICAL FRAME + NON-OVERLAPPING HUD)
      ========================================================================= */
   .deed-preview-stage {
-    --spot-x: 50%;
-    --spot-y: 34%;
     position: relative;
+    display: flex;
+    flex-direction: column;
     width: 100%;
-    height: 86px;
-    margin: 0 0 0.65rem 0;
+    height: auto;
+    margin: 0 0 0.6rem 0;
     border-radius: 16px;
     overflow: hidden;
     cursor: default;
     user-select: none;
-    background: linear-gradient(180deg, #113e2b 0%, #072016 58%, #03100b 100%);
-    border: 1px solid rgba(52, 211, 153, 0.34);
-    box-shadow:
-      0 12px 26px -12px rgba(4, 20, 13, 0.52),
-      inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    background: var(--bg-subtle, #edf2ee);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    box-shadow: none;
     transition:
-      border-color 0.24s ease,
-      box-shadow 0.24s ease,
-      transform 0.22s ease;
-  }
-
-  .deed-preview-stage::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    pointer-events: none;
-    background: radial-gradient(
-      140px 92px at var(--spot-x) var(--spot-y),
-      rgba(253, 230, 138, 0.18) 0%,
-      rgba(52, 211, 153, 0.1) 52%,
-      transparent 100%
-    );
-    opacity: 0.7;
-    transition: opacity 0.24s ease;
+      border-color 0.2s ease,
+      transform 0.2s ease;
   }
 
   .deed-preview-stage.is-primed {
-    border-color: rgba(251, 191, 36, 0.58);
-    box-shadow:
-      0 14px 30px -10px rgba(6, 28, 19, 0.6),
-      0 0 0 2px rgba(251, 191, 36, 0.2),
-      inset 0 1px 0 rgba(254, 243, 199, 0.25);
-  }
-
-  .deed-preview-stage.is-primed::after {
-    opacity: 1;
+    border-color: var(--accent-primary, #1b5e42);
   }
 
   .deed-preview-stage.is-nudged {
-    transform: scale(0.992);
+    transform: scale(0.994);
   }
 
   .preview-hud {
-    position: absolute;
-    top: 8px;
-    left: 9px;
-    right: 9px;
-    z-index: 2;
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.4rem;
+    gap: 0.45rem;
+    padding: 0.36rem 0.62rem;
+    background: var(--bg-surface, #ffffff);
+    border-bottom: 1px solid var(--border-subtle, #dce3dd);
     pointer-events: none;
   }
 
   .preview-promise-pill {
     display: inline-flex;
     align-items: center;
-    gap: 0.28rem;
-    max-width: 68%;
-    padding: 0.2rem 0.56rem;
-    border-radius: 999px;
-    background: rgba(4, 19, 13, 0.72);
-    border: 1px solid rgba(253, 230, 138, 0.38);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    color: #fef3c7;
-    font-size: 0.71rem;
+    gap: 0.32rem;
+    min-width: 0;
+    flex: 1 1 auto;
+    color: var(--ink-primary, #14281d);
+    font-size: 0.74rem;
     font-weight: 700;
-    line-height: 1.2;
+    line-height: 1.25;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  .preview-promise-spark {
-    color: #fbbf24;
+  .deed-preview-stage :global(.preview-promise-spark) {
+    color: var(--accent-warm, #b8651b);
     flex-shrink: 0;
   }
 
   .preview-status-pill {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
-    padding: 0.18rem 0.5rem;
+    gap: 0.28rem;
+    flex-shrink: 0;
+    padding: 0.16rem 0.5rem;
     border-radius: 999px;
-    background: rgba(16, 185, 129, 0.16);
-    border: 1px solid rgba(110, 231, 183, 0.3);
-    color: #a7f3d0;
+    background: var(--bg-subtle, #edf2ee);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    color: var(--ink-secondary, #3f574a);
     font-size: 0.68rem;
     font-weight: 700;
     line-height: 1.2;
     white-space: nowrap;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   }
 
   .preview-status-pill.nudged {
-    background: rgba(251, 191, 36, 0.24);
-    border-color: rgba(253, 230, 138, 0.65);
-    color: #fef3c7;
+    background: var(--accent-warm-tint, #fef6e8);
+    border-color: rgba(184, 101, 27, 0.36);
+    color: #8f4b0e;
   }
 
   .preview-status-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #34d399;
-    box-shadow: 0 0 8px #34d399;
+    background: var(--accent-primary, #1b5e42);
     flex-shrink: 0;
   }
 
   .preview-status-pill.nudged .preview-status-dot {
-    background: #fbbf24;
-    box-shadow: 0 0 8px #fbbf24;
+    background: var(--accent-warm, #b8651b);
   }
 
   .preview-diorama-canvas {
     display: block;
     width: 100%;
-    height: 100%;
+    height: 64px;
+    background: #14281d;
     pointer-events: none;
   }
 
@@ -1391,24 +1192,46 @@
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow: hidden;
     font-size: 0.78rem;
-    color: var(--text-muted, #6b7280);
-    margin-bottom: 0.42rem;
+    color: var(--ink-muted, #61786b);
+    margin-bottom: 0.38rem;
+  }
+
+  .card-personal-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-bottom: 0.38rem;
   }
 
   .quick-tags-pill {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    padding: 0.2rem 0.62rem;
+    padding: 0.2rem 0.6rem;
     border-radius: 999px;
-    background: rgba(16, 185, 129, 0.08);
-    border: 1px solid rgba(52, 211, 153, 0.24);
-    color: #065f46;
-    font-size: 0.75rem;
+    background: var(--bg-subtle, #edf2ee);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    color: var(--ink-secondary, #3f574a);
+    font-size: 0.74rem;
     font-weight: 700;
     letter-spacing: 0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  .done-dot {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    color: var(--accent-primary, #1b5e42);
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .category-aura-chip {
@@ -1422,6 +1245,7 @@
     letter-spacing: 0.01em;
     line-height: 1.2;
     white-space: nowrap;
+    flex-shrink: 0;
     box-sizing: border-box;
   }
 
@@ -1434,96 +1258,97 @@
   }
 
   .category-aura-animals {
-    background: rgba(251, 191, 36, 0.16);
-    border: 1px solid rgba(245, 158, 11, 0.36);
-    color: #92400e;
+    background: var(--accent-warm-tint, #fef6e8);
+    border: 1px solid rgba(184, 101, 27, 0.28);
+    color: #8f4b0e;
   }
 
   .category-aura-wildlife {
-    background: rgba(20, 184, 166, 0.13);
-    border: 1px solid rgba(45, 212, 191, 0.36);
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
     color: #0f766e;
   }
 
   .category-aura-nature {
-    background: rgba(16, 185, 129, 0.13);
-    border: 1px solid rgba(52, 211, 153, 0.35);
-    color: #065f46;
+    background: var(--bg-subtle, #edf2ee);
+    border: 1px solid var(--border-strong, #c2cec5);
+    color: var(--accent-primary, #1b5e42);
   }
 
   .category-aura-science {
-    background: rgba(59, 130, 246, 0.12);
-    border: 1px solid rgba(96, 165, 250, 0.35);
-    color: #1e40af;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1d4ed8;
   }
 
   .category-aura-community {
-    background: rgba(139, 92, 246, 0.11);
-    border: 1px solid rgba(167, 139, 250, 0.34);
+    background: #f5f3ff;
+    border: 1px solid #ddd6fe;
     color: #5b21b6;
   }
 
   .category-aura-care {
-    background: rgba(245, 158, 11, 0.13);
-    border: 1px solid rgba(251, 191, 36, 0.38);
+    background: var(--accent-warm-tint, #fef6e8);
+    border: 1px solid rgba(184, 101, 27, 0.28);
     color: #9a3412;
   }
 
   .category-aura-default {
-    background: rgba(16, 185, 129, 0.12);
-    border: 1px solid rgba(52, 211, 153, 0.3);
-    color: #065f46;
+    background: var(--bg-subtle, #edf2ee);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    color: var(--accent-primary, #1b5e42);
   }
 
   .personal-values-pill {
-    margin-left: auto;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    border: 1px solid rgba(16, 185, 129, 0.25);
-    background: rgba(236, 253, 245, 0.8);
-    color: #065f46;
+    border: 1px solid var(--border-strong, #c2cec5);
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--accent-primary, #1b5e42);
     font-family: var(--font-sans);
-    font-size: 0.75rem;
+    font-size: 0.76rem;
     font-weight: 700;
     min-height: 44px;
-    padding: 0.35rem 0.65rem;
+    min-width: 44px;
+    padding: 0.35rem 0.78rem;
+    gap: 0.32rem;
     box-sizing: border-box;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 999px;
     cursor: pointer;
-    transition: all 0.16s ease;
+    transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
   }
 
   .personal-values-pill.active {
-    background: #065f46;
+    background: var(--accent-primary, #1b5e42);
     color: #ffffff;
-    border-color: #065f46;
+    border-color: var(--accent-primary, #1b5e42);
   }
 
   .action-title {
     font-weight: 800;
-    font-size: 1.32rem;
-    line-height: 1.23;
+    font-size: 1.28rem;
+    line-height: 1.24;
     letter-spacing: -0.022em;
-    color: #071d14;
-    margin: 0 0 0.42rem 0;
+    color: var(--ink-primary, #14281d);
+    margin: 0 0 0.4rem 0;
   }
 
   .action-desc {
-    color: var(--text-secondary, #374151);
+    color: var(--ink-secondary, #3f574a);
     font-size: 0.93rem;
-    line-height: 1.56;
-    margin: 0 0 0.55rem 0;
+    line-height: 1.54;
+    margin: 0 0 0.5rem 0;
   }
 
   .action-impact-summary {
     margin: 0 0 0.75rem 0;
     padding-top: 0.5rem;
-    border-top: 1px solid rgba(22, 66, 48, 0.08);
+    border-top: 1px solid var(--border-subtle, #dce3dd);
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
@@ -1532,11 +1357,11 @@
   }
 
   .impact-benefit-line {
-    color: #091d14;
+    color: var(--ink-primary, #14281d);
   }
 
   .impact-benefit-line strong {
-    color: #047857;
+    color: var(--accent-primary, #1b5e42);
     margin-right: 0.25rem;
   }
 
@@ -1547,17 +1372,17 @@
   .detail-impact-line {
     font-size: 0.79rem;
     line-height: 1.42;
-    padding: 0.38rem 0.55rem;
+    padding: 0.42rem 0.6rem;
     border-radius: 10px;
-    background: rgba(16, 185, 129, 0.06);
-    border: 1px solid rgba(16, 185, 129, 0.14);
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-subtle, #dce3dd);
   }
 
   .partner-trust-line {
     display: block;
     font-size: 0.78rem;
     line-height: 1.44;
-    color: var(--text-muted, #6b7280);
+    color: var(--ink-muted, #61786b);
   }
 
   .partner-trust-line > span + span {
@@ -1565,47 +1390,46 @@
   }
 
   .partner-trust-line strong {
-    color: var(--text-secondary, #374151);
+    color: var(--ink-primary, #14281d);
     font-weight: 700;
   }
 
   .how-toggle {
     margin: 0 0 0.45rem 0;
     font-size: 0.83rem;
-    color: var(--text-secondary, #374151);
+    color: var(--ink-secondary, #3f574a);
   }
 
   .how-toggle summary {
     cursor: pointer;
     font-weight: 700;
-    color: var(--forest-800, #064e3b);
+    color: var(--accent-primary, #1b5e42);
     list-style: none;
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
     min-height: 44px;
-    padding: 0.35rem 0.2rem;
+    min-width: 44px;
+    padding: 0.35rem 0.25rem;
     box-sizing: border-box;
     border-radius: 8px;
     transition: color 0.16s ease;
   }
 
   .how-toggle summary:hover {
-    color: #047857;
+    color: var(--accent-primary-hover, #144732);
   }
 
   .how-toggle summary::-webkit-details-marker {
     display: none;
   }
 
-  .how-toggle summary::before {
-    content: "▸";
-    display: inline-block;
-    color: var(--emerald-600, #059669);
+  .how-toggle summary :global(.how-toggle-chevron) {
+    color: var(--accent-primary, #1b5e42);
     transition: transform 0.18s ease;
   }
 
-  .how-toggle[open] summary::before {
+  .how-toggle[open] summary :global(.how-toggle-chevron) {
     transform: rotate(90deg);
   }
 
@@ -1613,7 +1437,7 @@
     margin: 0.35rem 0 0 1.2rem;
     padding: 0;
     line-height: 1.5;
-    color: var(--text-secondary, #374151);
+    color: var(--ink-secondary, #3f574a);
     display: flex;
     flex-direction: column;
     gap: 0.28rem;
@@ -1622,18 +1446,19 @@
   .impact-chain-row {
     margin-top: 0.45rem;
     padding-top: 0.45rem;
-    border-top: 1px dashed rgba(22, 66, 48, 0.14);
+    border-top: 1px dashed var(--border-strong, #c2cec5);
     display: block;
     font-size: 0.78rem;
     line-height: 1.48;
-    color: var(--text-secondary, #374151);
+    color: var(--ink-secondary, #3f574a);
   }
 
   .chain-arrow {
-    display: inline-block;
-    margin: 0 0.24rem;
-    color: var(--emerald-600, #059669);
-    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    margin: 0 0.22rem;
+    color: var(--accent-primary, #1b5e42);
   }
 
   .how-details-content {
@@ -1641,10 +1466,10 @@
     flex-direction: column;
     gap: 0.48rem;
     margin-top: 0.35rem;
-    padding: 0.65rem 0.75rem;
+    padding: 0.7rem 0.8rem;
     border-radius: 14px;
-    background: rgba(238, 246, 241, 0.6);
-    border: 1px solid rgba(22, 82, 56, 0.1);
+    background: var(--bg-subtle, #edf2ee);
+    border: 1px solid var(--border-subtle, #dce3dd);
     font-size: 0.8rem;
     line-height: 1.42;
   }
@@ -1669,23 +1494,23 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    min-height: 50px;
-    padding: 0.86rem 1.2rem;
+    min-height: 48px;
+    padding: 0.8rem 1.15rem;
     box-sizing: border-box;
-    border-radius: 15px;
-    background: linear-gradient(135deg, #0b2c1e 0%, #145338 52%, #0d3524 100%);
+    border-radius: 14px;
+    background: var(--accent-primary, #1b5e42);
+    border: 1px solid var(--accent-primary, #1b5e42);
     color: #ffffff;
     font-weight: 800;
     font-size: 0.95rem;
     letter-spacing: -0.01em;
     text-decoration: none;
-    box-shadow:
-      0 12px 26px -6px rgba(10, 44, 30, 0.46),
-      0 0 0 1px rgba(52, 211, 153, 0.32),
-      inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    box-shadow: var(--shadow-sm, 0 2px 8px rgba(18, 42, 30, 0.05));
     transition:
-      transform 0.18s cubic-bezier(0.2, 0.9, 0.3, 1),
-      box-shadow 0.2s ease;
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      transform 0.16s ease,
+      box-shadow 0.18s ease;
   }
 
   .btn-studio-primary::before {
@@ -1693,45 +1518,17 @@
     position: absolute;
     inset: 0;
     z-index: -1;
-    background: linear-gradient(
-      90deg,
-      rgba(16, 185, 129, 0.42),
-      rgba(251, 191, 36, 0.48)
-    );
+    background: rgba(184, 101, 27, 0.36);
     transform-origin: left center;
     transform: scaleX(var(--spark-charge, 0));
     transition: transform 0.06s linear;
     pointer-events: none;
   }
 
-  .btn-studio-primary::after {
-    content: "";
-    position: absolute;
-    top: -50%;
-    bottom: -50%;
-    left: -60%;
-    width: 34%;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(255, 255, 255, 0.22),
-      transparent
-    );
-    transform: rotate(25deg);
-    pointer-events: none;
-    transition: transform 0.65s ease;
-  }
-
   .btn-studio-primary:hover {
-    transform: translateY(-2px);
-    box-shadow:
-      0 16px 32px -6px rgba(10, 44, 30, 0.56),
-      0 0 0 1.5px rgba(251, 191, 36, 0.55),
-      inset 0 1px 0 rgba(255, 255, 255, 0.22);
-  }
-
-  .btn-studio-primary:hover::after {
-    transform: rotate(25deg) translate(390%, 0);
+    background: var(--accent-primary-hover, #144732);
+    border-color: var(--accent-primary-hover, #144732);
+    box-shadow: var(--shadow-md, 0 8px 20px -6px rgba(18, 42, 30, 0.08));
   }
 
   .btn-studio-primary:active {
@@ -1740,84 +1537,63 @@
 
   .btn-studio-primary.cta-nudged,
   :global(.btn-studio-primary.spark-ready) {
-    box-shadow:
-      0 14px 30px -4px rgba(16, 185, 129, 0.5),
-      0 0 0 3px rgba(251, 191, 36, 0.68);
+    box-shadow: 0 0 0 3px rgba(184, 101, 27, 0.35);
   }
 
-  .cta-lead-icon {
-    color: #fde68a;
+  .btn-studio-primary :global(.cta-lead-icon) {
+    color: var(--accent-warm-tint, #fef6e8);
     flex-shrink: 0;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
   }
 
-  .cta-arrow-icon {
-    color: #a7f3d0;
+  .btn-studio-primary :global(.cta-arrow-icon) {
+    color: #ffffff;
     flex-shrink: 0;
     transition: transform 0.18s ease;
   }
 
-  .btn-studio-primary:hover .cta-arrow-icon {
+  .btn-studio-primary:hover :global(.cta-arrow-icon) {
     transform: translate(2px, -2px);
-    color: #fde68a;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .btn-studio-primary::after {
-      display: none;
-    }
   }
 
   .btn-studio-done {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.38rem;
-    min-height: 50px;
-    padding: 0.84rem 1rem;
+    min-height: 48px;
+    padding: 0.8rem 1rem;
     box-sizing: border-box;
-    border-radius: 15px;
-    border: 1px solid rgba(5, 150, 105, 0.28);
-    background: #eef7f1;
-    color: #065f46;
+    border-radius: 14px;
+    border: 1px solid var(--accent-primary, #1b5e42);
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--accent-primary, #1b5e42);
     font-family: var(--font-sans);
     font-weight: 700;
     font-size: 0.88rem;
     cursor: pointer;
-    transition: all 0.18s ease;
+    transition: background-color 0.18s ease, color 0.18s ease;
   }
 
-  .btn-studio-done:hover {
-    background: #059669;
-    color: #ffffff;
-  }
-
+  .btn-studio-done:hover,
   .btn-studio-done.initiated {
-    background: #059669;
+    background: var(--accent-primary, #1b5e42);
     color: #ffffff;
-    border-color: #059669;
+    border-color: var(--accent-primary, #1b5e42);
   }
 
   /* =========================================================================
-     FYZIKÁLNÍ SCÉNA DOPADU A IN-SITU OSLAVA (PO SPUŠTĚNÍ AKCE)
+     FYZIKÁLNÍ SCÉNA DOPADU A IN-SITU OSLAVA (DAYLIGHT EDITORIAL)
      ========================================================================= */
   .card-effect-stage {
     position: relative;
     margin: 0.5rem 0 0.55rem;
     padding: 0;
-    border-radius: 18px;
+    border-radius: 16px;
     overflow: hidden;
-    background: linear-gradient(
-      180deg,
-      #113e2b 0%,
-      #113e2b 48px,
-      #072016 76%,
-      #03100b 100%
-    );
-    border: 1px solid rgba(52, 211, 153, 0.38);
-    color: #ecfdf5;
-    box-shadow:
-      0 14px 30px -12px rgba(4, 18, 12, 0.55),
-      inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-strong, #c2cec5);
+    color: var(--ink-primary, #14281d);
+    box-shadow: var(--shadow-sm, 0 2px 8px rgba(18, 42, 30, 0.05));
   }
 
   .card-effect-head {
@@ -1827,19 +1603,21 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.4rem;
-    padding: 0.38rem 0.58rem 0.1rem;
+    padding: 0.36rem 0.58rem;
+    background: var(--bg-subtle, #edf2ee);
+    border-bottom: 1px solid var(--border-subtle, #dce3dd);
   }
 
   .card-effect-controls {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.32rem;
   }
 
   .card-effect-stage .impact-payoff-badge {
-    background: rgba(5, 20, 14, 0.76);
-    color: #fde68a;
-    border: 1px solid rgba(251, 191, 36, 0.44);
+    background: var(--accent-warm-tint, #fef6e8);
+    color: #8f4b0e;
+    border: 1px solid rgba(184, 101, 27, 0.28);
     border-radius: 999px;
     padding: 0.2rem 0.55rem;
     font-size: 0.72rem;
@@ -1851,33 +1629,30 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.24rem;
-    padding: 0.45rem 0.8rem;
+    gap: 0.26rem;
+    padding: 0.42rem 0.78rem;
     min-height: 44px;
     min-width: 44px;
     box-sizing: border-box;
     border-radius: 999px;
-    border: 1px solid rgba(52, 211, 153, 0.38);
-    background: rgba(5, 20, 14, 0.74);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    color: #ecfdf5;
+    border: 1px solid var(--border-strong, #c2cec5);
+    background: var(--bg-surface, #ffffff);
+    color: var(--ink-primary, #14281d);
     font-family: var(--font-sans);
-    font-size: 0.71rem;
-    font-weight: 800;
+    font-size: 0.73rem;
+    font-weight: 700;
     line-height: 1.2;
     cursor: pointer;
-    transition: all 0.16s ease;
+    transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
     white-space: nowrap;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.24);
   }
 
   .effect-spark-btn:hover,
   .effect-spark-btn.active,
   .sound-mute-btn:hover {
-    background: linear-gradient(135deg, #0d2e20 0%, #174933 100%);
-    color: #fde68a;
-    border-color: rgba(251, 191, 36, 0.55);
+    background: var(--accent-primary, #1b5e42);
+    color: #ffffff;
+    border-color: var(--accent-primary, #1b5e42);
   }
 
   .impact-payoff-canvas {
@@ -1885,6 +1660,7 @@
     width: 100%;
     max-width: 100%;
     height: 118px;
+    background: #14281d;
     border: none;
     border-radius: 0;
     cursor: pointer;
@@ -1894,17 +1670,17 @@
   .card-effect-stage,
   .celebration-card,
   .return-dopamine-strip {
-    animation: payoffSlideDown 0.32s cubic-bezier(0.18, 0.89, 0.32, 1.15);
+    animation: payoffSlideDown 0.28s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   @keyframes payoffSlideDown {
     from {
       opacity: 0;
-      transform: translateY(-8px) scale(0.98);
+      transform: translateY(-6px);
     }
     to {
       opacity: 1;
-      transform: translateY(0) scale(1);
+      transform: translateY(0);
     }
   }
 
@@ -1922,22 +1698,25 @@
     flex-direction: column;
     gap: 0.45rem;
     margin-bottom: 0.55rem;
-    padding: 0.72rem 0.88rem;
+    padding: 0.85rem 0.95rem;
     min-width: 0;
     max-width: 100%;
     box-sizing: border-box;
     border-radius: 16px;
-    background: linear-gradient(
-      145deg,
-      rgba(8, 30, 21, 0.96),
-      rgba(16, 54, 38, 0.95)
-    );
-    border: 1px solid rgba(52, 211, 153, 0.38);
-    color: #ecfdf5;
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-strong, #c2cec5);
+    color: var(--ink-primary, #14281d);
+    box-shadow: var(--shadow-md, 0 8px 20px -6px rgba(18, 42, 30, 0.08));
     font-size: 0.84rem;
-    line-height: 1.38;
+    line-height: 1.4;
     scroll-margin-top: 75px;
     scroll-margin-bottom: 75px;
+  }
+
+  .celebration-card .impact-payoff-canvas,
+  .return-dopamine-strip .impact-payoff-canvas {
+    border-radius: 12px;
+    border: 1px solid var(--border-subtle, #dce3dd);
   }
 
   .inline-celebration-head {
@@ -1949,57 +1728,82 @@
   }
 
   .inline-celebration-card .kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
     font-size: 0.72rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #6ee7b7;
+    color: var(--accent-primary, #1b5e42);
   }
 
   .inline-celebration-card .win-title {
     margin: 0;
     font-size: 0.96rem;
     font-weight: 800;
-    color: #ffffff;
+    color: var(--ink-primary, #14281d);
+  }
+
+  .return-dopamine-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--ink-primary, #14281d);
+  }
+
+  .return-dopamine-title :global(.return-title-icon) {
+    color: var(--accent-warm, #b8651b);
+    flex-shrink: 0;
   }
 
   .impact-payoff-badge {
     display: inline-flex;
     align-items: center;
-    gap: 0.26rem;
+    gap: 0.28rem;
     font-size: 0.74rem;
     font-weight: 700;
-    padding: 0.15rem 0.45rem;
+    padding: 0.18rem 0.52rem;
     border-radius: 999px;
-    background: rgba(16, 185, 129, 0.2);
-    color: #a7f3d0;
+    background: var(--accent-warm-tint, #fef6e8);
+    border: 1px solid rgba(184, 101, 27, 0.28);
+    color: #8f4b0e;
   }
 
-  .badge-paw-svg {
-    color: #fde68a;
-    flex-shrink: 0;
-  }
-
-  .molly-note-paw-svg {
+  .molly-celebration-note :global(.badge-paw-svg),
+  .molly-celebration-note :global(.molly-note-paw-svg) {
+    color: var(--accent-warm, #b8651b);
     display: inline-block;
     vertical-align: -2px;
-    margin-right: 0.18rem;
+    margin-right: 0.2rem;
   }
 
   .in-situ-affirmation,
   .molly-celebration-note {
     font-size: 0.82rem;
-    color: #e6f5ec;
-    background: rgba(16, 185, 129, 0.12);
-    border: 1px solid rgba(52, 211, 153, 0.28);
+    color: var(--ink-primary, #14281d);
+    background: var(--bg-subtle, #edf2ee);
+    border: 1px solid var(--border-subtle, #dce3dd);
     border-radius: 10px;
-    padding: 0.45rem 0.75rem;
-    margin: 0.45rem 0;
-    line-height: 1.4;
+    padding: 0.5rem 0.75rem;
+    margin: 0.25rem 0;
+    line-height: 1.42;
+  }
+
+  .in-situ-affirmation {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.42rem;
+  }
+
+  .in-situ-affirmation :global(.affirmation-icon) {
+    color: var(--accent-primary, #1b5e42);
+    flex-shrink: 0;
+    margin-top: 2px;
   }
 
   .molly-svet-inline-link {
-    color: #fde68a;
+    color: var(--accent-primary, #1b5e42);
     font-weight: 700;
     text-decoration: underline;
     text-underline-offset: 2px;
@@ -2008,74 +1812,77 @@
   .return-dopamine-actions {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
+    gap: 0.6rem;
     flex-wrap: wrap;
-    margin-top: 0.5rem;
+    margin-top: 0.45rem;
   }
 
   .return-dopamine-btn {
     appearance: none;
-    border: 1px solid rgba(251, 191, 36, 0.5);
-    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-    color: #062015;
+    border: 1px solid var(--accent-primary, #1b5e42);
+    background: var(--accent-primary, #1b5e42);
+    color: #ffffff;
     font-family: inherit;
     font-size: 0.85rem;
-    font-weight: 800;
+    font-weight: 700;
     padding: 0.5rem 1rem;
     border-radius: 999px;
     cursor: pointer;
     text-decoration: none;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.28);
     min-height: 44px;
     min-width: 44px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 0.36rem;
     box-sizing: border-box;
     scroll-margin-top: 75px;
     scroll-margin-bottom: 75px;
+    transition: background-color 0.16s ease, border-color 0.16s ease;
+  }
+
+  .return-dopamine-btn:hover {
+    background: var(--accent-primary-hover, #144732);
+    border-color: var(--accent-primary-hover, #144732);
   }
 
   .btn-session-close {
-    border: 1px solid rgba(52, 211, 153, 0.38);
-    background: rgba(6, 78, 59, 0.45);
-    color: #a7f3d0;
-    box-shadow: 0 2px 8px rgba(6, 78, 59, 0.25);
+    border: 1px solid var(--border-strong, #c2cec5);
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--ink-primary, #14281d);
   }
 
   .btn-session-close:hover {
-    background: rgba(6, 78, 59, 0.7);
-    border-color: rgba(52, 211, 153, 0.6);
-  }
-
-  .btn-next-deed {
-    border: 1px solid rgba(251, 191, 36, 0.5);
+    background: #e1eae4;
+    border-color: var(--accent-primary, #1b5e42);
   }
 
   .return-dopamine-svet-link {
-    color: #fde68a;
+    color: var(--ink-primary, #14281d);
     font-size: 0.82rem;
-    font-weight: 800;
-    text-decoration: underline;
+    font-weight: 700;
+    text-decoration: none;
     min-height: 44px;
     min-width: 44px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 0.32rem;
     box-sizing: border-box;
     cursor: pointer;
-    background: none;
-    border: none;
-    padding: 0.4rem 0.6rem;
+    background: var(--bg-subtle, #edf2ee);
+    border: 1px solid var(--border-strong, #c2cec5);
+    border-radius: 999px;
+    padding: 0.45rem 0.9rem;
   }
 
   .inline-celebration-next {
-    border: 1px solid rgba(251, 191, 36, 0.65);
-    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-    color: #062015;
+    border: 1px solid var(--accent-primary, #1b5e42);
+    background: var(--accent-primary, #1b5e42);
+    color: #ffffff;
     padding: 0.5rem 1rem;
     font-family: inherit;
-    font-weight: 800;
+    font-weight: 700;
     cursor: pointer;
   }
 
@@ -2087,16 +1894,16 @@
   .mobile-details-extra {
     margin-top: 0.45rem;
     padding-top: 0.45rem;
-    border-top: 1px dashed rgba(22, 66, 48, 0.16);
+    border-top: 1px dashed var(--border-strong, #c2cec5);
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    gap: 0.2rem 0.48rem;
+    gap: 0.25rem 0.5rem;
     flex-wrap: wrap;
     font-size: 0.73rem;
     line-height: 1.4;
-    color: var(--text-muted, #6b7280);
+    color: var(--ink-muted, #61786b);
     text-align: left;
   }
 
@@ -2107,25 +1914,28 @@
     max-width: 100%;
     font-size: 0.73rem;
     line-height: 1.4;
-    color: var(--text-muted, #6b7280);
+    color: var(--ink-muted, #61786b);
     text-align: left;
     overflow-wrap: anywhere;
   }
 
   .verify-meta strong,
   .mde-verify strong {
-    color: var(--text-secondary, #374151);
+    color: var(--ink-primary, #14281d);
     font-weight: 700;
   }
 
   .verify-source-link {
-    color: var(--forest-800, #064e3b);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.18rem;
+    color: var(--accent-primary, #1b5e42);
     font-weight: 700;
     text-decoration: none;
   }
 
   .verify-source-link:hover {
-    color: var(--emerald-600, #059669);
+    color: var(--accent-primary-hover, #144732);
     text-decoration: underline;
   }
 
@@ -2133,7 +1943,7 @@
   .mde-row {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.55rem;
     flex-wrap: wrap;
   }
 
@@ -2142,14 +1952,16 @@
     appearance: none;
     background: none;
     border: none;
-    padding: 0.12rem 0;
-    min-height: 28px;
+    padding: 0.2rem 0.25rem;
+    min-height: 44px;
+    min-width: 44px;
     display: inline-flex;
     align-items: center;
+    gap: 0.28rem;
     box-sizing: border-box;
-    color: #047857;
+    color: var(--accent-primary, #1b5e42);
     font-family: var(--font-sans);
-    font-size: 0.73rem;
+    font-size: 0.75rem;
     font-weight: 700;
     cursor: pointer;
     text-decoration: underline;
@@ -2161,14 +1973,15 @@
     appearance: none;
     border: none;
     background: transparent;
-    padding: 0.12rem 0;
-    min-height: 28px;
+    padding: 0.2rem 0.25rem;
+    min-height: 44px;
+    min-width: 44px;
     display: inline-flex;
     align-items: center;
     box-sizing: border-box;
-    color: var(--text-muted, #6b7280);
+    color: var(--ink-muted, #61786b);
     font-family: var(--font-sans);
-    font-size: 0.72rem;
+    font-size: 0.74rem;
     font-weight: 600;
     text-decoration: underline;
     text-underline-offset: 2px;
@@ -2176,7 +1989,7 @@
   }
 
   .broken-link-btn:hover {
-    color: #b45309;
+    color: var(--accent-warm, #b8651b);
   }
 
   @media (min-width: 681px) {
@@ -2192,18 +2005,17 @@
   }
 
   .card {
-    background: linear-gradient(180deg, #ffffff 0%, #f9fcfa 100%);
-    border: 1px solid rgba(16, 72, 48, 0.11);
-    border-radius: 22px;
-    box-shadow:
-      0 10px 26px -10px rgba(13, 46, 32, 0.08),
-      0 1px 3px rgba(0, 0, 0, 0.03);
-    padding: 0.92rem 1.08rem;
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    border-radius: 18px;
+    box-shadow: var(--shadow-sm, 0 2px 8px rgba(18, 42, 30, 0.05));
+    padding: 0.95rem 1.1rem;
     display: flex;
     flex-direction: column;
     transition:
-      transform 0.24s var(--ease-gentle, ease),
-      box-shadow 0.24s var(--ease-gentle, ease);
+      transform 0.22s var(--ease-gentle, ease),
+      box-shadow 0.22s var(--ease-gentle, ease),
+      border-color 0.22s ease;
   }
 
   /* Instant varianta žije uvnitř vnější skořápky (.instant-card na / nebo .highlight-card na /app/guided) — žádný vnořený dvojitý rámeček */
@@ -2216,17 +2028,16 @@
   }
 
   .directory-card:hover {
-    transform: translateY(-3px);
-    box-shadow:
-      0 14px 32px -8px rgba(13, 46, 32, 0.12),
-      0 3px 6px rgba(0, 0, 0, 0.06);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md, 0 8px 20px -6px rgba(18, 42, 30, 0.08));
+    border-color: var(--accent-primary, #1b5e42);
   }
 
   .card.spotlight {
-    border: 1.5px solid #f59e0b;
+    border: 1.5px solid var(--accent-warm, #b8651b);
     box-shadow:
-      0 0 0 4px rgba(253, 230, 138, 0.4),
-      var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+      0 0 0 3px var(--accent-warm-tint, #fef6e8),
+      var(--shadow-md, 0 8px 20px -6px rgba(18, 42, 30, 0.08));
   }
 
   @media (max-width: 680px) {
@@ -2234,11 +2045,11 @@
     .mde-broken-btn {
       min-height: 44px;
       min-width: 44px;
-      padding: 0.25rem 0.2rem;
+      padding: 0.25rem 0.35rem;
     }
     .card.directory-card {
-      padding: 0.58rem 0.78rem;
-      border-radius: 18px;
+      padding: 0.75rem 0.85rem;
+      border-radius: 16px;
     }
 
     .instant-body {
@@ -2246,22 +2057,18 @@
     }
 
     .deed-preview-stage {
-      height: 58px;
-      margin: 0 0 0.2rem 0;
+      height: auto;
+      margin: 0 0 0.18rem 0;
       border-radius: 13px;
     }
 
     .preview-hud {
-      top: 5px;
-      left: 6px;
-      right: 6px;
-      gap: 0.25rem;
+      padding: 0.26rem 0.48rem;
+      gap: 0.28rem;
     }
 
     .preview-promise-pill {
-      max-width: 100%;
-      padding: 0.13rem 0.44rem;
-      font-size: 0.64rem;
+      font-size: 0.67rem;
     }
 
     .preview-status-pill {
@@ -2270,77 +2077,65 @@
 
     .preview-status-pill.nudged {
       display: inline-flex;
-      padding: 0.12rem 0.38rem;
-      font-size: 0.61rem;
+      padding: 0.12rem 0.4rem;
+      font-size: 0.62rem;
+    }
+
+    .preview-diorama-canvas {
+      height: 46px;
     }
 
     .action-meta-line {
-      font-size: 0.68rem;
-      gap: 0.24rem;
+      font-size: 0.69rem;
+      gap: 0.28rem;
       margin-bottom: 0.08rem;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+
+    .card-personal-row {
+      margin-bottom: 0.14rem;
     }
 
     .category-aura-chip {
-      padding: 0.12rem 0.42rem;
-      font-size: 0.66rem;
-      gap: 0.18rem;
-    }
-
-    .category-aura-icon {
-      font-size: 0.72rem;
+      padding: 0.13rem 0.44rem;
+      font-size: 0.67rem;
+      gap: 0.2rem;
     }
 
     .quick-tags-pill {
-      padding: 0.11rem 0.4rem;
-      font-size: 0.65rem;
-      border-radius: 999px;
-      background: rgba(16, 185, 129, 0.1);
-      color: #065f46;
-      font-weight: 700;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      min-width: 0;
+      padding: 0.12rem 0.44rem;
+      font-size: 0.66rem;
     }
 
     .personal-values-pill {
       min-height: 44px;
-      padding: 0.3rem 0.6rem;
-      font-size: 0.71rem;
+      padding: 0.3rem 0.65rem;
+      font-size: 0.72rem;
       flex-shrink: 0;
-      margin-left: auto;
       box-sizing: border-box;
     }
 
     .action-title {
       font-size: 1.03rem;
-      line-height: 1.18;
-      margin: 0.02rem 0 0.1rem 0;
-      display: -webkit-box;
-      line-clamp: 2;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      line-height: 1.2;
+      margin: 0.04rem 0 0.1rem 0;
+      overflow-wrap: break-word;
     }
 
     .action-desc {
-      font-size: 0.79rem;
-      line-height: 1.3;
+      font-size: 0.81rem;
+      line-height: 1.35;
       margin: 0 0 0.08rem 0;
-      display: -webkit-box;
-      line-clamp: 2;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      overflow-wrap: break-word;
     }
 
     .action-impact-summary {
       margin: 0 0 0.14rem 0;
       padding-top: 0.28rem;
       gap: 0.14rem;
-      font-size: 0.77rem;
-      line-height: 1.32;
+      font-size: 0.78rem;
+      line-height: 1.34;
     }
 
     .partner-trust-line {
@@ -2349,14 +2144,14 @@
 
     .how-toggle {
       margin: 0;
-      padding: 0 0.1rem;
+      padding: 0;
       border-radius: 10px;
     }
 
     .how-toggle summary {
-      font-size: 0.77rem;
+      font-size: 0.78rem;
       min-height: 44px;
-      padding: 0.3rem 0.15rem;
+      padding: 0.3rem 0.2rem;
       box-sizing: border-box;
     }
 
@@ -2367,16 +2162,16 @@
 
     .celebration-card,
     .return-dopamine-strip {
-      padding: 0.55rem 0.75rem;
+      padding: 0.65rem 0.78rem;
       gap: 0.35rem;
     }
 
     .in-situ-affirmation,
     .molly-celebration-note {
-      padding: 0.35rem 0.6rem;
-      margin: 0.25rem 0;
-      font-size: 0.76rem;
-      line-height: 1.32;
+      padding: 0.4rem 0.6rem;
+      margin: 0.22rem 0;
+      font-size: 0.77rem;
+      line-height: 1.34;
     }
 
     .return-dopamine-actions {
@@ -2395,17 +2190,17 @@
     }
 
     .card-effect-head {
-      padding: 0.26rem 0.45rem 0.06rem;
+      padding: 0.28rem 0.45rem;
     }
 
     .card-effect-stage .impact-payoff-badge {
       font-size: 0.66rem;
-      padding: 0.14rem 0.44rem;
+      padding: 0.16rem 0.45rem;
     }
 
     .effect-spark-btn,
     .sound-mute-btn {
-      font-size: 0.68rem;
+      font-size: 0.69rem;
       min-height: 44px;
       min-width: 44px;
       padding: 0.25rem 0.55rem;
@@ -2435,25 +2230,26 @@
       align-items: center;
       justify-content: center;
       padding: 0.44rem 0.68rem;
-      font-size: 0.78rem;
+      font-size: 0.82rem;
       border-radius: 12px;
-      background: rgba(238, 247, 241, 0.75);
     }
   }
 
   @media (max-width: 680px) and (max-height: 700px) {
     .deed-preview-stage {
-      height: 52px;
       margin-bottom: 0.14rem;
     }
 
     .preview-hud {
-      top: 4px;
+      padding: 0.22rem 0.44rem;
     }
 
     .preview-promise-pill {
-      padding: 0.09rem 0.4rem;
-      font-size: 0.62rem;
+      font-size: 0.64rem;
+    }
+
+    .preview-diorama-canvas {
+      height: 42px;
     }
   }
 </style>

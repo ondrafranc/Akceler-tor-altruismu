@@ -1,5 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
+  import AppIcon from '$lib/components/AppIcon.svelte';
   import ActionCard from './ActionCard.svelte';
   import { safeGetItem, safeSetItem, AA_DONE_FOR_TODAY_PREFIX } from '../../../../lib/storage/index.js';
   import { trackEvent } from '../../../../lib/analytics.js';
@@ -62,7 +63,7 @@
   onMount(() => {
     try {
       const todayKey = getTodayKey();
-      if (safeGetItem(`${AA_DONE_FOR_TODAY_PREFIX}${todayKey}`, 'local') === '1') {
+      if (safeGetItem(`${DONE_FOR_TODAY_PREFIX}${todayKey}`, 'local') === '1') {
         isSessionClosed = true;
       }
     } catch {}
@@ -72,7 +73,7 @@
     isSessionClosed = true;
     try {
       const todayKey = getTodayKey();
-      safeSetItem(`${AA_DONE_FOR_TODAY_PREFIX}${todayKey}`, '1', 'local');
+      safeSetItem(`${DONE_FOR_TODAY_PREFIX}${todayKey}`, '1', 'local');
       safeVibrate(40);
       playCelebrationChord();
     } catch {}
@@ -86,7 +87,7 @@
     isSessionClosed = false;
     try {
       const todayKey = getTodayKey();
-      safeSetItem(`${AA_DONE_FOR_TODAY_PREFIX}${todayKey}`, '0', 'local');
+      safeSetItem(`${DONE_FOR_TODAY_PREFIX}${todayKey}`, '0', 'local');
     } catch {}
     trackEvent('aa_session_reopened', {});
     if (onReopenSession) onReopenSession();
@@ -205,8 +206,9 @@
       role="status"
       aria-live="polite"
     >
-      <div class="closed-glow" aria-hidden="true"></div>
-      <div class="closed-icon" aria-hidden="true">🌿</div>
+      <div class="closed-icon" aria-hidden="true">
+        <AppIcon name="leaf" size={28} strokeWidth={1.9} />
+      </div>
       <h2 class="closed-title">Pro dnešek máš hotovo.</h2>
       <p class="closed-desc">
         Udělal/a jsi svět o kousek lepším místem. Můžeš s čistým svědomím odložit telefon a věnovat se svému dni bez pocitu dluhu.
@@ -224,7 +226,8 @@
           on:click={handleReopenSession}
           aria-label="Chci udělat ještě jeden dobrý skutek"
         >
-          ✨ Chci ještě jeden skutek
+          <AppIcon name="sparkles" size={15} strokeWidth={2} />
+          <span>Chci ještě jeden skutek</span>
         </button>
       </div>
     </div>
@@ -279,15 +282,17 @@
           aria-label="Předchozí doporučený skutek"
           title="Předchozí tip (vlevo)"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
+          <AppIcon name="chevron-left" size={18} strokeWidth={2.3} />
         </button>
 
         <div class="deck-indicator" aria-live="polite">
           <span class="deck-step-text">{displayIndex + 1} / {totalCards || 1}</span>
           <span class="deck-dot-sep" aria-hidden="true">·</span>
-          <span class="deck-swipe-hint">← potáhni →</span>
+          <span class="deck-swipe-hint">
+            <AppIcon name="arrow-left" size={12} strokeWidth={2.1} />
+            <span>potáhni</span>
+            <AppIcon name="arrow-right" size={12} strokeWidth={2.1} />
+          </span>
         </div>
 
         <button
@@ -298,9 +303,7 @@
           aria-label="Další doporučený skutek"
           title="Další tip (vpravo)"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M9 18l6-6-6-6" />
-          </svg>
+          <AppIcon name="chevron-right" size={18} strokeWidth={2.3} />
         </button>
       </div>
     </div>
@@ -326,17 +329,17 @@
     align-items: center;
     justify-content: center;
     gap: 0.85rem;
-    padding: 0.35rem 0 0;
+    padding: 0.42rem 0 0;
     margin-top: 0.08rem;
-    border-top: 1px solid rgba(13, 46, 32, 0.08);
+    border-top: 1px solid var(--border-subtle, #dce3dd);
     box-sizing: border-box;
   }
 
   .deck-nav-btn {
     appearance: none;
-    border: 1px solid rgba(13, 46, 32, 0.13);
-    background: #f2f7f4;
-    color: #0d2e20;
+    border: 1px solid var(--border-strong, #c2cec5);
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--ink-primary, #14281d);
     min-width: 44px;
     min-height: 44px;
     border-radius: 999px;
@@ -345,18 +348,16 @@
     justify-content: center;
     cursor: pointer;
     transition:
-      background 0.18s ease,
+      background-color 0.18s ease,
       border-color 0.18s ease,
       color 0.18s ease,
       transform 0.14s ease;
-    box-shadow: 0 1px 2px rgba(9, 29, 20, 0.05);
   }
 
   .deck-nav-btn:hover:not(:disabled) {
-    background: #0d2e20;
-    border-color: #0d2e20;
-    color: #fde68a;
-    transform: translateY(-1px);
+    background: var(--accent-primary, #1b5e42);
+    border-color: var(--accent-primary, #1b5e42);
+    color: #ffffff;
   }
 
   .deck-nav-btn:active:not(:disabled) {
@@ -375,27 +376,31 @@
     gap: 0.38rem;
     padding: 0.28rem 0.72rem;
     border-radius: 999px;
-    background: rgba(13, 46, 32, 0.045);
+    background: var(--bg-subtle, #edf2ee);
+    border: 1px solid var(--border-subtle, #dce3dd);
     user-select: none;
   }
 
   .deck-step-text {
     font-size: 0.8rem;
     font-weight: 800;
-    color: #0d2e20;
+    color: var(--ink-primary, #14281d);
     letter-spacing: 0.03em;
     font-variant-numeric: tabular-nums;
   }
 
   .deck-dot-sep {
-    color: rgba(13, 46, 32, 0.35);
+    color: var(--ink-muted, #61786b);
     font-weight: 700;
   }
 
   .deck-swipe-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
     font-size: 0.72rem;
     font-weight: 600;
-    color: #35634d;
+    color: var(--ink-secondary, #3f574a);
     letter-spacing: 0.01em;
   }
 
@@ -411,21 +416,20 @@
      ========================================================================= */
   .session-closed-card {
     position: relative;
-    background: linear-gradient(180deg, rgba(6, 40, 28, 0.96) 0%, rgba(4, 24, 17, 0.98) 100%);
-    border: 1px solid rgba(52, 211, 153, 0.35);
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-subtle, #dce3dd);
     border-radius: 20px;
-    padding: 2.2rem 1.4rem;
+    padding: 2rem 1.4rem;
     text-align: center;
-    box-shadow: 0 16px 38px rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-md, 0 8px 20px -6px rgba(18, 42, 30, 0.08));
     overflow: hidden;
-    animation: fadeInScale 0.35s ease-out;
+    animation: fadeInScale 0.3s ease-out;
   }
 
   @keyframes fadeInScale {
     from {
       opacity: 0;
-      transform: scale(0.96);
+      transform: scale(0.98);
     }
     to {
       opacity: 1;
@@ -433,57 +437,54 @@
     }
   }
 
-  .closed-glow {
-    position: absolute;
-    top: -30%;
-    left: 20%;
-    right: 20%;
-    height: 60%;
-    background: radial-gradient(circle, rgba(52, 211, 153, 0.22) 0%, transparent 70%);
-    pointer-events: none;
-  }
-
   .closed-icon {
-    font-size: 2.8rem;
-    margin-bottom: 0.75rem;
-    filter: drop-shadow(0 4px 12px rgba(52, 211, 153, 0.4));
+    width: 54px;
+    height: 54px;
+    margin: 0 auto 0.75rem;
+    border-radius: 50%;
+    background: var(--bg-subtle, #edf2ee);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    color: var(--accent-primary, #1b5e42);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .closed-title {
-    font-size: 1.6rem;
+    font-size: 1.5rem;
     font-weight: 800;
-    color: #ffffff;
-    margin: 0 0 0.65rem;
+    color: var(--ink-primary, #14281d);
+    margin: 0 0 0.6rem;
     letter-spacing: -0.02em;
   }
 
   .closed-desc {
-    font-size: 0.98rem;
+    font-size: 0.95rem;
     line-height: 1.55;
-    color: #e6f5ec;
+    color: var(--ink-secondary, #3f574a);
     max-width: 360px;
-    margin: 0 auto 1.4rem;
+    margin: 0 auto 1.25rem;
   }
 
   .closed-stats-pill {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    background: rgba(16, 185, 129, 0.15);
-    border: 1px solid rgba(52, 211, 153, 0.3);
-    padding: 0.4rem 0.9rem;
+    gap: 0.48rem;
+    background: var(--bg-subtle, #edf2ee);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    padding: 0.38rem 0.88rem;
     border-radius: 999px;
-    font-size: 0.88rem;
-    color: #a7f3d0;
-    margin-bottom: 1.4rem;
+    font-size: 0.86rem;
+    color: var(--ink-primary, #14281d);
+    margin-bottom: 1.25rem;
   }
 
   .closed-stats-pill .live-dot {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
-    background: #34d399;
-    box-shadow: 0 0 8px #34d399;
+    background: var(--accent-primary, #1b5e42);
+    flex-shrink: 0;
   }
 
   .closed-actions {
@@ -494,27 +495,27 @@
 
   .closed-btn {
     appearance: none;
-    border: 1px solid rgba(52, 211, 153, 0.35);
-    background: rgba(16, 185, 129, 0.18);
-    color: #a7f3d0;
+    border: 1px solid var(--accent-primary, #1b5e42);
+    background: var(--accent-primary, #1b5e42);
+    color: #ffffff;
     font-family: inherit;
     font-size: 0.92rem;
     font-weight: 700;
-    padding: 0.65rem 1.4rem;
+    padding: 0.65rem 1.35rem;
     border-radius: 999px;
     min-height: 44px;
     min-width: 44px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 0.42rem;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
   }
 
   .closed-btn:hover {
-    background: rgba(16, 185, 129, 0.32);
-    border-color: rgba(52, 211, 153, 0.6);
-    color: #ffffff;
+    background: var(--accent-primary-hover, #144732);
+    border-color: var(--accent-primary-hover, #144732);
   }
 
   @media (max-width: 680px) {
@@ -525,7 +526,7 @@
     .deck-header-bar {
       justify-content: space-between;
       gap: 0.5rem;
-      padding: 0.26rem 0.06rem 0;
+      padding: 0.28rem 0.06rem 0;
       margin-top: 0.04rem;
     }
   }

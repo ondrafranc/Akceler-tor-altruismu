@@ -1,4 +1,5 @@
 <script>
+  import AppIcon from '$lib/components/AppIcon.svelte';
   import { HOPE_FACTS } from '../../data/czech-actions.js';
 
   export let hopeIndex = 0;
@@ -34,15 +35,16 @@
           rel="noopener noreferrer"
           class="qh-source-link"
         >
-          {activeHope.sourceLabel || 'Oficiální statistika'} ↗
+          <span>{activeHope.sourceLabel || 'Oficiální statistika'}</span>
+          <AppIcon name="arrow-up-right" size={14} strokeWidth={2.2} />
         </a>
       </div>
     {/if}
     <div class="qh-actions">
       <a href={activeHope.actionHref} class="qh-link">{activeHope.actionLabel}</a>
-      <span class="qh-sep">·</span>
       <button type="button" class="qh-next" on:click={cycleNext}>
-        ↻ Další důkaz naděje
+        <AppIcon name="refresh-cw" size={14} strokeWidth={2.1} />
+        <span>Další důkaz naděje</span>
       </button>
     </div>
   </div>
@@ -50,89 +52,121 @@
 
 <style>
   .quiet-hope {
-    padding: 1.85rem 2rem;
-    border-radius: 1.25rem;
-    background: rgba(255, 255, 255, 0.85);
-    border: 1px solid rgba(16, 185, 129, 0.2);
-    margin-bottom: 2rem;
-    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.06);
+    padding: 1.75rem 1.85rem;
+    border-radius: 18px;
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    margin-bottom: 1.75rem;
+    box-shadow: var(--shadow-sm, 0 2px 8px rgba(18, 42, 30, 0.05));
   }
 
   .section-overline {
     font-size: 0.74rem;
     font-weight: 700;
     letter-spacing: 0.08em;
-    color: #059669;
+    color: var(--accent-warm, #b8651b);
     text-transform: uppercase;
     display: block;
-    margin-bottom: 0.65rem;
+    margin-bottom: 0.55rem;
   }
 
   .qh-stat {
-    font-size: clamp(2rem, 3.8vw, 2.75rem);
+    font-size: clamp(1.9rem, 3.8vw, 2.65rem);
     font-weight: 800;
-    color: #047857;
+    color: var(--accent-primary, #1b5e42);
     line-height: 1.1;
-    margin-bottom: 0.5rem;
-    letter-spacing: -0.02em;
+    margin-bottom: 0.45rem;
+    letter-spacing: -0.025em;
   }
 
   .qh-text {
-    font-size: 1rem;
-    line-height: 1.5;
-    color: var(--text-heading, #1f2937);
-    margin: 0 0 1rem 0;
+    font-size: 0.98rem;
+    line-height: 1.52;
+    color: var(--ink-primary, #14281d);
+    margin: 0 0 0.85rem 0;
   }
 
   .qh-source-row {
-    font-size: 0.82rem;
-    color: var(--text-muted, #6b7280);
-    margin-bottom: 1rem;
+    font-size: 0.84rem;
+    color: var(--ink-muted, #61786b);
+    margin-bottom: 0.75rem;
     display: flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.4rem;
     flex-wrap: wrap;
   }
 
   .qh-source-link {
-    color: #059669;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.3rem 0.45rem;
+    border-radius: 8px;
+    color: var(--accent-primary, #1b5e42);
+    font-weight: 600;
     text-decoration: underline;
+    text-underline-offset: 2px;
+    box-sizing: border-box;
   }
 
   .qh-actions {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.65rem;
     flex-wrap: wrap;
   }
 
   .qh-link {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #059669;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.45rem 0.95rem;
+    border-radius: 999px;
+    background: var(--accent-primary, #1b5e42);
+    color: #ffffff;
+    font-size: 0.88rem;
+    font-weight: 700;
     text-decoration: none;
+    box-sizing: border-box;
+    transition: background-color 0.16s ease;
   }
 
   .qh-link:hover {
-    text-decoration: underline;
-  }
-
-  .qh-sep {
-    color: #9ca3af;
+    background: var(--accent-primary-hover, #144732);
   }
 
   .qh-next {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.38rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    font-family: inherit;
     font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--text-muted, #4b5563);
-    background: none;
-    border: none;
+    font-weight: 600;
+    color: var(--ink-primary, #14281d);
+    background: var(--bg-subtle, #edf2ee);
+    border: 1px solid var(--border-subtle, #dce3dd);
     cursor: pointer;
-    padding: 0;
+    box-sizing: border-box;
+    transition: background-color 0.16s ease, border-color 0.16s ease;
   }
 
   .qh-next:hover {
-    color: #059669;
+    background: #e1eae4;
+    border-color: var(--accent-primary, #1b5e42);
+  }
+
+  @media (max-width: 680px) {
+    .quiet-hope {
+      padding: 1.25rem 1.15rem;
+    }
   }
 </style>
-

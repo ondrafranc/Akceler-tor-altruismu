@@ -4,14 +4,17 @@
   import { isSoundMuted } from "../../../audio/audioContext.js";
   import { setMollyMood, unlockMollyTreat } from "../../../mollyStore.js";
   import { trackEvent } from "../../../analytics.js";
+  import AppIcon from "$lib/components/AppIcon.svelte";
+  import { resolveIconKey } from "$lib/icons/iconRegistry.js";
 
   export let onBreathWave = null; // (isInhale: boolean) => void
 
   export const BREATH_PATTERNS = [
     {
       id: "calm46",
+      icon: "leaf",
       label: "Klidný dech (4-6)",
-      short: "🌿 Klid (4-6)",
+      short: "Klid (4-6)",
       desc: "Prodloužený výdech aktivuje parasympatikus a přirozeně zpomaluje tep.",
       inhale: 4,
       hold: 0,
@@ -19,8 +22,9 @@
     },
     {
       id: "box4444",
+      icon: "package",
       label: "Krabicový dech (4-4-4-4)",
-      short: "📦 Krabicový (4-4-4)",
+      short: "Krabicový (4-4-4)",
       desc: "Rovnoměrný rytmus používaný pro rychlé znovunabytí soustředění a stability.",
       inhale: 4,
       hold: 4,
@@ -28,8 +32,9 @@
     },
     {
       id: "sleep478",
+      icon: "moon",
       label: "Hluboké uvolnění (4-7-8)",
-      short: "🌙 Uvolnění (4-7-8)",
+      short: "Uvolnění (4-7-8)",
       desc: "Dlouhý výdech pro hluboké zklidnění nervové soustavy.",
       inhale: 4,
       hold: 7,
@@ -183,7 +188,8 @@
             if (breathingActive) startBreathing();
           }}
         >
-          {pat.short}
+          <AppIcon name={resolveIconKey(pat.icon)} size={14} strokeWidth={2} />
+          <span>{pat.short}</span>
         </button>
       {/each}
     </div>
@@ -264,7 +270,9 @@
         {#if breathingActive}
           <span class="phase-sec">{breathPhaseSecLeft} s</span>
         {:else}
-          <span class="phase-leaf">🌿</span>
+          <span class="phase-leaf">
+            <AppIcon name="leaf" size={28} strokeWidth={1.85} />
+          </span>
         {/if}
         <div
           class="molly-lotus-guardian"
@@ -390,9 +398,12 @@
         data-molly-guide="true"
         on:click={startBreathing}
       >
-        🌊 Spustit klidný dech ({breathingDurationSec === 60
-          ? "1 min"
-          : "2 min"})
+        <AppIcon name="wind" size={16} strokeWidth={2} />
+        <span>
+          Spustit klidný dech ({breathingDurationSec === 60
+            ? "1 min"
+            : "2 min"})
+        </span>
       </button>
     {/if}
   </div>
@@ -400,14 +411,14 @@
 
 <style>
   .breathing-sanctuary {
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 30px;
-    padding: 2.2rem 2.3rem;
-    border: 1px solid rgba(22, 82, 56, 0.1);
+    background: var(--bg-surface);
+    border-radius: 24px;
+    padding: 2rem 2.15rem;
+    border: 1px solid var(--border-subtle);
     box-shadow: var(--shadow-sm);
     display: grid;
     grid-template-columns: 1.15fr 0.85fr;
-    gap: 2.2rem;
+    gap: 2rem;
     align-items: center;
   }
 
@@ -415,69 +426,76 @@
     display: inline-block;
     font-size: 0.72rem;
     font-weight: 800;
-    letter-spacing: 0.11em;
-    color: var(--emerald-600, #059669);
+    letter-spacing: 0.1em;
+    color: #8f4b0e;
     margin-bottom: 0.35rem;
   }
 
   .breathing-sanctuary h2 {
     margin: 0 0 0.55rem 0;
-    font-size: clamp(1.55rem, 2.5vw, 2.1rem);
+    font-size: clamp(1.5rem, 2.5vw, 2.05rem);
     font-weight: 800;
     letter-spacing: -0.025em;
     line-height: 1.16;
-    color: var(--text-primary, #0c2b1e);
+    color: var(--ink-primary);
   }
 
   .breathing-sanctuary h2 .serif-accent {
-    color: var(--emerald-600, #059669);
+    color: var(--accent-primary);
   }
 
   .breath-lead {
     margin: 0 0 1.15rem 0;
-    color: var(--text-secondary, #374151);
+    color: var(--ink-secondary);
     font-size: 0.95rem;
     line-height: 1.6;
   }
 
   .pattern-pills {
     display: inline-flex;
-    gap: 0.35rem;
+    gap: 0.32rem;
     padding: 0.28rem;
-    border-radius: 999px;
-    background: #eef4ef;
+    border-radius: 16px;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-subtle);
     flex-wrap: wrap;
     margin-bottom: 0.75rem;
   }
 
   .pattern-card {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 44px;
+    min-width: 44px;
     border: none;
-    border-radius: 999px;
-    padding: 0.5rem 0.95rem;
+    border-radius: 12px;
+    padding: 0.45rem 0.9rem;
     background: transparent;
-    color: var(--text-secondary, #374151);
+    color: var(--ink-secondary);
     font-family: inherit;
     font-size: 0.83rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.18s ease;
+    transition: background-color 0.18s ease, color 0.18s ease;
   }
 
   .pattern-card:hover {
-    color: var(--text-primary, #0c2b1e);
+    color: var(--ink-primary);
   }
 
   .pattern-card.active {
-    background: #0f3022;
-    color: #fde68a;
-    box-shadow: 0 4px 12px rgba(9, 29, 20, 0.16);
+    background: var(--accent-primary);
+    color: #ffffff;
+    box-shadow: var(--shadow-sm);
   }
 
   .pattern-active-desc {
     margin: 0 0 1.15rem 0;
     font-size: 0.88rem;
     line-height: 1.55;
-    color: var(--text-secondary, #374151);
+    color: var(--ink-secondary);
   }
 
   .duration-row {
@@ -489,37 +507,49 @@
   .dur-lbl {
     font-size: 0.82rem;
     font-weight: 700;
-    color: var(--text-muted, #6b7280);
+    color: var(--ink-muted);
   }
 
   .dur-chip {
-    padding: 0.34rem 0.78rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.45rem 0.92rem;
     border-radius: 999px;
-    border: 1px solid rgba(22, 82, 56, 0.12);
-    background: #ffffff;
-    color: var(--text-secondary, #374151);
+    border: 1px solid var(--border-strong);
+    background: var(--bg-surface);
+    color: var(--ink-secondary);
     font-family: inherit;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
+    transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+  }
+
+  .dur-chip:hover {
+    border-color: var(--accent-primary);
+    color: var(--ink-primary);
   }
 
   .dur-chip.active {
-    background: #0f3022;
+    background: var(--accent-primary);
     color: #ffffff;
-    border-color: #0f3022;
+    border-color: var(--accent-primary);
   }
 
   .breath-visual-col {
-    background: radial-gradient(circle at 50% 38%, #184a35 0%, #0b261b 100%);
-    border-radius: 26px;
-    padding: 2rem 1.5rem;
-    color: #f8faf8;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-subtle);
+    border-radius: 20px;
+    padding: 1.85rem 1.4rem;
+    color: var(--ink-primary);
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: 1.15rem;
+    gap: 1.1rem;
   }
 
   .lotus-stage {
@@ -541,41 +571,27 @@
   .lotus-halo.aura {
     width: 192px;
     height: 192px;
-    background: radial-gradient(
-      circle,
-      rgba(253, 230, 138, 0.18) 0%,
-      rgba(52, 211, 153, 0.08) 55%,
-      transparent 74%
-    );
-    transform: scale(0.82);
-    opacity: 0.5;
+    background: rgba(27, 94, 66, 0.06);
+    transform: scale(0.84);
+    opacity: 0.65;
   }
 
   .lotus-halo.outer {
     width: 158px;
     height: 158px;
-    background: radial-gradient(
-      circle,
-      rgba(52, 211, 153, 0.28) 0%,
-      rgba(253, 230, 138, 0.12) 65%,
-      transparent 100%
-    );
-    border: 1px solid rgba(110, 231, 183, 0.34);
-    transform: scale(0.86);
-    opacity: 0.62;
+    background: rgba(27, 94, 66, 0.1);
+    border: 1px solid rgba(27, 94, 66, 0.2);
+    transform: scale(0.88);
+    opacity: 0.78;
   }
 
   .lotus-halo.middle {
     width: 120px;
     height: 120px;
-    background: radial-gradient(
-      circle,
-      rgba(253, 230, 138, 0.34) 0%,
-      rgba(52, 211, 153, 0.24) 100%
-    );
-    border: 1px solid rgba(253, 230, 138, 0.42);
-    transform: scale(0.9);
-    opacity: 0.76;
+    background: rgba(27, 94, 66, 0.15);
+    border: 1px solid rgba(27, 94, 66, 0.28);
+    transform: scale(0.92);
+    opacity: 0.88;
   }
 
   .lotus-core {
@@ -584,13 +600,13 @@
     width: 82px;
     height: 82px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #6ee7b7 0%, #fde68a 100%);
-    color: #061b12;
+    background: var(--accent-primary);
+    color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 800;
-    box-shadow: 0 0 36px rgba(110, 231, 183, 0.5);
+    box-shadow: var(--shadow-md);
     transition-property: transform;
     transition-timing-function: ease-in-out;
   }
@@ -615,7 +631,7 @@
   .lotus-halo.outer.exhale,
   .lotus-halo.middle.exhale {
     transform: scale(0.76);
-    opacity: 0.48;
+    opacity: 0.5;
   }
   .lotus-core.exhale {
     transform: scale(0.82);
@@ -627,7 +643,10 @@
   }
 
   .phase-leaf {
-    font-size: 1.6rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
   }
 
   .breath-instruction {
@@ -639,39 +658,49 @@
 
   .breath-instruction strong {
     font-size: 1.02rem;
-    color: #fde68a;
+    color: var(--ink-primary);
   }
 
   .breath-instruction span {
-    font-size: 0.82rem;
-    color: rgba(232, 246, 238, 0.82);
+    font-size: 0.84rem;
+    color: var(--ink-secondary);
   }
 
   .breath-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 44px;
+    min-width: 44px;
     border: none;
     border-radius: 999px;
-    padding: 0.8rem 1.45rem;
+    padding: 0.72rem 1.45rem;
     font-family: inherit;
-    font-weight: 800;
+    font-weight: 700;
     font-size: 0.9rem;
     cursor: pointer;
-    transition: transform 0.18s ease;
+    transition: background-color 0.18s ease;
   }
 
   .breath-cta.start {
-    background: linear-gradient(135deg, #6ee7b7 0%, #fde68a 100%);
-    color: #061b12;
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.24);
+    background: var(--accent-primary);
+    color: #ffffff;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .breath-cta.start:hover {
+    background: var(--accent-primary-hover);
   }
 
   .breath-cta.stop {
-    background: rgba(255, 255, 255, 0.14);
-    border: 1px solid rgba(255, 255, 255, 0.24);
-    color: #ffffff;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-strong);
+    color: var(--ink-primary);
   }
 
-  .breath-cta:hover {
-    transform: translateY(-2px);
+  .breath-cta.stop:hover {
+    background: var(--bg-canvas);
   }
 
   .molly-lotus-guardian {
@@ -681,7 +710,7 @@
     transform: translateX(-50%) scale(1);
     transition: transform 1.2s ease-in-out;
     pointer-events: none;
-    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.45));
+    filter: drop-shadow(0 2px 6px rgba(18, 42, 30, 0.25));
   }
 
   .molly-lotus-guardian.is-inhale {
@@ -695,7 +724,7 @@
   @media (max-width: 900px) {
     .breathing-sanctuary {
       grid-template-columns: 1fr;
-      padding: 1.75rem 1.4rem;
+      padding: 1.5rem 1.2rem;
     }
   }
 </style>

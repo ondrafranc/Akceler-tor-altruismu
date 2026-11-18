@@ -1,5 +1,7 @@
 <script>
   import { trackEvent } from '../../lib/analytics.js';
+  import AppIcon from '$lib/components/AppIcon.svelte';
+  import PageHeader from '$lib/components/PageHeader.svelte';
 </script>
 
 <svelte:head>
@@ -7,154 +9,158 @@
 </svelte:head>
 
 <div class="app-page">
-  <div class="subpage-hero header">
-    <div class="hero-kicker">AKCELERÁTOR ALTRUISMU · POMÁHÁME LIDEM POMÁHAT</div>
-    <h1 class="title">Kudy se ti dnes <span class="serif-accent">chce pomoct?</span></h1>
-    <p class="subtitle">
-      Ať máš 2 minuty u telefonu, nebo volné odpoledne venku — vyber si přímou cestu ke skutečnému dobrému skutku.
-    </p>
-  </div>
+  <PageHeader
+    kicker="Akcelerátor altruismu · Pomáháme lidem pomáhat"
+    title="Kudy se ti dnes "
+    titleAccent="chce pomoct"
+    titleSuffix="?"
+    subtitle="Ať máš 2 minuty u telefonu, nebo volné odpoledne venku — vyber si přímou cestu ke skutečnému dobrému skutku."
+  />
 
   <div class="grid">
     <a class="card featured-svet" href="/svet" on:click={() => trackEvent('aa_app_choice', { choice: 'svet' })}>
-      <span class="card-overline">🌿 ŽIVÁ KRAJINA A KLIDNÝ DECH</span>
+      <span class="card-overline">
+        <AppIcon name="trees" size={14} strokeWidth={2} />
+        <span>ŽIVÁ KRAJINA A KLIDNÝ DECH</span>
+      </span>
       <div class="card-title">Krajina dobra</div>
       <div class="card-desc">
         Prozkoumej malovanou krajinu plnou skutečných dobrých skutků, rozsviť v ní ten svůj nebo si dopřej minutu klidného dechu.
       </div>
-      <div class="card-cta">Vstoupit do Krajiny dobra →</div>
+      <div class="card-cta">
+        <span>Vstoupit do Krajiny dobra</span>
+        <AppIcon name="arrow-right" size={15} strokeWidth={2} />
+      </div>
     </a>
 
     <a class="card" href="/app/guided" data-molly-guide="true" on:click={() => trackEvent('aa_app_choice', { choice: 'guided' })}>
-      <span class="card-overline">🧭 VÝBĚR NA MÍRU</span>
+      <span class="card-overline">
+        <AppIcon name="compass" size={14} strokeWidth={2} />
+        <span>VÝBĚR NA MÍRU</span>
+      </span>
       <div class="card-title">Průvodce podle tvé situace</div>
       <div class="card-desc">
         Zvolíš si čas a blízké téma — průvodce ti hned doporučí jeden konkrétní ověřený krok.
       </div>
-      <div class="card-cta">Spustit průvodce →</div>
+      <div class="card-cta">
+        <span>Spustit průvodce</span>
+        <AppIcon name="arrow-right" size={15} strokeWidth={2} />
+      </div>
     </a>
 
     <a class="card" href="/near" on:click={() => trackEvent('aa_app_choice', { choice: 'near' })}>
-      <span class="card-overline">📍 VE TVÉM MĚSTĚ A KRAJI</span>
+      <span class="card-overline">
+        <AppIcon name="map-pin" size={14} strokeWidth={2} />
+        <span>VE TVÉM MĚSTĚ A KRAJI</span>
+      </span>
       <div class="card-title">Mapa pomoci v okolí</div>
       <div class="card-desc">
         Útulky, veřejné knihobudky, šatníky, potravinové banky a spolky po celé ČR s připravenou zprávou na oslovení.
       </div>
-      <div class="card-cta">Otevřít mapu v okolí →</div>
+      <div class="card-cta">
+        <span>Otevřít mapu v okolí</span>
+        <AppIcon name="arrow-right" size={15} strokeWidth={2} />
+      </div>
     </a>
 
     <a class="card" href="/app/online" on:click={() => trackEvent('aa_app_choice', { choice: 'online' })}>
-      <span class="card-overline">⚡ Z DOMOVA I CESTOU VEN</span>
+      <span class="card-overline">
+        <AppIcon name="zap" size={14} strokeWidth={2} />
+        <span>Z DOMOVA I CESTOU VEN</span>
+      </span>
       <div class="card-title">Drobné skutky na pár minut</div>
       <div class="card-desc">
         Ověřené české projekty přehledně na jednom místě — od naplnění misky v útulku jedním klikem až po mapování studánek.
       </div>
-      <div class="card-cta">Prohlédnout online tipy →</div>
+      <div class="card-cta">
+        <span>Prohlédnout online tipy</span>
+        <AppIcon name="arrow-right" size={15} strokeWidth={2} />
+      </div>
     </a>
   </div>
 </div>
 
 <style>
   .app-page {
-    max-width: 1100px;
+    width: 100%;
+    max-width: 1140px;
+    box-sizing: border-box;
     margin: 0 auto;
-    padding: 0.75rem 1.25rem 4rem;
-  }
-
-  .header {
-    text-align: center;
-  }
-
-  .hero-kicker {
-    font-size: 0.74rem;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    color: #fde68a;
-    margin-bottom: 0.35rem;
-  }
-
-  .title {
-    font-family: var(--font-sans);
-    font-weight: 800;
-    color: #ffffff;
-    font-size: clamp(2rem, 3.6vw, 2.75rem);
-    line-height: 1.12;
-    margin: 0;
-    letter-spacing: -0.03em;
-  }
-
-  .title .serif-accent {
-    color: #fde68a;
-    font-weight: 400;
-  }
-
-  .subtitle {
-    color: rgba(236, 248, 241, 0.9);
-    margin: 0.55rem auto 0;
-    max-width: 50ch;
-    font-size: 0.98rem;
-    line-height: 1.6;
+    padding: 0.5rem 1.25rem 3rem;
   }
 
   .grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.2rem;
-    margin-top: 1.4rem;
+    gap: 1rem;
+    margin-top: 0.75rem;
   }
 
   .card {
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(22, 66, 48, 0.09);
-    border-radius: 24px;
+    min-height: 44px;
+    box-sizing: border-box;
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    border-radius: 18px;
     box-shadow: var(--shadow-sm);
-    padding: 1.8rem;
+    padding: 1.5rem;
     text-decoration: none;
     display: flex;
     flex-direction: column;
     gap: 0.55rem;
-    transition: transform 0.24s var(--ease-gentle), box-shadow 0.24s var(--ease-gentle);
+    transition:
+      transform 0.2s var(--ease-gentle),
+      box-shadow 0.2s var(--ease-gentle),
+      border-color 0.2s var(--ease-gentle);
   }
 
   .card:hover {
-    transform: translateY(-4px);
+    transform: translateY(-2px);
+    border-color: var(--border-strong, #c2cec5);
     box-shadow: var(--shadow-md);
   }
 
   .card.featured-svet {
-    background: linear-gradient(155deg, #ffffff 0%, #f1f8f3 100%);
+    background: var(--bg-surface, #ffffff);
+    border-color: var(--border-strong, #c2cec5);
   }
 
   .card-overline {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.38rem;
     font-size: 0.73rem;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: 0.08em;
-    color: var(--emerald-600);
+    color: var(--accent-primary, #1b5e42);
   }
 
   .card-title {
-    font-size: 1.28rem;
+    font-size: 1.24rem;
     font-weight: 800;
     letter-spacing: -0.02em;
-    color: var(--text-primary);
+    color: var(--ink-primary, #14281d);
   }
 
   .card-desc {
     font-size: 0.93rem;
-    line-height: 1.6;
-    color: var(--text-secondary);
+    line-height: 1.58;
+    color: var(--ink-secondary, #3f574a);
     flex: 1;
   }
 
   .card-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.38rem;
     font-size: 0.9rem;
-    font-weight: 800;
-    color: var(--forest-800);
-    margin-top: 0.4rem;
+    font-weight: 700;
+    color: var(--accent-primary, #1b5e42);
+    margin-top: 0.35rem;
   }
 
   .card:hover .card-cta {
-    color: var(--emerald-600);
+    color: var(--accent-primary-hover, #144732);
   }
 
   @media (max-width: 760px) {
@@ -165,58 +171,37 @@
 
   @media (max-width: 680px) {
     .app-page {
-      padding: 0.35rem 0.75rem 5.5rem;
-    }
-
-    .subpage-hero.header {
-      padding: 0.75rem 0.9rem !important;
-      margin-bottom: 0.45rem !important;
-      border-radius: 18px;
-    }
-
-    .hero-kicker,
-    .subtitle {
-      display: none;
-    }
-
-    .title {
-      font-size: 1.28rem;
-      line-height: 1.18;
+      padding: 0.25rem 0.75rem 2rem;
     }
 
     .grid {
-      gap: 0.48rem;
+      gap: 0.65rem;
       margin-top: 0.45rem;
     }
 
     .card {
-      padding: 0.68rem 0.88rem;
+      padding: 1rem 1.05rem;
       border-radius: 16px;
-      gap: 0.18rem;
+      gap: 0.35rem;
     }
 
     .card-overline {
-      font-size: 0.63rem;
+      font-size: 0.68rem;
     }
 
     .card-title {
-      font-size: 0.98rem;
-      line-height: 1.2;
+      font-size: 1.04rem;
+      line-height: 1.22;
     }
 
     .card-desc {
-      font-size: 0.76rem;
-      line-height: 1.3;
-      display: -webkit-box;
-      line-clamp: 2;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      font-size: 0.86rem;
+      line-height: 1.48;
     }
 
     .card-cta {
-      font-size: 0.78rem;
-      margin-top: 0.12rem;
+      font-size: 0.84rem;
+      margin-top: 0.2rem;
     }
   }
 </style>

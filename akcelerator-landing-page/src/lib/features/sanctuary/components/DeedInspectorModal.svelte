@@ -2,6 +2,8 @@
   import { cleanTitle } from "../../../utils.js";
   import { trackEvent } from "../../../analytics.js";
   import { SANCTUARY_ELEMENTS } from "../../../progress.js";
+  import AppIcon from "$lib/components/AppIcon.svelte";
+  import { resolveIconKey } from "$lib/icons/iconRegistry.js";
 
   /**
    * @typedef {{
@@ -32,11 +34,15 @@
   /** @type {((light: InspectorLight) => void) | null} */
   export let onMarkDone = null;
 
-  function getLightSemanticLabel(light) {
+  /**
+   * @param {InspectorLight | null} light
+   * @returns {{ icon: string, label: string }}
+   */
+  function getLightSemanticInfo(light) {
     const lt = light?.lightType || (light?.zone === "sky" ? "star" : "lantern");
-    if (lt === "wave") return "〰️ Vlna · Pomoc druhému";
-    if (lt === "star") return "✦ Hvězda · Inspirace";
-    return "🏮 Lucerna · Osobní skutek";
+    if (lt === "wave") return { icon: "waves", label: "Vlna · Pomoc druhému" };
+    if (lt === "star") return { icon: "star", label: "Hvězda · Inspirace" };
+    return { icon: "flame", label: "Lucerna · Osobní skutek" };
   }
 
   function handleClose() {
@@ -50,6 +56,7 @@
   $: selMeta =
     (selectedLight && elementMap[selectedLight.element]) ||
     SANCTUARY_ELEMENTS[3];
+  $: lightInfo = getLightSemanticInfo(selectedLight);
 </script>
 
 {#if selectedLight}
@@ -64,35 +71,26 @@
   >
     <div class="mw-head">
       <span class="mw-overline">
-        {#if selMeta.icon === "🐾"}
-          <svg
-            class="mw-paw-svg"
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <circle cx="7.5" cy="9.5" r="2.3" />
-            <circle cx="12" cy="7" r="2.3" />
-            <circle cx="16.5" cy="9.5" r="2.3" />
-            <path
-              d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z"
-            />
-          </svg>
-        {:else}
-          {selMeta.icon}
-        {/if}
-        {selMeta.title} · {getLightSemanticLabel(selectedLight)}
-        {#if selectedLight.isMine}
-          · ✦ Tvůj skutek{/if}
+        <AppIcon
+          name={resolveIconKey(selMeta.icon)}
+          size={13}
+          strokeWidth={2}
+          class={selMeta.icon === "paw" ? "mw-paw-svg" : ""}
+        />
+        <span>{selMeta.title} ·</span>
+        <AppIcon name={resolveIconKey(lightInfo.icon)} size={13} strokeWidth={2} />
+        <span>
+          {lightInfo.label}{#if selectedLight.isMine} · Tvůj skutek{/if}
+        </span>
       </span>
       <button
         type="button"
         class="mw-close"
         on:click={handleClose}
-        aria-label="Zavřít">✕</button
+        aria-label="Zavřít"
       >
+        <AppIcon name="x" size={16} strokeWidth={2.2} />
+      </button>
     </div>
 
     <strong class="mw-title">{cleanTitle(selectedLight.title)}</strong>
@@ -123,12 +121,14 @@
           on:click={() =>
             trackEvent("aa_world_deed_open", { id: selectedLight.actionId })}
         >
-          Udělat tenhle skutek ↗
+          <span>Udělat tenhle skutek</span>
+          <AppIcon name="arrow-up-right" size={15} strokeWidth={2} />
         </a>
       {/if}
       {#if !selectedLight.isMine}
         <button type="button" class="mw-btn-done" on:click={handleDone}>
-          ✓ Mám splněno — rozsvítit
+          <AppIcon name="check" size={15} strokeWidth={2.2} />
+          <span>Mám splněno — rozsvítit</span>
         </button>
       {/if}
     </div>
@@ -140,44 +140,60 @@
     position: absolute;
     bottom: 1rem;
     right: 1rem;
-    width: min(340px, calc(100% - 2rem));
-    padding: 1.05rem 1.15rem;
-    border-radius: 20px;
-    background: rgba(7, 26, 18, 0.97);
-    border: 1px solid rgba(253, 230, 138, 0.4);
-    color: #f8faf8;
+    width: min(350px, calc(100% - 2rem));
+    padding: 1rem 1.1rem;
+    border-radius: 18px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-strong);
+    color: var(--ink-primary);
     z-index: 20;
-    box-shadow: 0 18px 38px rgba(0, 0, 0, 0.45);
+    box-shadow: var(--shadow-lg);
   }
 
   .mw-head {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    gap: 0.5rem;
+    align-items: flex-start;
+    gap: 0.45rem;
     margin-bottom: 0.35rem;
   }
 
   .mw-overline {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.25rem;
     font-size: 0.72rem;
     font-weight: 800;
-    color: #fde68a;
-    letter-spacing: 0.03em;
+    color: #8f4b0e;
+    letter-spacing: 0.02em;
+    line-height: 1.35;
+    padding-top: 0.25rem;
   }
 
-  .mw-paw-svg {
-    display: inline-block;
-    vertical-align: -1.5px;
-    color: #fde68a;
-    margin-right: 0.14rem;
+  .mw-overline :global(.mw-paw-svg) {
+    color: #8f4b0e;
   }
 
   .mw-close {
-    border: none;
+    flex-shrink: 0;
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    border-radius: 11px;
     background: transparent;
-    color: rgba(255, 255, 255, 0.72);
+    color: var(--ink-secondary);
     cursor: pointer;
-    font-size: 0.95rem;
+    margin: -0.35rem -0.35rem 0 0;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  .mw-close:hover {
+    background: var(--bg-subtle);
+    color: var(--ink-primary);
   }
 
   .mw-title {
@@ -185,11 +201,12 @@
     font-size: 0.98rem;
     line-height: 1.32;
     margin-bottom: 0.25rem;
+    color: var(--ink-primary);
   }
 
   .mw-meta {
-    font-size: 0.75rem;
-    color: rgba(167, 243, 208, 0.85);
+    font-size: 0.76rem;
+    color: var(--ink-muted);
     margin-bottom: 0.4rem;
     display: flex;
     gap: 0.35rem;
@@ -197,52 +214,68 @@
 
   .mw-impact {
     margin: 0;
-    font-size: 0.81rem;
+    font-size: 0.82rem;
     line-height: 1.48;
-    color: rgba(236, 253, 245, 0.88);
+    color: var(--ink-secondary);
   }
 
   .mw-note {
     margin: 0.35rem 0 0;
     font-size: 0.8rem;
     font-style: italic;
-    color: #fde68a;
+    color: #8f4b0e;
   }
 
   .mw-actions {
-    margin-top: 0.8rem;
+    margin-top: 0.85rem;
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: 0.45rem;
   }
 
   .mw-btn-link {
     display: inline-flex;
     justify-content: center;
     align-items: center;
-    padding: 0.54rem 0.85rem;
+    gap: 0.35rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.56rem 0.9rem;
     border-radius: 11px;
-    background: linear-gradient(135deg, #fde68a 0%, #6ee7b7 100%);
-    color: #061b12;
-    font-weight: 800;
-    font-size: 0.8rem;
+    background: var(--accent-primary);
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.84rem;
     text-decoration: none;
+    transition: background-color 0.16s ease;
+  }
+
+  .mw-btn-link:hover {
+    background: var(--accent-primary-hover);
   }
 
   .mw-btn-done {
-    padding: 0.48rem 0.85rem;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.52rem 0.9rem;
     border-radius: 11px;
-    border: 1px solid rgba(167, 243, 208, 0.32);
-    background: rgba(255, 255, 255, 0.07);
-    color: #ecfdf5;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-subtle);
+    color: var(--ink-primary);
     font-family: inherit;
     font-weight: 700;
-    font-size: 0.78rem;
+    font-size: 0.82rem;
     cursor: pointer;
+    transition: border-color 0.16s ease, background-color 0.16s ease;
   }
 
   .mw-btn-done:hover {
-    background: rgba(16, 185, 129, 0.25);
+    background: var(--bg-canvas);
+    border-color: var(--accent-primary);
   }
 
   @media (max-width: 680px) {

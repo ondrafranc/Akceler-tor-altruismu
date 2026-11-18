@@ -96,7 +96,7 @@ export function openFeedbackModal(prefillOrOpts = '') {
     feedbackPrefill.set(prefillOrOpts.trim());
   } else if (prefillOrOpts && typeof prefillOrOpts === 'object') {
     feedbackPrefill.set({
-      title: prefillOrOpts.title || '💬 Zpětná vazba',
+      title: prefillOrOpts.title || 'Zpětná vazba',
       prefill: prefillOrOpts.prefill || ''
     });
   }

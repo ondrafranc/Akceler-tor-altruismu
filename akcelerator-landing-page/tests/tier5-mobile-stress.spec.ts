@@ -315,13 +315,12 @@ test.describe('Tier 5 Adversarial Stress: Mobile UX, Viewport Rotations & Tone I
     await page.waitForTimeout(100);
     await checkZeroHorizontalOverflow(page, 'Guided landscape walk situation');
 
-    // Toggle collapsible adaptive drawer if present
-    const adaptiveDrawer = page.locator('.adaptive-details summary');
-    if (await adaptiveDrawer.isVisible()) {
-      await adaptiveDrawer.click();
-      await page.waitForTimeout(100);
-      await checkZeroHorizontalOverflow(page, 'Guided landscape with adaptive drawer open');
-    }
+    // Toggle collapsible adaptive drawer
+    const adaptiveDrawer = page.locator('details.adaptive-params-drawer summary');
+    await expect(adaptiveDrawer).toBeVisible();
+    await adaptiveDrawer.click();
+    await page.waitForTimeout(100);
+    await checkZeroHorizontalOverflow(page, 'Guided landscape with adaptive drawer open');
 
     // 3. Rotate back to portrait (375x667)
     await page.setViewportSize({ width: 375, height: 667 });
@@ -355,12 +354,11 @@ test.describe('Tier 5 Adversarial Stress: Mobile UX, Viewport Rotations & Tone I
     // Switch filters in landscape
     const filtersToTest = ['free', 'fast', 'evidenceA'];
     for (const filterId of filtersToTest) {
-      const chip = page.locator(`.filter-chip:has-text("${filterId === 'free' ? 'Zdarma' : filterId === 'fast' ? 'Do 5 min' : '✦ Důkazy A'}")`);
-      if (await chip.isVisible()) {
-        await chip.click();
-        await page.waitForTimeout(80);
-        await checkZeroHorizontalOverflow(page, `Online landscape filter: ${filterId}`);
-      }
+      const chip = page.locator(`.filter-chip:has-text("${filterId === 'free' ? 'Zdarma' : filterId === 'fast' ? 'Do 5 min' : 'Ověřený dopad (A)'}")`);
+      await expect(chip).toBeVisible();
+      await chip.click();
+      await page.waitForTimeout(80);
+      await checkZeroHorizontalOverflow(page, `Online landscape filter: ${filterId}`);
     }
 
     // 3. Rotate back to portrait (375x667)
@@ -464,7 +462,7 @@ test.describe('Tier 5 Adversarial Stress: Mobile UX, Viewport Rotations & Tone I
       // Verify page rendered gracefully and did not throw uncaught errors
       const cta = page.locator('.instant-card .btn-studio-primary');
       await expect(cta).toBeVisible();
-      await expect(cta).toContainText('Začít pomáhat');
+      await expect(cta).toContainText(/Nakrmit útulek teď|Začít pomáhat/);
 
       // Verify fallback action title is populated
       const title = page.locator('.instant-card .action-title');
@@ -656,6 +654,9 @@ test.describe('Tier 5 Adversarial Stress: Mobile UX, Viewport Rotations & Tone I
     await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 20000 });
 
     const firstCard = page.locator('.card').first();
+    const primaryBtn = firstCard.locator('.cta.primary');
+    await expect(primaryBtn).toBeVisible();
+    await primaryBtn.dispatchEvent('click');
     const doneBtn = firstCard.locator('.cta.secondary');
     await expect(doneBtn).toBeVisible();
     await doneBtn.click();

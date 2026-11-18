@@ -10,6 +10,7 @@
   import { playPayoffAsmr } from "../lib/audio/presets.js";
   import { feedMolly, mollyState } from "../lib/mollyStore.js";
   import { cleanTitle } from "../lib/utils.js";
+  import AppIcon from "$lib/components/AppIcon.svelte";
 
   let restingMode = false;
   let sharedCopied = false;
@@ -127,10 +128,10 @@
     aria-labelledby="win-title"
   >
     <div class="celebration-card">
-      <div class="celebration-glow" aria-hidden="true"></div>
       {#if !restingMode}
         <div class="win-overline">
-          {activeElementMeta.icon} Klidné poděkování
+          <AppIcon name={activeElementMeta.icon} size={14} strokeWidth={2} />
+          <span>Klidné poděkování</span>
         </div>
         <h3 id="win-title" class="win-title">
           {cleanTitle($activeCelebration.title)}
@@ -140,9 +141,14 @@
           data-scene={effectMeta?.scene || "light"}
         >
           <div class="win-sensory-head card-effect-head">
-            <span class="impact-payoff-badge"
-              >{effectMeta?.badge || "✨ Světelná stopa"}</span
-            >
+            <span class="impact-payoff-badge">
+              <AppIcon
+                name={effectMeta?.icon || "sparkles"}
+                size={14}
+                strokeWidth={2}
+              />
+              <span>{effectMeta?.badge || "Světelná stopa"}</span>
+            </span>
             <span class="win-sensory-hint card-effect-hint"
               >Dotkni se pro jiskru</span
             >
@@ -163,7 +169,13 @@
         </div>
         {#if effectMeta?.mollyTreat}
           <div class="molly-celebration-note">
-            <span>{effectMeta.mollyTreat.icon}</span>
+            <span class="molly-treat-icon" aria-hidden="true">
+              <AppIcon
+                name={effectMeta.mollyTreat.icon}
+                size={18}
+                strokeWidth={1.9}
+              />
+            </span>
             <span>
               Patronka <strong>Molly</strong> ti s láskou děkuje za dobrotu (<strong
                 >{effectMeta.mollyTreat.name}</strong
@@ -176,12 +188,20 @@
               class="btn-celebration-feed"
               on:click={handleFeedMolly}
             >
-              🐾 Dát Molly zasloužený pamlsek ({effectMeta.mollyTreat.icon})
+              <AppIcon name="paw" size={16} />
+              <span>Dát Molly zasloužený pamlsek</span>
+              <AppIcon
+                name={effectMeta.mollyTreat.icon}
+                size={16}
+                strokeWidth={1.9}
+              />
             </button>
           {:else if fedThisCelebration}
             <div class="molly-fed-badge" role="status">
-              ✨ Molly spokojeně chroupe svůj zasloužený pamlsek a přede
-              radostí!
+              <AppIcon name="sparkles" size={16} strokeWidth={2} />
+              <span>
+                Molly spokojeně chroupe svůj zasloužený pamlsek a přede radostí!
+              </span>
             </div>
           {/if}
         {/if}
@@ -199,10 +219,13 @@
             class="btn-world"
             on:click={handleGoToWorld}
           >
-            ✨ Rozsvítit tenhle skutek v Krajině dobra →
+            <AppIcon name="sparkles" size={16} strokeWidth={2} />
+            <span>Rozsvítit tenhle skutek v Krajině dobra</span>
+            <AppIcon name="arrow-right" size={16} strokeWidth={2} />
           </a>
           <button type="button" class="btn-stop" on:click={handleStopHere}>
-            ☕ Pro dnešek mám splněno — dopřát si klid
+            <AppIcon name="coffee" size={16} strokeWidth={2} />
+            <span>Pro dnešek mám splněno — dopřát si klid</span>
           </button>
           <div class="win-secondary-row">
             <button
@@ -210,7 +233,13 @@
               class="btn-share"
               on:click={handleShareWithFriend}
             >
-              {sharedCopied ? "✓ Odkaz zkopírován" : "↗ Poslat tip blízkému"}
+              {#if sharedCopied}
+                <AppIcon name="check" size={15} strokeWidth={2.2} />
+                <span>Odkaz zkopírován</span>
+              {:else}
+                <AppIcon name="share-2" size={15} strokeWidth={2} />
+                <span>Poslat tip blízkému</span>
+              {/if}
             </button>
             <button type="button" class="btn-more" on:click={handleContinue}>
               Zavřít
@@ -218,7 +247,9 @@
           </div>
         </div>
       {:else}
-        <div class="rest-icon" aria-hidden="true">🌿</div>
+        <div class="rest-icon" aria-hidden="true">
+          <AppIcon name="leaf" size={28} strokeWidth={1.85} />
+        </div>
         <h3 id="win-title" class="win-title">
           Dnes se ti povedlo něco dobrého
         </h3>
@@ -228,7 +259,8 @@
         </p>
         <div class="win-actions">
           <a href="/svet#dech" class="btn-world" on:click={handleGoToWorld}>
-            🌊 Minuta klidného dechu v Krajině dobra
+            <AppIcon name="waves" size={16} strokeWidth={2} />
+            <span>Minuta klidného dechu v Krajině dobra</span>
           </a>
           <button type="button" class="btn-stop" on:click={closeCelebration}>
             Zavřít okno
@@ -244,8 +276,7 @@
     position: fixed;
     inset: 0;
     z-index: 1200;
-    background: rgba(6, 20, 14, 0.56);
-    backdrop-filter: blur(10px);
+    background: rgba(20, 40, 29, 0.52);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -255,52 +286,50 @@
 
   .celebration-card {
     position: relative;
-    overflow: hidden;
     width: 100%;
     max-width: 450px;
-    background: #ffffff;
-    border-radius: 28px;
-    padding: 2.1rem 1.9rem;
-    box-shadow: 0 32px 64px -16px rgba(4, 15, 10, 0.45);
-    border: 1px solid rgba(16, 185, 129, 0.2);
+    max-height: calc(100dvh - 1.5rem);
+    overflow-y: auto;
+    box-sizing: border-box;
+    background: var(--bg-surface, #ffffff);
+    border-radius: 22px;
+    padding: 1.85rem 1.65rem;
+    box-shadow: var(--shadow-xl, 0 20px 44px -12px rgba(18, 42, 30, 0.16));
+    border: 1px solid var(--border-subtle, #dce3dd);
     text-align: center;
   }
 
-  .celebration-glow {
-    position: absolute;
-    top: -60px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 260px;
-    height: 140px;
-    background: radial-gradient(
-      circle,
-      rgba(52, 211, 153, 0.2) 0%,
-      transparent 70%
-    );
-    pointer-events: none;
-  }
-
   .win-overline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
     font-size: 0.78rem;
     font-weight: 800;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: #059669;
+    color: var(--accent-primary, #1b5e42);
     margin-bottom: 0.55rem;
   }
 
   .rest-icon {
-    font-size: 2.2rem;
-    margin-bottom: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 999px;
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--accent-primary, #1b5e42);
+    margin-bottom: 0.65rem;
   }
 
   .win-title {
     margin: 0 0 0.55rem 0;
-    font-size: 1.35rem;
+    font-size: 1.32rem;
     font-weight: 800;
     letter-spacing: -0.02em;
-    color: #0b2419;
+    color: var(--ink-primary, #14281d);
     line-height: 1.25;
   }
 
@@ -317,55 +346,64 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.45rem;
+    gap: 0.5rem;
     margin: 0 0 0.7rem 0;
-    padding: 0.48rem 0.75rem;
+    padding: 0.55rem 0.75rem;
     border-radius: 12px;
-    background: linear-gradient(
-      135deg,
-      rgba(254, 243, 199, 0.75),
-      rgba(209, 250, 229, 0.55)
-    );
-    border: 1px solid rgba(245, 158, 11, 0.35);
-    color: #0b2419;
-    font-size: 0.81rem;
-    line-height: 1.4;
+    background: var(--accent-warm-tint, #fef6e8);
+    border: 1px solid rgba(143, 75, 14, 0.28);
+    color: var(--ink-primary, #14281d);
+    font-size: 0.82rem;
+    line-height: 1.42;
     text-align: left;
+  }
+
+  .molly-treat-icon {
+    display: inline-flex;
+    align-items: center;
+    color: #8f4b0e;
+    flex-shrink: 0;
   }
 
   .btn-celebration-feed {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: 0.45rem;
     width: 100%;
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
     margin: 0 0 0.85rem 0;
-    padding: 0.75rem 1.15rem;
+    padding: 0.7rem 1.1rem;
     border-radius: 14px;
-    border: 1px solid rgba(245, 158, 11, 0.4);
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    color: #92400e;
+    border: 1px solid rgba(143, 75, 14, 0.35);
+    background: var(--accent-warm-tint, #fef6e8);
+    color: #8f4b0e;
     font-family: inherit;
     font-size: 0.88rem;
     font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
-    transition:
-      transform 0.15s ease,
-      box-shadow 0.15s ease;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
   }
 
   .btn-celebration-feed:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.28);
+    background: #fdead1;
+    border-color: #8f4b0e;
   }
 
   .molly-fed-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    width: 100%;
+    box-sizing: border-box;
     margin: 0 0 0.85rem 0;
     padding: 0.55rem 0.85rem;
     border-radius: 12px;
-    background: rgba(16, 185, 129, 0.12);
-    color: #065f46;
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--accent-primary, #1b5e42);
     font-size: 0.84rem;
     font-weight: 700;
   }
@@ -375,14 +413,14 @@
     font-size: 0.92rem;
     font-weight: 700;
     line-height: 1.5;
-    color: #065f46;
+    color: var(--accent-primary, #1b5e42);
   }
 
   .win-message {
-    margin: 0 0 1.4rem 0;
+    margin: 0 0 1.35rem 0;
     font-size: 0.92rem;
     line-height: 1.6;
-    color: #3d5247;
+    color: var(--ink-secondary, #3f574a);
   }
 
   .win-actions {
@@ -395,36 +433,46 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0.92rem 1.25rem;
-    border-radius: 15px;
-    background: linear-gradient(135deg, #0d2e20 0%, #174933 100%);
-    color: #fde68a;
+    gap: 0.45rem;
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
+    padding: 0.82rem 1.2rem;
+    border-radius: 14px;
+    background: var(--accent-primary, #1b5e42);
+    color: #ffffff;
     font-weight: 700;
     font-size: 0.93rem;
     text-decoration: none;
-    box-shadow: 0 12px 24px -8px rgba(9, 29, 20, 0.32);
-    transition: transform 0.2s ease;
+    transition: background-color 0.18s ease;
   }
 
   .btn-world:hover {
-    transform: translateY(-2px);
+    background: var(--accent-primary-hover, #144732);
   }
 
   .btn-stop {
-    padding: 0.84rem 1.15rem;
-    border-radius: 15px;
-    border: 1px solid rgba(22, 66, 48, 0.14);
-    background: #f6faf7;
-    color: #0d291d;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
+    padding: 0.78rem 1.15rem;
+    border-radius: 14px;
+    border: 1px solid var(--border-strong, #c2cec5);
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--ink-primary, #14281d);
     font-family: inherit;
     font-weight: 700;
     font-size: 0.88rem;
     cursor: pointer;
-    transition: background 0.18s ease;
+    transition: background-color 0.18s ease;
   }
 
   .btn-stop:hover {
-    background: #eaf3ed;
+    background: var(--border-subtle, #dce3dd);
   }
 
   .win-secondary-row {
@@ -436,21 +484,44 @@
   .btn-share,
   .btn-more {
     flex: 1;
-    padding: 0.55rem 0.65rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
+    padding: 0.55rem 0.75rem;
     border-radius: 10px;
-    border: none;
+    border: 1px solid transparent;
     background: transparent;
-    color: #5b7367;
+    color: var(--ink-secondary, #3f574a);
     font-family: inherit;
     font-weight: 700;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
   }
 
   .btn-share:hover,
   .btn-more:hover {
-    color: #0d2118;
-    background: rgba(22, 66, 48, 0.05);
+    color: var(--ink-primary, #14281d);
+    background: var(--bg-subtle, #edf2ee);
+  }
+
+  @media (max-width: 680px) {
+    .celebration-backdrop {
+      padding: 0.75rem;
+    }
+
+    .celebration-card {
+      padding: 1.25rem 1rem;
+      border-radius: 18px;
+    }
+
+    .win-secondary-row {
+      flex-wrap: wrap;
+    }
   }
 
   @keyframes fadeIn {

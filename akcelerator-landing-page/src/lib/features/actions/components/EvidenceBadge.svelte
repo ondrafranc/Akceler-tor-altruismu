@@ -1,12 +1,20 @@
 <script>
+  import AppIcon from '$lib/components/AppIcon.svelte';
   import { EVIDENCE_TIERS } from '../../../data/czech-actions.js';
 
   export let tier = 'B';
   export let className = '';
   export let variant = 'pill'; // 'pill' | 'card' | 'rec'
 
+  const DAYLIGHT_TIER_LABELS = {
+    A: 'Přímý měřitelný účinek',
+    B: 'Doložený přínos',
+    C: 'Komunitní smysl'
+  };
+
   $: safeTier = tier && EVIDENCE_TIERS[tier] ? tier : 'B';
-  $: tierMeta = EVIDENCE_TIERS[safeTier] || { shortLabel: 'Doložený výsledek', desc: '' };
+  $: tierMeta = EVIDENCE_TIERS[safeTier] || { desc: '' };
+  $: tierLabel = DAYLIGHT_TIER_LABELS[safeTier] || 'Doložený přínos';
   $: baseClass = variant === 'card'
     ? 'card-evidence-badge'
     : variant === 'rec'
@@ -17,9 +25,10 @@
 
 <span
   class={fullClass}
-  title={tierMeta.desc || `Třída důkazů ${safeTier}`}
+  title={tierMeta.desc || `Ověřený dopad (${safeTier})`}
 >
-  Důkazy {safeTier} · {tierMeta.shortLabel}
+  <AppIcon name="shield-check" size={12} strokeWidth={2.2} />
+  <span>Ověřený dopad ({safeTier}) · {tierLabel}</span>
 </span>
 
 <style>
@@ -28,30 +37,32 @@
   .rec-evidence-pill {
     display: inline-flex;
     align-items: center;
+    gap: 0.28rem;
     font-size: 0.72rem;
     font-weight: 600;
-    padding: 0.18rem 0.55rem;
+    padding: 0.22rem 0.6rem;
     border-radius: 999px;
     letter-spacing: 0.01em;
     cursor: help;
-    transition: all 0.2s ease;
+    line-height: 1.25;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
   }
 
   .tier-A {
-    background: rgba(16, 185, 129, 0.14);
-    color: #065f46;
-    border: 1px solid rgba(16, 185, 129, 0.35);
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--accent-primary, #1b5e42);
+    border: 1px solid var(--border-strong, #c2cec5);
   }
 
   .tier-B {
-    background: rgba(59, 130, 246, 0.12);
-    color: #1e40af;
-    border: 1px solid rgba(59, 130, 246, 0.3);
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
   }
 
   .tier-C {
-    background: rgba(245, 158, 11, 0.12);
-    color: #92400e;
-    border: 1px solid rgba(245, 158, 11, 0.3);
+    background: var(--accent-warm-tint, #fef6e8);
+    color: #8f4b0e;
+    border: 1px solid rgba(184, 101, 27, 0.3);
   }
 </style>

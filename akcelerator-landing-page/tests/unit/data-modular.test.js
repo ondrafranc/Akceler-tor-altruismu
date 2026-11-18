@@ -132,10 +132,10 @@ describe('contactTemplates: buildFirstContactTemplate', () => {
 
 describe('pulseService: describeAmbientPulse', () => {
   it('handles in-card and global views with live indicators', () => {
-    const livePulse = { message: 'Někdo právě podpořil útulek v Brně', isLive: true, actionId: 'act-1' };
+    const livePulse = { message: 'Sdílený skutek v Brně: naplnit misku v útulku', isLive: true, actionId: 'act-1' };
 
     const inCardMatching = describeAmbientPulse(livePulse, { inCard: true, actionId: 'act-1' });
-    expect(inCardMatching).toBe('Někdo právě podpořil útulek v Brně');
+    expect(inCardMatching).toBe('Sdílený skutek v Brně: naplnit misku v útulku');
 
     const inCardOther = describeAmbientPulse(livePulse, { inCard: true, actionId: 'act-2' });
     expect(inCardOther).toContain('Mezitím v komunitě:');

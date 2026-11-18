@@ -16,7 +16,7 @@ import {
 export const MICRO_ACTIONS = [
   {
     id: 'zvirata_utulek_online',
-    title: '🐾 Naplnit misku v českém útulku jedním klikem',
+    title: 'Naplnit misku v českém útulku jedním klikem',
     org: 'Click and Feed',
     desc: `Jedním bezplatným kliknutím pošleš přes sponzora ${CLICK_AND_FEED.sponsor} (~${CLICK_AND_FEED.gramsPerClick} g krmiva na klik) skutečné granule psům a kočkám ve ${CLICK_AND_FEED.shelters} českých útulcích.`,
     whyItMatters: `Lidé už takto pomohli dodat přes ${CLICK_AND_FEED.totalTonnesLabel} tun krmiva do ${CLICK_AND_FEED.shelters} útulků po celé ČR.`,
@@ -37,11 +37,11 @@ export const MICRO_ACTIONS = [
     mode: 'online',
     social: 'solo',
     categoryTag: 'writing',
-    metaLabel: '⏱️ 2 min • 💰 zdarma • 💻 online'
+    metaLabel: '2 min · zdarma · online'
   },
   {
     id: 'aplikace_zachranka',
-    title: '🚑 Nastavit si v mobilu českou aplikaci Záchranka',
+    title: 'Nastavit si v mobilu českou aplikaci Záchranka',
     org: 'Aplikace Záchranka',
     desc: 'Nainstaluj si nebo zkontroluj aplikaci Záchranka — v nouzi s ní jedním stiskem přivoláš pomoc člověku na ulici a najdeš nejbližší defibrilátor.',
     whyItMatters: 'Když někdo kolem zkolabuje, přesná GPS poloha a mapa defibrilátorů rozhodují o minutách.',
@@ -62,11 +62,11 @@ export const MICRO_ACTIONS = [
     mode: 'online',
     social: 'solo',
     categoryTag: 'writing',
-    metaLabel: '⏱️ 3 min • 💰 zdarma • 📱 v mobilu'
+    metaLabel: '3 min · zdarma · v mobilu'
   },
   {
     id: 'nevypusť_dusi',
-    title: '🧠 Projít nebo poslat dál tahák první psychické pomoci',
+    title: 'Projít nebo poslat dál tahák první psychické pomoci',
     org: 'Nevypusť duši',
     desc: 'Podívej se na praktické infografiky péče o duševní zdraví pro mladé nebo pošli jeden užitečný tahák kamarádovi, kterému není dobře.',
     whyItMatters: 'Otevřenost a včasná podpora mezi kamarády snižuje pocit samoty a reálně chrání zdraví.',
@@ -87,11 +87,11 @@ export const MICRO_ACTIONS = [
     mode: 'online',
     social: 'solo',
     categoryTag: 'writing',
-    metaLabel: '⏱️ 4 min • 💰 zdarma • 💻 online'
+    metaLabel: '4 min · zdarma · online'
   },
   {
     id: 'wikipedie_cz',
-    title: '📝 Opravit překlep nebo doplnit fakt na české Wikipedii',
+    title: 'Opravit překlep nebo doplnit fakt na české Wikipedii',
     org: 'Wikipedie ČR / Wikimedia Česká republika',
     desc: 'Otevři článek o své obci, škole nebo oblíbeném oboru na české Wikipedii a oprav v něm chybu nebo doplň chybějící zdroj.',
     whyItMatters: 'Českou Wikipedii čtou denně statisíce studentů. Každá drobná úprava zpřesňuje informace pro všechny ostatní.',
@@ -112,11 +112,11 @@ export const MICRO_ACTIONS = [
     mode: 'online',
     social: 'solo',
     categoryTag: 'writing',
-    metaLabel: '⏱️ 5 min • 💰 zdarma • 💻 online'
+    metaLabel: '5 min · zdarma · online'
   },
   {
     id: 'missing_maps',
-    title: '🗺️ Obkreslit 10 budov ze satelitu pro Lékaře bez hranic',
+    title: 'Obkreslit 10 budov ze satelitu pro Lékaře bez hranic',
     org: 'Missing Maps CZ & SK',
     desc: 'Pomoz zmapovat bílá místa na mapě světa přímo v prohlížeči. Stačí obkreslit obdélníky střech na satelitním snímku.',
     whyItMatters: 'Když přijde povodeň nebo epidemie, humanitární týmy díky těmto mapám vědí, kde žijí lidé a kudy k nim doručit pomoc.',
@@ -137,11 +137,11 @@ export const MICRO_ACTIONS = [
     mode: 'online',
     social: 'solo',
     categoryTag: 'tech',
-    metaLabel: '⏱️ 10–15 min • 💰 zdarma • 💻 z domova'
+    metaLabel: '10–15 min · zdarma · z domova'
   },
   {
     id: 'letters_seniors',
-    title: '👵 Podpořit osamělého seniora (Krása pomoci / Ježíškova vnoučata)',
+    title: 'Podpořit osamělého seniora (Krása pomoci / Ježíškova vnoučata)',
     org: 'Nadace Krása pomoci / Ježíškova vnoučata',
     desc: 'Zapoj se do přátelských návštěv, telefonátů nebo splň drobné přání osamělému seniorovi v domově.',
     whyItMatters: 'Osamělost trápí statisíce českých seniorů – osobní zájem a rozhovor jim vrací radost do běžného týdne.',
@@ -162,11 +162,11 @@ export const MICRO_ACTIONS = [
     mode: 'home',
     social: 'solo',
     categoryTag: 'writing',
-    metaLabel: '⏱️ 10–15 min • 💰 zdarma • 🏠 z domova i osobně'
+    metaLabel: '10–15 min · zdarma · z domova i osobně'
   },
   {
     id: 'cesko_digital_micro',
-    title: '💻 Pomoci neziskovce s webem, textem nebo tabulkou',
+    title: 'Pomoci neziskovce s webem, textem nebo tabulkou',
     org: 'Česko.Digital (Tržiště příležitostí)',
     desc: 'Prohlédni si aktuální mikro-úkoly na Tržišti příležitostí, kde české neziskovky hledají jednorázovou pomoc na pár hodin.',
     whyItMatters: 'Tvoje běžné digitální nebo studentské dovednosti ušetří neziskové organizaci týdny tápání.',
@@ -188,11 +188,11 @@ export const MICRO_ACTIONS = [
     mode: 'online',
     social: 'solo',
     categoryTag: 'tech',
-    metaLabel: '⏱️ 5–15 min výběr • 💰 zdarma • 💻 online'
+    metaLabel: '5–15 min výběr · zdarma · online'
   },
   {
     id: 'ucime_online',
-    title: '🧑‍🏫 Doučovat dítě online (1 hodina týdně)',
+    title: 'Doučovat dítě online (1 hodina týdně)',
     org: 'Učíme online / Česko.Digital',
     desc: 'Pomoz přes videohovor dítěti, kterému doma nemohou poradit s češtinou, matematikou nebo angličtinou.',
     whyItMatters: 'Jedna hodina týdně dokáže dítěti vrátit sebevědomí ve škole a otevřít mu lepší šanci do života.',
@@ -214,11 +214,11 @@ export const MICRO_ACTIONS = [
     mode: 'online',
     social: 'solo',
     categoryTag: 'tutoring',
-    metaLabel: '⏱️ registrace 5 min • 💰 zdarma • 💻 online'
+    metaLabel: 'registrace 5 min · zdarma · online'
   },
   {
     id: 'knihobudka_kniha',
-    title: '📚 Zanést přečtenou knihu do veřejné Knihobudky v ulici',
+    title: 'Zanést přečtenou knihu do veřejné Knihobudky v ulici',
     org: 'Kam s ním? / Sousedské knihobudky',
     desc: 'Vyber doma jednu knihu, kterou už nebudeš číst, a při nejbližší procházce ji vlož do veřejné knihobudky pro sousedy.',
     whyItMatters: 'Drobná radost pro náhodného kolemjdoucího a příjemný důvod vyjít na 10 minut ven bez jakéhokoliv tlaku.',
@@ -240,11 +240,11 @@ export const MICRO_ACTIONS = [
     mode: 'local',
     social: 'solo',
     categoryTag: 'community',
-    metaLabel: '⏱️ 10 min • 💰 zdarma • 🚶 procházka'
+    metaLabel: '10 min · zdarma · procházka'
   },
   {
     id: 'trash_hero_uklid',
-    title: '🧤 Posbírat 5 kusů odpadků při běžné procházce',
+    title: 'Posbírat 5 kusů odpadků při běžné procházce',
     org: 'Ukliďme Česko / Osobní mikro-krok',
     desc: 'Nepotřebuješ velkou organizovanou akci. Při nejbližší cestě ven posbírej 5 kusů plastu nebo papíru a vyhoď je do koše.',
     whyItMatters: 'Okamžitá proměna místa kolem tebe za 2 minuty, bez registrace a bez čekání na kohokoliv.',
@@ -266,11 +266,11 @@ export const MICRO_ACTIONS = [
     mode: 'local',
     social: 'solo',
     categoryTag: 'nature',
-    metaLabel: '⏱️ 5 min • 💰 zdarma • 🌿 hned teď'
+    metaLabel: '5 min · zdarma · hned teď'
   },
   {
     id: 'inaturalist_priroda',
-    title: '🦋 Vyfotit rostlinu nebo hmyz pro vědce (občanská věda)',
+    title: 'Vyfotit rostlinu nebo hmyz pro vědce (občanská věda)',
     org: 'iNaturalist CZ / Akademie věd ČR',
     desc: 'Při procházce vyfoť mobilem zajímavou rostlinu, houbu nebo brouka a nahraj pozorování do otevřené databáze přírody.',
     whyItMatters: 'Tvoje fotka pomůže českým biologům a ochranářům mapovat rozmanitost přírody a chránit ohrožené druhy v ČR.',
@@ -291,11 +291,11 @@ export const MICRO_ACTIONS = [
     mode: 'local',
     social: 'solo',
     categoryTag: 'nature',
-    metaLabel: '⏱️ 5–10 min • 💰 zdarma • 🚶 venku s mobilem'
+    metaLabel: '5–10 min · zdarma · venku s mobilem'
   },
   {
     id: 'darovani_krve',
-    title: '🩸 Zjistit možnosti prvodárcovství krve v okolí',
+    title: 'Zjistit možnosti prvodárcovství krve v okolí',
     org: 'Český červený kříž',
     desc: 'Podívej se, co obnáší darování krve nebo plazmy pro prvodárce a kde je nejbližší transfuzní stanice.',
     whyItMatters: 'Jeden odběr trvá jen pár desítek minut a dokáže zachránit až 3 lidské životy.',
@@ -316,11 +316,11 @@ export const MICRO_ACTIONS = [
     mode: 'local',
     social: 'solo',
     categoryTag: 'community',
-    metaLabel: '⏱️ 5 min info • 💰 zdarma • ❤️ vysoký dopad'
+    metaLabel: '5 min info · zdarma · vysoký dopad'
   },
   {
     id: 'kostni_dren',
-    title: '🧬 Zjistit zápis do registru dárců kostní dřeně (18–35 let)',
+    title: 'Zjistit zápis do registru dárců kostní dřeně (18–35 let)',
     org: 'Český národní registr dárců dřeně (ČNRDD)',
     desc: 'Pokud je ti 18–35 let, podívej se, jak probíhá bezbolestný zápis do registru (170 104 registrovaných dárců a 2 939 odběrů) pomocí stěru z úst.',
     whyItMatters: 'Pro pacienta s leukémií jsi možná jediná shoda na světě. Samotný zápis zabere 10 minut a vůbec nebolí.',
@@ -341,11 +341,11 @@ export const MICRO_ACTIONS = [
     mode: 'local',
     social: 'solo',
     categoryTag: 'community',
-    metaLabel: '⏱️ 5 min info • 💰 zdarma • 🧬 pro mladé 18–35 let'
+    metaLabel: '5 min info · zdarma · pro mladé 18–35 let'
   },
   {
     id: 'remobil_telefon',
-    title: '📱 Poslat starý mobil ze šuplíku zdarma s kódem Zásilkovny',
+    title: 'Poslat starý mobil ze šuplíku zdarma s kódem Zásilkovny',
     org: 'Remobil, z. s.',
     desc: 'Vytáhni ze šuplíku starý nefunkční mobil a cestou do školy/práce ho podej na jakékoliv Zásilkovně s bezplatným kódem 98 765 259.',
     whyItMatters: 'Přes Remobil lidé zrecyklovali už 221 060 mobilů (2,21 mil. Kč na charitu) – z každého telefonu jde 10 Kč na dobrou věc a práce pro lidi s hendikepem.',
@@ -366,11 +366,11 @@ export const MICRO_ACTIONS = [
     mode: 'local',
     social: 'solo',
     categoryTag: 'nature',
-    metaLabel: '⏱️ 10 min • 💰 zdarma (kód 98 765 259) • ♻️ z šuplíku'
+    metaLabel: '10 min · zdarma (kód 98 765 259) · z šuplíku'
   },
   {
     id: 'potravinova_banka',
-    title: '🥫 Zapojit se v Potravinové bance (třídění potravin)',
+    title: 'Zapojit se v Potravinové bance (třídění potravin)',
     org: 'Česká federace potravinových bank',
     desc: 'Pomoz na pár hodin třídit zachráněné potraviny pro samoživitele, seniory a rodiny v nouzi ve svém kraji.',
     whyItMatters: 'Potravinové banky v ČR ročně zachrání 17 400 tun jídla pro 430 000 lidí v nouzi – za pár hodin ve skladu vidíš okamžitý výsledek.',
@@ -391,11 +391,11 @@ export const MICRO_ACTIONS = [
     mode: 'local',
     social: 'group',
     categoryTag: 'community',
-    metaLabel: '⏱️ domluva 5 min • 💰 zdarma • 🤝 v týmu'
+    metaLabel: 'domluva 5 min · zdarma · v týmu'
   },
   {
     id: 'brontosaurus_vikend',
-    title: '⛺ Vyrazit na jednodenní nebo víkendovou akci v přírodě',
+    title: 'Vyrazit na jednodenní nebo víkendovou akci v přírodě',
     org: 'Hnutí Brontosaurus',
     desc: 'Přidej se k partě mladých lidí na kosení orchidejových luk, sázení stromů nebo opravu hradu ve svém kraji.',
     whyItMatters: 'Nejlepší lék na osamělost a digitální únavu – strávíš den venku, uděláš kus práce a poznáš přátelské lidi.',
@@ -416,11 +416,11 @@ export const MICRO_ACTIONS = [
     mode: 'local',
     social: 'group',
     categoryTag: 'nature',
-    metaLabel: '⏱️ výběr 5 min • 💰 zdarma/symbolicky • 🤝 noví lidé'
+    metaLabel: 'výběr 5 min · zdarma/symbolicky · noví lidé'
   },
   {
     id: 'nadeje_jidlo',
-    title: '🍞 Darovat teplou polévku a nocleh (Nocleženka)',
+    title: 'Darovat teplou polévku a nocleh (Nocleženka)',
     org: 'Armáda spásy – Nocleženka',
     desc: 'Přes Nocleženku můžeš během 2 minut zaplatit teplé jídlo, sprchu a bezpečnou noc pod střechou pro člověka bez domova.',
     whyItMatters: 'Okamžitá a velmi konkrétní pomoc člověku v akutní nouzi přímo v českých městech.',
@@ -441,11 +441,11 @@ export const MICRO_ACTIONS = [
     mode: 'online',
     social: 'solo',
     categoryTag: 'donation',
-    metaLabel: '⏱️ 2 min • 💰 od 100 Kč • 💻 online'
+    metaLabel: '2 min · od 100 Kč · online'
   },
   {
     id: 'sazime_budoucnost',
-    title: '🌳 Podpořit výsadbu stromů v české krajině',
+    title: 'Podpořit výsadbu stromů v české krajině',
     org: 'Sázíme budoucnost (Nadace Partnerství)',
     desc: 'Podpoř výsadbu a následnou péči o stromy v české krajině a obcích – nebo se podívej na mapu výsadeb v okolí.',
     whyItMatters: 'Stromy zadržují vodu v krajině a chladí ulice. I drobný příspěvek nebo účast na výsadbě má trvalý dopad.',
@@ -466,11 +466,11 @@ export const MICRO_ACTIONS = [
     mode: 'online',
     social: 'solo',
     categoryTag: 'donation',
-    metaLabel: '⏱️ 2–5 min • 💰 dobrovolné • 💻 online'
+    metaLabel: '2–5 min · dobrovolné · online'
   },
   {
     id: 'krabice_od_bot',
-    title: '🎁 Podpořit děti z chudých rodin v ČR (Krabice od bot)',
+    title: 'Podpořit děti z chudých rodin v ČR (Krabice od bot)',
     org: 'Diakonie ČCE – Krabice od bot',
     desc: 'Celoroční sbírka a předvánoční akce na podporu dětí z azylových domů a nízkopříjmových rodin v Česku.',
     whyItMatters: 'Pomáhá dětem v nouzi zažít radost, zaplatit kroužky, školní pomůcky nebo letní tábor.',
@@ -491,11 +491,11 @@ export const MICRO_ACTIONS = [
     mode: 'online',
     social: 'solo',
     categoryTag: 'donation',
-    metaLabel: '⏱️ 3–5 min • 💰 dobrovolné • 💻 online i osobně'
+    metaLabel: '3–5 min · dobrovolné · online i osobně'
   },
   {
     id: 'charita_dar',
-    title: '💚 Jednorázový dar 100–200 Kč na terénní péči',
+    title: 'Jednorázový dar 100–200 Kč na terénní péči',
     org: 'Charita Česká republika',
     desc: 'Podpoř terénní sestry, hospice a pomoc rodinám v tísni přímo v českých regionech.',
     whyItMatters: 'Charita ČR patří k nejrozšířenějším sítím přímé lidské pomoci seniorům a rodinám v Česku.',
@@ -516,11 +516,11 @@ export const MICRO_ACTIONS = [
     mode: 'online',
     social: 'solo',
     categoryTag: 'donation',
-    metaLabel: '⏱️ 3 min • 💰 dobrovolné • 💻 online'
+    metaLabel: '3 min · dobrovolné · online'
   },
   {
     id: 'birdlife_ptaci_pasti',
-    title: '🐦 Nahlásit prosklenou zastávku nebezpečnou pro ptáky',
+    title: 'Nahlásit prosklenou zastávku nebezpečnou pro ptáky',
     org: 'Česká společnost ornitologická – Ptačí pasti',
     desc: 'Místo scrollování na zastávce zadej do mobilního webu Ptačí pasti nebezpečnou prosklenou plochu nebo nález ptáka u skla – bez registrace.',
     whyItMatters: 'Díky hlášením od obyčejných lidí pak ornitologové prosazují u obcí polepy zastávek, které zachrání stovky ptáků.',
@@ -541,11 +541,11 @@ export const MICRO_ACTIONS = [
     mode: 'local',
     social: 'solo',
     categoryTag: 'nature',
-    metaLabel: '⏱️ 2 min • 💰 zdarma • 📱 bez registrace'
+    metaLabel: '2 min · zdarma · bez registrace'
   },
   {
     id: 'strnadi_nareci',
-    title: '🎶 Sundat venku sluchátka a nahrát 15 s ptačího nářečí',
+    title: 'Sundat venku sluchátka a nahrát 15 s ptačího nářečí',
     org: 'ČSO & Přírodovědecká fakulta UK – Nářečí strnadů',
     desc: 'Při procházce sundej na chvíli sluchátka, zaposlouchej se a nahraj na mobil zpěv strnada obecného pro mapu českých ptačích dialektů.',
     whyItMatters: 'Uklidníš vlastní hlavu v přírodě a pomůžeš českým vědcům zmapovat unikátní kulturní dědictví v ptačím zpěvu.',
@@ -566,11 +566,11 @@ export const MICRO_ACTIONS = [
     mode: 'local',
     social: 'solo',
     categoryTag: 'nature',
-    metaLabel: '⏱️ 5 min • 💰 zdarma • 🎧 klid venku'
+    metaLabel: '5 min · zdarma · klid venku'
   },
   {
     id: 'na_ovoce_strom',
-    title: '🍎 Přidat volně rostoucí jabloň nebo třešeň do mapy Na ovoce',
+    title: 'Přidat volně rostoucí jabloň nebo třešeň do mapy Na ovoce',
     org: 'Na ovoce, z. s.',
     desc: 'Víš u cesty nebo v parku o veřejném ovocném stromu, pod kterým jinak shnije úroda? Přidej špendlík do otevřené komunitní mapy.',
     whyItMatters: 'Studenti a sousedé z okolí si tam nasbírají čerstvé ovoce zdarma a staré aleje dostanou péči místo zapomnění.',
@@ -591,11 +591,11 @@ export const MICRO_ACTIONS = [
     mode: 'local',
     social: 'solo',
     categoryTag: 'nature',
-    metaLabel: '⏱️ 5 min • 💰 zdarma • 🌳 čerstvý vzduch'
+    metaLabel: '5 min · zdarma · čerstvý vzduch'
   },
   {
     id: 'zachran_jidlo_recept',
-    title: '🥕 Uvařit rychlou večeři ze surovin „na hraně“ místo vyhození',
+    title: 'Uvařit rychlou večeři ze surovin „na hraně“ místo vyhození',
     org: 'Zachraň jídlo',
     desc: 'Než vyhodíš gumovou mrkev, starší pečivo nebo přezrálé ovoce v lednici, naklikej si levný 15minutový záchranářský recept.',
     whyItMatters: 'Domácnosti tvoří přes polovinu plýtvání jídlem – ušetříš stovky korun za jídlo a rovnou ulevíš planetě.',
@@ -616,11 +616,11 @@ export const MICRO_ACTIONS = [
     mode: 'home',
     social: 'solo',
     categoryTag: 'writing',
-    metaLabel: '⏱️ 15 min • 💰 ušetří peníze • 🍳 doma v kuchyni'
+    metaLabel: '15 min · ušetří peníze · doma v kuchyni'
   },
   {
     id: 'freerice_ryze',
-    title: '🍚 Darovat zrnka rýže správnými odpověďmi v kvízu',
+    title: 'Darovat zrnka rýže správnými odpověďmi v kvízu',
     org: 'Freerice (Světový potravinový program OSN)',
     desc: 'Přelož z gauče 10 anglických slovíček nebo odpověz na zeměpisné otázky – bez registrace. Za každou správnou odpověď sponzoři pošlou 10 zrnek rýže lidem v nouzi.',
     whyItMatters: 'Okamžitá náhrada za bezmyšlenkovité scrollování: procvičíš si angličtinu a reálně naplníš misku jídla.',
@@ -641,11 +641,11 @@ export const MICRO_ACTIONS = [
     mode: 'online',
     social: 'solo',
     categoryTag: 'writing',
-    metaLabel: '⏱️ 2 min • 💰 zdarma • 📱 0 s bez registrace'
+    metaLabel: '2 min · zdarma · 0 s bez registrace'
   },
   {
     id: 'zooniverse_veda',
-    title: '🔭 Počítat tučňáky, běluhy nebo galaxie na fotkách pro vědce',
+    title: 'Počítat tučňáky, běluhy nebo galaxie na fotkách pro vědce',
     org: 'Zooniverse – People-Powered Research',
     desc: 'Zapoj se z gauče bez přihlášení do skutečného výzkumu Oxfordu a dalších univerzit: označuj zvířata z fotopastí nebo hvězdokupy.',
     whyItMatters: 'Lidské oko pořád vidí detaily, které algoritmům unikají. Tvých 5 minut reálně posune vědeckou studii.',
@@ -666,11 +666,11 @@ export const MICRO_ACTIONS = [
     mode: 'online',
     social: 'solo',
     categoryTag: 'tech',
-    metaLabel: '⏱️ 5 min • 💰 zdarma • 💻 uklidňující klikání'
+    metaLabel: '5 min · zdarma · uklidňující klikání'
   },
   {
     id: 'amnesty_apel',
-    title: '✍️ Podepsat za 2 minuty apel za nespravedlivě vězněného člověka',
+    title: 'Podepsat za 2 minuty apel za nespravedlivě vězněného člověka',
     org: 'Amnesty International ČR – Maraton psaní dopisů',
     desc: 'Připoj své jméno k dopisu solidarity pro konkrétního studenta, novináře nebo obránce přírody, který skončil nespravedlivě za mřížemi.',
     whyItMatters: 'Když úřadům přijdou tisíce dopisů z celého světa, nemohou případ ututlat – přes třetinu lidí z Maratonu se podaří dostat na svobodu.',
@@ -691,11 +691,11 @@ export const MICRO_ACTIONS = [
     mode: 'online',
     social: 'solo',
     categoryTag: 'writing',
-    metaLabel: '⏱️ 3 min • 💰 zdarma • 🕊️ reálné propuštění lidí'
+    metaLabel: '3 min · zdarma · reálné propuštění lidí'
   },
   {
     id: 'moudra_sovicka_mobil',
-    title: '🧓 Trpělivě pomoct seniorovi s mobilem nebo počítačem',
+    title: 'Trpělivě pomoct seniorovi s mobilem nebo počítačem',
     org: 'Moudrá Sovička z.s.',
     desc: 'Pro mladého člověka 5 minut nastavení v telefonu, pro babičku, dědu nebo staršího souseda záchrana před osamělostí a podvodnými SMS.',
     whyItMatters: 'Digitální bariéra odřezává seniory od rodiny i světa – lidská trpělivost je tu cennější než peníze.',
@@ -716,11 +716,11 @@ export const MICRO_ACTIONS = [
     mode: 'home',
     social: 'solo',
     categoryTag: 'tutoring',
-    metaLabel: '⏱️ 15 min • 💰 zdarma • 💬 obrovská vděčnost'
+    metaLabel: '15 min · zdarma · obrovská vděčnost'
   },
   {
     id: 'kola_pro_afriku',
-    title: '🚲 Poslat nepoužívané kolo ze sklepa dětem na cestu do školy',
+    title: 'Poslat nepoužívané kolo ze sklepa dětem na cestu do školy',
     org: 'Kola pro Afriku',
     desc: 'Práší se u vás nebo u prarodičů ve sklepě na staré horské či dětské kolo? Dovez ho na jedno ze sběrných míst po celém Česku.',
     whyItMatters: 'V české sociální dílně dají kolu druhý život a dítěti v Gambii zkrátí každodenní mnohakilometrovou pěší cestu do školy.',
@@ -741,11 +741,11 @@ export const MICRO_ACTIONS = [
     mode: 'local',
     social: 'solo',
     categoryTag: 'community',
-    metaLabel: '⏱️ 30 min jednorázově • 💰 zdarma • 🚲 druhý život věcem'
+    metaLabel: '30 min jednorázově · zdarma · druhý život věcem'
   },
   {
     id: 'inex_workcamp_cr',
-    title: '🎒 Zažít víkendový miniprojekt s mladými lidmi přímo v Česku',
+    title: 'Zažít víkendový miniprojekt s mladými lidmi přímo v Česku',
     org: 'INEX – Sdružení dobrovolných aktivit',
     desc: 'Nemusíš letět přes půl světa – vyjeď na pár dní obnovit sad, památku nebo komunitní zahradu v ČR s partou mladých lidí z různých koutů světa.',
     whyItMatters: 'Vypneš hlavu od sociálních sítí, procvičíš si přirozeně angličtinu a získáš opravdové přátele mimo bublinu.',
@@ -766,11 +766,11 @@ export const MICRO_ACTIONS = [
     mode: 'local',
     social: 'group',
     categoryTag: 'community',
-    metaLabel: '⏱️ výběr 5 min • 💰 dostupné pro studenty • 🌍 nová přátelství'
+    metaLabel: 'výběr 5 min · dostupné pro studenty · nová přátelství'
   },
   {
     id: 'zvire_v_nouzi',
-    title: '🦔 Uložit si do mobilu pohotovost pro zraněné ježky a ptáky',
+    title: 'Uložit si do mobilu pohotovost pro zraněné ježky a ptáky',
     org: 'ČSOP – Národní síť záchranných stanic (Zvíře v nouzi)',
     desc: 'Ulož si do kontaktů číslo 774 155 155 a podívej se na mapu 34 českých záchranných stanic pro chvíle, kdy venku najdeš zraněné volně žijící zvíře.',
     whyItMatters: 'České záchranné stanice ročně zachrání přes 40 000 divokých zvířat — včasný telefonát rozhoduje o přežití.',
@@ -791,11 +791,11 @@ export const MICRO_ACTIONS = [
     mode: 'online',
     social: 'solo',
     categoryTag: 'writing',
-    metaLabel: '⏱️ 2 min • 💰 zdarma • 📱 100% bez registrace'
+    metaLabel: '2 min · zdarma · 100% bez registrace'
   },
   {
     id: 'opatruj_se_nudz',
-    title: '🧘 Zkusit 5minutový vědecký check-in duševní pohody',
+    title: 'Zkusit 5minutový vědecký check-in duševní pohody',
     org: 'NÚDZ – Opatruj.se',
     desc: 'Projdi si anonymní 5minutové cvičení duševní hygieny nebo praktický návod od českých psychologů, jak mluvit s blízkým, kterému je těžko.',
     whyItMatters: 'Nemůžeš dlouhodobě svítit druhým, když přitom vyhoříš. Péče o vlastní hlavu a umění naslouchat kamarádovi je skutečná pomoc.',
@@ -816,11 +816,11 @@ export const MICRO_ACTIONS = [
     mode: 'online',
     social: 'solo',
     categoryTag: 'writing',
-    metaLabel: '⏱️ 5 min • 💰 zdarma • 🧠 anonymně bez účtu'
+    metaLabel: '5 min · zdarma · anonymně bez účtu'
   },
   {
     id: 's_barvou_ven',
-    title: '🌈 Přečíst si 7 tipů, jak být bezpečnou oporou kamarádovi',
+    title: 'Přečíst si 7 tipů, jak být bezpečnou oporou kamarádovi',
     org: 'S barvou ven (peer mentoring pro mladé)',
     desc: 'Podívej se na srozumitelný tahák od vyškolených peer mentorů, jak citlivě a bez frází podpořit spolužáka nebo kamaráda, který hledá přijetí.',
     whyItMatters: 'Jedna přijímající reakce v blízkém okolí prokazatelně snižuje riziko úzkostí a samoty u dospívajících na zlomek.',
@@ -841,11 +841,11 @@ export const MICRO_ACTIONS = [
     mode: 'online',
     social: 'solo',
     categoryTag: 'writing',
-    metaLabel: '⏱️ 5–10 min • 💰 zdarma • 💜 peer podpora'
+    metaLabel: '5–10 min · zdarma · peer podpora'
   },
   {
     id: 'estudanky_pramen',
-    title: '💧 Zkontrolovat a vyčistit lesní studánku na procházce',
+    title: 'Zkontrolovat a vyčistit lesní studánku na procházce',
     org: 'ČSOP Mladí ochránci přírody – eSTUDÁNKY',
     desc: 'Najdi si v Národním registru pramenů lesní studánku poblíž své trasy, odhrň z odtoku napadané listí a pošli fotku aktuálního stavu.',
     whyItMatters: 'V Česku je přes 14 600 zmapovaných studánek a pramenů — díky drobným kontrolám od výletníků nezanikají.',
@@ -866,11 +866,11 @@ export const MICRO_ACTIONS = [
     mode: 'local',
     social: 'solo',
     categoryTag: 'nature',
-    metaLabel: '⏱️ 15 min venku • 💰 zdarma • 🌲 cíl na procházku'
+    metaLabel: '15 min venku · zdarma · cíl na procházku'
   },
   {
     id: 'mapko_kompost',
-    title: '🌱 Najít komunitní zahradu nebo kompostér ve své čtvrti',
+    title: 'Najít komunitní zahradu nebo kompostér ve své čtvrti',
     org: 'Kokoza – Mapko.cz',
     desc: 'Prohlédni si otevřenou českou mapu téměř 1 600 komunitních zahrad a sousedských kompostérů, kam můžeš nosit slupky z kuchyně nebo se přidat k pěstování.',
     whyItMatters: 'Bioodpad tvoří třetinu běžné popelnice — v komunitním kompostéru se místo skládky promění v živou půdu pro stromy a záhony v ulici.',
@@ -891,11 +891,11 @@ export const MICRO_ACTIONS = [
     mode: 'local',
     social: 'group',
     categoryTag: 'nature',
-    metaLabel: '⏱️ 5–10 min • 💰 zdarma • 🪴 1 590+ míst v ČR'
+    metaLabel: '5–10 min · zdarma · 1 590+ míst v ČR'
   },
   {
     id: 'nesnezeno_porce',
-    title: '🥐 Zachránit před zavíračkou neprodanou porci jídla v okolí',
+    title: 'Zachránit před zavíračkou neprodanou porci jídla v okolí',
     org: 'Nesnězeno',
     desc: 'Cestou ze školy nebo z práce vyzvedni v okolní pekárně, bistru či kavárně balíček skvělého jídla, které by se večer muselo vyhodit.',
     whyItMatters: 'V Česku se už takto zachránilo přes 7,6 milionu porcí hotového jídla přímo z místních podniků.',
@@ -916,11 +916,11 @@ export const MICRO_ACTIONS = [
     mode: 'local',
     social: 'solo',
     categoryTag: 'nature',
-    metaLabel: '⏱️ 10 min cestou • 💰 ušetří 50–70 % • 🥐 bez plýtvání'
+    metaLabel: '10 min cestou · ušetří 50–70 % · bez plýtvání'
   },
   {
     id: 'nevyhazujto_sousedum',
-    title: '📦 Poslat 1 nevyužitou věc z pokoje dál přes Nevyhazujto',
+    title: 'Poslat 1 nevyužitou věc z pokoje dál přes Nevyhazujto',
     org: 'Nevyhazujto.cz',
     desc: 'Máš na koleji nebo v pokoji funkční lampu, skripta, batoh nebo židli, na kterou sedá prach? Vyfoť ji za 3 minuty a daruj ji za odvoz lidem v okolí.',
     whyItMatters: 'Věc neskončí u popelnic a udělá okamžitou službu studentovi nebo rodině o pár ulic vedle.',
@@ -941,11 +941,11 @@ export const MICRO_ACTIONS = [
     mode: 'home',
     social: 'solo',
     categoryTag: 'community',
-    metaLabel: '⏱️ 10 min doma • 💰 zdarma • 🧹 čistý stůl i hlava'
+    metaLabel: '10 min doma · zdarma · čistý stůl i hlava'
   },
   {
     id: 'pamet_naroda_vzpominka',
-    title: '🎙️ Nahrát na mobil 1 vzpomínku babičky nebo dědy z mládí',
+    title: 'Nahrát na mobil 1 vzpomínku babičky nebo dědy z mládí',
     org: 'Paměť národa (Post Bellum)',
     desc: 'Sedni si na 15 minut s babičkou, dědou nebo starším sousedem, polož jim jednu zvídavou otázku o jejich mládí a nahraj si vyprávění na diktafon v mobilu.',
     whyItMatters: 'Pro staršího člověka je opravdový zájem vnoučete obrovským darem — a pro tebe zůstane nahrávka hlasu, která má nevyčíslitelnou hodnotu.',
@@ -966,11 +966,11 @@ export const MICRO_ACTIONS = [
     mode: 'home',
     social: 'solo',
     categoryTag: 'writing',
-    metaLabel: '⏱️ 15 min • 💰 zdarma • 👵 mezigenerační blízkost'
+    metaLabel: '15 min · zdarma · mezigenerační blízkost'
   },
   {
     id: 'doucujte_cvt',
-    title: '✏️ Doučovat 1 hodinu týdně školáka (už od 16 let!)',
+    title: 'Doučovat 1 hodinu týdně školáka (už od 16 let!)',
     org: 'Člověk v tísni – Doučujte.cz',
     desc: 'Pomoz online z pokoje nebo osobně ve svém městě jednomu dítěti ze znevýhodněné rodiny zvládnout základku (češtinu, matiku nebo angličtinu).',
     whyItMatters: 'Pravidelná přátelská opora staršího studenta dokáže zabránit propadnutí a otevřít dítěti cestu na střední školu.',
@@ -991,11 +991,11 @@ export const MICRO_ACTIONS = [
     mode: 'online',
     social: 'solo',
     categoryTag: 'tutoring',
-    metaLabel: '⏱️ 5 min přihláška • 💰 zdarma • 🎓 vhodné už od 16 let'
+    metaLabel: '5 min přihláška · zdarma · vhodné už od 16 let'
   },
   {
     id: 'chodci_sobe',
-    title: '♿ Nahlásit nebezpečný přechod nebo bariéru pro vozíčkáře a kočárky',
+    title: 'Nahlásit nebezpečný přechod nebo bariéru pro vozíčkáře a kočárky',
     org: 'Pěšky městem – Chodci sobě',
     desc: 'Víš cestou do školy o rozbitém chodníku, chybějícím nájezdu nebo nebezpečném přechodu? Vyfoť místo mobilem a pošli podnět radnici přes Chodci sobě.',
     whyItMatters: 'Přes portál už obyvatelé v Česku vyřešili více než 1 740 konkrétních nebezpečných míst pro seniory, děti i lidi na vozíku.',
@@ -1016,11 +1016,11 @@ export const MICRO_ACTIONS = [
     mode: 'local',
     social: 'solo',
     categoryTag: 'community',
-    metaLabel: '⏱️ 5 min venku • 💰 zdarma • 🚶 1 740+ opravených míst'
+    metaLabel: '5 min venku · zdarma · 1 740+ opravených míst'
   },
   {
     id: 'epp_pohybem',
-    title: '👟 Proměnit běžnou chůzi do školy nebo běh v body pro neziskovky',
+    title: 'Proměnit běžnou chůzi do školy nebo běh v body pro neziskovky',
     org: 'EPP – Pomáhej pohybem',
     desc: 'Zapni si při obyčejné pěší cestě, venčení psa nebo jízdě na kole bezplatnou českou aplikaci EPP a nasbírané body věnuj vybranému projektu v ČR.',
     whyItMatters: 'Přes 880 000 lidí už svým běžným pohybem venku pomohlo financovat stovky komunitních, ekologických a zdravotních projektů.',
@@ -1041,11 +1041,11 @@ export const MICRO_ACTIONS = [
     mode: 'local',
     social: 'solo',
     categoryTag: 'nature',
-    metaLabel: '⏱️ při chůzi venku • 💰 zdarma • 🏃 bez registrace'
+    metaLabel: 'při chůzi venku · zdarma · bez registrace'
   },
   {
     id: 'daruj_vlasy',
-    title: '💇‍♀️ Darovat ostříhaný cop vlasů na paruku pro onkologické pacientky',
+    title: 'Darovat ostříhaný cop vlasů na paruku pro onkologické pacientky',
     org: 'Nadační fond Daruj vlasy',
     desc: 'Chystáš se shodit dlouhé vlasy (alespoň 40 cm, klidně i barvené)? Místo koše z nich v Česku vyrobí paruku na míru pro holčičku s alopecií nebo ženu po chemoterapii.',
     whyItMatters: 'Kvalitní paruka z pravých vlasů vrací dětem a ženám v těžké léčbě odvahu vyjít mezi lidi — fond už předal přes 285 paruk.',
@@ -1066,11 +1066,11 @@ export const MICRO_ACTIONS = [
     mode: 'local',
     social: 'solo',
     categoryTag: 'community',
-    metaLabel: '⏱️ 5 min info • 💰 střih zdarma v salonu • 💛 obrovský dopad'
+    metaLabel: '5 min info · střih zdarma v salonu · obrovský dopad'
   },
   {
     id: 'dobry_andel',
-    title: '👼 Poslat cenu jedné kávy rodině s vážně nemocným dítětem',
+    title: 'Poslat cenu jedné kávy rodině s vážně nemocným dítětem',
     org: 'Nadace DOBRÝ ANDĚL',
     desc: 'Podpoř drobným příspěvkem českou rodinu, kterou zasáhla onkologická nebo jiná vážná nemoc, a podívej se na konkrétní příběh, kam pomoc doputovala.',
     whyItMatters: 'Garantováno do posledního haléře: 100 % každého daru odchází přímo rodinám ještě v daném měsíci.',
@@ -1091,11 +1091,11 @@ export const MICRO_ACTIONS = [
     mode: 'online',
     social: 'solo',
     categoryTag: 'donation',
-    metaLabel: '⏱️ 3 min • 💰 do posledního haléře • 💻 online'
+    metaLabel: '3 min · do posledního haléře · online'
   },
   {
     id: 'znesnaze21_pribeh',
-    title: '🤝 Poslat 50 Kč (nebo zdarma nasdílet) ověřený příběh na Znesnáze21',
+    title: 'Poslat 50 Kč (nebo zdarma nasdílet) ověřený příběh na Znesnáze21',
     org: 'Znesnáze21',
     desc: 'Vyber si na české platformě Znesnáze21 jeden sociálními pracovníky ověřený příběh samoživitelky, seniora nebo hendikepovaného člověka.',
     whyItMatters: '100 % vybrané částky jde obdarovanému — a i pouhé nasdílení odkazu prokazatelně přivádí další dárce.',
@@ -1116,11 +1116,11 @@ export const MICRO_ACTIONS = [
     mode: 'online',
     social: 'solo',
     categoryTag: 'donation',
-    metaLabel: '⏱️ 2 min • 💰 od 50 Kč nebo sdílení • 💻 bez registrace'
+    metaLabel: '2 min · od 50 Kč nebo sdílení · bez registrace'
   },
   {
     id: 'donio_utulky',
-    title: '🐾 Podpořit konkrétní český útulek nebo sousedský projekt na Donio',
+    title: 'Podpořit konkrétní český útulek nebo sousedský projekt na Donio',
     org: 'Donio.cz',
     desc: 'Vyber si na Donio malý místní útulek, kočičí depozitum nebo komunitní výsadbu a pošli drobný dar bez srážek a poplatků.',
     whyItMatters: '100 % tvého příspěvku dostane přímo autor sbírky a zpátky ti přijde lidská zpráva, co se díky tomu podařilo.',
@@ -1141,7 +1141,7 @@ export const MICRO_ACTIONS = [
     mode: 'online',
     social: 'solo',
     categoryTag: 'donation',
-    metaLabel: '⏱️ 2 min • 💰 100 % daru příjemci • 💻 bez registrace'
+    metaLabel: '2 min · 100 % daru příjemci · bez registrace'
   }
 ];
 

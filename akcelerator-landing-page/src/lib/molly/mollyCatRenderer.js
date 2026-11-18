@@ -20,7 +20,7 @@
  *   facing: number,
  *   walkCycle: number,
  *   flyingTreat?: { p: number } | null,
- *   pouncePhase: number,
+ *   pouncePhase?: number,
  *   groomPhase: number,
  *   accessories: { collar?: boolean, bell?: boolean, flower?: boolean, star?: boolean },
  *   pointerX: number,
@@ -30,7 +30,6 @@
  *   blinkProgress: number,
  *   firefly?: { x: number, y: number, phase: number } | null,
  *   hearts: Array<{ x: number, y: number, vx: number, vy: number, alpha: number, scale: number, color: string }>,
- *   stardust: Array<{ x: number, y: number, vx: number, vy: number, alpha: number, size: number, twinkle: number, color: string }>,
  *   frameK: number,
  *   isFollowingMouse?: boolean
  * }} MollyCatRenderState
@@ -92,30 +91,25 @@ export function drawMollyCat(ctx, w, h, nowSec, state) {
       ? 1 + Math.sin(nowSec * 1.4) * 0.065
       : 1 + Math.sin(nowSec * 2.4) * 0.025;
   const walkBob = isWalking ? Math.abs(Math.sin(state.walkCycle * 2)) * -3.2 : 0;
-  const isChasingStar = state.behavior === 'CHASE_STAR';
   const isFollowingMouse = Boolean(state.isFollowingMouse);
   const leapOffset =
     state.behavior === 'CATCH_TREAT' && state.flyingTreat
       ? Math.sin(state.flyingTreat.p * Math.PI) * -14
-      : isChasingStar && state.pouncePhase > 0
-        ? -Math.sin(Math.min(1, state.pouncePhase) * Math.PI) * 16
-        : 0;
+      : 0;
 
   ctx.translate(0, walkBob + leapOffset);
 
   // 1. 6-Control-Point Harmonic Bézier Tail (Obsidian with amber/rust/honey tortoiseshell rings)
-  const tailFreq = isChasingStar
-    ? 6.2
-    : isBliss || isEating
+  const tailFreq =
+    isBliss || isEating
       ? 5.2
       : isFollowingMouse
         ? 4.8
         : isWalking
           ? 3.8
           : 2.1;
-  const tailAmp = isChasingStar
-    ? 13
-    : isBliss || isEating
+  const tailAmp =
+    isBliss || isEating
       ? 11
       : isFollowingMouse
         ? 9.5
@@ -230,7 +224,7 @@ export function drawMollyCat(ctx, w, h, nowSec, state) {
   ctx.fill();
   ctx.restore();
 
-  // 4. Front Paws (Animated walking, grooming or star pouncing)
+  // 4. Front Paws (Animated walking or grooming)
   if (isGrooming) {
     // Lifted ginger paw washing cheek
     const lickY = -24 + Math.sin(state.groomPhase * 7) * 3.2;
@@ -241,17 +235,6 @@ export function drawMollyCat(ctx, w, h, nowSec, state) {
     ctx.fillStyle = '#fde68a';
     ctx.beginPath();
     ctx.arc(17.5, lickY - 1, 2.2, 0, Math.PI * 2);
-    ctx.fill();
-  } else if (isChasingStar && state.pouncePhase > 0.08 && state.pouncePhase < 0.92) {
-    // Playfully reaching up with paws to catch the fluttering star
-    const reachY = -12 - Math.sin(state.pouncePhase * Math.PI) * 14;
-    ctx.fillStyle = '#f59e0b';
-    ctx.beginPath();
-    ctx.ellipse(10, reachY, 5.0, 3.8, 0.4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#1e1714';
-    ctx.beginPath();
-    ctx.ellipse(15, reachY + 2, 4.8, 3.6, 0.2, 0, Math.PI * 2);
     ctx.fill();
   } else {
     // Front-left paw (ginger-amber)
@@ -321,13 +304,9 @@ export function drawMollyCat(ctx, w, h, nowSec, state) {
   // Independent ear twitches + dynamic ear bounce physics
   const earBounce = isWalking ? Math.sin(state.walkCycle * 2) * 0.12 : 0;
   const leftEarTwitch =
-    isChasingStar
-      ? Math.sin(nowSec * 16) * 0.16 + earBounce
-      : (Math.sin(nowSec * 3.1) > 0.9 ? Math.sin(nowSec * 20) * 0.12 : 0) + earBounce;
+    (Math.sin(nowSec * 3.1) > 0.9 ? Math.sin(nowSec * 20) * 0.12 : 0) + earBounce;
   const rightEarTwitch =
-    isChasingStar
-      ? Math.cos(nowSec * 14) * -0.18 - earBounce
-      : (Math.cos(nowSec * 2.7) > 0.88 ? Math.cos(nowSec * 19) * -0.14 : 0) - earBounce;
+    (Math.cos(nowSec * 2.7) > 0.88 ? Math.cos(nowSec * 19) * -0.14 : 0) - earBounce;
 
   // Left ear (Obsidian with honey tuft)
   ctx.save();
@@ -428,7 +407,7 @@ export function drawMollyCat(ctx, w, h, nowSec, state) {
     });
   } else {
     const pupilW =
-      state.behavior === 'CHASE_FIREFLY' || state.currentState.mood === 'playful'
+      state.behavior === 'CHASE_FIREFLY' || state.currentState?.mood === 'playful'
         ? 2.5
         : 1.75;
     [-5.6, 5.6].forEach((ex) => {
@@ -620,41 +599,6 @@ export function drawMollyCat(ctx, w, h, nowSec, state) {
         hx,
         hy + r * 0.35
       );
-      ctx.fill();
-      ctx.restore();
-    }
-  }
-
-  // 10B. Shower of Stardust Sparkles when Molly catches a star
-  if (Array.isArray(state.stardust)) {
-    for (let i = state.stardust.length - 1; i >= 0; i--) {
-      const sp = state.stardust[i];
-      if (!sp) continue;
-      sp.x += sp.vx * state.frameK;
-      sp.y += sp.vy * state.frameK;
-      sp.vy += 0.08 * state.frameK; // gentle stardust gravity
-      sp.twinkle += 0.25 * state.frameK;
-      sp.alpha *= Math.pow(0.94, state.frameK);
-      if (sp.alpha < 0.05) {
-        state.stardust.splice(i, 1);
-        continue;
-      }
-      ctx.save();
-      ctx.globalAlpha = sp.alpha;
-      ctx.fillStyle = sp.color;
-      const s = Math.max(0.8, sp.size * (0.8 + Math.sin(sp.twinkle) * 0.35));
-      // 4-point diamond star sparkle
-      ctx.beginPath();
-      ctx.moveTo(sp.x, sp.y - s * 2.2);
-      ctx.quadraticCurveTo(sp.x, sp.y, sp.x + s * 2.2, sp.y);
-      ctx.quadraticCurveTo(sp.x, sp.y, sp.x, sp.y + s * 2.2);
-      ctx.quadraticCurveTo(sp.x, sp.y, sp.x - s * 2.2, sp.y);
-      ctx.quadraticCurveTo(sp.x, sp.y, sp.x, sp.y - s * 2.2);
-      ctx.fill();
-
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(sp.x, sp.y, s * 0.45, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }

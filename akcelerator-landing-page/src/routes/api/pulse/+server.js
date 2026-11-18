@@ -16,73 +16,73 @@ const PULSE_TEMPLATES = [
     actionId: 'zvirata_utulek_online',
     verb: 'naplnil misku v útulku',
     infinitive: 'naplnit misku v útulku jedním klikem',
-    icon: '🐾'
+    icon: 'paw'
   },
   {
     actionId: 'missing_maps',
     verb: 'zmapoval čtvrť pro Lékaře bez hranic',
     infinitive: 'zmapovat čtvrť pro Lékaře bez hranic',
-    icon: '🗺️'
+    icon: 'map'
   },
   {
     actionId: 'knihobudka_kniha',
     verb: 'přidal knížku do veřejné knihobudky',
     infinitive: 'přidat knížku do veřejné knihobudky',
-    icon: '📚'
+    icon: 'book-open'
   },
   {
     actionId: 'birdlife_ptaci_pasti',
     verb: 'nahlásil skleněnou zastávku v Ptačích pastech',
     infinitive: 'nahlásit nebezpečné sklo v Ptačích pastech',
-    icon: '🐦'
+    icon: 'bird'
   },
   {
     actionId: 'letters_seniors',
     verb: 'napsal dopis osamělému seniorovi',
     infinitive: 'napsat dopis osamělému seniorovi',
-    icon: '✉️'
+    icon: 'mail'
   },
   {
     actionId: 'estudanky_pramen',
     verb: 'zkontroloval lesní studánku v okolí',
     infinitive: 'zkontrolovat lesní studánku v okolí',
-    icon: '💧'
+    icon: 'droplet'
   },
   {
     actionId: 'remobil_telefon',
     verb: 'poslal starý telefon ze šuplíku přes Remobil',
     infinitive: 'poslat starý telefon ze šuplíku přes Remobil',
-    icon: '📱'
+    icon: 'smartphone'
   },
   {
     actionId: 'freerice_ryze',
     verb: 'daroval zrnka rýže v kvízu Freerice',
     infinitive: 'darovat zrnka rýže v kvízu Freerice',
-    icon: '🍚'
+    icon: 'utensils'
   },
   {
     actionId: 'wikipedie_cz',
     verb: 'doplnil článek na české Wikipedii',
     infinitive: 'doplnit fakt na české Wikipedii',
-    icon: '📝'
+    icon: 'pen-line'
   },
   {
     actionId: 'sazime_budoucnost',
     verb: 'podpořil výsadbu stromu v krajině',
     infinitive: 'podpořit výsadbu stromu v krajině',
-    icon: '🌳'
+    icon: 'trees'
   },
   {
     actionId: 'darovani_krve',
     verb: 'se objednal na odběr krve v nemocnici',
     infinitive: 'objednat se na odběr krve v nemocnici',
-    icon: '🩸'
+    icon: 'heart'
   },
   {
     actionId: 'zooniverse_veda',
     verb: 'klasifikoval snímek v občanské vědě Zooniverse',
     infinitive: 'klasifikovat snímek v občanské vědě Zooniverse',
-    icon: '🔭'
+    icon: 'telescope'
   }
 ];
 
@@ -205,15 +205,15 @@ async function resolvePulsePayload(rawSlot) {
         // Neznámý skutek (např. místo z mapy) NESMÍ spadnout na „naplnil misku v útulku“
         const tpl = PULSE_TEMPLATES.find((t) => t.actionId === latest.action_id) || {
           actionId: latest.action_id,
-          verb: 'udělal drobný dobrý skutek',
-          icon: '🌱'
+          infinitive: 'udělat drobný dobrý skutek',
+          icon: 'sprout'
         };
         const { cleanCityName, loc } = latest.city
           ? resolveCityLocative(latest.city)
           : { cleanCityName: '', loc: '' };
         const eventTs = Date.parse(latest.created_at) || now;
         const livePayload = {
-          message: `${relativeTimeLabel(now - eventTs)} někdo ${loc ? `${loc} ` : ''}${tpl.verb}`,
+          message: `Sdílený skutek${loc ? ` ${loc}` : ''}: ${tpl.infinitive}`,
           city: cleanCityName,
           actionId: tpl.actionId,
           icon: tpl.icon,
@@ -265,21 +265,7 @@ export async function GET({ url, request }) {
 }
 
 /**
- * Pravdivé časové určení: „Před chvílí“ jen do 10 minut, jinak skutečné stáří události (max. 24 h).
- * @param {number} ageMs
- */
-function relativeTimeLabel(ageMs) {
-  const min = Math.max(0, Math.round(ageMs / 60000));
-  if (min < 10) return 'Před chvílí';
-  if (min < 60) return `Před ${min} min`;
-  const h = Math.round(min / 60);
-  if (h <= 1) return 'Před hodinou';
-  return `Před ${h} h`;
-}
-
-/**
- * Lokální vývoj a automatické testy nesmí zapisovat do živé tabulky `pulse_events`
- * (jinak se testovací skutek ukáže skutečným lidem jako „Před chvílí někdo…“).
+ * Lokální vývoj a automatické testy nesmí zapisovat do živé tabulky `pulse_events`.
  * Výjimku lze zapnout proměnnou PULSE_ALLOW_DEV_WRITES=1.
  * @param {Request} request
  * @param {URL} url

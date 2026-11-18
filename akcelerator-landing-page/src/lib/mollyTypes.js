@@ -5,42 +5,42 @@
 
 export const MOLLY_TREAT_BY_FOOD = {
   salmon: {
-    icon: '🐟',
+    icon: 'fish',
     name: 'lososová granulka',
     shortLabel: 'Rybka pro Molly',
     color: '#f59e0b',
     foodType: 'salmon'
   },
   milk: {
-    icon: '🥛',
+    icon: 'milk',
     name: 'teplé kočičí mlíčko v misce',
     shortLabel: 'Mlíčko pro Molly',
     color: '#fde68a',
     foodType: 'milk'
   },
   tuna: {
-    icon: '🍣',
+    icon: 'fish',
     name: 'rýžový polštářek s tuňákem',
     shortLabel: 'Voňavé sousto pro Molly',
     color: '#fbbf24',
     foodType: 'tuna'
   },
   catnip: {
-    icon: '🌿',
+    icon: 'leaf',
     name: 'čerstvý lístek šanty kočičí',
     shortLabel: 'Lístek šanty pro Molly',
     color: '#4ade80',
     foodType: 'catnip'
   },
   cream: {
-    icon: '🧶',
+    icon: 'heart',
     name: 'smetanový pamlsek a klubíčko',
     shortLabel: 'Smetanový pamlsek pro Molly',
     color: '#f472b6',
     foodType: 'cream'
   },
   star_treat: {
-    icon: '✨',
+    icon: 'sparkles',
     name: 'křupavá hvězdička',
     shortLabel: 'Křupavá hvězdička pro Molly',
     color: '#a78bfa',
@@ -117,10 +117,10 @@ export function resolveMollyTreat(specOrMode) {
  * Záměrně bez „levelů“ — jde o vděčnost, ne o soutěž.
  */
 export const MOLLY_MILESTONES = [
-  { at: 3, key: 'collar', icon: '💚', name: 'smaragdový obojek' },
-  { at: 10, key: 'bell', icon: '🔔', name: 'zlatý zvoneček' },
-  { at: 25, key: 'flower', icon: '🌼', name: 'květinová korunka' },
-  { at: 50, key: 'star', icon: '⭐', name: 'zářivá hvězdička' }
+  { at: 3, key: 'collar', icon: 'heart', name: 'smaragdový obojek' },
+  { at: 10, key: 'bell', icon: 'bell', name: 'zlatý zvoneček' },
+  { at: 25, key: 'flower', icon: 'flower-2', name: 'květinová korunka' },
+  { at: 50, key: 'star', icon: 'star', name: 'zářivá hvězdička' }
 ];
 
 /**
@@ -183,7 +183,7 @@ export function describeNextMollyGift(deeds) {
   if (!next) return 'Molly má všechny dárky. Děkuje za každý tvůj skutek!';
   const left = next.at - n;
   const verb = left >= 2 && left <= 4 ? 'chybějí' : 'chybí';
-  return `Do dárku „${next.name}“ ${next.icon} ${verb} ${left} ${pluralSkutek(left)}.`;
+  return `Do dárku „${next.name}“ ${verb} ${left} ${pluralSkutek(left)}.`;
 }
 
 /**
@@ -194,7 +194,7 @@ export function describeNextMollyGift(deeds) {
 export function getNextMollyGiftProgress(deeds) {
   const n = Math.max(0, Number(deeds) || 0);
   const idx = MOLLY_MILESTONES.findIndex((m) => n < m.at);
-  if (idx === -1) return { pct: 100, done: n, need: n, icon: '⭐', complete: true };
+  if (idx === -1) return { pct: 100, done: n, need: n, icon: 'star', complete: true };
   const next = MOLLY_MILESTONES[idx];
   const prevAt = idx > 0 ? MOLLY_MILESTONES[idx - 1].at : 0;
   const span = next.at - prevAt;
@@ -209,37 +209,37 @@ export function getNextMollyGiftProgress(deeds) {
  */
 export const MOLLY_ROUTE_GUIDES = {
   '/': {
-    icon: '🐾',
+    icon: 'paw',
     hint: 'Vyber, kolik máš času, a já ti ukážu jeden lehký skutek.',
     nudge: 'Tenhle skutek zabere jen chvilku. Zkusíš ho se mnou?'
   },
   '/app': {
-    icon: '🧭',
+    icon: 'compass',
     hint: 'Vyber si cestu, která ti dnes sedí. Každá vede ke skutečné pomoci.',
     nudge: 'Když si nebudeš jistý výběrem, ráda ti pomůžu najít krok na míru.'
   },
   '/app/guided': {
-    icon: '🧭',
+    icon: 'compass',
     hint: 'Společně najdeme pomoc, která ti dnes nejlépe sedne.',
     nudge: 'Tenhle skutek ti teď sedí nejvíc. Zkusíš ho?'
   },
   '/app/online': {
-    icon: '⏱️',
+    icon: 'clock',
     hint: 'Tady stačí pár minut a telefon. Vyber si jeden krok.',
     nudge: 'Tenhle krok zvládneš hned teď, odkudkoliv.'
   },
   '/near': {
-    icon: '📍',
+    icon: 'map-pin',
     hint: 'Podívej se, kdo potřebuje pomoc kousek od tebe.',
     nudge: 'Začni třeba tímto místem — najdeš u něj i jednoduchý návod, jak pomoci.'
   },
   '/svet': {
-    icon: '✨',
+    icon: 'sparkles',
     hint: 'Tady u jezera ráda odpočívám. Vyber si místo na hladině a rozsviť své světlo dobra.',
     nudge: 'Zkus se mnou chvilku klidně dýchat.'
   },
   '/submit': {
-    icon: '🌱',
+    icon: 'sprout',
     hint: 'Znáš místo, kde se pomáhá? Přidej ho a ukaž cestu dalším.',
     nudge: 'Stačí jen název a adresa, zbytek s péčí ověříme.'
   }

@@ -34,42 +34,32 @@
   import { normSearchStr } from '../../lib/utils.js';
   import { safeGetItem, AA_MY_PENDING_SUBMISSIONS_KEY } from '../../lib/storage/index.js';
   import PlaceCard from '../../lib/features/map/components/PlaceCard.svelte';
+  import AppIcon from '$lib/components/AppIcon.svelte';
+  import PageHeader from '$lib/components/PageHeader.svelte';
+  import { getSvgIconHtml } from '$lib/icons/iconRegistry.js';
 
   const CATEGORY_PRESETS = [
-    { id: 'all', label: '✨ Vše smysluplné v okolí', kinds: ['ngo', 'community', 'food', 'animals'], onlyWeb: false },
-    { id: 'animals', label: '🐾 Útulky a zvířata', kinds: ['animals'], onlyWeb: false },
-    { id: 'food', label: '🥫 Jídlo a šatníky', kinds: ['food', 'community'], onlyWeb: false },
-    { id: 'community', label: '📚 Knihobudky a sousedé', kinds: ['community'], onlyWeb: false },
-    { id: 'fast', label: '⚡ S přímým webem', kinds: ['ngo', 'community', 'food', 'animals'], onlyWeb: true }
+    { id: 'all', icon: 'sparkles', label: 'Vše smysluplné v okolí', kinds: ['ngo', 'community', 'food', 'animals'], onlyWeb: false },
+    { id: 'animals', icon: 'paw', label: 'Útulky a zvířata', kinds: ['animals'], onlyWeb: false },
+    { id: 'food', icon: 'utensils', label: 'Jídlo a šatníky', kinds: ['food', 'community'], onlyWeb: false },
+    { id: 'community', icon: 'book-open', label: 'Knihobudky a sousedé', kinds: ['community'], onlyWeb: false },
+    { id: 'fast', icon: 'zap', label: 'S přímým webem', kinds: ['ngo', 'community', 'food', 'animals'], onlyWeb: true }
   ];
 
   const SOURCE_FILTERS = [
-    { id: 'all', label: 'Všechny zdroje' },
-    { id: 'verified_org', label: '✦ Ověřené organizace' },
-    { id: 'community', label: '🌱 Komunitní tipy' },
-    { id: 'osm', label: '🗺️ Veřejné mapy a orientační body' }
+    { id: 'all', icon: null, label: 'Všechny zdroje' },
+    { id: 'verified_org', icon: 'shield-check', label: 'Ověřené organizace' },
+    { id: 'community', icon: 'sprout', label: 'Komunitní tipy' },
+    { id: 'osm', icon: 'map', label: 'Veřejné mapy a orientační body' }
   ];
 
   const RADIUS_PRESETS = [2, 5, 8, 15, 25];
 
   const KIND_META = {
-    ngo: { emoji: '🏛️', label: 'Neziskovka / spolek', color: '#059669' },
-    community: { emoji: '🤝', label: 'Komunita / knihobudka', color: '#0d9488' },
-    food: { emoji: '🥫', label: 'Potraviny a šatník', color: '#d97706' },
-    animals: { emoji: '🐾', label: 'Zvířata a útulek', color: '#2563eb' }
-  };
-
-  const HELP_WAY_META = {
-    food_donation: { icon: '🥫', label: 'Darovat potraviny' },
-    material_dropoff: { icon: '🧥', label: 'Přinést věci / knihy' },
-    one_off_help: { icon: '⚡', label: 'Jednorázová výpomoc' },
-    regular_volunteering: { icon: '🤝', label: 'Dobrovolnictví' }
-  };
-
-  const VISIT_MODE_META = {
-    drop_in: { icon: '🟢', label: 'Volně přístupné bez domlouvání' },
-    opening_hours: { icon: '🕒', label: 'Otevírací doba' },
-    by_agreement: { icon: '📅', label: 'Po domluvě' }
+    ngo: { icon: 'building', label: 'Neziskovka / spolek', color: '#1b5e42' },
+    community: { icon: 'handshake', label: 'Komunita / knihobudka', color: '#0f766e' },
+    food: { icon: 'utensils', label: 'Potraviny a šatník', color: '#8f4b0e' },
+    animals: { icon: 'paw', label: 'Zvířata a útulek', color: '#2c5282' }
   };
 
   const ALL_KINDS = ['ngo', 'community', 'food', 'animals'];
@@ -148,36 +138,6 @@
   function isCommunityNeighborhoodBoosted(p) {
     const text = `${p?.name || ''} ${p?.subcategory || ''} ${p?.description || ''}`.toLowerCase();
     return /knihobudka|knihovnička|reuse|zahrada|soused|dílna|swap|kompost/.test(text);
-  }
-
-  function getPlaceHelpWays(p) {
-    if (Array.isArray(p?.helpWays) && p.helpWays.length > 0) {
-      return p.helpWays.slice(0, 3);
-    }
-    if (isSelfServicePoint(p)) {
-      const text = `${p?.name || ''} ${p?.subcategory || ''}`.toLowerCase();
-      return /potravin|lednice|food/.test(text) ? ['food_donation'] : ['material_dropoff'];
-    }
-    if (p?.kind === 'animals') return ['material_dropoff', 'one_off_help'];
-    if (p?.kind === 'food') return ['food_donation', 'material_dropoff', 'one_off_help'];
-    if (p?.kind === 'community') return ['material_dropoff', 'one_off_help'];
-    return ['regular_volunteering', 'one_off_help'];
-  }
-
-  function getPlaceVisitMode(p) {
-    if (p?.visitMode && VISIT_MODE_META[p.visitMode]) return p.visitMode;
-    if (isSelfServicePoint(p)) return 'drop_in';
-    if (p?.opening_hours || p?.kind === 'food' || p?.kind === 'animals') return 'opening_hours';
-    return 'by_agreement';
-  }
-
-  function getPlaceDescription(p) {
-    if (p?.description) return p.description;
-    const sub = p?.subcategory || KIND_META[p?.kind]?.label || 'Místo pomoci v okolí';
-    if (isSelfServicePoint(p)) {
-      return `${sub} — volně přístupné sousedské místo pro bezplatné sdílení knih nebo věcí.`;
-    }
-    return `${sub} působící ve tvém okolí${p?.address ? ` (${p.address})` : ''}.`;
   }
 
   function normalizeCommunityItemToPlace(ci, lat, lon) {
@@ -292,8 +252,8 @@
   let markersLayer = null;
   let userMarker = null;
   let radiusCircle = null;
-  let isProgrammaticMove = false;
-  /** @type {Map<string, { setPopupContent: (c: string) => void, setZIndexOffset: (z: number) => void, getElement?: () => HTMLElement | null, openPopup: () => void, [key: string]: unknown }>} */
+  let userGestureActive = false;
+  /** @type {Map<string, { setPopupContent: (c: string) => void, setZIndexOffset: (z: number) => void, getElement?: () => HTMLElement | null, openPopup: () => void, closePopup?: () => void, _aaPopupHtml?: string, [key: string]: unknown }>} */
   let markerById = new Map();
   /** @type {{ lat: number, lon: number } | null} */
   let pannedCenter = null;
@@ -318,6 +278,7 @@
   let hoveredPlaceId = null;
   let visibleCount = 3;
   let mobileView = 'list'; // 'list' | 'map'
+  let filtersOpen = false;
 
   // First-contact template
   let openTemplateId = null;
@@ -514,10 +475,10 @@
       radiusCircle = leaflet
         .circle([lat, lon], {
           radius: radiusKm * 1000,
-          color: '#10b981',
+          color: '#1b5e42',
           weight: 2,
           opacity: 0.65,
-          fillColor: '#10b981',
+          fillColor: '#1b5e42',
           fillOpacity: 0.07,
           interactive: false
         })
@@ -533,7 +494,7 @@
     centerLon = lon;
     pannedCenter = null;
     if (!map || !leaflet) return;
-    isProgrammaticMove = true;
+    userGestureActive = false;
     map.setView([lat, lon], zoom, { animate: true });
     if (userMarker) userMarker.remove();
     userMarker = leaflet
@@ -541,7 +502,7 @@
         radius: 8,
         color: '#ffffff',
         weight: 2.5,
-        fillColor: '#059669',
+        fillColor: '#1b5e42',
         fillOpacity: 1
       })
       .bindTooltip('Střed hledání', { direction: 'top' })
@@ -551,6 +512,7 @@
 
   function fitMapToFilteredPlaces() {
     if (!map || !leaflet) return;
+    if (mapEl && (mapEl.clientWidth <= 0 || mapEl.clientHeight <= 0)) return;
     const pts = [[centerLat, centerLon]];
     const topForBounds = filteredPlaces.slice(0, Math.max(visibleCount, 3));
     for (const p of topForBounds) {
@@ -560,7 +522,7 @@
     }
     if (pts.length >= 2) {
       try {
-        isProgrammaticMove = true;
+        userGestureActive = false;
         const bounds = leaflet.latLngBounds(pts);
         map.fitBounds(bounds, { padding: [34, 34], maxZoom: 14, animate: true });
       } catch {}
@@ -580,51 +542,46 @@
     const isCurated = !!p.curated || p.sourceType === 'verified_org';
     const isComm = p.sourceType === 'community';
     const badgeHtml = isCurated
-      ? '<i class="pin-star" title="Ověřená organizace">★</i>'
+      ? `<i class="pin-star" title="Ověřená organizace">${getSvgIconHtml('star', 10, 2.2)}</i>`
       : isComm
-        ? '<i class="pin-leaf" title="Komunitní tip">🌱</i>'
+        ? `<i class="pin-leaf" title="Komunitní tip">${getSvgIconHtml('sprout', 10, 2.2)}</i>`
         : '';
-    return `<div class="pin-bubble ${isCurated ? 'is-curated' : ''} ${isComm ? 'is-community' : ''} ${isHighlighted ? 'is-active' : ''}" style="--pin-color:${meta.color}"><span>${meta.emoji}</span>${badgeHtml}</div>`;
+    return `<div class="pin-bubble ${isCurated ? 'is-curated' : ''} ${isComm ? 'is-community' : ''} ${isHighlighted ? 'is-active' : ''}" style="--pin-color:${meta.color}"><span class="pin-glyph">${getSvgIconHtml(meta.icon, 16, 2)}</span>${badgeHtml}</div>`;
   }
+
+  const POPUP_OPTIONS = {
+    maxWidth: 256,
+    minWidth: 196,
+    offset: [0, -12],
+    autoPan: true,
+    autoPanPaddingTopLeft: [64, 68],
+    autoPanPaddingBottomRight: [20, 76]
+  };
 
   function buildPopupHtml(p) {
     const meta = KIND_META[p.kind] || KIND_META.ngo;
     const safeWeb = normalizeUrl(p.website);
     const mapyUrl = `https://mapy.cz/zakladni?x=${encodeURIComponent(p.lon)}&y=${encodeURIComponent(p.lat)}&z=17&q=${encodeURIComponent(p.name || '')}`;
-    const visitMode = VISIT_MODE_META[getPlaceVisitMode(p)] || VISIT_MODE_META.by_agreement;
-    const ways = getPlaceHelpWays(p)
-      .map((w) => HELP_WAY_META[w])
-      .filter(Boolean)
-      .map(
-        (m) =>
-          `<span style="display:inline-block;font-size:10.5px;font-weight:700;background:#f0fdf4;border:1px solid rgba(5,150,105,0.22);color:#065f46;padding:2px 6px;border-radius:999px;margin:2px 3px 2px 0;">${m.icon} ${escapeHtml(m.label)}</span>`
-      )
-      .join('');
-    const sourceBadge =
+    const sourceBadgeHtml =
       p.curated || p.sourceType === 'verified_org'
-        ? '✦ Ověřená organizace'
+        ? `<span style="display:inline-flex;align-items:center;gap:3px;">${getSvgIconHtml('shield-check', 11, 2)}<span>Ověřená organizace</span></span>`
         : p.sourceType === 'community'
-          ? '🌱 Komunitní tip'
-          : '🗺️ Orientační bod OSM';
+          ? `<span style="display:inline-flex;align-items:center;gap:3px;">${getSvgIconHtml('sprout', 11, 2)}<span>Komunitní tip</span></span>`
+          : `<span style="display:inline-flex;align-items:center;gap:3px;">${getSvgIconHtml('map', 11, 2)}<span>OSM</span></span>`;
 
     const linksHtml = `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px;">
-      ${safeWeb ? `<a href="${escapeHtml(safeWeb)}" target="_blank" rel="noopener noreferrer" style="font-weight:800;font-size:12px;color:#059669;text-decoration:none;">Web organizace ↗</a>` : ''}
-      <a href="${escapeHtml(mapyUrl)}" target="_blank" rel="noopener noreferrer" style="font-weight:700;font-size:12px;color:#0f2d20;text-decoration:underline;">🧭 Navigovat (Mapy.cz) ↗</a>
+      ${safeWeb ? `<a href="${escapeHtml(safeWeb)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:3px;font-weight:800;font-size:11.5px;color:#1b5e42;text-decoration:none;"><span>Web organizace</span>${getSvgIconHtml('arrow-up-right', 12, 2)}</a>` : ''}
+      <a href="${escapeHtml(mapyUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:3px;font-weight:700;font-size:11.5px;color:#14281d;text-decoration:underline;">${getSvgIconHtml('compass', 12, 2)}<span>Navigovat (Mapy.cz)</span>${getSvgIconHtml('arrow-up-right', 12, 2)}</a>
     </div>`;
 
-    return `<div style="font-family:'Plus Jakarta Sans',sans-serif;max-width:270px;line-height:1.42;">
-      <div style="font-size:10.5px;font-weight:800;text-transform:uppercase;color:${meta.color};margin-bottom:2px;">
-        ${escapeHtml(p.subcategory || meta.label)} • ${escapeHtml(formatDist(p.distanceKm))} • ${escapeHtml(sourceBadge)}
+    return `<div style="font-family:'Plus Jakarta Sans',sans-serif;max-width:228px;line-height:1.36;">
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:3px;padding-right:24px;font-size:10px;font-weight:800;text-transform:uppercase;color:${meta.color};margin-bottom:2px;">
+        <span>${escapeHtml(p.subcategory || meta.label)}</span><span>·</span><span>${escapeHtml(formatDist(p.distanceKm))}</span><span>·</span>${sourceBadgeHtml}
       </div>
-      <div style="font-weight:800;font-size:14px;color:#0d2118;margin-bottom:3px;">${escapeHtml(p.name)}</div>
-      ${p.address ? `<div style="font-size:11.5px;color:#3d5247;margin-bottom:4px;">📍 ${escapeHtml(p.address)}</div>` : ''}
-      <div style="font-size:11.5px;color:#385245;margin-bottom:5px;">${escapeHtml(getPlaceDescription(p))}</div>
-      <div style="margin-bottom:4px;">
-        <span style="display:inline-block;font-size:10.5px;font-weight:700;color:#1e4633;margin-right:4px;">${visitMode.icon} ${escapeHtml(visitMode.label)}</span>
-        ${ways}
-      </div>
-      <div style="font-size:11.5px;background:#ecfdf5;padding:6px 8px;border-radius:8px;color:#065f46;margin:5px 0;">
-        <strong>Jak tu pomoct:</strong> ${escapeHtml(concreteActionHint(p))}
+      <div style="font-weight:800;font-size:13.5px;line-height:1.25;color:#14281d;margin-bottom:3px;padding-right:16px;max-height:3.75em;overflow:hidden;">${escapeHtml(p.name)}</div>
+      ${p.address ? `<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:#3f574a;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${getSvgIconHtml('map-pin', 11, 2)}<span style="overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.address)}</span></div>` : ''}
+      <div style="font-size:11px;line-height:1.38;background:#edf2ee;border:1px solid #dce3dd;padding:5px 7px;border-radius:8px;color:#14281d;margin:4px 0;max-height:76px;overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;">
+        <strong>Jak pomoct:</strong> ${escapeHtml(concreteActionHint(p))}
       </div>
       ${linksHtml}
     </div>`;
@@ -649,10 +606,14 @@
     for (const p of nextSlice) {
       if (typeof p.lat !== 'number' || typeof p.lon !== 'number') continue;
       const isHighlighted = p.id === activePlaceId || p.id === hoveredPlaceId;
+      const popupHtml = buildPopupHtml(p);
 
       if (markerById.has(p.id)) {
         const existing = markerById.get(p.id);
-        existing.setPopupContent(buildPopupHtml(p));
+        if (existing._aaPopupHtml !== popupHtml) {
+          existing.setPopupContent(popupHtml);
+          existing._aaPopupHtml = popupHtml;
+        }
         existing.setZIndexOffset(isHighlighted ? 1000 : p.curated ? 300 : 0);
         const iconEl = existing.getElement?.();
         if (iconEl) {
@@ -668,8 +629,8 @@
       const icon = leaflet.divIcon({
         className: isHighlighted ? 'aa-map-pin is-active' : 'aa-map-pin',
         html: buildPinHtml(p, isHighlighted),
-        iconSize: [38, 38],
-        iconAnchor: [19, 19]
+        iconSize: [44, 44],
+        iconAnchor: [22, 22]
       });
 
       const marker = leaflet.marker([p.lat, p.lon], {
@@ -677,22 +638,40 @@
         riseOnHover: true,
         zIndexOffset: isHighlighted ? 1000 : p.curated ? 300 : 0
       });
+      marker._aaPopupHtml = popupHtml;
       markerById.set(p.id, marker);
 
-      marker.bindPopup(buildPopupHtml(p));
+      marker.bindPopup(popupHtml, POPUP_OPTIONS);
+      marker.off('click');
+      marker.off('keypress');
 
-      marker.on('click', async () => {
+      const handleMarkerActivate = async () => {
         activePlaceId = p.id;
-        if (typeof window !== 'undefined' && window.innerWidth <= 980) {
-          setTimeout(() => map?.closePopup(), 0);
-        }
+        const isMobileOrTablet = typeof window !== 'undefined' && window.innerWidth <= 980;
         const idxInList = filteredPlaces.findIndex((item) => item.id === p.id);
         if (idxInList >= visibleCount) {
           visibleCount = idxInList + 1;
-          await tick();
         }
+        await tick();
+        if (isMobileOrTablet) {
+          userGestureActive = false;
+          map?.closePopup();
+          map?.panTo([p.lat, p.lon], { animate: true });
+          return;
+        }
+        userGestureActive = false;
+        marker.openPopup();
         const el = document.getElementById(`place-card-${String(p.id).replace(/[^a-zA-Z0-9_-]/g, '-')}`);
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      };
+
+      marker.on('click', handleMarkerActivate);
+      marker.on('keypress', (/** @type {{ originalEvent?: KeyboardEvent }} */ e) => {
+        const key = e?.originalEvent?.key;
+        if (!key || key === 'Enter' || key === ' ') {
+          e?.originalEvent?.preventDefault?.();
+          void handleMarkerActivate();
+        }
       });
 
       marker.addTo(markersLayer);
@@ -832,7 +811,8 @@
         } else {
           visibleCount = 3;
         }
-        fitMapToFilteredPlaces();
+        renderMarkers();
+        syncMapToActiveOrFiltered();
       }
     }
   }
@@ -851,6 +831,8 @@
 
   async function selectQuickCity(city) {
     selectedCity = city;
+    activePlaceId = null;
+    map?.closePopup();
     query = '';
     locationQuery = '';
     geoResults = [];
@@ -870,6 +852,8 @@
   async function applyPreset(preset) {
     // 0ms instant in-memory filter — no network call or map wipe needed!
     activePresetId = preset.id;
+    activePlaceId = null;
+    map?.closePopup();
     query = '';
     kinds = [...preset.kinds];
     onlyWithWebsite = !!preset.onlyWeb;
@@ -882,6 +866,8 @@
 
   async function setSourceFilter(nextSource) {
     sourceFilter = nextSource;
+    activePlaceId = null;
+    map?.closePopup();
     visibleCount = 3;
     await tick();
     fitMapToFilteredPlaces();
@@ -891,6 +877,8 @@
     if (!pannedCenter) return;
     const { lat, lon } = pannedCenter;
     pannedCenter = null;
+    activePlaceId = null;
+    map?.closePopup();
     query = '';
     moveMapCenter(lat, lon, map ? map.getZoom() : 13);
     await fetchNearby(lat, lon);
@@ -898,6 +886,8 @@
   }
 
   function resetAndExpandSearch() {
+    activePlaceId = null;
+    map?.closePopup();
     query = '';
     onlyWithWebsite = false;
     sourceFilter = 'all';
@@ -947,6 +937,8 @@
 
   async function pickGeocodeResult(r) {
     if (!r || typeof r.lat !== 'number' || typeof r.lon !== 'number') return;
+    activePlaceId = null;
+    map?.closePopup();
     query = '';
     geoResults = [];
     geoStatus = 'idle';
@@ -966,6 +958,8 @@
     gpsMessage = 'Čekám na povolení polohy v prohlížeči…';
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
+        activePlaceId = null;
+        map?.closePopup();
         query = '';
         gpsStatus = 'ok';
         gpsMessage = 'Poloha nalezena! Zobrazuji nejbližší místa kolem tebe.';
@@ -980,25 +974,91 @@
     );
   }
 
-  async function focusPlaceOnMap(p) {
-    activePlaceId = p.id;
-    const isMobileOrTablet = typeof window !== 'undefined' && window.innerWidth <= 980;
-    if (mobileView === 'list') {
-      mobileView = 'map';
-      await tick();
+  function centerMapOnMobilePlace(p) {
+    if (!map || !p || typeof p.lat !== 'number' || typeof p.lon !== 'number') return;
+    if (resizeTimer) {
+      clearTimeout(resizeTimer);
+      resizeTimer = null;
     }
+    userGestureActive = false;
+    map.closePopup();
+    try {
+      map.stop();
+    } catch {}
+    const targetZoom = Math.max(map.getZoom(), 15);
+    map.setView([p.lat, p.lon], targetZoom, { animate: false });
+  }
+
+  function openPlacePopupCenteredOnDesktop(p) {
+    if (!map || !leaflet || !p || typeof p.lat !== 'number' || typeof p.lon !== 'number') return;
+    if (resizeTimer) {
+      clearTimeout(resizeTimer);
+      resizeTimer = null;
+    }
+    userGestureActive = false;
+    try {
+      map.stop();
+    } catch {}
+    const targetZoom = Math.max(map.getZoom(), 15);
+    const markerPt = map.project([p.lat, p.lon], targetZoom);
+    const offsetCenter = map.unproject(leaflet.point(markerPt.x, markerPt.y - 98), targetZoom);
+    map.setView(offsetCenter, targetZoom, { animate: false });
+    const m = markerById.get(p.id);
+    if (m) {
+      userGestureActive = false;
+      m.openPopup();
+    }
+  }
+
+  function syncMapToActiveOrFiltered() {
+    if (!map || !leaflet) return;
+    if (mapEl && (mapEl.clientWidth <= 0 || mapEl.clientHeight <= 0)) return;
+    const active =
+      (activePlaceId &&
+        (filteredPlaces.find((item) => item.id === activePlaceId) ||
+          places.find((item) => item.id === activePlaceId))) ||
+      null;
+    if (active) {
+      const isMobileOrTablet = typeof window !== 'undefined' && window.innerWidth <= 980;
+      if (isMobileOrTablet) {
+        centerMapOnMobilePlace(active);
+      } else {
+        openPlacePopupCenteredOnDesktop(active);
+      }
+      return;
+    }
+    fitMapToFilteredPlaces();
+  }
+
+  async function focusPlaceOnMap(p) {
+    if (!p) return;
+    activePlaceId = p.id;
+    pannedCenter = null;
+    const isMobileOrTablet = typeof window !== 'undefined' && window.innerWidth <= 980;
+    if (isMobileOrTablet && mobileView === 'list') {
+      mobileView = 'map';
+    }
+    await tick();
     if (!map) {
       await initMap();
     }
     if (!map) return;
     map.invalidateSize();
-    isProgrammaticMove = true;
-    map.flyTo([p.lat, p.lon], Math.max(map.getZoom(), 15), { duration: 0.45 });
+    renderMarkers();
     if (isMobileOrTablet) {
-      map.closePopup();
+      centerMapOnMobilePlace(p);
+      const tabsEl = document.querySelector('.near-page .mobile-tabs');
+      const headerRect = document.querySelector('header.top-nav')?.getBoundingClientRect();
+      const minTop = (headerRect ? headerRect.bottom : 60) + 6;
+      const anchorEl = tabsEl || mapEl?.closest?.('.map-column');
+      if (anchorEl) {
+        const rect = anchorEl.getBoundingClientRect();
+        if (rect.top < minTop - 2 || rect.top > window.innerHeight * 0.45) {
+          window.scrollBy({ top: rect.top - minTop, behavior: 'auto' });
+        }
+      }
     } else {
-      const m = markerById.get(p.id);
-      if (m) m.openPopup();
+      openPlacePopupCenteredOnDesktop(p);
     }
   }
 
@@ -1030,7 +1090,7 @@
     try {
       syncUrlState(centerLat, centerLon);
       await navigator.clipboard.writeText(window.location.href);
-      shareMessage = '✓ Odkaz na tuhle oblast mapy je zkopírovaný!';
+      shareMessage = 'Odkaz na tuhle oblast mapy je zkopírovaný!';
       setTimeout(() => (shareMessage = ''), 3200);
     } catch {}
   }
@@ -1066,7 +1126,8 @@
         await initMap();
       }
       map?.invalidateSize();
-      fitMapToFilteredPlaces();
+      renderMarkers();
+      syncMapToActiveOrFiltered();
     }
   }
 
@@ -1098,7 +1159,21 @@
       });
       map.on('focus', () => map?.scrollWheelZoom?.enable());
       map.on('blur', () => map?.scrollWheelZoom?.disable());
+      map.on('autopanstart', () => {
+        userGestureActive = false;
+      });
+      map.on('dragstart', () => {
+        userGestureActive = true;
+      });
+      map.on('popupopen', () => {
+        if (typeof window !== 'undefined' && window.innerWidth <= 980) {
+          map?.closePopup();
+        }
+      });
 
+      const onMapWheel = () => {
+        userGestureActive = true;
+      };
       const onMapTouchStart = (e) => {
         if (!map || mobileView === 'map') return;
         if (e.touches && e.touches.length === 1) {
@@ -1116,6 +1191,7 @@
       const onMapTouchEnd = () => {
         map?.dragging?.enable();
       };
+      mapEl.addEventListener('wheel', onMapWheel, { passive: true });
       mapEl.addEventListener('touchstart', onMapTouchStart, { passive: true });
       mapEl.addEventListener('touchend', onMapTouchEnd, { passive: true });
 
@@ -1124,19 +1200,23 @@
       isLoadingMap = false;
 
       resizeTimer = setTimeout(() => {
+        resizeTimer = null;
+        userGestureActive = false;
         map?.invalidateSize();
-        fitMapToFilteredPlaces();
+        syncMapToActiveOrFiltered();
       }, 120);
 
       map.on('moveend', () => {
-        if (!map) return;
-        if (isProgrammaticMove) {
-          isProgrammaticMove = false;
-          return;
-        }
+        if (!map || !userGestureActive) return;
+        userGestureActive = false;
         const c = map.getCenter();
         const distFromActive = haversineKm(centerLat, centerLon, c.lat, c.lng);
-        if (distFromActive >= 1.8) {
+        const bounds = map.getBounds?.();
+        const visibleWidthKm = bounds
+          ? haversineKm(c.lat, bounds.getWest(), c.lat, bounds.getEast())
+          : 4;
+        const panThresholdKm = Math.min(1.8, Math.max(0.45, visibleWidthKm * 0.42));
+        if (distFromActive >= panThresholdKm) {
           pannedCenter = { lat: c.lat, lon: c.lng };
         } else {
           pannedCenter = null;
@@ -1144,7 +1224,7 @@
       });
 
       renderMarkers();
-      fitMapToFilteredPlaces();
+      syncMapToActiveOrFiltered();
     } catch {
       if (destroyed) return;
       isLoadingMap = false;
@@ -1159,6 +1239,9 @@
     destroyed = false;
     let nearReturnTimer = null;
     soundMuted = isSoundMuted();
+    if (typeof window !== 'undefined' && window.innerWidth > 680) {
+      filtersOpen = true;
+    }
 
     const checkNearReturn = () => {
       if (nearReturnPlace) return;
@@ -1202,9 +1285,33 @@
     };
     checkNearReturn();
 
+    let wasDesktop = typeof window !== 'undefined' && window.innerWidth > 980;
+    const onWindowResize = () => {
+      if (typeof window === 'undefined' || destroyed) return;
+      const nowDesktop = window.innerWidth > 980;
+      if (nowDesktop) {
+        if (!map) {
+          void initMap();
+        } else {
+          map.invalidateSize();
+          if (!wasDesktop) {
+            renderMarkers();
+            syncMapToActiveOrFiltered();
+          }
+        }
+      } else if (map) {
+        map.closePopup();
+        if (mobileView === 'map') {
+          map.invalidateSize();
+        }
+      }
+      wasDesktop = nowDesktop;
+    };
+
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('focus', checkNearReturn);
     window.addEventListener('pageshow', checkNearReturn);
+    window.addEventListener('resize', onWindowResize, { passive: true });
 
     (async () => {
       try {
@@ -1265,10 +1372,13 @@
       await fetchNearby(centerLat, centerLon);
       if (activePlaceId) {
         await tick();
+        renderMarkers();
         const el = document.getElementById(`place-card-${String(activePlaceId).replace(/[^a-zA-Z0-9_-]/g, '-')}`);
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        const m = markerById.get(activePlaceId);
-        if (m) m.openPopup();
+        const targetPlace = places.find((item) => item.id === activePlaceId);
+        if (targetPlace && typeof window !== 'undefined' && window.innerWidth > 980) {
+          openPlacePopupCenteredOnDesktop(targetPlace);
+        }
       }
     })();
 
@@ -1277,6 +1387,7 @@
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('focus', checkNearReturn);
       window.removeEventListener('pageshow', checkNearReturn);
+      window.removeEventListener('resize', onWindowResize);
       if (resizeTimer) clearTimeout(resizeTimer);
       if (nearReturnTimer) clearTimeout(nearReturnTimer);
       if (touchHintTimer) clearTimeout(touchHintTimer);
@@ -1295,21 +1406,20 @@
 </svelte:head>
 
 <div class="near-page">
-  <header class="subpage-hero near-header">
-    <div class="near-header-main">
-      <div class="hero-kicker">MAPA POMOCI V OKOLÍ · CELÁ ČR</div>
-      <h1 class="title">Kde můžeš pomoct <span class="serif-accent">kousek od sebe</span></h1>
-    </div>
-    <p class="subtitle">
-      Ověřené útulky, potravinové banky, šatníky, komunitní zahrady i veřejné knihobudky — s jasným přehledem, jak se zapojit.
-    </p>
-  </header>
+  <PageHeader
+    kicker="MAPA POMOCI V OKOLÍ · CELÁ ČR"
+    title="Kde můžeš pomoct "
+    titleAccent="kousek od sebe"
+    subtitle="Ověřené útulky, potravinové banky, šatníky, komunitní zahrady i veřejné knihobudky — s jasným přehledem, jak se zapojit."
+    class="near-page-header"
+  />
 
   <!-- UNIFIED SEARCH + FILTER BAR -->
   <div class="controls-card">
     <div class="controls-top search-capsule">
       <button type="button" class="gps-btn" on:click={useGps} disabled={gpsStatus === 'requesting'}>
-        {gpsStatus === 'requesting' ? '📍 Hledám…' : '📍 Moje poloha'}
+        <AppIcon name="navigation" size={15} />
+        <span>{gpsStatus === 'requesting' ? 'Hledám…' : 'Moje poloha'}</span>
       </button>
 
       <div class="search-box">
@@ -1324,46 +1434,9 @@
           on:keydown={(e) => e.key === 'Enter' && searchLocation()}
         />
         <button type="button" class="btn-find" on:click={searchLocation}>
-          {geoStatus === 'loading' ? 'Hledám…' : 'Najít'}
+          <AppIcon name="search" size={14} />
+          <span>{geoStatus === 'loading' ? 'Hledám…' : 'Najít'}</span>
         </button>
-      </div>
-
-      <select
-        id="near-city-jump"
-        name="city"
-        autocomplete="off"
-        class="city-jump-select"
-        aria-label="Rychlý skok do krajského města"
-        on:change={(e) => {
-          const found = CZECH_CITIES.find((c) => c.id === e.currentTarget.value);
-          if (found) selectQuickCity(found);
-        }}
-      >
-        <option value="">Krajská města…</option>
-        {#each CZECH_CITIES as city}
-          <option
-            value={city.id}
-            selected={Math.abs(centerLat - city.lat) < 0.05 && Math.abs(centerLon - city.lon) < 0.05}
-          >
-            {city.name}
-          </option>
-        {/each}
-      </select>
-
-      <div class="radius-box" role="group" aria-label="Okruh hledání v kilometrech">
-        <span class="radius-label">Okruh:</span>
-        <div class="radius-pills">
-          {#each RADIUS_PRESETS as rKm}
-            <button
-              type="button"
-              class="radius-pill"
-              class:active={radiusKm === rKm}
-              on:click={() => setRadiusKm(rKm)}
-            >
-              {rKm} km
-            </button>
-          {/each}
-        </div>
       </div>
     </div>
 
@@ -1377,7 +1450,7 @@
       <div class="geo-dropdown" role="listbox" aria-label="Rychlý výběr města">
         {#each instantTownSuggestions as t}
           <button type="button" class="geo-opt" on:click={() => pickGeocodeResult(t)}>
-            <strong>📍 {t.label.split(',')[0]}</strong>
+            <strong><AppIcon name="map-pin" size={14} /><span>{t.label.split(',')[0]}</span></strong>
             <span>{t.label} · okamžitý přesun</span>
           </button>
         {/each}
@@ -1394,7 +1467,7 @@
       </div>
     {/if}
 
-    <div class="controls-bottom">
+    <div class="controls-presets-row">
       <div class="presets-bar" role="group" aria-label="Co na mapě hledáš">
         {#each CATEGORY_PRESETS as preset}
           <button
@@ -1403,23 +1476,113 @@
             class:active={activePresetId === preset.id}
             on:click={() => applyPreset(preset)}
           >
-            {preset.label}
+            <AppIcon name={preset.icon} size={14} />
+            <span>{preset.label}</span>
           </button>
         {/each}
       </div>
+    </div>
+
+    <div class="controls-utility-row">
+      <details class="near-filters-drawer" bind:open={filtersOpen}>
+        <summary class="near-filters-summary">
+          <AppIcon name="sliders-horizontal" size={15} />
+          <span>Filtry ({radiusKm} km)</span>
+        </summary>
+        <div class="near-filters-body">
+          <select
+            id="near-city-jump"
+            name="city"
+            autocomplete="off"
+            class="city-jump-select"
+            aria-label="Rychlý skok do krajského města"
+            on:change={(e) => {
+              const found = CZECH_CITIES.find((c) => c.id === e.currentTarget.value);
+              if (found) selectQuickCity(found);
+            }}
+          >
+            <option value="">Krajská města…</option>
+            {#each CZECH_CITIES as city}
+              <option
+                value={city.id}
+                selected={Math.abs(centerLat - city.lat) < 0.05 && Math.abs(centerLon - city.lon) < 0.05}
+              >
+                {city.name}
+              </option>
+            {/each}
+          </select>
+
+          <div class="radius-box" role="group" aria-label="Okruh hledání v kilometrech">
+            <span class="radius-label">Okruh:</span>
+            <div class="radius-pills">
+              {#each RADIUS_PRESETS as rKm}
+                <button
+                  type="button"
+                  class="radius-pill"
+                  class:active={radiusKm === rKm}
+                  on:click={() => setRadiusKm(rKm)}
+                >
+                  {rKm} km
+                </button>
+              {/each}
+            </div>
+          </div>
+
+          <div class="list-filters">
+            {#if places.length > 3 || query.trim().length > 0}
+              <input
+                type="search"
+                id="near-list-filter"
+                name="q"
+                autocomplete="off"
+                aria-label="Hledat v seznamu míst"
+                class="filter-input"
+                placeholder="Hledat v seznamu…"
+                bind:value={query}
+              />
+            {/if}
+            <select bind:value={sortBy} id="near-sort" name="sort" autocomplete="off" class="sort-select" aria-label="Řazení míst">
+              <option value="easy">Nejjednodušší start</option>
+              <option value="distance">Podle vzdálenosti</option>
+              <option value="name">Abecedně A–Z</option>
+            </select>
+          </div>
+
+          <div class="source-tier-bar" role="group" aria-label="Filtrovat podle stupně ověření zdroje">
+            {#each SOURCE_FILTERS as sf}
+              <button
+                type="button"
+                class="source-chip"
+                class:active={sourceFilter === sf.id}
+                on:click={() => setSourceFilter(sf.id)}
+              >
+                {#if sf.icon}
+                  <AppIcon name={sf.icon} size={13} />
+                {/if}
+                <span>{sf.label}</span>
+              </button>
+            {/each}
+          </div>
+        </div>
+      </details>
 
       <div class="controls-links">
         <button type="button" class="text-util-btn" on:click={copyShareLink}>
-          {shareMessage || '🔗 Sdílet výřez'}
+          <AppIcon name={shareMessage ? 'check' : 'share-2'} size={14} />
+          <span>{shareMessage || 'Sdílet výřez'}</span>
         </button>
-        <a href="/submit" class="text-util-link">+ Přidat místo</a>
+        <a href="/submit" class="text-util-link">
+          <AppIcon name="plus" size={14} />
+          <span>Přidat místo</span>
+        </a>
       </div>
     </div>
   </div>
 
   {#if allOutsideRadius || isRadiusExpanded}
     <div class="smart-nearest-banner" role="status">
-      📍 V okruhu {radiusKm} km jsme našli méně míst — ukazujeme i nejbližší ověřené možnosti v tvém regionu.
+      <AppIcon name="map-pin" size={15} />
+      <span>V okruhu {radiusKm} km jsme našli méně míst — ukazujeme i nejbližší ověřené možnosti v tvém regionu.</span>
     </div>
   {/if}
 
@@ -1432,7 +1595,8 @@
       class:active={mobileView === 'list'}
       on:click={() => setMobileMode('list')}
     >
-      📋 Seznam ({filteredPlaces.length})
+      <AppIcon name="list" size={15} />
+      <span>Seznam ({filteredPlaces.length})</span>
     </button>
     <button
       type="button"
@@ -1441,7 +1605,8 @@
       class:active={mobileView === 'map'}
       on:click={() => setMobileMode('map')}
     >
-      🗺️ Mapa ({filteredPlaces.length})
+      <AppIcon name="map" size={15} />
+      <span>Mapa ({filteredPlaces.length})</span>
     </button>
   </div>
 
@@ -1449,94 +1614,109 @@
   <div class="split-layout">
     <div class="map-column" class:hidden-mob={mobileView === 'list'}>
       <div class="map-frame">
-        {#if isLoadingMap}
-          <div class="map-status-pill">Spouštím mapu…</div>
-        {:else if isFetching}
-          <div class="map-status-pill">Aktualizuji okolí…</div>
-        {/if}
+        <div class="map-stage">
+          {#if isLoadingMap}
+            <div class="map-status-pill">Spouštím mapu…</div>
+          {:else if isFetching}
+            <div class="map-status-pill">Aktualizuji okolí…</div>
+          {/if}
 
-        {#if pannedCenter && !isFetching}
-          <button
-            type="button"
-            class="search-area-btn"
-            class:above-sheet={mobileView === 'map' && !!activePlaceObj}
-            on:click={searchPannedArea}
-          >
-            🔄 Hledat v této oblasti mapy
-          </button>
-        {/if}
+          {#if pannedCenter && !isFetching}
+            <button
+              type="button"
+              class="search-area-btn"
+              on:click={searchPannedArea}
+            >
+              <AppIcon name="refresh-cw" size={14} />
+              <span>Hledat v této oblasti mapy</span>
+            </button>
+          {/if}
 
-        <div class="map-floating-tools">
-          <button
-            type="button"
-            class="tile-switch-btn"
-            class:active={tileStyle === 'calm'}
-            aria-pressed={tileStyle === 'calm'}
-            title={tileStyle === 'calm' ? 'Přepnout na kontrastní mapu' : 'Přepnout na jemný podklad'}
-            on:click={toggleTileStyle}
-          >
-            {tileStyle === 'calm' ? '🌿 Jemný podklad' : '🗺️ Kontrastní mapa'}
-          </button>
+          <div class="map-floating-tools">
+            <button
+              type="button"
+              class="tile-switch-btn"
+              class:active={tileStyle === 'calm'}
+              aria-pressed={tileStyle === 'calm'}
+              title={tileStyle === 'calm' ? 'Přepnout na kontrastní mapu' : 'Přepnout na jemný podklad'}
+              on:click={toggleTileStyle}
+            >
+              <AppIcon name={tileStyle === 'calm' ? 'leaf' : 'map'} size={14} />
+              <span>{tileStyle === 'calm' ? 'Jemný podklad' : 'Kontrastní mapa'}</span>
+            </button>
+          </div>
+
+          {#if mapBootError}
+            <div class="map-error-box">{mapBootError}</div>
+          {/if}
+
+          {#if touchGestureHint}
+            <div class="map-gesture-hint" role="status">
+              Posuň mapu dvěma prsty
+            </div>
+          {/if}
+
+          <div
+            bind:this={mapEl}
+            class="leaflet-canvas map-canvas"
+            class:is-calm-tiles={tileStyle === 'calm'}
+            class:is-crisp-tiles={tileStyle === 'crisp'}
+            class:map-expanded={mobileView === 'map'}
+          ></div>
         </div>
 
-        {#if mapBootError}
-          <div class="map-error-box">{mapBootError}</div>
-        {/if}
-
-        {#if touchGestureHint}
-          <div class="map-gesture-hint" role="status">
-            Posuň mapu dvěma prsty ✌️
-          </div>
-        {/if}
-
-        <div
-          bind:this={mapEl}
-          class="leaflet-canvas map-canvas"
-          class:is-calm-tiles={tileStyle === 'calm'}
-          class:is-crisp-tiles={tileStyle === 'crisp'}
-          class:map-expanded={mobileView === 'map'}
-        ></div>
-
-        {#if mobileView === 'map' && activePlaceObj}
-          {@const activeWeb = normalizeUrl(activePlaceObj.website)}
-          <div class="map-active-sheet" role="region" aria-label="Vybrané místo na mapě">
-            <div class="mas-top">
-              <div>
-                <span class="mas-meta">
-                  {activePlaceObj.subcategory || KIND_META[activePlaceObj.kind]?.label} · {formatDist(activePlaceObj.distanceKm)}
-                </span>
-                <strong class="mas-title">{activePlaceObj.name}</strong>
-              </div>
-              <button type="button" class="mas-close" aria-label="Zavřít náhled" on:click={() => (activePlaceId = null)}>
-                ✕
-              </button>
-            </div>
-            <p class="mas-mission">{concreteActionHint(activePlaceObj)}</p>
-            <div class="mas-actions">
-              {#if activeWeb}
-                <a href={activeWeb} target="_blank" rel="noopener noreferrer" class="pc-btn primary">Web ↗</a>
-              {:else}
-                <a
-                  href={`https://mapy.cz/zakladni?x=${activePlaceObj.lon}&y=${activePlaceObj.lat}&z=17&q=${encodeURIComponent(activePlaceObj.name)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="pc-btn primary"
-                >
-                  🧭 Mapy.cz ↗
-                </a>
-              {/if}
-              <button type="button" class="pc-btn ghost" on:click={() => focusPlaceInList(activePlaceObj)}>
-                📋 Detail v seznamu
-              </button>
-            </div>
-          </div>
-        {/if}
-
         <div class="map-foot-hint">
-          <span>★ Ověřená organizace · 🌱 Komunitní tip · 🗺️ Orientační bod OSM</span>
+          <span class="legend-group">
+            <span class="legend-item"><AppIcon name="star" size={12} /><span>Ověřená organizace</span></span>
+            <span aria-hidden="true">·</span>
+            <span class="legend-item"><AppIcon name="sprout" size={12} /><span>Komunitní tip</span></span>
+            <span aria-hidden="true">·</span>
+            <span class="legend-item"><AppIcon name="map" size={12} /><span>Orientační bod OSM</span></span>
+          </span>
           <span>Posuň mapu kamkoliv po ČR pro hledání v novém výřezu.</span>
         </div>
       </div>
+
+      {#if mobileView === 'map' && activePlaceObj}
+        {@const activeWeb = normalizeUrl(activePlaceObj.website)}
+        <div class="map-active-sheet" role="region" aria-label="Vybrané místo na mapě">
+          <div class="mas-top">
+            <div>
+              <span class="mas-meta">
+                {activePlaceObj.subcategory || KIND_META[activePlaceObj.kind]?.label} · {formatDist(activePlaceObj.distanceKm)}
+              </span>
+              <strong class="mas-title">{activePlaceObj.name}</strong>
+            </div>
+            <button type="button" class="mas-close" aria-label="Zavřít náhled" on:click={() => (activePlaceId = null)}>
+              <AppIcon name="x" size={16} />
+            </button>
+          </div>
+          <p class="mas-mission">{concreteActionHint(activePlaceObj)}</p>
+          <div class="mas-actions">
+            {#if activeWeb}
+              <a href={activeWeb} target="_blank" rel="noopener noreferrer" class="near-btn primary">
+                <span>Web</span>
+                <AppIcon name="arrow-up-right" size={14} />
+              </a>
+            {:else}
+              <a
+                href={`https://mapy.cz/zakladni?x=${activePlaceObj.lon}&y=${activePlaceObj.lat}&z=17&q=${encodeURIComponent(activePlaceObj.name)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="near-btn primary"
+              >
+                <AppIcon name="compass" size={14} />
+                <span>Mapy.cz</span>
+                <AppIcon name="arrow-up-right" size={14} />
+              </a>
+            {/if}
+            <button type="button" class="near-btn ghost" on:click={() => focusPlaceInList(activePlaceObj)}>
+              <AppIcon name="list" size={14} />
+              <span>Detail v seznamu</span>
+            </button>
+          </div>
+        </div>
+      {/if}
     </div>
 
     <div class="list-column" class:hidden-mob={mobileView === 'map'}>
@@ -1551,39 +1731,6 @@
                 ? 'místa pomoci v okolí'
                 : 'míst pomoci v okolí'}
         </div>
-        <div class="list-filters">
-          {#if places.length > 3 || query.trim().length > 0}
-            <input
-              type="search"
-              id="near-list-filter"
-              name="q"
-              autocomplete="off"
-              aria-label="Hledat v seznamu míst"
-              class="filter-input"
-              placeholder="Hledat…"
-              bind:value={query}
-            />
-          {/if}
-          <select bind:value={sortBy} id="near-sort" name="sort" autocomplete="off" class="sort-select" aria-label="Řazení míst">
-            <option value="easy">Nejjednodušší start</option>
-            <option value="distance">Podle vzdálenosti</option>
-            <option value="name">Abecedně A–Z</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- SOURCE TIER FILTER & LEGEND -->
-      <div class="source-tier-bar" role="group" aria-label="Filtrovat podle stupně ověření zdroje">
-        {#each SOURCE_FILTERS as sf}
-          <button
-            type="button"
-            class="source-chip"
-            class:active={sourceFilter === sf.id}
-            on:click={() => setSourceFilter(sf.id)}
-          >
-            {sf.label}
-          </button>
-        {/each}
       </div>
 
       {#if nearReturnPlace}
@@ -1595,7 +1742,8 @@
         >
           <div class="return-dopamine-head">
             <span class="return-dopamine-title">
-              ✨ Vítej zpět z místa {nearReturnPlace.title}! Povedlo se?
+              <AppIcon name="sparkles" size={15} />
+              <span>Vítej zpět z místa {nearReturnPlace.title}! Povedlo se?</span>
             </span>
             <span class="impact-payoff-badge">
               {getActionEffectMeta(nearReturnPlace, nearReturnMetric, { isReturnStrip: true }).badge}
@@ -1629,7 +1777,8 @@
                 });
               }}
             >
-              ✓ Hotovo – rozsvítit stopu
+              <AppIcon name="check" size={15} />
+              <span>Hotovo – rozsvítit stopu</span>
             </button>
             <button
               type="button"
@@ -1692,11 +1841,12 @@
               {/if}
             </p>
             <div class="near-empty-actions">
-              <button type="button" class="pc-btn primary" on:click={resetAndExpandSearch}>
+              <button type="button" class="near-btn primary" on:click={resetAndExpandSearch}>
                 Rozšířit okruh na 15 km a zrušit filtry
               </button>
-              <a href="/app/online" class="pc-btn ghost">
-                Zkusit 2minutový skutek online →
+              <a href="/app/online" class="near-btn ghost">
+                <span>Zkusit 2minutový skutek online</span>
+                <AppIcon name="arrow-right" size={14} strokeWidth={2} />
               </a>
             </div>
 
@@ -1722,7 +1872,8 @@
                           fetchNearby(org.lat, org.lon);
                         }}
                       >
-                        Přejít sem →
+                        <span>Přejít sem</span>
+                        <AppIcon name="arrow-right" size={14} strokeWidth={2} />
                       </button>
                     </div>
                   {/each}
@@ -1772,7 +1923,10 @@
         <div class="portals-mini-grid">
           {#each PORTALS.slice(0, 4) as portal}
             <a href={portal.url} target="_blank" rel="noopener noreferrer" class="portal-mini">
-              <strong>{portal.title} ↗</strong>
+              <strong>
+                <span>{portal.title}</span>
+                <AppIcon name="arrow-up-right" size={13} />
+              </strong>
               <span>{portal.desc}</span>
             </a>
           {/each}
@@ -1785,184 +1939,111 @@
 <style>
   .near-page {
     width: 100%;
-    max-width: 1220px;
-    margin: 0 auto;
-    padding: 0.2rem 1.15rem 3rem;
+    max-width: 1140px;
+    margin-inline: auto;
+    padding: 0.25rem 1.25rem 3rem;
     box-sizing: border-box;
-    overflow-x: hidden;
-  }
-
-  /* Compact Subpage Hero so Split Layout starts high above the fold (y ~ 180-230px on Desktop) */
-  .subpage-hero.near-header {
-    padding: 0.42rem 1rem;
-    margin-bottom: 0.35rem;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    text-align: left;
-  }
-
-  .near-header-main {
-    display: flex;
-    flex-direction: column;
-    gap: 0.04rem;
-  }
-
-  .hero-kicker {
-    font-size: 0.6rem;
-    font-weight: 800;
-    letter-spacing: 0.11em;
-    color: #fde68a;
-  }
-
-  .title {
-    font-family: var(--font-sans);
-    font-weight: 800;
-    color: #ffffff;
-    font-size: clamp(1.12rem, 1.65vw, 1.38rem);
-    line-height: 1.08;
-    margin: 0;
-    letter-spacing: -0.025em;
-  }
-
-  .title .serif-accent {
-    color: #fde68a;
-    font-weight: 400;
-  }
-
-  .subtitle {
-    color: rgba(236, 248, 241, 0.9);
-    margin: 0;
-    max-width: 54ch;
-    font-size: 0.76rem;
-    line-height: 1.3;
+    overflow-x: clip;
   }
 
   /* Controls Card */
   .controls-card {
-    background: rgba(255, 255, 255, 0.96);
-    border: 1px solid rgba(22, 66, 48, 0.11);
-    border-radius: 15px;
-    padding: 0.42rem 0.78rem;
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    border-radius: 16px;
+    padding: 0.72rem 0.9rem;
     box-shadow: var(--shadow-sm);
-    margin-bottom: 0.4rem;
+    margin-bottom: 0.75rem;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .controls-top {
     display: flex;
-    gap: 0.4rem;
+    gap: 0.45rem;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 
   .gps-btn {
-    padding: 0.32rem 0.66rem;
-    border-radius: 9px;
-    background: #eef7f1;
-    border: 1px solid rgba(5, 150, 105, 0.28);
-    color: #065f46;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.45rem 0.78rem;
+    border-radius: 10px;
+    background: var(--bg-subtle, #edf2ee);
+    border: 1px solid var(--border-strong, #c2cec5);
+    color: var(--accent-primary, #1b5e42);
     font-family: var(--font-sans);
-    font-size: 0.77rem;
+    font-size: 0.8rem;
     font-weight: 700;
     cursor: pointer;
     white-space: nowrap;
-    transition: all 0.16s ease;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    box-sizing: border-box;
+    transition: background-color 0.16s ease, color 0.16s ease;
   }
 
   .gps-btn:hover {
-    background: #059669;
+    background: var(--accent-primary, #1b5e42);
     color: #ffffff;
+    border-color: var(--accent-primary, #1b5e42);
   }
 
   .search-box {
     flex: 1;
-    min-width: 220px;
+    min-width: 0;
     display: flex;
-    gap: 0.32rem;
+    gap: 0.35rem;
   }
 
   .search-box input {
     flex: 1;
-    padding: 0.32rem 0.66rem;
-    border-radius: 9px;
-    border: 1px solid rgba(22, 66, 48, 0.15);
+    min-width: 0;
+    min-height: 44px;
+    padding: 0.45rem 0.72rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-subtle, #dce3dd);
     font-family: var(--font-sans);
-    font-size: 0.79rem;
-    background: #ffffff;
+    font-size: 0.88rem;
+    background: var(--bg-surface, #ffffff);
+    color: var(--ink-primary, #14281d);
+    box-sizing: border-box;
   }
 
   .btn-find {
-    padding: 0.32rem 0.76rem;
-    border-radius: 9px;
-    border: none;
-    background: var(--forest-850);
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.45rem 0.88rem;
+    border-radius: 10px;
+    border: 1px solid var(--accent-primary, #1b5e42);
+    background: var(--accent-primary, #1b5e42);
     color: #ffffff;
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 0.77rem;
+    font-size: 0.8rem;
     cursor: pointer;
-  }
-
-  .city-jump-select {
-    padding: 0.32rem 0.6rem;
-    border-radius: 9px;
-    border: 1px solid rgba(22, 66, 48, 0.15);
-    background: #ffffff;
-    font-family: var(--font-sans);
-    font-size: 0.77rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    cursor: pointer;
-  }
-
-  .radius-box {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    font-size: 0.78rem;
-    color: var(--text-secondary);
-  }
-
-  .radius-label {
-    font-weight: 700;
-    white-space: nowrap;
-  }
-
-  .radius-pills {
+    flex-shrink: 0;
     display: inline-flex;
-    gap: 0.22rem;
-    background: #f2f7f4;
-    padding: 0.18rem;
-    border-radius: 999px;
-    border: 1px solid rgba(22, 66, 48, 0.1);
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    box-sizing: border-box;
   }
 
-  .radius-pill {
-    padding: 0.24rem 0.52rem;
-    border-radius: 999px;
-    border: none;
-    background: transparent;
-    color: var(--text-secondary);
-    font-family: var(--font-sans);
-    font-size: 0.74rem;
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-
-  .radius-pill.active {
-    background: var(--forest-850);
-    color: #fde68a;
+  .btn-find:hover {
+    background: var(--accent-primary-hover, #144732);
+    border-color: var(--accent-primary-hover, #144732);
   }
 
   .info-note {
     margin-top: 0.45rem;
     font-size: 0.8rem;
     font-weight: 600;
-    color: #065f46;
+    color: var(--accent-primary, #1b5e42);
   }
 
   .geo-dropdown {
@@ -1973,102 +2054,313 @@
 
   .geo-opt {
     text-align: left;
-    padding: 0.48rem 0.75rem;
+    min-height: 44px;
+    padding: 0.5rem 0.75rem;
     border-radius: 11px;
-    border: 1px solid rgba(22, 66, 48, 0.12);
-    background: #ffffff;
+    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bg-surface, #ffffff);
     cursor: pointer;
     display: flex;
     flex-direction: column;
+    gap: 0.12rem;
+    box-sizing: border-box;
+  }
+
+  .geo-opt strong {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--ink-primary, #14281d);
   }
 
   .geo-opt span {
     font-size: 0.76rem;
-    color: var(--text-muted);
+    color: var(--ink-muted, #61786b);
   }
 
-  .controls-bottom {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-top: 0.38rem;
-    padding-top: 0.36rem;
-    border-top: 1px solid rgba(22, 66, 48, 0.07);
+  .controls-presets-row {
+    margin-top: 0.55rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid var(--border-subtle, #dce3dd);
   }
 
   .presets-bar {
     display: flex;
-    gap: 0.3rem;
+    gap: 0.35rem;
     flex-wrap: wrap;
   }
 
   .preset-pill {
-    padding: 0.26rem 0.68rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.4rem 0.78rem;
     border-radius: 999px;
-    border: 1px solid rgba(22, 66, 48, 0.1);
-    background: #f5f9f6;
-    color: var(--text-primary);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--ink-primary, #14281d);
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 0.76rem;
+    font-size: 0.78rem;
     cursor: pointer;
-    transition: all 0.16s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    box-sizing: border-box;
+    transition: background-color 0.16s ease, border-color 0.16s ease;
   }
 
   .preset-pill:hover {
-    border-color: rgba(16, 185, 129, 0.38);
-    background: #ffffff;
+    border-color: var(--accent-primary, #1b5e42);
+    background: var(--bg-surface, #ffffff);
   }
 
   .preset-pill.active {
-    background: var(--forest-850);
-    color: #fde68a;
-    border-color: var(--forest-850);
+    background: var(--accent-primary, #1b5e42);
+    color: #ffffff;
+    border-color: var(--accent-primary, #1b5e42);
+  }
+
+  .controls-utility-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-top: 0.55rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid var(--border-subtle, #dce3dd);
+  }
+
+  .near-filters-drawer {
+    flex: 1 1 560px;
+    min-width: 0;
+  }
+
+  .near-filters-summary {
+    list-style: none;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.42rem 0.78rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-strong, #c2cec5);
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--ink-primary, #14281d);
+    font-family: var(--font-sans);
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    box-sizing: border-box;
+  }
+
+  .near-filters-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .near-filters-body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .city-jump-select {
+    min-height: 44px;
+    padding: 0.4rem 0.65rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bg-surface, #ffffff);
+    font-family: var(--font-sans);
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--ink-primary, #14281d);
+    cursor: pointer;
+    box-sizing: border-box;
+  }
+
+  .radius-box {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    color: var(--ink-secondary, #3f574a);
+  }
+
+  .radius-label {
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .radius-pills {
+    display: inline-flex;
+    gap: 0.22rem;
+    background: var(--bg-subtle, #edf2ee);
+    padding: 0.18rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle, #dce3dd);
+  }
+
+  .radius-pill {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.32rem 0.62rem;
+    border-radius: 999px;
+    border: none;
+    background: transparent;
+    color: var(--ink-secondary, #3f574a);
+    font-family: var(--font-sans);
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+
+  .radius-pill.active {
+    background: var(--accent-primary, #1b5e42);
+    color: #ffffff;
+  }
+
+  .list-filters {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .filter-input {
+    min-height: 44px;
+    padding: 0.4rem 0.7rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bg-surface, #ffffff);
+    font-family: var(--font-sans);
+    font-size: 0.82rem;
+    color: var(--ink-primary, #14281d);
+    box-sizing: border-box;
+  }
+
+  .sort-select {
+    min-height: 44px;
+    padding: 0.4rem 0.7rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bg-surface, #ffffff);
+    font-family: var(--font-sans);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--ink-primary, #14281d);
+    box-sizing: border-box;
+  }
+
+  .source-tier-bar {
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .source-chip {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.35rem 0.72rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bg-surface, #ffffff);
+    color: var(--ink-secondary, #3f574a);
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.32rem;
+    box-sizing: border-box;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .source-chip.active {
+    background: var(--accent-primary, #1b5e42);
+    border-color: var(--accent-primary, #1b5e42);
+    color: #ffffff;
   }
 
   .controls-links {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    font-size: 0.78rem;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+    flex-shrink: 0;
   }
 
   .text-util-btn {
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.42rem 0.75rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bg-surface, #ffffff);
+    color: var(--ink-secondary, #3f574a);
     font-family: var(--font-sans);
     font-weight: 700;
     font-size: 0.78rem;
     cursor: pointer;
-    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.32rem;
+    box-sizing: border-box;
   }
 
   .text-util-btn:hover {
-    color: var(--text-primary);
+    color: var(--ink-primary, #14281d);
+    border-color: var(--border-strong, #c2cec5);
   }
 
   .text-util-link {
-    color: var(--emerald-600);
-    font-weight: 800;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.42rem 0.78rem;
+    border-radius: 10px;
+    border: 1px solid var(--accent-primary, #1b5e42);
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--accent-primary, #1b5e42);
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: 0.78rem;
     text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    box-sizing: border-box;
   }
 
   .text-util-link:hover {
-    text-decoration: underline;
+    background: var(--accent-primary, #1b5e42);
+    color: #ffffff;
   }
 
   .smart-nearest-banner {
     margin-bottom: 0.65rem;
     padding: 0.5rem 0.85rem;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(16, 185, 129, 0.25);
-    color: var(--text-secondary);
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    color: var(--ink-secondary, #3f574a);
     font-size: 0.81rem;
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
   }
 
   .mobile-tabs {
@@ -2079,21 +2371,28 @@
 
   .mobile-tabs button {
     flex: 1;
+    min-height: 44px;
+    min-width: 44px;
     padding: 0.5rem 0.65rem;
     border-radius: 11px;
-    border: 1px solid rgba(22, 66, 48, 0.14);
-    background: #ffffff;
-    color: var(--text-primary);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bg-surface, #ffffff);
+    color: var(--ink-primary, #14281d);
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 0.81rem;
+    font-size: 0.84rem;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    box-sizing: border-box;
   }
 
   .mobile-tabs button.active {
-    background: var(--forest-850);
-    color: #fde68a;
-    border-color: var(--forest-850);
+    background: var(--accent-primary, #1b5e42);
+    color: #ffffff;
+    border-color: var(--accent-primary, #1b5e42);
   }
 
   /* Split Layout */
@@ -2112,26 +2411,32 @@
 
   .map-column {
     position: sticky;
-    top: 76px;
+    top: 5.5rem;
+    scroll-margin-top: 5.25rem;
   }
 
   .map-frame {
     position: relative;
-    background: #ffffff;
-    border-radius: 22px;
+    z-index: 1;
+    isolation: isolate;
+    background: var(--bg-surface, #ffffff);
+    border-radius: 18px;
     overflow: hidden;
-    border: 1px solid rgba(22, 66, 48, 0.12);
+    border: 1px solid var(--border-subtle, #dce3dd);
     box-shadow: var(--shadow-md);
+  }
+
+  .map-stage {
+    position: relative;
   }
 
   .leaflet-canvas {
     width: 100%;
-    height: 390px;
-    background: #e7ece8;
+    height: 440px;
+    background: var(--bg-subtle, #edf2ee);
     z-index: 1;
   }
 
-  /* Refined CSS Cartographic Filters on Standard OpenStreetMap Tiles */
   .leaflet-canvas.is-calm-tiles :global(.leaflet-tile-pane) {
     filter: saturate(0.76) contrast(0.96) brightness(1.02) hue-rotate(-4deg);
     transition: filter 0.25s ease;
@@ -2145,46 +2450,48 @@
   .map-status-pill {
     position: absolute;
     top: 12px;
-    left: 54px;
+    left: 64px;
     z-index: 500;
-    padding: 0.32rem 0.74rem;
+    padding: 0.35rem 0.78rem;
     border-radius: 999px;
-    background: rgba(8, 25, 18, 0.88);
-    color: #fde68a;
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-strong, #c2cec5);
+    color: var(--ink-primary, #14281d);
     font-size: 0.74rem;
     font-weight: 700;
-    backdrop-filter: blur(8px);
+    box-shadow: var(--shadow-sm);
     pointer-events: none;
   }
 
   .search-area-btn {
     position: absolute;
-    bottom: 44px;
+    bottom: 26px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 520;
-    padding: 0.46rem 0.95rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.46rem 0.98rem;
     border-radius: 999px;
-    border: 1px solid rgba(52, 211, 153, 0.55);
-    background: rgba(8, 25, 18, 0.94);
-    color: #fde68a;
+    border: 1px solid var(--accent-primary, #1b5e42);
+    background: var(--accent-primary, #1b5e42);
+    color: #ffffff;
     font-family: var(--font-sans);
     font-size: 0.78rem;
-    font-weight: 800;
+    font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 10px 24px rgba(6, 21, 15, 0.32);
-    backdrop-filter: blur(8px);
+    box-shadow: var(--shadow-md);
     white-space: nowrap;
-    transition: transform 0.15s ease, background 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    box-sizing: border-box;
+    transition: background-color 0.15s ease;
   }
 
   .search-area-btn:hover {
-    transform: translateX(-50%) scale(1.03);
-    background: #064e3b;
-  }
-
-  .search-area-btn.above-sheet {
-    bottom: 148px;
+    background: var(--accent-primary-hover, #144732);
   }
 
   .map-floating-tools {
@@ -2195,35 +2502,45 @@
   }
 
   .tile-switch-btn {
-    padding: 0.34rem 0.72rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.38rem 0.78rem;
     border-radius: 999px;
-    border: 1px solid rgba(22, 66, 48, 0.18);
-    background: rgba(255, 255, 255, 0.95);
-    color: var(--text-primary);
+    border: 1px solid var(--border-strong, #c2cec5);
+    background: var(--bg-surface, #ffffff);
+    color: var(--ink-primary, #14281d);
     font-family: var(--font-sans);
-    font-size: 0.73rem;
+    font-size: 0.74rem;
     font-weight: 700;
     cursor: pointer;
     box-shadow: var(--shadow-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    box-sizing: border-box;
   }
 
   .tile-switch-btn.active {
-    border-color: rgba(5, 150, 105, 0.42);
-    background: #f2fbf6;
-    color: #065f46;
+    border-color: var(--accent-primary, #1b5e42);
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--accent-primary, #1b5e42);
   }
 
   .map-active-sheet {
-    position: absolute;
-    left: 12px;
-    right: 12px;
-    bottom: 12px;
-    z-index: 540;
-    background: rgba(255, 255, 255, 0.98);
-    border: 1px solid rgba(5, 150, 105, 0.35);
+    position: relative;
+    margin-top: 0.65rem;
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-strong, #c2cec5);
     border-radius: 16px;
-    padding: 0.75rem 0.9rem;
-    box-shadow: 0 14px 32px rgba(6, 21, 15, 0.28);
+    padding: 0.78rem 0.95rem;
+    box-shadow: var(--shadow-md);
+  }
+
+  @media (min-width: 981px) {
+    .map-active-sheet {
+      display: none;
+    }
   }
 
   .mas-top {
@@ -2235,49 +2552,106 @@
 
   .mas-meta {
     display: block;
-    font-size: 0.71rem;
+    font-size: 0.72rem;
     font-weight: 700;
-    color: var(--emerald-600);
+    color: var(--accent-primary, #1b5e42);
   }
 
   .mas-title {
     display: block;
     font-size: 0.95rem;
-    color: var(--text-primary);
+    color: var(--ink-primary, #14281d);
   }
 
   .mas-close {
-    border: none;
-    background: #f1f5f3;
+    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--ink-primary, #14281d);
     border-radius: 50%;
-    width: 26px;
-    height: 26px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
     cursor: pointer;
-    font-size: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-sizing: border-box;
   }
 
   .mas-mission {
     margin: 0.35rem 0 0.55rem;
-    font-size: 0.79rem;
-    color: var(--text-secondary);
+    font-size: 0.8rem;
+    color: var(--ink-secondary, #3f574a);
     line-height: 1.4;
   }
 
   .mas-actions {
     display: flex;
     gap: 0.45rem;
+    flex-wrap: wrap;
+  }
+
+  .near-btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.48rem 0.9rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bg-surface, #ffffff);
+    color: var(--ink-primary, #14281d);
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: 0.82rem;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    box-sizing: border-box;
+  }
+
+  .near-btn.primary {
+    background: var(--accent-primary, #1b5e42);
+    border-color: var(--accent-primary, #1b5e42);
+    color: #ffffff;
+  }
+
+  .near-btn.primary:hover {
+    background: var(--accent-primary-hover, #144732);
+  }
+
+  .near-btn.ghost {
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--ink-primary, #14281d);
+    border-color: var(--border-strong, #c2cec5);
   }
 
   .map-foot-hint {
-    padding: 0.48rem 0.85rem;
-    background: #f8faf8;
-    border-top: 1px solid rgba(22, 66, 48, 0.07);
-    font-size: 0.73rem;
-    color: var(--text-muted);
+    padding: 0.55rem 0.85rem;
+    background: var(--bg-subtle, #edf2ee);
+    border-top: 1px solid var(--border-subtle, #dce3dd);
+    font-size: 0.74rem;
+    color: var(--ink-secondary, #3f574a);
     display: flex;
     justify-content: space-between;
     gap: 0.5rem;
     flex-wrap: wrap;
+  }
+
+  .legend-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
   }
 
   .map-error-box {
@@ -2299,70 +2673,27 @@
 
   .count-heading {
     font-size: 0.92rem;
-    color: var(--text-secondary);
+    color: var(--ink-secondary, #3f574a);
   }
 
   .count-heading strong {
     font-size: 1.12rem;
-    color: var(--forest-850);
+    color: var(--ink-primary, #14281d);
   }
 
-  .list-filters {
-    display: flex;
-    gap: 0.4rem;
+  .return-dopamine-title {
+    display: inline-flex;
     align-items: center;
-    flex-wrap: wrap;
+    gap: 0.35rem;
   }
 
-  .filter-input {
-    padding: 0.38rem 0.68rem;
-    border-radius: 10px;
-    border: 1px solid rgba(22, 66, 48, 0.12);
-    background: rgba(255, 255, 255, 0.94);
-    font-family: var(--font-sans);
-    font-size: 0.79rem;
-    color: var(--text-primary);
+  .btn-return-complete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
   }
 
-  .sort-select {
-    padding: 0.38rem 0.68rem;
-    border-radius: 10px;
-    border: 1px solid rgba(22, 66, 48, 0.12);
-    background: rgba(255, 255, 255, 0.94);
-    font-family: var(--font-sans);
-    font-size: 0.79rem;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  /* Source Tier Bar */
-  .source-tier-bar {
-    display: flex;
-    gap: 0.25rem;
-    flex-wrap: wrap;
-    margin-bottom: 0.55rem;
-  }
-
-  .source-chip {
-    padding: 0.22rem 0.52rem;
-    border-radius: 999px;
-    border: 1px solid rgba(22, 66, 48, 0.11);
-    background: rgba(255, 255, 255, 0.86);
-    color: var(--text-secondary);
-    font-family: var(--font-sans);
-    font-size: 0.71rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .source-chip.active {
-    background: #e6f6ee;
-    border-color: rgba(5, 150, 105, 0.42);
-    color: #064e3b;
-  }
-
-  /* Clean Place Cards */
   .places-stack {
     display: flex;
     flex-direction: column;
@@ -2375,7 +2706,7 @@
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 650;
-    background: rgba(13, 33, 24, 0.86);
+    background: var(--ink-primary, #14281d);
     color: #ffffff;
     font-size: 0.78rem;
     font-weight: 700;
@@ -2384,35 +2715,10 @@
     pointer-events: none;
   }
 
-  .pc-btn {
-    padding: 0.44rem 0.8rem;
-    border-radius: 10px;
-    border: 1px solid rgba(22, 66, 48, 0.12);
-    background: #ffffff;
-    color: var(--text-primary);
-    font-family: var(--font-sans);
-    font-weight: 700;
-    font-size: 0.79rem;
-    text-decoration: none;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .pc-btn.primary {
-    background: var(--forest-850);
-    border-color: var(--forest-850);
-    color: #ffffff;
-  }
-
-  .pc-btn.ghost {
-    background: transparent;
-    color: var(--text-secondary);
-  }
-
   .near-empty-fallback {
-    background: rgba(255, 255, 255, 0.96);
-    border: 1px solid rgba(22, 66, 48, 0.12);
-    border-radius: 20px;
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    border-radius: 18px;
     padding: 1.35rem 1.4rem;
     box-shadow: var(--shadow-sm);
   }
@@ -2421,14 +2727,14 @@
     margin: 0 0 0.45rem;
     font-size: 1.05rem;
     font-weight: 800;
-    color: var(--forest-850);
+    color: var(--ink-primary, #14281d);
   }
 
   .near-empty-fallback p {
     margin: 0 0 0.95rem;
     font-size: 0.88rem;
     line-height: 1.52;
-    color: var(--text-secondary);
+    color: var(--ink-secondary, #3f574a);
   }
 
   .near-empty-actions {
@@ -2440,14 +2746,14 @@
 
   .nearest-verified-box {
     padding-top: 0.8rem;
-    border-top: 1px solid rgba(22, 66, 48, 0.09);
+    border-top: 1px solid var(--border-subtle, #dce3dd);
   }
 
   .nv-label {
     display: block;
     font-size: 0.76rem;
     font-weight: 800;
-    color: var(--text-muted);
+    color: var(--ink-muted, #61786b);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     margin-bottom: 0.45rem;
@@ -2469,24 +2775,31 @@
   }
 
   .nv-meta {
-    color: var(--text-muted);
+    color: var(--ink-muted, #61786b);
     font-size: 0.77rem;
   }
 
   .nv-jump-btn {
-    border: none;
-    background: rgba(16, 185, 129, 0.12);
-    color: #065f46;
+    border: 1px solid var(--border-strong, #c2cec5);
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--accent-primary, #1b5e42);
     font-family: var(--font-sans);
-    font-size: 0.77rem;
+    font-size: 0.78rem;
     font-weight: 700;
-    padding: 0.26rem 0.62rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.35rem 0.75rem;
     border-radius: 999px;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    box-sizing: border-box;
   }
 
   .nv-jump-btn:hover {
-    background: #059669;
+    background: var(--accent-primary, #1b5e42);
     color: #ffffff;
   }
 
@@ -2497,13 +2810,20 @@
   .near-show-all {
     background: none;
     border: none;
-    color: var(--text-muted);
+    color: var(--ink-secondary, #3f574a);
     font-family: var(--font-sans);
-    font-size: 0.79rem;
+    font-size: 0.8rem;
     font-weight: 700;
     text-decoration: underline;
     text-underline-offset: 3px;
     cursor: pointer;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.4rem 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
   }
 
   .extra-drawer {
@@ -2518,62 +2838,123 @@
   }
 
   .portal-mini {
+    min-height: 44px;
     padding: 0.65rem 0.8rem;
     border-radius: 12px;
-    background: #ffffff;
-    border: 1px solid rgba(22, 66, 48, 0.08);
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-subtle, #dce3dd);
     text-decoration: none;
     display: flex;
     flex-direction: column;
     gap: 0.16rem;
+    box-sizing: border-box;
   }
 
   .portal-mini strong {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
     font-size: 0.83rem;
-    color: #059669;
+    color: var(--accent-primary, #1b5e42);
   }
 
   .portal-mini span {
     font-size: 0.76rem;
-    color: var(--text-secondary);
+    color: var(--ink-secondary, #3f574a);
     line-height: 1.38;
   }
 
-  /* Custom Leaflet Pins */
+  /* Custom Leaflet Controls & Pins */
+  .map-frame :global(.leaflet-popup-content-wrapper) {
+    border-radius: 14px;
+    border: 1px solid var(--border-strong, #c2cec5);
+    box-shadow: 0 10px 26px -6px rgba(18, 42, 30, 0.18);
+    padding: 0;
+  }
+
+  .map-frame :global(.leaflet-popup-content) {
+    margin: 10px 13px;
+    line-height: 1.36;
+  }
+
+  .map-frame :global(.leaflet-popup-close-button) {
+    top: 6px;
+    right: 6px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-secondary, #3f574a);
+    font-size: 18px;
+    line-height: 1;
+    padding: 0;
+    text-decoration: none;
+  }
+
+  .map-frame :global(.leaflet-popup-close-button:hover) {
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--ink-primary, #14281d);
+  }
+
+  .map-frame :global(.leaflet-control-zoom a) {
+    min-width: 44px;
+    min-height: 44px;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    line-height: 1;
+    box-sizing: border-box;
+  }
+
   :global(.aa-map-pin) {
     background: transparent;
     border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   :global(.aa-map-pin .pin-bubble) {
     position: relative;
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     background: #ffffff;
-    border: 2.5px solid var(--pin-color, #059669);
-    box-shadow: 0 6px 16px rgba(6, 21, 15, 0.24);
+    border: 2px solid var(--pin-color, #1b5e42);
+    box-shadow: 0 3px 10px rgba(18, 42, 30, 0.16);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 17px;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
 
+  :global(.aa-map-pin .pin-glyph) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--pin-color, #1b5e42);
+  }
+
   :global(.aa-map-pin .pin-bubble.is-curated) {
-    background: #fffef7;
-    border: 3px solid #059669;
-    box-shadow: 0 8px 20px rgba(6, 21, 15, 0.28), 0 0 0 3px rgba(251, 191, 36, 0.45);
+    background: var(--accent-warm-tint, #fef6e8);
+    border: 2.5px solid var(--accent-primary, #1b5e42);
+    box-shadow: 0 4px 12px rgba(18, 42, 30, 0.2);
   }
 
   :global(.aa-map-pin .pin-bubble.is-community) {
-    background: #f0fdfa;
-    border: 2.5px solid #0d9488;
+    background: var(--bg-subtle, #edf2ee);
+    border: 2px solid #0f766e;
   }
 
   :global(.aa-map-pin .pin-bubble.is-active) {
-    transform: scale(1.22);
-    box-shadow: 0 10px 24px rgba(6, 21, 15, 0.38), 0 0 0 5px rgba(16, 185, 129, 0.45);
+    transform: scale(1.16);
+    border-color: var(--ink-primary, #14281d);
+    box-shadow: 0 6px 16px rgba(18, 42, 30, 0.28);
   }
 
   :global(.aa-map-pin .pin-star),
@@ -2581,27 +2962,30 @@
     position: absolute;
     top: -4px;
     right: -4px;
-    width: 15px;
-    height: 15px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    background: #f59e0b;
+    background: #8f4b0e;
     color: #ffffff;
     font-style: normal;
-    font-size: 9px;
-    font-weight: 900;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 2px 5px rgba(18, 42, 30, 0.2);
   }
 
   :global(.aa-map-pin .pin-leaf) {
-    background: #0d9488;
-    font-size: 8px;
+    background: var(--accent-primary, #1b5e42);
   }
 
   :global(.aa-map-pin:hover .pin-bubble) {
-    transform: scale(1.18);
+    transform: scale(1.14);
+  }
+
+  @media (min-width: 681px) {
+    .near-filters-summary {
+      display: none;
+    }
   }
 
   @media (max-width: 980px) {
@@ -2627,159 +3011,60 @@
 
   @media (max-width: 680px) {
     .near-page {
-      padding: 0.06rem 0.5rem calc(5.2rem + env(safe-area-inset-bottom, 0px));
-      overflow-x: hidden;
-      width: 100%;
-      box-sizing: border-box;
+      padding: 0.2rem 0.75rem 2rem;
     }
 
-    .subpage-hero.near-header {
-      padding: 0.24rem 0.55rem;
-      margin-bottom: 0.16rem;
-      border-radius: 14px;
+    :global(.near-page-header) {
+      padding: 0.55rem 0 0.45rem;
+      margin-bottom: 0.55rem;
     }
 
-    .near-header .hero-kicker,
-    .near-header .subtitle {
-      display: none !important;
-    }
-
-    .near-header .title {
-      font-size: 1.02rem;
-      line-height: 1.12;
-      margin: 0;
+    :global(.near-page-header .page-header-subtitle) {
+      display: none;
     }
 
     .controls-card {
-      padding: 0.26rem 0.44rem;
-      margin-bottom: 0.16rem;
+      padding: 0.55rem 0.6rem;
+      margin-bottom: 0.55rem;
       border-radius: 14px;
-      max-width: 100%;
-      box-sizing: border-box;
     }
 
     .controls-top {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.22rem;
-      align-items: center;
-      width: 100%;
+      flex-wrap: nowrap;
+      gap: 0.35rem;
     }
 
     .gps-btn {
-      order: 1;
-      flex-shrink: 0;
-      padding: 0.34rem 0.54rem;
-      font-size: 0.74rem;
-      min-height: 44px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 9px;
-      box-sizing: border-box;
-    }
-
-    .city-jump-select {
-      order: 2;
-      flex: 1 1 112px;
-      min-width: 0;
-      max-width: none;
-      padding: 0.24rem 0.36rem;
-      font-size: 1rem;
-      min-height: 44px;
-      border-radius: 9px;
-      box-sizing: border-box;
-    }
-
-    .search-box {
-      order: 3;
-      flex: 1 1 100%;
-      min-width: 0;
-      display: flex;
-      gap: 0.22rem;
+      padding: 0.4rem 0.58rem;
+      font-size: 0.76rem;
     }
 
     .search-box input {
-      flex: 1;
-      min-width: 0;
-      padding: 0.34rem 0.5rem;
+      padding: 0.4rem 0.55rem;
       font-size: 1rem;
-      border-radius: 9px;
-      min-height: 44px;
-      box-sizing: border-box;
     }
 
     .btn-find {
-      padding: 0.34rem 0.56rem;
+      padding: 0.4rem 0.65rem;
       font-size: 0.78rem;
-      min-height: 44px;
-      flex-shrink: 0;
-      border-radius: 9px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      box-sizing: border-box;
     }
 
-    .radius-box {
-      order: 4;
-      width: 100%;
-      display: flex;
-      align-items: center;
-      gap: 0.26rem;
-      margin-top: 0;
-    }
-
-    .radius-label {
-      display: inline-block;
-      font-size: 0.73rem;
-      font-weight: 700;
-      color: var(--text-secondary);
-    }
-
-    .radius-pills {
-      display: flex;
-      flex: 1;
-      width: 100%;
-      box-sizing: border-box;
-      gap: 0.18rem;
-      padding: 0.08rem;
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-
-    .radius-pill {
-      flex: 1 1 0;
-      padding: 0.32rem 0.38rem;
-      font-size: 0.74rem;
-      min-height: 44px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      box-sizing: border-box;
-    }
-
-    .controls-bottom {
-      margin-top: 0.18rem;
-      padding-top: 0.16rem;
-      gap: 0.18rem;
-      min-width: 0;
+    .controls-presets-row {
+      margin-top: 0.45rem;
+      padding-top: 0.45rem;
     }
 
     .presets-bar {
-      display: flex;
       flex-wrap: nowrap;
       overflow-x: auto;
-      gap: 0.24rem;
+      gap: 0.3rem;
       width: 100%;
       max-width: 100%;
       min-width: 0;
       scrollbar-width: none;
       -webkit-overflow-scrolling: touch;
       scroll-snap-type: x mandatory;
-      mask-image: linear-gradient(to right, black 0%, black calc(100% - 28px), transparent 100%);
-      -webkit-mask-image: linear-gradient(to right, black 0%, black calc(100% - 28px), transparent 100%);
-      padding: 0.02rem 1rem 0.06rem 0.02rem;
+      padding-bottom: 0.08rem;
     }
 
     .presets-bar::-webkit-scrollbar {
@@ -2789,138 +3074,74 @@
     .preset-pill {
       flex: 0 0 auto;
       white-space: nowrap;
-      padding: 0.34rem 0.62rem;
-      font-size: 0.75rem;
-      min-height: 44px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 999px;
+      padding: 0.38rem 0.7rem;
+      font-size: 0.76rem;
       scroll-snap-align: start;
-      box-sizing: border-box;
     }
 
-    .controls-links {
-      display: none;
-    }
-
-    .smart-nearest-banner {
-      margin-bottom: 0.18rem;
-      padding: 0.22rem 0.48rem;
-      font-size: 0.7rem;
-      line-height: 1.24;
-    }
-
-    .mobile-tabs {
-      display: flex;
-      gap: 0.3rem;
-      margin-bottom: 0.24rem;
-      background: rgba(22, 66, 48, 0.06);
-      padding: 0.14rem;
-      border-radius: 14px;
-      border: 1px solid rgba(22, 66, 48, 0.1);
-      box-sizing: border-box;
-    }
-
-    .mobile-tabs button {
-      flex: 1;
-      min-height: 44px;
-      padding: 0.45rem 0.68rem;
-      border-radius: 10px;
-      border: 1px solid transparent;
-      background: transparent;
-      color: var(--text-secondary);
-      font-family: var(--font-sans);
-      font-weight: 700;
-      font-size: 0.84rem;
-      cursor: pointer;
-      display: inline-flex;
+    .controls-utility-row {
+      margin-top: 0.45rem;
+      padding-top: 0.45rem;
+      gap: 0.35rem;
       align-items: center;
-      justify-content: center;
-      gap: 0.32rem;
-      transition: all 0.18s ease;
-      box-sizing: border-box;
     }
 
-    .mobile-tabs button.active {
-      background: var(--forest-850);
-      color: #fde68a;
-      border-color: var(--forest-850);
-      box-shadow: var(--shadow-sm);
+    .near-filters-drawer {
+      flex: 0 0 auto;
     }
 
-    .split-layout {
-      gap: 0.2rem;
+    .near-filters-drawer[open] {
+      flex: 1 1 100%;
+      width: 100%;
     }
 
-    .leaflet-canvas,
-    .leaflet-canvas.map-expanded {
-      height: min(46dvh, 320px);
-      min-height: 260px;
+    .near-filters-body {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.45rem;
+      margin-top: 0.45rem;
     }
 
-    .search-area-btn {
-      bottom: 14px;
-      font-size: 0.72rem;
-      padding: 0.38rem 0.78rem;
+    .city-jump-select,
+    .filter-input,
+    .sort-select {
+      font-size: 1rem;
+      width: 100%;
+      max-width: none;
+      min-height: 44px;
     }
 
-    .map-foot-hint {
-      display: none;
-    }
-
-    .list-toolbar {
-      margin-bottom: 0.16rem;
-      padding: 0;
-      gap: 0.2rem;
+    .radius-box {
+      width: 100%;
       flex-wrap: wrap;
     }
 
-    .count-heading {
-      font-size: 0.73rem;
-      white-space: nowrap;
+    .radius-pills {
+      display: flex;
+      flex: 1;
+      width: 100%;
+      overflow-x: auto;
+      scrollbar-width: none;
     }
 
-    .count-heading strong {
-      font-size: 0.85rem;
+    .radius-pill {
+      flex: 1 1 auto;
+      padding: 0.35rem 0.45rem;
+      font-size: 0.75rem;
     }
 
     .list-filters {
-      display: flex;
-      flex-wrap: nowrap;
-      gap: 0.2rem;
-      min-width: 0;
-      flex: 1;
-      justify-content: flex-end;
-    }
-
-    .filter-input,
-    .sort-select {
-      min-height: 44px;
-      font-size: 1rem;
-      border-radius: 8px;
-      padding: 0.22rem 0.4rem;
-      box-sizing: border-box;
-      min-width: 0;
-    }
-
-    .filter-input {
-      max-width: 86px;
-    }
-
-    .sort-select {
-      max-width: 132px;
+      width: 100%;
+      flex-direction: column;
+      align-items: stretch;
     }
 
     .source-tier-bar {
       flex-wrap: nowrap;
       overflow-x: auto;
       scrollbar-width: none;
-      margin-bottom: 0.2rem;
-      gap: 0.2rem;
-      width: 100%;
+      gap: 0.25rem;
       max-width: 100%;
-      min-width: 0;
     }
 
     .source-tier-bar::-webkit-scrollbar {
@@ -2930,37 +3151,60 @@
     .source-chip {
       flex: 0 0 auto;
       white-space: nowrap;
-      min-height: 44px;
-      padding: 0.28rem 0.55rem;
-      font-size: 0.72rem;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      box-sizing: border-box;
+      font-size: 0.74rem;
+    }
+
+    .controls-links {
+      margin-left: auto;
+      gap: 0.35rem;
+    }
+
+    .text-util-btn,
+    .text-util-link {
+      padding: 0.4rem 0.65rem;
+      font-size: 0.76rem;
+    }
+
+    .smart-nearest-banner {
+      margin-bottom: 0.45rem;
+      padding: 0.4rem 0.65rem;
+      font-size: 0.75rem;
+    }
+
+    .mobile-tabs {
+      margin-bottom: 0.5rem;
+    }
+
+    .split-layout {
+      gap: 0.5rem;
+    }
+
+    .leaflet-canvas,
+    .leaflet-canvas.map-expanded {
+      height: min(48dvh, 360px);
+      min-height: 260px;
+    }
+
+    .search-area-btn {
+      bottom: 24px;
+      font-size: 0.74rem;
+      padding: 0.4rem 0.8rem;
+    }
+
+    .map-foot-hint {
+      display: none;
+    }
+
+    .list-toolbar {
+      margin-bottom: 0.4rem;
+    }
+
+    .count-heading {
+      font-size: 0.82rem;
     }
 
     .places-stack {
       gap: 0.75rem;
-    }
-
-    :global(html) {
-      scroll-padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
-    }
-
-    :global(.place-card button),
-    :global(.place-card a) {
-      scroll-margin-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
-    }
-
-    .pc-btn {
-      min-height: 44px;
-      padding: 0.48rem 0.75rem;
-      font-size: 0.78rem;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 10px;
-      box-sizing: border-box;
     }
   }
 </style>

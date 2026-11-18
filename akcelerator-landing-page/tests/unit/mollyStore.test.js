@@ -54,7 +54,7 @@ describe('mollyStore Unit Tests (Milestone 3: Follow Mouse & State Transitions)'
       const stateWithWhisper = get(mollyState);
       expect(stateWithWhisper.followMouse).toBe(true);
       expect(stateWithWhisper.whisper).not.toBeNull();
-      expect(stateWithWhisper.whisper?.icon).toBe('🐾');
+      expect(stateWithWhisper.whisper?.icon).toBe('paw');
       expect(stateWithWhisper.whisper?.text).toContain('Půjdu s tebou');
       expect(safeGetItem(MOLLY_FOLLOW_MOUSE_KEY, 'local')).toBe('true');
 
@@ -64,7 +64,7 @@ describe('mollyStore Unit Tests (Milestone 3: Follow Mouse & State Transitions)'
 
       const stateSecond = get(mollyState);
       expect(stateSecond.followMouse).toBe(false);
-      expect(stateSecond.whisper?.icon).toBe('🧺');
+      expect(stateSecond.whisper?.icon).toBe('home');
       expect(stateSecond.whisper?.text).toContain('Zůstanu na svém klidném místě');
       expect(safeGetItem(MOLLY_FOLLOW_MOUSE_KEY, 'local')).toBe('false');
     });
@@ -137,7 +137,7 @@ describe('mollyStore Unit Tests (Milestone 3: Follow Mouse & State Transitions)'
       expect(afterState.treatsFedTotal).toBe(beforeTreatsTotal);
       expect(afterState.giftDeeds).toBe(beforeGiftDeeds);
       expect(afterState.availableTreats).toBe(beforeAvailable);
-      expect(afterState.whisper?.icon).toBe('✨');
+      expect(afterState.whisper?.icon).toBe('sparkles');
     });
 
     it('petMolly increments petCount and sets purring mood', () => {

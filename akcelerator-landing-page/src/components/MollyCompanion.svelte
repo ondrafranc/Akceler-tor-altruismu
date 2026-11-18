@@ -1,18 +1,15 @@
 <script>
-  import { onMount, onDestroy, tick } from 'svelte';
+  import { onMount, onDestroy, tick as svelteTick } from 'svelte';
   import { page } from '$app/stores';
   import {
     mollyState,
     mollyEvents,
     petMolly,
-    toggleMollyPelisek,
-    toggleMollyFollowMouse,
     mollyWhisper
   } from '$lib/mollyStore.js';
   import {
     getMollyAccessories,
     describeNextMollyGift,
-    getNextMollyGiftProgress,
     MOLLY_ROUTE_GUIDES,
     getMollyGreeting
   } from '$lib/mollyTypes.js';
@@ -20,20 +17,23 @@
   import { playMollyPurr, playMollyMeow } from '$lib/audio/presets.js';
   import { safeGetItem, safeSetItem, AA_MOLLY_HINTS_KEY, AA_MOLLY_NUDGES_KEY } from '$lib/storage/index.js';
   import { drawMollyCat as renderProceduralMollyCat } from '$lib/molly/mollyCatRenderer.js';
+  import AppIcon from '$lib/components/AppIcon.svelte';
+  import MollyDock, { isCompactDock, mollyDockBridge, normalizeMollyIcon } from './MollyDock.svelte';
 
   let catCanvas = null;
   let catCtx = null;
   let actorEl = null;
   let treatEl = null;
-  let petBtnEl = null;
-  let toggleBtnEl = null;
   let rafId = 0;
   let mounted = false;
   const LOGICAL_W = 110;
   const LOGICAL_H = 96;
+  const CAT_SAFETY_X = 4;
+  const CAT_SAFETY_TOP = 6;
+  const CAT_SAFETY_BOTTOM = 2;
   // Poslední zapsaná transformace — DOM zapisujeme jen při skutečné změně (žádný layout thrash)
   let lastActorTransform = '';
-  // Bublina se šeptandou je MIMO herce (nezmenšuje se s kočkou na mobilu) a umisťuje se v rAF
+  // Bublina se šeptandou je MIMO herce (nezmenšuje se s kočkou na mobilu) a umisťuje se mimo rAF
   let bubbleEl = null;
   let bubbleW = 0;
   let bubbleH = 0;
@@ -43,7 +43,7 @@
   let pendingWhisperMs = 0;
   let relocateTimer = null;
   // Nevyžádaný tip (průvodce), pro který teď není volné místo: zkusíme to znovu, a když ani pak
-  // ne, uloží se do pelíšku jako „💬 tip“ — ukáže se až na klepnutí (nic nezakryje sám od sebe).
+  // ne, uloží se do pelíšku jako nevtíravý indikátor — ukáže se až na klepnutí (nic nezakryje sám od sebe).
   /** @type {{ icon?: string, text: string } | null} */
   let pendingTip = null;
   let deferTimer = null;
@@ -51,6 +51,8 @@
   let lastSeenWhisperTs = 0;
   // Na /svet bydlí Molly u jezera přímo v krajině — toulavá Molly se tam schová (žádné dvě Molly naráz)
   let atHome = false;
+  // Na přeplněné obrazovce Molly tiše zaparkuje v pelíšku, aniž by měnila uživatelské nastavení režimu
+  let crowdedPark = false;
   let lastRenderTs = 0;
   // Krok snímku vůči 60 fps — částice (srdíčka, světluška) běží stejně rychle na 60/120 Hz i při poklesu FPS
   let frameK = 1;
@@ -81,14 +83,6 @@
   let hasFinePointer = false;
   let lastPointerMoveTs = 0;
 
-  // Star / Firefly chasing ("honit hvezdicky v pozadi") & Bleeding-Edge VFX (R3)
-  let chasedStar = null; // { x, y, vx, vy, phase, life, alpha, caught, catchTimer }
-  let starEl = null;
-  let lastStarTransform = '';
-  let stardust = []; // [{ x, y, vx, vy, size, color, alpha, twinkle }]
-  let pouncePhase = 0;
-  let lastStarSpawnTs = 0;
-
   // Ambient firefly & heart particles around Molly
   let firefly = null; // { x, y, vx, vy, phase, alpha }
   let hearts = []; // { x, y, vy, scale, alpha, color }
@@ -102,6 +96,7 @@
   let walkArriveSafetyTimer = null;
   let dockAnchoredBubble = false;
   let bubbleTravelling = false;
+  let forceDockWhisper = false;
 
   let unsubEvents = null;
   let unsubState = null;
@@ -123,6 +118,7 @@
     if (walkArriveSafetyTimer) clearTimeout(walkArriveSafetyTimer);
     pendingWhisperMs = durationMs;
     dockAnchoredBubble = false;
+    forceDockWhisper = false;
     whisperHideTimer = setTimeout(hideWhisperBubble, durationMs);
     placeWhisperBubble();
   }
@@ -137,7 +133,10 @@
     bubbleH = 0;
     dockAnchoredBubble = false;
     bubbleTravelling = false;
+    forceDockWhisper = false;
     lastBubbleTransform = '';
+    cachedWhisperRectKey = '';
+    cachedWhisperRect = null;
   }
 
   function clearDeferredGuide() {
@@ -174,22 +173,16 @@
     }, 1050);
   }
 
-  /** Přímá kontrola překryvu s interaktivními prvky stránky (mimo rAF, před zobrazením nevyžádaného tipu). */
+  /** Čistá kontrola překryvu s předměřenými interaktivními prvky stránky (nikdy nečte DOM). */
   function directControlOverlapAt(x) {
-    if (typeof document === 'undefined') return 0;
+    if (cachedControlRects.length === 0) return 0;
     const { vw, vh } = viewportSize();
     const s = actorScale(vw);
     const bub = defaultBubbleRectAt(x, groundLine(vw, vh), s, vw);
     if (!bub) return 0;
     let area = 0;
-    const controls = document.querySelectorAll('a[href], button, input, select, textarea');
-    for (const el of controls) {
-      if (el.closest('.molly-companion-layer, .mobile-bottom-nav, .top-nav')) continue;
-      const t = el.getBoundingClientRect();
-      if (t.width <= 0 || t.height <= 0) continue;
-      const w = Math.min(bub.r, t.right) - Math.max(bub.l, t.left);
-      const h = Math.min(bub.b, t.bottom) - Math.max(bub.t, t.top);
-      if (w > 0 && h > 0) area += w * h;
+    for (const t of cachedControlRects) {
+      area += overlapArea(bub, t);
     }
     return area;
   }
@@ -212,11 +205,23 @@
    * tlačítko, odkaz, pole formuláře nebo nadpis, najde 100% volné místo.
    */
   async function placeWhisperBubble() {
-    await tick();
+    await svelteTick();
     if (!activeWhisper || typeof window === 'undefined') return;
     if (!bubbleEl) {
       if (activeWhisper.routePath) {
         markSessionList(HINTS_KEY, activeWhisper.routePath);
+      }
+      if (
+        activeWhisper.guide &&
+        !activeWhisper.fromDock &&
+        currentState.mode === 'roaming' &&
+        !atHome &&
+        crowdedPark
+      ) {
+        if (!pendingTip) {
+          pendingTip = { icon: activeWhisper.icon, text: activeWhisper.text };
+        }
+        hideWhisperBubble();
       }
       deferTries = 0;
       return;
@@ -230,9 +235,17 @@
     // volné místo (typicky mobil s kartami přes celou šířku), počkáme a případně ho uložíme do pelíšku.
     if (activeWhisper.guide && !activeWhisper.fromDock && currentState.mode === 'roaming' && !atHome) {
       const spot = findBestSpot({ preferX: posX, withBubble: true, groundOnly: true });
-      if (hardBubbleOverlapAt(spot.x) > 35) {
-        deferGuideWhisper(activeWhisper);
-        return;
+      if (vw <= MOBILE_MAX_W) {
+        if (hardBubbleOverlapAt(spot.x) > 35) {
+          deferGuideWhisper(activeWhisper);
+          return;
+        }
+      } else {
+        const bestPlaced = findBestWhisperRectWithCost(spot.x, spot.y, actorScale(vw), vw, vh);
+        if (hardBubbleOverlapAt(spot.x) > 35 && bestPlaced.obsCost > 35) {
+          deferGuideWhisper(activeWhisper);
+          return;
+        }
       }
     }
     if (activeWhisper.routePath) {
@@ -252,6 +265,7 @@
       targetX = posX;
       targetY = posY;
       updateBubbleAnchorMode(posX);
+      evaluateDockWhisperFallback(posX);
       applyActorTransform();
       return;
     }
@@ -277,6 +291,7 @@
       whisperHideTimer = setTimeout(hideWhisperBubble, pendingWhisperMs || 4200);
     }
     updateBubbleAnchorMode(targetX);
+    evaluateDockWhisperFallback(targetX);
     applyActorTransform();
   }
 
@@ -298,103 +313,6 @@
     }
   }
 
-  function spawnStardustShower(count = 16) {
-    if (prefersReducedMotion()) return;
-    const colors = ['#fde047', '#fbbf24', '#34d399', '#ffffff', '#67e8f9', '#f472b6'];
-    for (let i = 0; i < count; i++) {
-      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
-      const speed = 1.2 + Math.random() * 2.4;
-      stardust.push({
-        x: 8 + (Math.random() - 0.5) * 16,
-        y: -34 + (Math.random() - 0.5) * 14,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 0.8,
-        size: 1.8 + Math.random() * 1.6,
-        color: colors[i % colors.length],
-        alpha: 1,
-        twinkle: Math.random() * 6.28
-      });
-    }
-    if (stardust.length > 36) {
-      stardust = stardust.slice(-36);
-    }
-  }
-
-  function spawnChasedStar(initialCoords = null) {
-    if (typeof window === 'undefined') return;
-    if (prefersReducedMotion() || currentState.mode === 'docked' || atHome || document.hidden) return;
-    if (chasedStar && !chasedStar.caught) return;
-    if (flyingTreat) return;
-
-    const { vw, vh } = viewportSize();
-    const { minX, maxX } = roamRange(vw);
-    const ground = groundLine(vw, vh);
-
-    let sx = 0;
-    let sy = 0;
-    if (initialCoords && Number.isFinite(initialCoords.x) && Number.isFinite(initialCoords.y)) {
-      sx = initialCoords.x;
-      sy = Math.max(80, Math.min(ground - 30, initialCoords.y));
-    } else {
-      // Autonomous star spawn in Molly's vicinity
-      const side = Math.random() > 0.5 ? 1 : -1;
-      const offset = side * (60 + Math.random() * 100);
-      sx = posX + offset;
-      sy = ground - 42 - Math.random() * 32;
-    }
-
-    sx = Math.max(minX + 20, Math.min(maxX - 20, sx));
-    chasedStar = {
-      x: sx,
-      y: sy,
-      vx: (Math.random() - 0.5) * 22,
-      vy: (Math.random() - 0.5) * 12,
-      phase: Math.random() * Math.PI * 2,
-      life: 9.0,
-      alpha: 0,
-      caught: false,
-      catchTimer: 0
-    };
-    lastStarTransform = '';
-
-    // Molly spots the star!
-    if (behavior !== 'CATCH_TREAT' && !hurry) {
-      behavior = 'CHASE_STAR';
-      behaviorTimer = 9.0;
-      pouncePhase = 0;
-    }
-    ensureLoopRunning();
-  }
-
-  function catchStar() {
-    if (!chasedStar || chasedStar.caught) return;
-    chasedStar.caught = true;
-    chasedStar.catchTimer = 0;
-    spawnStardustShower(16);
-    spawnHeartBurst(5);
-    petBlissTimer = 2.0;
-    behavior = 'PET_BLISS';
-    behaviorTimer = 2.4;
-    pouncePhase = 0;
-    playMollyPurr(0.85, 0.7);
-    if (Math.random() < 0.35) {
-      setTimeout(() => playMollyMeow(), 220);
-    }
-    if (!activeWhisper && Math.random() < 0.45) {
-      mollyWhisper('Chytila jsem zlatou hvězdičku! ✨', '🌟');
-    }
-  }
-
-  function applyStarTransform() {
-    if (!starEl || !chasedStar) return;
-    const tf = `translate3d(${(chasedStar.x - 14).toFixed(1)}px, ${(chasedStar.y - 14).toFixed(1)}px, 0)`;
-    if (tf !== lastStarTransform) {
-      lastStarTransform = tf;
-      starEl.style.transform = tf;
-    }
-    starEl.style.opacity = Math.max(0, Math.min(1, chasedStar.alpha)).toFixed(2);
-  }
-
   function launchViewportTreatToMolly(treat) {
     if (typeof window === 'undefined') return;
     const vw = window.innerWidth || 1280;
@@ -413,7 +331,7 @@
       }
     }
 
-    const toDock = currentState.mode === 'docked' || atHome;
+    const toDock = currentState.mode === 'docked' || atHome || crowdedPark;
     const dockRect = toDock ? document.querySelector('.molly-pelisek-dock')?.getBoundingClientRect() : null;
     const destX = toDock
       ? dockRect
@@ -437,7 +355,7 @@
       y1: destY,
       p: 0,
       follow: !toDock,
-      icon: treat?.icon || '🐟',
+      icon: normalizeMollyIcon(treat?.icon, 'fish'),
       color: treat?.color || '#f59e0b',
       name: treat?.name || 'lososová granulka'
     };
@@ -461,7 +379,7 @@
   // na tlačítku „Zobrazit krok“ nebo na výběru měst. Teď si Molly vybírá místo podle toho,
   // co je zrovna pod ní: tlačítka, odkazy, pole formuláře a nadpisy se snaží nikdy nepřekrýt.
   const OBSTACLE_SELECTOR =
-    'a[href], button, input, select, textarea, label, summary, [role="button"], [data-molly-guide], h1, h2, h3, h4, .chip, .pill, .cat-pill, .city-chip, .q-pill, .preset-pill, .topic-pill, .filter-chip, .source-chip, .radius-pill, .energy-tab, .mobile-guided-preview-bar, .feedback-pill';
+    'a[href], button, input, select, textarea, label, summary, [role="button"], [data-molly-guide], h1, h2, h3, h4, .chip, .pill, .cat-pill, .city-chip, .q-pill, .preset-pill, .topic-pill, .filter-chip, .source-chip, .radius-pill, .energy-tab, .mobile-guided-preview-bar, .feedback-pill, .deck-header-bar, .deck-indicator, .deck-nav-btn, .instant-card, .action-card, .place-card, .nav-capsule, .top-nav, .card, .compass-shell, .highlight-card, .alt-card, .local-card, .side-note, .empty-box, .calm-drawer, .footer-col, .footer-brand, .footer-desc, .footer-heading, .footer-trust, .map-frame, .leaflet-container';
   const MOBILE_MAX_W = 680;
 
   function viewportSize() {
@@ -479,6 +397,7 @@
     vw: 0,
     vh: 0,
     groundY: 0,
+    topNavBottom: 0,
     dock: null,
     crisis: null
   };
@@ -487,9 +406,16 @@
   let cachedObstacles = [];
   /** @type {Array<{ l: number, t: number, r: number, b: number, w: number }>} */
   let cachedFullObstacles = [];
+  /** @type {Array<{ l: number, t: number, r: number, b: number }>} */
+  let cachedControlRects = [];
+  let cachedWhisperRectKey = '';
+  /** @type {{ l: number, t: number, r: number, b: number } | null} */
+  let cachedWhisperRect = null;
 
   function invalidateLayoutCache() {
     layoutMetricsCache.ts = 0;
+    cachedWhisperRectKey = '';
+    cachedWhisperRect = null;
   }
 
   /**
@@ -504,6 +430,13 @@
       vh = vs.vh;
     }
     const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+
+    const topNavEl = document.querySelector('header.top-nav, .top-nav, .navbar');
+    const topNavR = topNavEl ? topNavEl.getBoundingClientRect() : null;
+    const topNavBottom =
+      topNavR && topNavR.width > 0 && topNavR.height > 0 && topNavR.top <= 16
+        ? topNavR.bottom
+        : 0;
 
     const dEl = document.querySelector('.molly-pelisek-dock');
     const dR = dEl?.getBoundingClientRect();
@@ -521,16 +454,27 @@
 
     let groundY;
     if (vw <= MOBILE_MAX_W) {
-      const nav = document.querySelector('.mobile-bottom-nav');
-      const top = nav ? nav.getBoundingClientRect().top : 0;
-      groundY = Math.round(top > vh * 0.5 ? top - 2 : vh - 60);
+      groundY = Math.round(vh - 10);
     } else {
       groundY = vh <= 620 ? vh - 12 : vh - 18;
     }
 
-    layoutMetricsCache = { ts: now, vw, vh, groundY, dock, crisis };
+    layoutMetricsCache = { ts: now, vw, vh, groundY, topNavBottom, dock, crisis };
     cachedObstacles = measureObstaclesInternal(vw, vh, false);
     cachedFullObstacles = measureObstaclesInternal(vw, vh, true);
+
+    /** @type {Array<{ l: number, t: number, r: number, b: number }>} */
+    const ctrlRects = [];
+    const controls = document.querySelectorAll('a[href], button, input, select, textarea');
+    for (const el of controls) {
+      if (el.closest('.molly-companion-layer, .molly-pelisek-dock, .top-nav')) continue;
+      const t = el.getBoundingClientRect();
+      if (t.width <= 0 || t.height <= 0) continue;
+      ctrlRects.push({ l: t.left, t: t.top, r: t.right, b: t.bottom });
+    }
+    cachedControlRects = ctrlRects;
+    cachedWhisperRectKey = '';
+    cachedWhisperRect = null;
   }
 
   function ensureLayoutMetrics(vw, vh) {
@@ -543,14 +487,14 @@
     }
     let groundY;
     if (vw <= MOBILE_MAX_W) {
-      groundY = Math.round(vh - 60);
+      groundY = Math.round(vh - 10);
     } else {
       groundY = vh <= 620 ? vh - 12 : vh - 18;
     }
     return { ...layoutMetricsCache, vw, vh, groundY };
   }
 
-  /** Svislá „chodníková“ linie, po které Molly chodí (na mobilu sedí přímo na horní hraně spodní navigace). */
+  /** Svislá „chodníková“ linie, po které Molly chodí. */
   function groundLine(vw, vh) {
     return ensureLayoutMetrics(vw, vh).groundY;
   }
@@ -578,21 +522,141 @@
       return { minX: left, maxX: right };
     }
     // Na desktopu nechodí přes pelíšek vlevo dole ani přes pilulku krizové opory vpravo dole
-    const left = d && d.right < vw * 0.45 ? Math.ceil(d.right + half + 10) : Math.ceil(half + 16);
+    const dLeftBottom = d && d.bottom > vh * 0.5 && d.right < vw * 0.45 ? d : null;
+    const left = dLeftBottom ? Math.ceil(dLeftBottom.right + half + 10) : Math.ceil(half + 16);
     const right = c && c.left > vw * 0.5 ? Math.floor(c.left - half - 10) : Math.floor(vw - half - 16);
     return { minX: left, maxX: Math.max(left + 40, right) };
   }
 
   function catRectAt(x, y, s) {
-    return { l: x - 43 * s, t: y - 86 * s, r: x + 43 * s, b: y };
+    const halfW = LOGICAL_W * 0.5 * s + CAT_SAFETY_X;
+    const fullH = LOGICAL_H * s + CAT_SAFETY_TOP;
+    return { l: x - halfW, t: y - fullH, r: x + halfW, b: y + CAT_SAFETY_BOTTOM };
   }
 
   function defaultBubbleRectAt(x, y, s, vw) {
     if (!bubbleW || !bubbleH) return null;
     const left = Math.max(8, Math.min(vw - 8 - bubbleW, Math.round(x - bubbleW / 2)));
-    const bottom = y - Math.round(88 * s) - 6;
+    const bottom = y - Math.round(LOGICAL_H * s) - 6;
     const top = Math.max(64, bottom - bubbleH);
     return { l: left, t: top, r: left + bubbleW, b: top + bubbleH };
+  }
+
+  function rectOverlapWithObstaclesAndControls(rect, vw, vh) {
+    if (!rect) return 0;
+    let area = 0;
+    for (const o of collectObstacles(vw, vh, true)) {
+      area += overlapArea(rect, o);
+    }
+    for (const t of cachedControlRects) {
+      area += overlapArea(rect, t);
+    }
+    return area;
+  }
+
+  function dockAnchoredBubbleRect(x, y, s, vw) {
+    const d = dockRect();
+    if (!d || d.top < 96) return null;
+    const left = Math.max(8, Math.min(vw - 8 - bubbleW, Math.round(d.left)));
+    const right = left + bubbleW;
+    const cat = catRectAt(x, y, s);
+    let bottom = Math.round(d.top - 6);
+    if (right > cat.l - 4 && left < cat.r + 4) {
+      bottom = Math.min(bottom, Math.floor(cat.t - 6));
+    }
+    const c = crisisRect();
+    if (c && right > c.left - 4 && left < c.right + 4) {
+      bottom = Math.min(bottom, Math.floor(c.top - 6));
+    }
+    const top = Math.max(64, bottom - bubbleH);
+    return { l: left, t: top, r: right, b: top + bubbleH };
+  }
+
+  function findBestWhisperRectWithCost(x, y, s, vw, vh) {
+    if (!bubbleW || !bubbleH) return { rect: null, obsCost: 0 };
+    const obstacles = collectObstacles(vw, vh, true);
+    const { topNavBottom } = ensureLayoutMetrics(vw, vh);
+    const minTop = topNavBottom > 0 ? Math.ceil(topNavBottom + 8) : 64;
+    const maxTop = Math.max(minTop, vh - bubbleH - 8);
+    const isParkedOrDock = Boolean(
+      activeWhisper?.fromDock ||
+      currentState.mode === 'docked' ||
+      atHome ||
+      crowdedPark
+    );
+    const catVisible = currentState.mode === 'roaming' && !atHome && !crowdedPark;
+    const cat = catVisible ? catRectAt(x, y, s) : null;
+    const preferredY = catVisible
+      ? Math.max(minTop, Math.min(maxTop, y - Math.round(LOGICAL_H * s) - 8 - bubbleH))
+      : minTop;
+
+    const candXs = Array.from(
+      new Set([
+        Math.max(8, Math.min(vw - 8 - bubbleW, Math.round(vw - 10 - bubbleW))),
+        Math.max(8, Math.min(vw - 8 - bubbleW, Math.round((vw - bubbleW) * 0.5))),
+        Math.max(8, Math.min(vw - 8 - bubbleW, Math.round(x - bubbleW * 0.5))),
+        8
+      ])
+    );
+
+    const candYs = [minTop, maxTop, preferredY];
+    for (let ty = minTop; ty <= maxTop; ty += 12) {
+      candYs.push(ty);
+    }
+
+    let best = null;
+    let bestScore = Infinity;
+    let bestObsCost = 0;
+
+    const evalCandidates = (xs) => {
+      for (const ty of candYs) {
+        if (ty < minTop || ty > maxTop) continue;
+        for (const lx of xs) {
+          const rect = { l: lx, t: ty, r: lx + bubbleW, b: ty + bubbleH };
+          let obsCost = 0;
+          for (const o of obstacles) {
+            const area = overlapArea(rect, o);
+            if (area > 0) obsCost += area * o.w;
+          }
+          for (const t of cachedControlRects) {
+            const area = overlapArea(rect, t);
+            if (area > 0) obsCost += area * 2;
+          }
+          if (cat) {
+            obsCost += overlapArea(rect, cat) * 1.5;
+          }
+          const distPref = isParkedOrDock ? (ty - minTop) * 0.05 : Math.abs(ty - preferredY) * 0.1;
+          const score = obsCost * 100 + distPref;
+          if (score < bestScore) {
+            bestScore = score;
+            best = rect;
+            bestObsCost = obsCost;
+          }
+        }
+      }
+    };
+
+    evalCandidates(candXs);
+
+    if (bestObsCost > 0) {
+      const maxX = Math.max(8, vw - 8 - bubbleW);
+      const scanXs = [];
+      for (let lx = 8; lx <= maxX; lx += 48) {
+        if (!candXs.includes(lx)) scanXs.push(lx);
+      }
+      if (scanXs.length > 0) evalCandidates(scanXs);
+    }
+
+    if (best) return { rect: best, obsCost: bestObsCost };
+    const fallbackLeft = Math.max(8, Math.min(vw - 8 - bubbleW, Math.round(vw - 10 - bubbleW)));
+    return {
+      rect: { l: fallbackLeft, t: minTop, r: fallbackLeft + bubbleW, b: minTop + bubbleH },
+      obsCost: 0
+    };
+  }
+
+  function findBestWhisperRect(x, y, s, vw, vh) {
+    return findBestWhisperRectWithCost(x, y, s, vw, vh).rect;
   }
 
   function updateBubbleAnchorMode(anchorX) {
@@ -600,37 +664,61 @@
       dockAnchoredBubble = false;
       return;
     }
-    dockAnchoredBubble = Boolean(
-      activeWhisper.fromDock && dockRect() && hardBubbleOverlapAt(anchorX) > 40
-    );
+    if (!activeWhisper.fromDock || !dockRect() || hardBubbleOverlapAt(anchorX) <= 40) {
+      dockAnchoredBubble = false;
+      return;
+    }
+    const { vw, vh } = viewportSize();
+    const s = actorScale(vw);
+    const cand = dockAnchoredBubbleRect(anchorX, groundLine(vw, vh), s, vw);
+    dockAnchoredBubble = Boolean(cand && rectOverlapWithObstaclesAndControls(cand, vw, vh) <= 0);
+  }
+
+  function evaluateDockWhisperFallback(anchorX) {
+    if (!activeWhisper?.fromDock || $isCompactDock || currentState.mode === 'docked' || atHome || crowdedPark) {
+      forceDockWhisper = false;
+      return;
+    }
+    if (dockAnchoredBubble || !bubbleW || !bubbleH) {
+      forceDockWhisper = false;
+      return;
+    }
+    const { vw, vh } = viewportSize();
+    if (vw <= 1024 || hardBubbleOverlapAt(anchorX) <= 0) {
+      forceDockWhisper = false;
+      return;
+    }
+    const s = actorScale(vw);
+    const { obsCost } = findBestWhisperRectWithCost(anchorX, groundLine(vw, vh), s, vw, vh);
+    forceDockWhisper = obsCost > 0;
+  }
+
+  function getMemoizedWhisperRect(x, y, s, vw, vh) {
+    const key = `${Math.round(x)}|${Math.round(y)}|${s}|${vw}|${vh}|${bubbleW}|${bubbleH}|${layoutMetricsCache.ts}|${currentState.mode}|${atHome ? 1 : 0}|${crowdedPark ? 1 : 0}|${activeWhisper?.fromDock ? 1 : 0}|${activeWhisper?.ts || 0}`;
+    if (key === cachedWhisperRectKey && cachedWhisperRect) {
+      return cachedWhisperRect;
+    }
+    const rect = findBestWhisperRect(x, y, s, vw, vh);
+    cachedWhisperRectKey = key;
+    cachedWhisperRect = rect;
+    return rect;
   }
 
   function bubbleRectAt(x, y, s, vw) {
     if (!bubbleW || !bubbleH) return null;
+    const { vh } = viewportSize();
+    if ($isCompactDock || vw <= 1024 || crowdedPark) {
+      return getMemoizedWhisperRect(x, y, s, vw, vh);
+    }
     if (dockAnchoredBubble) {
-      const d = dockRect();
-      if (d) {
-        const left =
-          vw <= MOBILE_MAX_W
-            ? Math.max(8, Math.min(vw - 8 - bubbleW, Math.round(d.right - bubbleW)))
-            : Math.max(8, Math.min(vw - 8 - bubbleW, Math.round(d.left)));
-        const right = left + bubbleW;
-        if (d.top < 96) {
-          const top = Math.max(64, Math.round(d.bottom + 12));
-          return { l: left, t: top, r: right, b: top + bubbleH };
-        }
-        const cat = catRectAt(x, y, s);
-        let bottom = Math.round(d.top - 6);
-        if (right > cat.l - 4 && left < cat.r + 4) {
-          bottom = Math.min(bottom, Math.floor(cat.t - 6));
-        }
-        const c = crisisRect();
-        if (c && right > c.left - 4 && left < c.right + 4) {
-          bottom = Math.min(bottom, Math.floor(c.top - 6));
-        }
-        const top = Math.max(64, bottom - bubbleH);
-        return { l: left, t: top, r: right, b: top + bubbleH };
+      const cand = dockAnchoredBubbleRect(x, y, s, vw);
+      if (cand) {
+        return cand;
       }
+      return getMemoizedWhisperRect(x, y, s, vw, vh);
+    }
+    if (hardBubbleOverlapAt(x) > 0) {
+      return getMemoizedWhisperRect(x, y, s, vw, vh);
     }
     return defaultBubbleRectAt(x, y, s, vw);
   }
@@ -642,24 +730,18 @@
     const pad = fullViewport ? 3 : 2;
     const topNavEl = document.querySelector('.navbar, .top-nav');
     const topNavRect = topNavEl ? topNavEl.getBoundingClientRect() : null;
+    const capsuleEl = document.querySelector('.nav-capsule');
+    const capsuleRect = capsuleEl ? capsuleEl.getBoundingClientRect() : null;
     const topNavBottom =
       topNavRect && topNavRect.width > 0 && topNavRect.height > 0 && topNavRect.top <= 16
         ? topNavRect.bottom
         : 0;
-    const bottomNavEl = document.querySelector('.mobile-bottom-nav');
-    const bottomNavRect =
-      bottomNavEl && getComputedStyle(bottomNavEl).display !== 'none'
-        ? bottomNavEl.getBoundingClientRect()
-        : null;
-    const bottomNavTop =
-      bottomNavRect && bottomNavRect.width > 0 && bottomNavRect.height > 0 && bottomNavRect.bottom >= vh - 16
-        ? bottomNavRect.top
-        : vh;
 
     const nodes = document.querySelectorAll(OBSTACLE_SELECTOR);
     for (const el of nodes) {
-      if (el.closest('.molly-companion-layer')) continue;
-      if (el.closest('.mobile-bottom-nav, .navbar, .top-nav')) continue;
+      if (el.closest('.molly-companion-layer, .molly-pelisek-dock')) continue;
+      if (!el.matches('.top-nav, .nav-capsule') && el.closest('.navbar, .top-nav')) continue;
+      if (el.matches('.top-nav, .nav-capsule')) continue;
       const closedDetails = el.closest('details:not([open])');
       if (closedDetails && !el.closest('summary')) continue;
       if (typeof el.checkVisibility === 'function') {
@@ -671,7 +753,7 @@
       const r = el.getBoundingClientRect();
       if (r.width < 2 || r.height < 2) continue;
       const visTop = fullViewport ? Math.max(r.top, topNavBottom) : r.top;
-      const visBottom = fullViewport ? Math.min(r.bottom, bottomNavTop) : r.bottom;
+      const visBottom = fullViewport ? Math.min(r.bottom, vh) : r.bottom;
       if (visBottom - visTop < 2) continue;
       if (visBottom < zoneTop || visTop > vh || r.right < 0 || r.left > vw) continue;
       const isHeading = /^H[1-4]$/.test(el.tagName);
@@ -684,21 +766,21 @@
       });
     }
     if (fullViewport) {
-      if (bottomNavRect && bottomNavRect.width > 0 && bottomNavRect.height > 0) {
-        out.push({
-          l: bottomNavRect.left,
-          t: bottomNavRect.top - 2,
-          r: bottomNavRect.right,
-          b: bottomNavRect.bottom,
-          w: 4
-        });
-      }
       if (topNavRect && topNavRect.width > 0 && topNavRect.height > 0) {
         out.push({
           l: topNavRect.left,
           t: topNavRect.top,
           r: topNavRect.right,
           b: topNavRect.bottom + 1,
+          w: 4
+        });
+      }
+      if (capsuleRect && capsuleRect.width > 0 && capsuleRect.height > 0) {
+        out.push({
+          l: capsuleRect.left,
+          t: capsuleRect.top,
+          r: capsuleRect.right,
+          b: capsuleRect.bottom + 1,
           w: 4
         });
       }
@@ -713,9 +795,6 @@
   }
 
   function collectObstacles(vw, vh, fullViewport = false) {
-    if (cachedObstacles.length === 0 && typeof document !== 'undefined') {
-      measureLayoutAndObstacles(vw, vh);
-    }
     return fullViewport ? cachedFullObstacles : cachedObstacles;
   }
 
@@ -775,6 +854,20 @@
   function snapMollyToFreeSpot() {
     if (typeof window === 'undefined' || currentState.mode !== 'roaming' || atHome) return;
     const spot = findBestSpot({ preferX: posX, withBubble: false });
+    if (spot.raw > 0) {
+      crowdedPark = true;
+      perchedOnLedge = false;
+      lastActorTransform = '';
+      if (activeWhisper && bubbleW) {
+        updateBubbleAnchorMode(posX);
+        evaluateDockWhisperFallback(posX);
+        lastBubbleTransform = '';
+      }
+      applyActorTransform();
+      return;
+    }
+    const wasParked = crowdedPark;
+    crowdedPark = false;
     posX = spot.x;
     posY = spot.y;
     targetX = spot.x;
@@ -783,9 +876,13 @@
     lastActorTransform = '';
     if (activeWhisper && bubbleW) {
       updateBubbleAnchorMode(posX);
+      evaluateDockWhisperFallback(posX);
       lastBubbleTransform = '';
     }
     applyActorTransform();
+    if (wasParked) {
+      ensureLoopRunning();
+    }
   }
 
   /**
@@ -804,6 +901,17 @@
     const baseY = groundLine(vw, vh);
     const here = scoreSpot(baseX, baseY, s, vw, obstacles, withBubble);
     const spot = findBestSpot({ preferX: baseX, withBubble, obstacles });
+    const catSpot = withBubble ? findBestSpot({ preferX: baseX, withBubble: false, obstacles }) : spot;
+    if (catSpot.raw > 0) {
+      crowdedPark = true;
+      applyActorTransform();
+      return false;
+    }
+    const wasParked = crowdedPark;
+    crowdedPark = false;
+    if (wasParked) {
+      ensureLoopRunning();
+    }
     if (here <= 0 && Math.abs(baseY - spot.y) < 6) return walking;
     if (spot.raw >= here && Math.abs(baseY - spot.y) < 6) return walking;
     perchedOnLedge = false;
@@ -837,12 +945,19 @@
         !atHome &&
         directControlOverlapAt(posX) > 35
       ) {
-        deferGuideWhisper(activeWhisper);
-        return;
+        const { vw, vh } = viewportSize();
+        const shouldDefer =
+          vw <= MOBILE_MAX_W ||
+          findBestWhisperRectWithCost(posX, groundLine(vw, vh), actorScale(vw), vw, vh).obsCost > 35;
+        if (shouldDefer) {
+          deferGuideWhisper(activeWhisper);
+          return;
+        }
       }
       bubbleTravelling = false;
       bubbleEl?.classList.remove('is-travelling');
       updateBubbleAnchorMode(posX);
+      evaluateDockWhisperFallback(posX);
       lastBubbleTransform = '';
       if (activeWhisper && pendingWhisperMs > 0) {
         if (whisperHideTimer) clearTimeout(whisperHideTimer);
@@ -856,11 +971,27 @@
     const { vw } = viewportSize();
     const { minX, maxX } = roamRange(vw);
     const preferX = minX + Math.random() * Math.max(40, maxX - minX);
-    const spot = findBestSpot({
+    const catSpot = findBestSpot({
       preferX,
-      withBubble: Boolean(activeWhisper && bubbleW),
+      withBubble: false,
       avoidX: avoidPointer ? pointerX : null
     });
+    if (catSpot.raw > 0) {
+      crowdedPark = true;
+      perchedOnLedge = false;
+      behavior = 'IDLE_SIT';
+      applyActorTransform();
+      return;
+    }
+    const spot =
+      activeWhisper && bubbleW
+        ? findBestSpot({
+            preferX,
+            withBubble: true,
+            avoidX: avoidPointer ? pointerX : null
+          })
+        : catSpot;
+    crowdedPark = false;
     perchedOnLedge = false;
     targetX = spot.x;
     targetY = spot.y;
@@ -881,19 +1012,16 @@
       return;
     }
     const roll = Math.random();
-    if (roll < 0.38) {
+    if (roll < 0.42) {
       behavior = 'WALK_ROAM';
       behaviorTimer = 3.5 + Math.random() * 3.0;
       pickSafeTarget(false);
-    } else if (roll < 0.60) {
+    } else if (roll < 0.66) {
       behavior = 'IDLE_SIT';
       behaviorTimer = 3.2 + Math.random() * 2.8;
-    } else if (roll < 0.76) {
+    } else if (roll < 0.84) {
       behavior = 'GROOM';
       behaviorTimer = 2.8 + Math.random() * 2.0;
-    } else if (roll < 0.90 && !prefersReducedMotion()) {
-      // Star chasing ("honit hvezdicky v pozadi") (R3)
-      spawnChasedStar();
     } else {
       behavior = 'CHASE_FIREFLY';
       behaviorTimer = 3.4 + Math.random() * 2.0;
@@ -926,6 +1054,7 @@
     if (typeof window === 'undefined') return;
     invalidateLayoutCache();
     const { vw, vh } = viewportSize();
+    isCompactDock.set(vw <= 1024);
     const { minX, maxX } = roamRange(vw);
     perchedOnLedge = false;
     posX = Math.max(minX, Math.min(maxX, posX));
@@ -950,6 +1079,7 @@
       } else {
         if (activeWhisper && bubbleW) {
           updateBubbleAnchorMode(posX);
+          evaluateDockWhisperFallback(posX);
         }
         applyActorTransform();
       }
@@ -996,7 +1126,7 @@
     }
   }
 
-  // Po doscrollování se pod Molly objeví jiný obsah → když teď něco zakrývá, přejde jinam
+  // Po doscrollování se pod Molly objeví jiný obsah -> když teď něco zakrývá, přejde jinam
   function handleWindowScroll() {
     lastInteractionTs = Date.now();
     if (currentState.mode !== 'roaming' || atHome) return;
@@ -1007,6 +1137,7 @@
       const moving = relocateToFreeSpot(Boolean(activeWhisper && bubbleW));
       if (activeWhisper && bubbleW) {
         updateBubbleAnchorMode(targetX);
+        evaluateDockWhisperFallback(targetX);
         lastBubbleTransform = '';
         applyActorTransform();
       }
@@ -1090,7 +1221,7 @@
     if (fromDock && pendingTip) {
       const tip = pendingTip;
       pendingTip = null;
-      petMolly(tip.text, { fromDock: true, icon: tip.icon });
+      petMolly(tip.text, { fromDock: true, icon: normalizeMollyIcon(tip.icon, 'paw') });
     } else {
       const isCompact = typeof window !== 'undefined' && window.innerWidth <= MOBILE_MAX_W;
       petMolly(
@@ -1102,8 +1233,14 @@
   }
 
   let handleVisibilityChange = null;
+  let compactDockMql = null;
+  let onCompactDockChange = null;
+  let pointerFineMql = null;
+  let onPointerFineChange = null;
   let settleTimer1 = null;
   let settleTimer2 = null;
+  let layoutChangeTimer = null;
+  let mainResizeObserver = null;
 
   // ===================== Molly jako průvodkyně (směrování) =====================
   // 1) Při prvním příchodu na stránku (1× za session) pošeptá, co se tu dá udělat.
@@ -1236,6 +1373,14 @@
     // Molly dojde po spodní „chodníkové“ linii co nejblíž pod tlačítko, ale jen na místo,
     // kde nic nezakrývá (dřív stála na obsahu hned pod tlačítkem). Tlačítko jemně rozzáří.
     const spot = findBestSpot({ preferX: ctaCx, withBubble: false });
+    if (spot.raw > 0) {
+      crowdedPark = true;
+      perchedOnLedge = false;
+      behavior = 'IDLE_SIT';
+      applyActorTransform();
+      return;
+    }
+    crowdedPark = false;
     perchedOnLedge = false;
     targetX = spot.x;
     targetY = spot.y;
@@ -1354,7 +1499,6 @@
           facing,
           walkCycle,
           flyingTreat,
-          pouncePhase,
           groomPhase,
           accessories,
           pointerX,
@@ -1364,7 +1508,6 @@
           blinkProgress,
           firefly,
           hearts,
-          stardust,
           frameK,
           isFollowingMouse: Boolean($mollyState?.followMouse && hasFinePointer && !prefersReducedMotion())
         });
@@ -1417,74 +1560,15 @@
 
       // Roaming physics
       let isWalkingNow = false;
-      // Chůzi na volné místo přerušilo pohlazení / krmení → bublinu ukážeme hned
+      // Chůzi na volné místo přerušilo pohlazení / krmení -> bublinu ukážeme hned
       if (hurry && behavior !== 'WALK_ROAM') onArrived();
-      if (currentState.mode === 'roaming' && !reduced && !atHome) {
-        // Star / Firefly fluttering physics
-        if (chasedStar) {
-          if (!chasedStar.caught) {
-            chasedStar.alpha = Math.min(1, chasedStar.alpha + dt * 3.5);
-            chasedStar.phase += dt * 3.2;
-            chasedStar.x += chasedStar.vx * dt;
-            chasedStar.y += Math.sin(chasedStar.phase) * 16 * dt + chasedStar.vy * dt;
-            const { minX, maxX } = roamRange(vw);
-            if (chasedStar.x < minX + 16) {
-              chasedStar.x = minX + 16;
-              chasedStar.vx = Math.abs(chasedStar.vx);
-            }
-            if (chasedStar.x > maxX - 16) {
-              chasedStar.x = maxX - 16;
-              chasedStar.vx = -Math.abs(chasedStar.vx);
-            }
-            chasedStar.life -= dt;
-            if (chasedStar.life <= 0) {
-              chasedStar.alpha -= dt * 2;
-              if (chasedStar.alpha <= 0) chasedStar = null;
-            }
-          } else {
-            chasedStar.catchTimer += dt;
-            if (chasedStar.catchTimer > 0.35) {
-              chasedStar = null;
-            }
-          }
-        }
-
-        // Autonomous Star Spawning Timer: every ~16-28s when roaming
-        if (!chasedStar && behavior !== 'CATCH_TREAT' && behavior !== 'PET_BLISS' && now - lastStarSpawnTs > 16000) {
-          if (Math.random() < 0.007) {
-            lastStarSpawnTs = now;
-            spawnChasedStar();
-          }
-        }
-
+      if (currentState.mode === 'roaming' && !reduced && !atHome && !crowdedPark) {
         behaviorTimer -= dt;
-        if (behaviorTimer <= 0 && !hurry && behavior !== 'CHASE_STAR') {
+        if (behaviorTimer <= 0 && !hurry) {
           chooseNextBehavior();
         }
 
-        if (behavior === 'CHASE_STAR' && chasedStar && !chasedStar.caught) {
-          const dx = chasedStar.x - posX;
-          const dist = Math.abs(dx);
-          facing = dx >= 0 ? 1 : -1;
-          pointerX = chasedStar.x;
-          pointerY = chasedStar.y;
-
-          if (dist > 22) {
-            isWalkingNow = true;
-            const chaseSpd = Math.min(220, Math.max(90, dist * 3.4));
-            vx = Math.sign(dx) * chaseSpd;
-            posX += vx * dt;
-            walkCycle += dt * 14;
-            pouncePhase = 0;
-          } else {
-            // Close enough! Gentle leap and pounce!
-            vx *= 0.65;
-            pouncePhase += dt * 3.6;
-            if (pouncePhase >= 0.45 && !chasedStar.caught) {
-              catchStar();
-            }
-          }
-        } else if ($mollyState.followMouse && hasFinePointer && behavior !== 'CATCH_TREAT' && behavior !== 'PET_BLISS' && !activeWhisper) {
+        if ($mollyState.followMouse && hasFinePointer && behavior !== 'CATCH_TREAT' && behavior !== 'PET_BLISS' && !activeWhisper) {
           // Optional Mouse-Follow Mode (R2): gentle spring physics, sitting after 3s idle
           const pointerIdle = now - lastPointerMoveTs > 3000;
           if (pointerIdle) {
@@ -1557,15 +1641,12 @@
       }
 
       applyActorTransform();
-      applyStarTransform();
 
       const hasActiveTransient =
         Boolean(flyingTreat) ||
-        Boolean(chasedStar) ||
         eatTimer > 0 ||
         petBlissTimer > 0 ||
-        hearts.length > 0 ||
-        stardust.length > 0;
+        hearts.length > 0;
 
       // Úspora baterie: když Molly jen sedí/myje se, stačí ~30 fps (pomalé sinusové pohyby
       // vypadají stejně). Chůze, krmení a srdíčka běží na plnou obnovovací frekvenci.
@@ -1575,8 +1656,8 @@
         renderCatFrame(nowSec);
       }
 
-      // H4: Pause RAF loop when docked / u jezera (/svet) / reduced-motion with no active transient animation
-      if ((currentState.mode === 'docked' || reduced || atHome) && !hasActiveTransient) {
+      // H4: Pause RAF loop when docked / parked / u jezera (/svet) / reduced-motion with no active transient animation
+      if ((currentState.mode === 'docked' || reduced || atHome || crowdedPark) && !hasActiveTransient) {
         rafId = 0;
         return;
       }
@@ -1616,15 +1697,21 @@
         launchViewportTreatToMolly(ev.treat);
       } else if (ev.type === 'spark') {
         launchViewportTreatToMolly(ev.treat);
-        if (!prefersReducedMotion() && currentState.mode === 'roaming' && !atHome) {
-          setTimeout(() => {
-            spawnChasedStar();
-          }, 400);
-        }
       } else if (ev.type === 'pet') {
         petBlissTimer = 2.6;
         spawnHeartBurst(7);
       } else if (ev.type === 'wake') {
+        measureLayoutAndObstacles();
+        const spot = findBestSpot({ preferX: posX, withBubble: false });
+        if (spot.raw > 0) {
+          crowdedPark = true;
+          perchedOnLedge = false;
+          behavior = 'IDLE_SIT';
+          applyActorTransform();
+          spawnHeartBurst(5);
+          return;
+        }
+        crowdedPark = false;
         behavior = 'WALK_ROAM';
         behaviorTimer = 3.2;
         pickSafeTarget(false);
@@ -1634,15 +1721,31 @@
     });
 
     if (typeof window !== 'undefined' && window.matchMedia) {
-      const mql = window.matchMedia('(pointer: fine)');
-      hasFinePointer = mql.matches;
-      const onPointerChange = (ev) => {
+      compactDockMql = window.matchMedia('(max-width: 1024px)');
+      isCompactDock.set(compactDockMql.matches);
+      onCompactDockChange = (ev) => {
+        isCompactDock.set(ev.matches);
+        svelteTick().then(() => {
+          if (!mounted) return;
+          measureLayoutAndObstacles();
+          snapMollyToFreeSpot();
+        });
+      };
+      if (typeof compactDockMql.addEventListener === 'function') {
+        compactDockMql.addEventListener('change', onCompactDockChange);
+      } else if (typeof compactDockMql.addListener === 'function') {
+        compactDockMql.addListener(onCompactDockChange);
+      }
+
+      pointerFineMql = window.matchMedia('(pointer: fine)');
+      hasFinePointer = pointerFineMql.matches;
+      onPointerFineChange = (ev) => {
         hasFinePointer = ev.matches;
       };
-      if (typeof mql.addEventListener === 'function') {
-        mql.addEventListener('change', onPointerChange);
-      } else if (typeof mql.addListener === 'function') {
-        mql.addListener(onPointerChange);
+      if (typeof pointerFineMql.addEventListener === 'function') {
+        pointerFineMql.addEventListener('change', onPointerFineChange);
+      } else if (typeof pointerFineMql.addListener === 'function') {
+        pointerFineMql.addListener(onPointerFineChange);
       }
     }
 
@@ -1662,6 +1765,34 @@
     window.addEventListener('scroll', handleWindowScroll, { passive: true });
     window.addEventListener('keydown', onUserActivity, { passive: true });
     window.addEventListener('wheel', onUserActivity, { passive: true });
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const mainEl = document.querySelector('main') || document.body;
+      if (mainEl) {
+        let prevMainH = mainEl.getBoundingClientRect().height;
+        mainResizeObserver = new ResizeObserver((entries) => {
+          const h = entries[0]?.contentRect?.height ?? 0;
+          if (Math.abs(h - prevMainH) > 2) {
+            prevMainH = h;
+            if (atHome || currentState.mode !== 'roaming') return;
+            if (layoutChangeTimer) clearTimeout(layoutChangeTimer);
+            layoutChangeTimer = setTimeout(() => {
+              layoutChangeTimer = null;
+              if (!mounted || atHome) return;
+              measureLayoutAndObstacles();
+              snapMollyToFreeSpot();
+              if (activeWhisper && bubbleW) {
+                updateBubbleAnchorMode(targetX);
+                evaluateDockWhisperFallback(targetX);
+                lastBubbleTransform = '';
+                applyActorTransform();
+              }
+            }, 80);
+          }
+        });
+        mainResizeObserver.observe(mainEl);
+      }
+    }
 
     handleVisibilityChange = () => {
       if (document.hidden) {
@@ -1691,7 +1822,10 @@
     if (deferTimer) clearTimeout(deferTimer);
     if (settleTimer1) clearTimeout(settleTimer1);
     if (settleTimer2) clearTimeout(settleTimer2);
+    if (layoutChangeTimer) clearTimeout(layoutChangeTimer);
     if (resizeTimer) clearTimeout(resizeTimer);
+    mainResizeObserver?.disconnect();
+    mainResizeObserver = null;
     if (typeof document !== 'undefined') clearGuideGlow();
     unsubEvents?.();
     unsubState?.();
@@ -1707,12 +1841,36 @@
     if (typeof document !== 'undefined' && handleVisibilityChange) {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     }
+    if (compactDockMql && onCompactDockChange) {
+      if (typeof compactDockMql.removeEventListener === 'function') {
+        compactDockMql.removeEventListener('change', onCompactDockChange);
+      } else if (typeof compactDockMql.removeListener === 'function') {
+        compactDockMql.removeListener(onCompactDockChange);
+      }
+    }
+    if (pointerFineMql && onPointerFineChange) {
+      if (typeof pointerFineMql.removeEventListener === 'function') {
+        pointerFineMql.removeEventListener('change', onPointerFineChange);
+      } else if (typeof pointerFineMql.removeListener === 'function') {
+        pointerFineMql.removeListener(onPointerFineChange);
+      }
+    }
   });
 
   $: nextGiftText = describeNextMollyGift($mollyState.giftDeeds);
-  $: giftProgress = getNextMollyGiftProgress($mollyState.giftDeeds);
-  $: roamingWhisper = activeWhisper && $mollyState.mode === 'roaming' && !atHome;
-  $: dockWhisper = activeWhisper && ($mollyState.mode === 'docked' || atHome);
+  $: roamingWhisper =
+    activeWhisper &&
+    !forceDockWhisper &&
+    ($isCompactDock || ($mollyState.mode === 'roaming' && !atHome && !crowdedPark));
+  $: mollyDockBridge.set({
+    pendingTip,
+    activeWhisper,
+    hasFinePointer,
+    atHome,
+    isParked: crowdedPark,
+    forceDockWhisper,
+    onPet: () => triggerPetInteraction(true)
+  });
 </script>
 
 <div
@@ -1735,68 +1893,34 @@
       style="--treat-color: {flyingTreatView.color}; transform: translate3d({flyingTreatView.x0}px, {flyingTreatView.y0}px, 0);"
       aria-hidden="true"
     >
-      <span class="treat-emoji">{flyingTreatView.icon}</span>
+      <span class="treat-icon-wrap">
+        <AppIcon name={normalizeMollyIcon(flyingTreatView.icon, 'fish')} size={15} strokeWidth={2} />
+      </span>
     </div>
   {/if}
 
-  <!-- Luminous little star / firefly being playfully chased by Molly ("honit hvezdicky v pozadi") -->
-  {#if chasedStar && !chasedStar.caught}
-    <div
-      bind:this={starEl}
-      class="molly-chased-star"
-      aria-hidden="true"
-    >
-      <svg viewBox="0 0 24 24" class="chased-star-svg">
-        <defs>
-          <radialGradient id="starAura" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#ffffff" stop-opacity="1" />
-            <stop offset="35%" stop-color="#fde047" stop-opacity="0.9" />
-            <stop offset="70%" stop-color="#f59e0b" stop-opacity="0.45" />
-            <stop offset="100%" stop-color="#f59e0b" stop-opacity="0" />
-          </radialGradient>
-        </defs>
-        <circle cx="12" cy="12" r="11" fill="url(#starAura)" />
-        <path d="M12 2 L13.8 10.2 L22 12 L13.8 13.8 L12 22 L10.2 13.8 L2 12 L10.2 10.2 Z" fill="#fef08a" />
-        <path d="M12 5.5 L13.2 10.8 L18.5 12 L13.2 13.2 L12 18.5 L10.8 13.2 L5.5 12 L10.8 10.8 Z" fill="#fbbf24" opacity="0.85" />
-        <circle cx="12" cy="12" r="2.2" fill="#ffffff" />
-      </svg>
-    </div>
-  {/if}
-
-  <!-- Šeptanda: samostatná vrstva (nezmenšuje se s kočkou), polohu zapisuje rAF; klepnutím zmizí -->
+  <!-- Šeptanda: samostatná vrstva (nezmenšuje se s kočkou), polohu zapisuje mimo rAF -->
   {#if roamingWhisper}
-    <button
+    <div
       bind:this={bubbleEl}
-      type="button"
       class="molly-whisper-bubble"
       class:is-travelling={bubbleTravelling}
-      on:click|stopPropagation={hideWhisperBubble}
-      aria-label="Skrýt zprávu od Molly"
-      title="Skrýt zprávu"
+      role="status"
     >
       <span class="molly-whisper-inner">
         <span class="whisper-icon" aria-hidden="true">
-          {#if !activeWhisper.icon || activeWhisper.icon === '🐾'}
-            <svg class="molly-paw-svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="7.5" cy="9.5" r="2.3" />
-              <circle cx="12" cy="7" r="2.3" />
-              <circle cx="16.5" cy="9.5" r="2.3" />
-              <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
-            </svg>
-          {:else}
-            {activeWhisper.icon}
-          {/if}
+          <AppIcon name={normalizeMollyIcon(activeWhisper.icon, 'paw')} size={14} strokeWidth={2} />
         </span>
         <span class="whisper-text">{activeWhisper.text}</span>
       </span>
-    </button>
+    </div>
   {/if}
 
   <!-- Volně se toulající želvovinová kočka Molly (pointer-events: none, nikdy neblokuje kliknutí) -->
   <div
     bind:this={actorEl}
     class="molly-roaming-actor"
-    class:is-docked={$mollyState.mode === 'docked' || atHome}
+    class:is-docked={$mollyState.mode === 'docked' || atHome || crowdedPark}
     aria-hidden="true"
   >
     <canvas
@@ -1807,115 +1931,9 @@
     ></canvas>
   </div>
 
-  <!-- Klidový pelíšek Dock — uživatel má Molly vždy plně pod kontrolou -->
-  <div
-    class="molly-pelisek-dock"
-    class:is-docked={$mollyState.mode === 'docked' || atHome}
-    role="region"
-    aria-label="Patronka Molly a klidový pelíšek"
-  >
-    {#if dockWhisper}
-      <div class="molly-dock-whisper">
-        {#if !activeWhisper.icon || activeWhisper.icon === '🐾'}
-          <svg class="molly-paw-svg dock-whisper-paw-svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <circle cx="7.5" cy="9.5" r="2.3" />
-            <circle cx="12" cy="7" r="2.3" />
-            <circle cx="16.5" cy="9.5" r="2.3" />
-            <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
-          </svg>
-          <span>{activeWhisper.text}</span>
-        {:else}
-          <span>{activeWhisper.icon} {activeWhisper.text}</span>
-        {/if}
-      </div>
-    {/if}
-
-    <button
-      bind:this={petBtnEl}
-      type="button"
-      class="molly-dock-pet-btn"
-      class:has-tip={Boolean(pendingTip)}
-      on:pointerdown|stopPropagation
-      on:click|stopPropagation={() => triggerPetInteraction(true)}
-      title={`${pendingTip ? 'Molly má pro tebe laskavý tip. ' : ''}Pohladit kočičku Molly. ${nextGiftText}`}
-      aria-label={`${pendingTip ? 'Molly má pro tebe laskavý tip. ' : ''}Pohladit Molly. Darované pamlsky: ${$mollyState.treatsFedTotal}. ${nextGiftText}`}
-    >
-      {#if pendingTip}
-        <span class="molly-tip-dot" aria-hidden="true" data-testid="molly-tip-dot">💬</span>
-      {/if}
-      <span class="molly-avatar-badge" aria-hidden="true">
-        <span class="tortie-ear-left"></span>
-        <span class="tortie-ear-right"></span>
-        <span class="tortie-face">
-          <span class="tortie-eye"></span>
-          <span class="tortie-eye"></span>
-        </span>
-      </span>
-      <span class="molly-dock-label">
-        <span class="molly-dock-name">Molly</span>
-        <strong class="molly-treat-counter" data-testid="molly-treat-count">
-          {$mollyState.treatsFedTotal} {$mollyState.lastTreat?.icon || '🐟'}
-        </strong>
-      </span>
-      <!-- Viditelný postup k dalšímu dárku (na dotykových zařízeních se tooltip nezobrazí) -->
-      <span
-        class="molly-gift-meter"
-        class:is-complete={giftProgress.complete}
-        aria-hidden="true"
-        data-testid="molly-gift-meter"
-      >
-        <span class="molly-gift-icon">{giftProgress.icon}</span>
-        <span class="molly-gift-track"><span class="molly-gift-fill" style="width: {giftProgress.pct}%"></span></span>
-      </span>
-    </button>
-
-    {#if !atHome}
-      <button
-        bind:this={toggleBtnEl}
-        type="button"
-        class="molly-dock-toggle-btn"
-        on:pointerdown|stopPropagation
-        on:click|stopPropagation={toggleMollyPelisek}
-        aria-pressed={$mollyState.mode === 'docked'}
-        aria-label={$mollyState.mode === 'docked'
-          ? 'Pozvat Molly na procházku'
-          : 'Dopřát Molly odpočinek v pelíšku'}
-        title={$mollyState.mode === 'docked'
-          ? 'Pozvat Molly na procházku'
-          : 'Dopřát Molly odpočinek v pelíšku'}
-      >
-        <span aria-hidden="true">{$mollyState.mode === 'docked' ? '✨' : '🧺'}</span>
-        <span class="molly-toggle-text">{$mollyState.mode === 'docked' ? 'Procházka' : 'Pelíšek'}</span>
-      </button>
-
-      {#if hasFinePointer}
-        <button
-          type="button"
-          class="molly-dock-follow-btn"
-          class:is-active={$mollyState.followMouse}
-          on:pointerdown|stopPropagation
-          on:click|stopPropagation={toggleMollyFollowMouse}
-          aria-pressed={$mollyState.followMouse}
-          aria-label={$mollyState.followMouse ? 'Vypnout sledování myši' : 'Zapnout sledování myši (Molly půjde za kurzorem)'}
-          title={$mollyState.followMouse ? 'Vypnout sledování myši' : 'Zapnout sledování myši (Molly půjde za kurzorem)'}
-        >
-          <span aria-hidden="true">
-            {#if $mollyState.followMouse}
-              <svg class="molly-paw-svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                <circle cx="7.5" cy="9.5" r="2.3" />
-                <circle cx="12" cy="7" r="2.3" />
-                <circle cx="16.5" cy="9.5" r="2.3" />
-                <path d="M12 12.2c-3.1 0-5.4 2.2-5.4 4.5 0 1.6 1.3 2.6 3 2.6 1 0 1.7-.4 2.4-.4s1.4.4 2.4.4c1.7 0 3-1 3-2.6 0-2.3-2.3-4.5-5.4-4.5Z" />
-              </svg>
-            {:else}
-              🖱️
-            {/if}
-          </span>
-          <span class="molly-follow-text">{$mollyState.followMouse ? 'Sleduji' : 'Myš'}</span>
-        </button>
-      {/if}
-    {/if}
-  </div>
+  {#if !$isCompactDock}
+    <MollyDock variant="floating" />
+  {/if}
 </div>
 
 <style>
@@ -1956,25 +1974,23 @@
        přepočítávat znovu (drahé hlavně na mobilech). Stín pod kočkou kreslí přímo canvas. */
   }
 
-  /* Polohu (levý horní roh) zapisuje applyActorTransform() přímo do style.transform.
-     Proto žádné bottom/left/translate v CSS — dřív se sčítaly s inline transformací
-     a bublina končila mimo obrazovku (top ≈ 1300 px), takže Molly nebylo vůbec „slyšet“. */
+  /* Polohu (levý horní roh) zapisuje applyActorTransform() přímo do style.transform. */
   .molly-whisper-bubble {
     position: absolute;
     top: 0;
     left: 0;
     transform: translate3d(-9999px, 0, 0);
     width: max-content;
-    max-width: 230px;
-    padding: 6px 11px;
+    max-width: 248px;
+    padding: 7px 12px;
     border-radius: 14px;
-    background: rgba(12, 22, 18, 0.94);
-    border: 1px solid rgba(251, 191, 36, 0.48);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
-    color: #fef3c7;
-    font-size: 0.74rem;
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-strong, #c2cec5);
+    box-shadow: var(--shadow-md, 0 8px 20px -6px rgba(18, 42, 30, 0.08));
+    color: var(--ink-primary, #14281d);
+    font-size: 0.76rem;
     font-weight: 600;
-    line-height: 1.3;
+    line-height: 1.35;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -1989,23 +2005,19 @@
     animation: none;
   }
 
+  .molly-whisper-inner {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 6px;
+    text-align: left;
+  }
+
   .whisper-icon {
     flex-shrink: 0;
-    font-size: 0.88rem;
+    color: var(--accent-primary, #1b5e42);
     display: inline-flex;
     align-items: center;
-  }
-
-  .molly-paw-svg {
-    color: #fde68a;
-    flex-shrink: 0;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
-  }
-
-  .dock-whisper-paw-svg {
-    display: inline-block;
-    vertical-align: -1.5px;
-    margin-right: 0.2rem;
+    margin-top: 1px;
   }
 
   .whisper-text {
@@ -2016,273 +2028,24 @@
     position: fixed;
     top: -14px;
     left: -14px;
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
     border-radius: 999px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(
-      circle,
-      rgba(254, 243, 199, 0.95) 0%,
-      var(--treat-color, #f59e0b) 68%,
-      rgba(245, 158, 11, 0) 100%
-    );
-    box-shadow: 0 0 18px var(--treat-color, #f59e0b);
+    background: var(--accent-warm-tint, #fef6e8);
+    border: 1.5px solid #8f4b0e;
+    color: #8f4b0e;
+    box-shadow: var(--shadow-sm, 0 2px 8px rgba(18, 42, 30, 0.05));
     pointer-events: none;
     z-index: 945;
   }
 
-  .treat-emoji {
-    font-size: 1rem;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
-  }
-
-  /* Klidový pelíšek Dock */
-  .molly-pelisek-dock {
-    position: fixed;
-    bottom: 10px;
-    left: 10px;
+  .treat-icon-wrap {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px 5px;
-    border-radius: 999px;
-    background: rgba(14, 23, 19, 0.9);
-    border: 1px solid rgba(251, 191, 36, 0.35);
-    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.38);
-    backdrop-filter: blur(10px);
-    pointer-events: auto;
-    z-index: 941;
-    transition: border-color 0.2s ease, transform 0.2s ease;
-  }
-
-  .molly-pelisek-dock.is-docked {
-    border-color: rgba(52, 211, 153, 0.48);
-    background: rgba(12, 26, 20, 0.94);
-  }
-
-  .molly-dock-whisper {
-    position: absolute;
-    bottom: calc(100% + 8px);
-    left: 0;
-    width: max-content;
-    max-width: 240px;
-    padding: 6px 10px;
-    border-radius: 12px;
-    background: rgba(12, 22, 18, 0.95);
-    border: 1px solid rgba(251, 191, 36, 0.45);
-    color: #fef3c7;
-    font-size: 0.73rem;
-    font-weight: 600;
-    pointer-events: none;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
-  }
-
-  .molly-dock-pet-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 0.45rem 0.8rem;
-    min-height: 44px;
-    min-width: 44px;
-    box-sizing: border-box;
-    border-radius: 999px;
-    border: none;
-    background: transparent;
-    color: #f8fafc;
-    font-family: inherit;
-    font-size: 0.76rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.18s ease;
-  }
-
-  .molly-dock-pet-btn:hover {
-    background: rgba(251, 191, 36, 0.14);
-  }
-
-  .molly-dock-pet-btn {
-    position: relative;
-  }
-
-  /* Molly má odložený tip (nebylo kam ho ukázat, aniž by něco zakryl) */
-  .molly-tip-dot {
-    position: absolute;
-    top: -9px;
-    left: 2px;
-    font-size: 0.7rem;
-    line-height: 1;
-    padding: 2px 3px;
-    border-radius: 999px;
-    background: rgba(251, 191, 36, 0.95);
-    box-shadow: 0 0 0 2px rgba(14, 23, 19, 0.9);
-    animation: mollyTipBob 2.4s ease-in-out infinite;
-  }
-
-  @keyframes mollyTipBob {
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-2px);
-    }
-  }
-
-  .molly-avatar-badge {
-    position: relative;
-    width: 18px;
-    height: 16px;
-    display: inline-block;
-    flex-shrink: 0;
-  }
-
-  .tortie-ear-left,
-  .tortie-ear-right {
-    position: absolute;
-    top: 0;
-    width: 6px;
-    height: 6px;
-    border-radius: 2px 5px 0 0;
-  }
-
-  .tortie-ear-left {
-    left: 1px;
-    background: #1e1714;
-    border: 1px solid rgba(253, 230, 138, 0.45);
-    transform: rotate(-14deg);
-  }
-
-  .tortie-ear-right {
-    right: 1px;
-    background: #ea580c;
-    transform: rotate(14deg);
-  }
-
-  .tortie-face {
-    position: absolute;
-    bottom: 0;
-    left: 1px;
-    right: 1px;
-    height: 13px;
-    border-radius: 999px;
-    background: linear-gradient(90deg, #1e1714 0%, #1e1714 50%, #f59e0b 50%, #ea580c 100%);
-    border: 1px solid rgba(253, 230, 138, 0.55);
-    display: flex;
-    align-items: center;
-    justify-content: space-around;
-    padding: 0 2px;
-  }
-
-  .tortie-eye {
-    width: 3.5px;
-    height: 3.5px;
-    border-radius: 999px;
-    background: #bef264;
-    box-shadow: 0 0 4px #84cc16;
-  }
-
-  .molly-dock-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    white-space: nowrap;
-  }
-
-  .molly-treat-counter {
-    color: #fde68a;
-    font-weight: 800;
-    background: rgba(245, 158, 11, 0.16);
-    padding: 1px 6px;
-    border-radius: 999px;
-    font-size: 0.72rem;
-  }
-
-  .molly-dock-toggle-btn {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.45rem 0.8rem;
-    min-height: 44px;
-    min-width: 44px;
-    box-sizing: border-box;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: rgba(255, 255, 255, 0.06);
-    color: #d1fae5;
-    font-family: inherit;
-    font-size: 0.72rem;
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background 0.18s ease, border-color 0.18s ease;
-  }
-
-  .molly-dock-toggle-btn:hover {
-    background: rgba(52, 211, 153, 0.18);
-    border-color: rgba(52, 211, 153, 0.45);
-  }
-
-  .molly-dock-follow-btn {
-    padding: 0.45rem 0.8rem;
-    min-height: 44px;
-    min-width: 44px;
-    box-sizing: border-box;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: rgba(255, 255, 255, 0.06);
-    color: #e2e8f0;
-    font-family: inherit;
-    font-size: 0.72rem;
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
-  }
-
-  .molly-dock-follow-btn:hover {
-    background: rgba(251, 191, 36, 0.18);
-    border-color: rgba(251, 191, 36, 0.45);
-    color: #fde68a;
-  }
-
-  .molly-dock-follow-btn.is-active {
-    background: rgba(245, 158, 11, 0.22);
-    border-color: rgba(251, 191, 36, 0.65);
-    color: #fde68a;
-    box-shadow: 0 0 10px rgba(245, 158, 11, 0.35);
-  }
-
-  .molly-chased-star {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 28px;
-    height: 28px;
-    pointer-events: none;
-    user-select: none;
-    z-index: 939;
-    will-change: transform, opacity;
-    filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.85));
-    animation: starPulseTwinkle 1.6s ease-in-out infinite alternate;
-  }
-
-  .chased-star-svg {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-
-  @keyframes starPulseTwinkle {
-    0% {
-      transform: scale(0.88) rotate(0deg);
-    }
-    100% {
-      transform: scale(1.18) rotate(22deg);
-    }
+    justify-content: center;
   }
 
   /* Jen průhlednost — animace transformace by přebila inline polohu bubliny */
@@ -2295,97 +2058,34 @@
     }
   }
 
-  /* Molly ukazuje cestu: jemná zlatá záře kolem hlavního kroku stránky (globální, prvek je v jiné komponentě) */
+  /* Molly ukazuje cestu: jemné zvýraznění kolem hlavního kroku stránky */
   :global(.molly-guide-glow) {
-    outline: 2px solid rgba(251, 191, 36, 0.85);
+    outline: 2px solid #8f4b0e;
     outline-offset: 3px;
-    animation: mollyGuidePulse 1.6s ease-in-out 3;
-  }
-
-  @keyframes mollyGuidePulse {
-    0%,
-    100% {
-      box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
-    }
-    50% {
-      box-shadow: 0 0 0 8px rgba(251, 191, 36, 0.28);
-    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    :global(.molly-guide-glow) {
-      animation: none;
-    }
-
     .molly-whisper-bubble {
       animation: none;
-    }
-
-    .molly-chased-star {
-      display: none !important;
-      animation: none !important;
     }
   }
 
   @media (min-width: 681px) and (max-width: 1024px) {
     .molly-whisper-bubble {
-      max-width: 210px;
+      max-width: 230px;
     }
   }
 
   @media (max-width: 680px) {
     .molly-whisper-bubble {
-      max-width: 248px;
-      padding: 3px 9px;
-      font-size: 0.67rem;
-      line-height: 1.16;
-    }
-
-    .molly-dock-whisper {
-      bottom: auto;
-      top: calc(100% + 14px);
-      left: auto;
-      right: 0;
-      max-width: min(240px, calc(100vw - 24px));
-    }
-
-    /* Na mobilu sedí pelíšek čistě v pravé části horní lišty (.nav-capsule),
-       takže nikdy nepřekrývá akční tlačítka ani formuláře na stránce. */
-    .molly-pelisek-dock {
-      top: calc(max(0.3rem, env(safe-area-inset-top, 0px)) + 1px);
-      right: calc(max(0.65rem, env(safe-area-inset-right, 0px)) + 4px);
-      bottom: auto;
-      left: auto;
-      padding: 0 2px;
-      gap: 2px;
-      transform: none;
-    }
-
-    .molly-dock-pet-btn,
-    .molly-dock-toggle-btn {
-      padding: 0.2rem 0.44rem;
-      min-height: 44px;
-      min-width: 44px;
-    }
-
-    .molly-dock-name,
-    .molly-gift-meter,
-    .molly-toggle-text,
-    .molly-follow-text,
-    .molly-dock-follow-btn {
-      display: none !important;
+      max-width: min(260px, calc(100vw - 20px));
+      padding: 6px 10px;
+      font-size: 0.74rem;
+      line-height: 1.3;
     }
   }
 
   @media (min-width: 681px) and (max-height: 700px) {
-    .molly-pelisek-dock {
-      bottom: 6px;
-      transform: scale(0.78);
-      transform-origin: bottom left;
-      pointer-events: auto;
-      opacity: 0.92;
-    }
-
     .molly-roaming-actor {
       pointer-events: none;
       opacity: 0.88;

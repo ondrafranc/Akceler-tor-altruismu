@@ -11,7 +11,7 @@ export const HOPE_FACTS = [
     sourceLabel: 'Česká federace potravinových bank (Výroční zpráva)',
     sourceUrl: 'https://www.potravinovebanky.cz/uploads/dms/pdf/6a2004ae277ef699586774.pdf',
     verifiedAt: '02/2026',
-    actionLabel: 'Najít potravinovou pomoc v okolí →',
+    actionLabel: 'Najít potravinovou pomoc v okolí',
     actionHref: '/near?kinds=food'
   },
   {
@@ -22,7 +22,7 @@ export const HOPE_FACTS = [
     sourceLabel: 'Ukliďme Česko – Historie a statistiky úklidů',
     sourceUrl: 'https://www.uklidmecesko.cz/about/historie/',
     verifiedAt: '11/2026',
-    actionLabel: 'Zkusit malý krok pro přírodu →',
+    actionLabel: 'Zkusit malý krok pro přírodu',
     actionHref: '/app/guided?topic=environment'
   },
   {
@@ -33,7 +33,7 @@ export const HOPE_FACTS = [
     sourceLabel: 'Darujme.cz (Nadace VIA)',
     sourceUrl: 'https://www.darujme.cz/',
     verifiedAt: '11/2026',
-    actionLabel: 'Prohlédnout ověřené drobné skutky →',
+    actionLabel: 'Prohlédnout ověřené drobné skutky',
     actionHref: '/app/online'
   },
   {
@@ -44,7 +44,7 @@ export const HOPE_FACTS = [
     sourceLabel: 'ČNRDD – Aktuální čísla registru',
     sourceUrl: 'https://registr.kostnidren.cz/o-registru/aktualni-cisla/',
     verifiedAt: '09/2026',
-    actionLabel: 'Zjistit více o zápisu (5 min) →',
+    actionLabel: 'Zjistit více o zápisu (5 min)',
     actionHref: '/app/guided?topic=health'
   },
   {
@@ -55,7 +55,7 @@ export const HOPE_FACTS = [
     sourceLabel: 'Aplikace Záchranka – Oficiální přehled',
     sourceUrl: 'https://www.zachrankaapp.cz/',
     verifiedAt: '11/2026',
-    actionLabel: 'Zkontrolovat online tipy pro zdraví →',
+    actionLabel: 'Zkontrolovat online tipy pro zdraví',
     actionHref: '/app/online?filter=fast'
   },
   {
@@ -66,7 +66,7 @@ export const HOPE_FACTS = [
     sourceLabel: 'Krabice od bot (Diakonie ČCE)',
     sourceUrl: 'https://www.krabiceodbot.cz/',
     verifiedAt: '11/2026',
-    actionLabel: 'Pomoc dětem a vzdělávání →',
+    actionLabel: 'Pomoc dětem a vzdělávání',
     actionHref: '/app/guided?topic=children'
   }
 ];

@@ -1,6 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import { isCrisisOpen, toggleCrisisModal } from "../lib/utils.js";
+  import AppIcon from "$lib/components/AppIcon.svelte";
 
   onMount(() => {
     const handleToggle = () => {
@@ -46,7 +47,16 @@
   function toggleHelp() {
     toggleCrisisModal();
   }
+
+  /** @param {KeyboardEvent} e */
+  function handleKeydown(e) {
+    if (e.key === "Escape" && $isCrisisOpen) {
+      toggleHelp();
+    }
+  }
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 <div class="crisis-widget" class:expanded={$isCrisisOpen}>
   {#if $isCrisisOpen}
@@ -57,7 +67,10 @@
     >
       <div class="panel-head">
         <div>
-          <strong>🆘 Potřebuješ teď oporu ty?</strong>
+          <strong class="panel-title">
+            <AppIcon name="life-buoy" size={18} strokeWidth={2} />
+            <span>Potřebuješ teď oporu ty?</span>
+          </strong>
           <div class="panel-sub">
             Na to, co prožíváš, nemusíš zůstat bez podpory. Tyto služby jsou tu
             pro tebe zdarma a anonymně:
@@ -66,10 +79,10 @@
         <button
           type="button"
           class="close-btn"
-          on:click={toggleHelp}
+          onclick={toggleHelp}
           aria-label="Skrýt krizové kontakty"
         >
-          ✕
+          <AppIcon name="x" size={18} strokeWidth={2} />
         </button>
       </div>
 
@@ -82,15 +95,21 @@
             </div>
             <div class="res-links">
               {#if r.phone}
-                <a href={`tel:${r.phoneRaw}`} class="res-phone">📞 {r.phone}</a>
+                <a href={`tel:${r.phoneRaw}`} class="res-phone">
+                  <AppIcon name="phone" size={15} strokeWidth={2} />
+                  <span>{r.phone}</span>
+                </a>
               {/if}
               {#if r.url}
                 <a
                   href={r.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="res-web">Web / chat →</a
+                  class="res-web"
                 >
+                  <span>Web / chat</span>
+                  <AppIcon name="arrow-up-right" size={15} strokeWidth={2} />
+                </a>
               {/if}
             </div>
           </div>
@@ -98,8 +117,13 @@
       </div>
 
       <div class="emergency-foot">
-        ⚠️ V akutním ohrožení života volej <strong>155</strong> (záchranka) nebo
-        <strong>112</strong>.
+        <span class="foot-alert-icon" aria-hidden="true">
+          <AppIcon name="alert-triangle" size={16} strokeWidth={2} />
+        </span>
+        <span>
+          V akutním ohrožení života volej <strong>155</strong> (záchranka) nebo
+          <strong>112</strong>.
+        </span>
       </div>
     </div>
   {/if}
@@ -107,7 +131,7 @@
   <button
     type="button"
     class="crisis-pill crisis-trigger"
-    on:click={toggleHelp}
+    onclick={toggleHelp}
     aria-expanded={$isCrisisOpen}
   >
     <span class="pill-dot" aria-hidden="true"></span>
@@ -117,7 +141,7 @@
   <button
     type="button"
     class="crisis-mobile-fab"
-    on:click={toggleHelp}
+    onclick={toggleHelp}
     aria-expanded={$isCrisisOpen}
     aria-label="Krizová opora 24/7 (116 111 / 116 123)"
     title="Potřebuješ oporu? Linky důvěry 116 111 / 116 123"
@@ -139,47 +163,50 @@
     gap: 0.55rem;
   }
 
+  .crisis-widget.expanded {
+    z-index: 1020;
+  }
+
   .crisis-pill {
     display: inline-flex;
     align-items: center;
     gap: 0.48rem;
-    padding: 0.5rem 0.9rem;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding: 0.5rem 0.95rem;
     border-radius: 999px;
-    border: 1px solid rgba(217, 119, 6, 0.28);
-    background: rgba(254, 255, 253, 0.95);
-    color: #143324;
+    border: 1px solid rgba(143, 75, 14, 0.32);
+    background: var(--bg-surface, #ffffff);
+    color: var(--ink-primary, #14281d);
     font-family: var(--font-sans);
     font-weight: 700;
     font-size: 0.8rem;
     cursor: pointer;
-    box-shadow: 0 10px 24px -8px rgba(12, 38, 26, 0.18);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    transition: all 0.18s ease;
+    box-shadow: var(--shadow-md, 0 8px 20px -6px rgba(18, 42, 30, 0.08));
+    transition: background-color 0.18s ease, border-color 0.18s ease;
   }
 
   .pill-dot {
     width: 8px;
     height: 8px;
     border-radius: 999px;
-    background: #f59e0b;
-    box-shadow: 0 0 8px rgba(245, 158, 11, 0.65);
+    background: #8f4b0e;
     flex-shrink: 0;
   }
 
   .crisis-pill:hover {
-    background: #ffffff;
-    border-color: #d97706;
-    transform: translateY(-1px);
+    background: var(--accent-warm-tint, #fef6e8);
+    border-color: #8f4b0e;
   }
 
   .crisis-panel {
     width: min(390px, calc(100vw - 28px));
-    background: rgba(255, 255, 255, 0.98);
-    border: 2px solid rgba(46, 93, 49, 0.22);
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-strong, #c2cec5);
     border-radius: 18px;
     padding: 1rem;
-    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.18);
+    box-sizing: border-box;
+    box-shadow: var(--shadow-xl, 0 20px 44px -12px rgba(18, 42, 30, 0.16));
   }
 
   .panel-head {
@@ -188,27 +215,44 @@
     align-items: flex-start;
     gap: 0.5rem;
     margin-bottom: 0.75rem;
-    color: var(--czech-forest);
+    color: var(--ink-primary, #14281d);
     font-size: 0.95rem;
   }
 
+  .panel-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--ink-primary, #14281d);
+  }
+
   .panel-sub {
-    color: var(--text-secondary);
+    color: var(--ink-secondary, #3f574a);
     font-size: 0.84rem;
-    margin-top: 0.2rem;
-    line-height: 1.4;
+    margin-top: 0.25rem;
+    line-height: 1.45;
   }
 
   .close-btn {
-    border: none;
-    background: rgba(242, 247, 242, 0.8);
-    color: var(--text-secondary);
-    width: 28px;
-    height: 28px;
+    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--ink-secondary, #3f574a);
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 999px;
     cursor: pointer;
-    font-weight: 800;
     flex-shrink: 0;
+    transition: background-color 0.15s ease;
+  }
+
+  .close-btn:hover {
+    background: var(--border-subtle, #dce3dd);
+    color: var(--ink-primary, #14281d);
   }
 
   .resource-list {
@@ -218,68 +262,98 @@
   }
 
   .resource-item {
-    padding: 0.6rem 0.75rem;
+    padding: 0.65rem 0.75rem;
     border-radius: 12px;
-    background: rgba(242, 247, 242, 0.7);
-    border: 1px solid rgba(44, 62, 45, 0.1);
+    background: var(--bg-subtle, #edf2ee);
+    border: 1px solid var(--border-subtle, #dce3dd);
   }
 
   .res-top {
     display: flex;
     flex-direction: column;
-    gap: 0.1rem;
-    margin-bottom: 0.35rem;
+    gap: 0.12rem;
+    margin-bottom: 0.4rem;
   }
 
   .res-name {
     font-weight: 800;
-    color: var(--czech-forest);
+    color: var(--ink-primary, #14281d);
     font-size: 0.88rem;
   }
 
   .res-avail {
     font-size: 0.78rem;
-    color: var(--text-secondary);
+    color: var(--ink-secondary, #3f574a);
   }
 
   .res-links {
     display: flex;
-    gap: 0.75rem;
+    gap: 0.5rem;
     align-items: center;
     flex-wrap: wrap;
   }
 
+  .res-phone,
+  .res-web {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.45rem 0.75rem;
+    border-radius: 10px;
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    text-decoration: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+  }
+
   .res-phone {
     font-weight: 800;
-    font-size: 0.88rem;
-    color: var(--czech-forest);
-    text-decoration: none;
+    font-size: 0.86rem;
+    color: var(--accent-primary, #1b5e42);
   }
+
   .res-phone:hover {
+    border-color: var(--accent-primary, #1b5e42);
     text-decoration: underline;
   }
 
   .res-web {
     font-weight: 700;
     font-size: 0.82rem;
-    color: var(--text-secondary);
-    text-decoration: none;
+    color: var(--ink-primary, #14281d);
   }
+
   .res-web:hover {
-    color: var(--czech-forest);
+    border-color: var(--border-strong, #c2cec5);
     text-decoration: underline;
   }
 
   .emergency-foot {
     margin-top: 0.7rem;
-    padding-top: 0.55rem;
-    border-top: 1px solid rgba(44, 62, 45, 0.1);
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--border-subtle, #dce3dd);
     font-size: 0.8rem;
-    color: var(--text-secondary);
+    color: var(--ink-secondary, #3f574a);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.4rem;
+    line-height: 1.4;
+  }
+
+  .foot-alert-icon {
+    display: inline-flex;
+    align-items: center;
+    color: #8f4b0e;
+    margin-top: 1px;
+    flex-shrink: 0;
   }
 
   .crisis-mobile-fab {
-    display: none;
+    display: none !important;
   }
 
   @media (max-width: 680px) {
@@ -289,9 +363,9 @@
     }
 
     .crisis-widget {
-      left: 8px;
-      right: auto;
-      bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+      left: 12px;
+      right: 12px;
+      bottom: max(12px, env(safe-area-inset-bottom, 0px));
       align-items: flex-start;
       z-index: 942;
     }
@@ -302,12 +376,13 @@
 
     .crisis-panel {
       position: fixed;
-      bottom: calc(102px + env(safe-area-inset-bottom, 0px));
+      bottom: max(12px, env(safe-area-inset-bottom, 0px));
       left: 12px;
       right: 12px;
       width: auto;
+      max-width: calc(100vw - 24px);
       z-index: 980;
-      max-height: calc(100dvh - 150px);
+      max-height: calc(100dvh - 84px);
       overflow-y: auto;
     }
   }

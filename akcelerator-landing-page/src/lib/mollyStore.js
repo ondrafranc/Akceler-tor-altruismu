@@ -8,6 +8,7 @@ import {
   AA_SANCTUARY_WISHES_KEY
 } from './storage/index.js';
 import {
+  MOLLY_TREAT_BY_FOOD,
   resolveMollyTreat,
   getUnlockedMilestone,
   MOLLY_PET_WHISPERS,
@@ -115,14 +116,22 @@ function loadMollyState() {
       : 0;
     const availableTreats = Math.max(0, Number(parsed.availableTreats) || 0);
     const earnedTreatQueue = Array.isArray(parsed.earnedTreatQueue)
-      ? parsed.earnedTreatQueue.filter((t) => t && typeof t === 'object')
+      ? parsed.earnedTreatQueue
+          .filter((t) => t && typeof t === 'object')
+          .map((t) => ({
+            ...t,
+            icon: MOLLY_TREAT_BY_FOOD[t.foodType]?.icon || 'fish'
+          }))
       : [];
     const lastTreat =
       parsed.lastTreat &&
       typeof parsed.lastTreat === 'object' &&
       !Array.isArray(parsed.lastTreat) &&
       typeof parsed.lastTreat.icon === 'string'
-        ? parsed.lastTreat
+        ? {
+            ...parsed.lastTreat,
+            icon: MOLLY_TREAT_BY_FOOD[parsed.lastTreat.foodType]?.icon || 'fish'
+          }
         : null;
     return {
       ...DEFAULT_MOLLY_STATE,
@@ -218,7 +227,7 @@ export function unlockMollyTreat(action, opts = {}) {
       availableTreats: nextAvailable,
       earnedTreatQueue: nextQueue,
       whisper: {
-        icon: treat.icon || '🐟',
+        icon: treat.icon || 'fish',
         text: `Mňau! Odemkla se dobrota za tvůj dobrý skutek: ${treat.name}. Můžeš mi ji dát!`,
         ts
       }
@@ -274,7 +283,7 @@ export function feedMolly(sourceOrAction = 'action', opts = {}) {
     const unearnedWhisper =
       opts?.unearnedWhisper ||
       'Mrrr… bříško mám klidné a pamlsky si šetřím na oslavu dobrého skutku. Děkuji za pohlazení!';
-    petMolly(unearnedWhisper, { icon: '🐾', fromDock: opts?.fromDock });
+    petMolly(unearnedWhisper, { icon: 'paw', fromDock: opts?.fromDock });
     return { success: false, treat: null };
   }
 
@@ -282,7 +291,7 @@ export function feedMolly(sourceOrAction = 'action', opts = {}) {
   const poppedTreat = earnedQueue.shift() || null;
   const meta = action ? getActionEffectMeta(action) : null;
   const treat = poppedTreat || meta?.mollyTreat || {
-    icon: '🐟',
+    icon: 'fish',
     name: 'lososová granulka',
     shortLabel: 'Rybka pro Molly',
     color: '#f59e0b',
@@ -302,7 +311,7 @@ export function feedMolly(sourceOrAction = 'action', opts = {}) {
   };
 
   const whisper = {
-    icon: treat.icon || '🐟',
+    icon: treat.icon || 'fish',
     text: `Mňam! Děkuji za ${treat.name || 'dobrotu'}, moc mi chutná.`,
     ts
   };
@@ -381,14 +390,14 @@ export function notifyMollySpark(action, opts = {}) {
 
   const sparkRecord = {
     ...treat,
-    icon: '✨',
+    icon: 'sparkles',
     name: 'světelná jiskra',
     actionId,
     ts
   };
 
   const whisper = {
-    icon: '✨',
+    icon: 'sparkles',
     text: 'Cítím tvoji jiskru! Každá myšlenka na pomoc zahřeje.',
     ts
   };
@@ -445,7 +454,7 @@ export function petMolly(customWhisper, opts = {}) {
       mood: 'purring',
       petCount: nextPetCount,
       whisper: {
-        icon: opts?.icon || '🐾',
+        icon: opts?.icon || 'paw',
         text: chosenText,
         ts,
         fromDock: Boolean(opts?.fromDock)
@@ -485,7 +494,7 @@ export function toggleMollyPelisek() {
       mode: nextMode,
       mood: nextMode === 'docked' ? 'sleeping' : 'curious',
       whisper: {
-        icon: nextMode === 'docked' ? '🧺' : '🐾',
+        icon: nextMode === 'docked' ? 'home' : 'paw',
         text:
           nextMode === 'docked'
             ? 'Zachumlám se do pelíšku a budu tiše odpočívat.'
@@ -541,7 +550,7 @@ export function toggleMollyFollowMouse() {
       ...prev,
       followMouse: nextVal,
       whisper: {
-        icon: nextVal ? '🐾' : '🧺',
+        icon: nextVal ? 'paw' : 'home',
         text: nextVal
           ? 'Mňau! Půjdu s tebou a budu tě tiše doprovázet.'
           : 'Zůstanu na svém klidném místě.',
@@ -572,7 +581,7 @@ export function setMollyMood(mood) {
  * @param {string} [icon]
  * @param {{ guide?: boolean, routePath?: string }} [opts]
  */
-export function mollyWhisper(text, icon = '🐾', opts = {}) {
+export function mollyWhisper(text, icon = 'paw', opts = {}) {
   if (!text) return;
   mollyState.update((prev) => ({
     ...prev,

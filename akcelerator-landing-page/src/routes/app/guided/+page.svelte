@@ -44,11 +44,13 @@
     AA_PREFS_NEAR_KEY
   } from "../../../lib/storage/index.js";
   import ActionCard from "$lib/features/actions/components/ActionCard.svelte";
+  import AppIcon from "$lib/components/AppIcon.svelte";
+  import PageHeader from "$lib/components/PageHeader.svelte";
 
   const SITUATIONS = [
     {
       id: "couch",
-      emoji: "🛋️",
+      icon: "armchair",
       title: "2 minuty z domova",
       sub: "Rychlý skutek z mobilu",
       timeBucket: "5",
@@ -58,7 +60,7 @@
     },
     {
       id: "focus",
-      emoji: "💻",
+      icon: "laptop",
       title: "15 minut u počítače",
       sub: "Mapování nebo věda z domova",
       timeBucket: "15",
@@ -68,7 +70,7 @@
     },
     {
       id: "walk",
-      emoji: "🌿",
+      icon: "leaf",
       title: "Při procházce venku",
       sub: "Užitečná věc cestou v okolí",
       timeBucket: "15",
@@ -78,7 +80,7 @@
     },
     {
       id: "people",
-      emoji: "🤝",
+      icon: "handshake",
       title: "Mezi lidmi v partě",
       sub: "Společná akce ve městě či přírodě",
       timeBucket: "45",
@@ -88,7 +90,7 @@
     },
     {
       id: "donate",
-      emoji: "💚",
+      icon: "heart",
       title: "Poslat drobný dar",
       sub: "Od 50 Kč přímo na pomoc",
       timeBucket: "5",
@@ -473,19 +475,16 @@
 </svelte:head>
 
 <div class="page">
-  <header class="subpage-hero header">
-    <div class="hero-kicker">PRŮVODCE NA MÍRU</div>
-    <h1 class="title">
-      Jak chceš dneska <span class="serif-accent">pomoct</span>?
-    </h1>
-    <p class="subtitle">
-      Zvol si, kolik máš zrovna času a jaké téma ti je blízké — hned uvidíš
-      jeden konkrétní, ověřený skutek.
-    </p>
-  </header>
+  <PageHeader
+    kicker="Průvodce na míru"
+    title="Jak chceš dneska "
+    titleAccent="pomoct"
+    titleSuffix="?"
+    subtitle="Zvol si, kolik máš zrovna času a jaké téma ti je blízké — hned uvidíš jeden konkrétní, ověřený skutek."
+  />
 
   <div class="guided-workspace">
-    <!-- LEFT: 2 CALM FOUNDATIONAL CHOICES -->
+    <!-- LEFT: UNIFIED COMPASS CARD (STEPS 1 + 2 + 3 & ADAPTIVE PARAMS) -->
     <section class="compass-shell compass-foundations" aria-label="Nastavení průvodce">
       <div class="step-block">
         <div class="block-label">1. Kolik máš zrovna času?</div>
@@ -503,7 +502,9 @@
               aria-pressed={activeSituationId === s.id}
               on:click={() => selectSituation(s.id)}
             >
-              <span class="sit-emoji">{s.emoji}</span>
+              <span class="sit-icon" aria-hidden="true">
+                <AppIcon name={s.icon} size={18} strokeWidth={1.9} />
+              </span>
               <div class="sit-copy">
                 <span class="sit-title">{s.title}</span>
                 <span class="sit-sub">{s.sub}</span>
@@ -527,7 +528,8 @@
             class:selected={selectedTopics.length === 0}
             on:click={() => toggleTopic("all")}
           >
-            ✨ Cokoliv
+            <AppIcon name="sparkles" size={14} strokeWidth={1.9} />
+            <span>Cokoliv</span>
           </button>
           {#each VALUES as v}
             <button
@@ -536,29 +538,388 @@
               class:selected={selectedTopics.includes(v.key)}
               on:click={() => toggleTopic(v.key)}
             >
-              {v.shortLabel || v.label}
+              <AppIcon name={v.icon} size={14} strokeWidth={1.9} />
+              <span>{v.shortLabel || v.label}</span>
             </button>
           {/each}
         </div>
       </div>
-    </section>
 
-    {#if bestAction}
-      <div class="mobile-guided-preview-bar" role="region" aria-label="Náhled doporučeného kroku">
-        <span class="mgp-title">🎯 Doporučení: {cleanTitle(bestAction.title)}</span>
-        <button
-          type="button"
-          class="mgp-btn"
-          on:click={() =>
-            document.getElementById("personal-plan")?.scrollIntoView({
-              behavior: "smooth",
-              block: "start",
-            })}
-        >
-          Zobrazit krok ↓
-        </button>
+      <div class="divider"></div>
+
+      <!-- STEP 3 & CONSOLIDATED PARAMETERS DRAWER -->
+      <div class="step-block adaptive-step-block" aria-label="Upřesňující volby">
+        {#if selectedTopics.length === 0 && recipientMacro === "any"}
+          <div class="block-label">
+            3. Komu chceš dnes nejvíc pomoct? <span class="opt-tag"
+              >(nepovinné)</span
+            >
+          </div>
+          <div class="topic-pills">
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={String(recipientMacro) === "people"}
+              on:click={() =>
+                applyAdaptiveFilter(() => (recipientMacro = "people"), "recipient")}
+            >
+              <AppIcon name="users" size={14} strokeWidth={1.9} />
+              <span>Lidem</span>
+            </button>
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={String(recipientMacro) === "animals"}
+              on:click={() =>
+                applyAdaptiveFilter(
+                  () => (recipientMacro = "animals"),
+                  "recipient",
+                )}
+            >
+              <AppIcon name="paw" size={14} />
+              <span>Zvířatům</span>
+            </button>
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={String(recipientMacro) === "nature"}
+              on:click={() =>
+                applyAdaptiveFilter(() => (recipientMacro = "nature"), "recipient")}
+            >
+              <AppIcon name="leaf" size={14} strokeWidth={1.9} />
+              <span>Přírodě</span>
+            </button>
+          </div>
+        {:else if activeSituationId === "couch" || activeSituationId === "focus"}
+          <div class="block-label">
+            3. Chceš zůstat úplně anonymní? <span class="opt-tag"
+              >(nepovinné)</span
+            >
+          </div>
+          <div class="topic-pills">
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={contactLevel === "any"}
+              on:click={() =>
+                applyAdaptiveFilter(() => (contactLevel = "any"), "contact")}
+            >
+              Nezáleží
+            </button>
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={contactLevel === "anonymous"}
+              on:click={() =>
+                applyAdaptiveFilter(
+                  () => (contactLevel = "anonymous"),
+                  "contact",
+                )}
+            >
+              <AppIcon name="lock" size={14} strokeWidth={1.9} />
+              <span>Zcela anonymně</span>
+            </button>
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={contactLevel === "contact_ok"}
+              on:click={() =>
+                applyAdaptiveFilter(
+                  () => (contactLevel = "contact_ok"),
+                  "contact",
+                )}
+            >
+              <AppIcon name="message-circle" size={14} strokeWidth={1.9} />
+              <span>Nevadí mi kontakt</span>
+            </button>
+          </div>
+        {:else}
+          <div class="block-label">
+            3. Jednorázově, nebo dlouhodobě? <span class="opt-tag"
+              >(nepovinné)</span
+            >
+          </div>
+          <div class="topic-pills">
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={commitment === "any"}
+              on:click={() =>
+                applyAdaptiveFilter(() => (commitment = "any"), "commitment")}
+            >
+              Nezáleží
+            </button>
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={commitment === "one_off"}
+              on:click={() =>
+                applyAdaptiveFilter(
+                  () => (commitment = "one_off"),
+                  "commitment",
+                )}
+            >
+              <AppIcon name="zap" size={14} strokeWidth={1.9} />
+              <span>Jednorázově</span>
+            </button>
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={commitment === "long_term"}
+              on:click={() =>
+                applyAdaptiveFilter(
+                  () => (commitment = "long_term"),
+                  "commitment",
+                )}
+            >
+              <AppIcon name="sprout" size={14} strokeWidth={1.9} />
+              <span>Dlouhodobě</span>
+            </button>
+          </div>
+        {/if}
+
+        <details class="adaptive-params-drawer">
+          <summary>
+            <span class="summary-label">
+              <AppIcon name="sliders-horizontal" size={15} strokeWidth={2} />
+              <span>Upřesnit další volby (anonymita, závazek, ověřený dopad)</span>
+            </span>
+            <span class="drawer-chevron-wrap" aria-hidden="true">
+              <AppIcon name="chevron-down" size={16} />
+            </span>
+          </summary>
+          <div class="adaptive-params-grid">
+            <div class="ap-group">
+              <span class="ap-label">Závazek:</span>
+              <div class="ap-pills">
+                <button
+                  type="button"
+                  class:active={commitment === "any"}
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (commitment = "any"), "commitment")}
+                  >Vše</button
+                >
+                <button
+                  type="button"
+                  class:active={commitment === "one_off"}
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (commitment = "one_off"),
+                      "commitment",
+                    )}>Jednorázově</button
+                >
+                <button
+                  type="button"
+                  class:active={commitment === "long_term"}
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (commitment = "long_term"),
+                      "commitment",
+                    )}>Dlouhodobě</button
+                >
+              </div>
+            </div>
+
+            <div class="ap-group">
+              <span class="ap-label">Anonymita:</span>
+              <div class="ap-pills">
+                <button
+                  type="button"
+                  class:active={contactLevel === "any"}
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (contactLevel = "any"), "contact")}
+                  >Vše</button
+                >
+                <button
+                  type="button"
+                  class:active={contactLevel === "anonymous"}
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (contactLevel = "anonymous"),
+                      "contact",
+                    )}>Anonymně</button
+                >
+                <button
+                  type="button"
+                  class:active={contactLevel === "contact_ok"}
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (contactLevel = "contact_ok"),
+                      "contact",
+                    )}
+                  >Nevadí kontakt</button
+                >
+              </div>
+            </div>
+
+            <div class="ap-group">
+              <span class="ap-label">Komu pomoci:</span>
+              <div class="ap-pills">
+                <button
+                  type="button"
+                  class:active={recipientMacro === "any"}
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (recipientMacro = "any"),
+                      "recipient",
+                    )}>Všem</button
+                >
+                <button
+                  type="button"
+                  class:active={recipientMacro === "people"}
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (recipientMacro = "people"),
+                      "recipient",
+                    )}>Lidem</button
+                >
+                <button
+                  type="button"
+                  class:active={recipientMacro === "animals"}
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (recipientMacro = "animals"),
+                      "recipient",
+                    )}>Zvířatům</button
+                >
+                <button
+                  type="button"
+                  class:active={recipientMacro === "nature"}
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (recipientMacro = "nature"),
+                      "recipient",
+                    )}>Přírodě</button
+                >
+              </div>
+            </div>
+
+            <div class="ap-group">
+              <span class="ap-label">Sám / s lidmi:</span>
+              <div class="ap-pills">
+                <button
+                  type="button"
+                  class:active={socialOverride === "any"}
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (socialOverride = "any"), "social")}
+                  >Podle situace</button
+                >
+                <button
+                  type="button"
+                  class:active={socialOverride === "solo"}
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (socialOverride = "solo"), "social")}
+                  >Sám</button
+                >
+                <button
+                  type="button"
+                  class:active={socialOverride === "group"}
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (socialOverride = "group"),
+                      "social",
+                    )}
+                  >S ostatními</button
+                >
+              </div>
+            </div>
+
+            <div class="ap-group">
+              <span class="ap-label">Prostředí:</span>
+              <div class="ap-pills">
+                <button
+                  type="button"
+                  class:active={modeOverride === "any"}
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (modeOverride = "any"), "mode")}
+                  >Podle situace</button
+                >
+                <button
+                  type="button"
+                  class:active={modeOverride === "online"}
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (modeOverride = "online"), "mode")}
+                  >Z domova</button
+                >
+                <button
+                  type="button"
+                  class:active={modeOverride === "local"}
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (modeOverride = "local"), "mode")}
+                  >Venku</button
+                >
+              </div>
+            </div>
+
+            <div class="ap-group">
+              <span class="ap-label">Finanční náročnost:</span>
+              <div class="ap-pills">
+                <button
+                  type="button"
+                  class:active={costOverride === "any"}
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (costOverride = "any"), "cost")}
+                  >Podle situace</button
+                >
+                <button
+                  type="button"
+                  class:active={costOverride === "free"}
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (costOverride = "free"), "cost")}
+                  >Bez peněz (0 Kč)</button
+                >
+                <button
+                  type="button"
+                  class:active={costOverride === "donation"}
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (costOverride = "donation"),
+                      "cost",
+                    )}
+                  >Mohu darovat</button
+                >
+              </div>
+            </div>
+
+            <div class="ap-group">
+              <span class="ap-label">Míra ověření dopadu:</span>
+              <div class="ap-pills">
+                <button
+                  type="button"
+                  class:active={evidenceTier === "any"}
+                  on:click={() =>
+                    applyAdaptiveFilter(
+                      () => (evidenceTier = "any"),
+                      "evidence",
+                    )}>Vše (A–C)</button
+                >
+                <button
+                  type="button"
+                  class:active={evidenceTier === "A"}
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (evidenceTier = "A"), "evidence")}
+                  >Ověřený dopad (A)</button
+                >
+                <button
+                  type="button"
+                  class:active={evidenceTier === "B"}
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (evidenceTier = "B"), "evidence")}
+                  >Ověřený dopad (B)</button
+                >
+                <button
+                  type="button"
+                  class:active={evidenceTier === "C"}
+                  on:click={() =>
+                    applyAdaptiveFilter(() => (evidenceTier = "C"), "evidence")}
+                  >Ověřený dopad (C)</button
+                >
+              </div>
+            </div>
+          </div>
+        </details>
       </div>
-    {/if}
+    </section>
 
     <!-- RIGHT: CLEAN FOCUSED RECOMMENDATION (STANDARDIZED 6-PART GOODACTION CARD) -->
     <section
@@ -575,7 +936,8 @@
               class="btn-cycle-inline"
               on:click={cycleRecommendation}
             >
-              ↻ Jiný nápad
+              <AppIcon name="refresh-cw" size={14} strokeWidth={2} />
+              <span>Jiný nápad</span>
             </button>
           </div>
 
@@ -615,16 +977,16 @@
       {#if sideAlternatives.length}
         <details class="calm-drawer alts-drawer">
           <summary>
-            <span
-              >Další {sideAlternatives.length} nápady pro tohle nastavení</span
-            >
+            <span class="summary-label">
+              Další {sideAlternatives.length} nápady pro tohle nastavení
+            </span>
           </summary>
           <div class="alts-grid">
             {#each sideAlternatives as alt (alt.id)}
               <article class="alt-card">
                 <div class="alt-meta">
-                  {alt.quickTagsLabel || cleanMeta(alt.metaLabel)} · Důkazy {alt.impactEvidence ||
-                    "B"} · Ověřeno: {alt.verifiedLabel}
+                  {alt.quickTagsLabel || cleanMeta(alt.metaLabel)} · Ověřený dopad ({alt.impactEvidence ||
+                    "B"}) · Ověřeno: {alt.verifiedLabel}
                 </div>
                 <h4>{cleanTitle(alt.title)}</h4>
                 <p>{alt.desc}</p>
@@ -641,14 +1003,16 @@
                     use:holdSpark={{ id: alt.id, surface: "guided_alt" }}
                     on:click={() => handleStartGuidedAction(alt, "guided_alt")}
                   >
-                    Začít pomáhat ↗
+                    <span>Začít pomáhat</span>
+                    <AppIcon name="arrow-up-right" size={14} strokeWidth={2} />
                   </a>
                   <button
                     type="button"
                     class="alt-detail"
                     on:click={() => promoteAlternative(alt)}
                   >
-                    Detail ↑
+                    <span>Detail</span>
+                    <AppIcon name="arrow-up" size={14} strokeWidth={2} />
                   </button>
                 </div>
               </article>
@@ -660,10 +1024,10 @@
       <!-- 5.1 & 5.2 OVĚŘENÁ ÚČINNOST A METODIKA DOPADU -->
       <details class="calm-drawer methodology-drawer">
         <summary>
-          <span
-            >⚖️ Jak poznáme, že pomoc skutečně pomohla? (Hodnocení důkazů A / B
-            / C)</span
-          >
+          <span class="summary-label">
+            <AppIcon name="scale" size={16} strokeWidth={1.9} />
+            <span>Jak poznáme, že pomoc skutečně pomohla? (Ověřený dopad A / B / C)</span>
+          </span>
         </summary>
         <div class="methodology-body">
           <p class="meth-intro">{EVIDENCE_METHODOLOGY.intro}</p>
@@ -671,7 +1035,11 @@
           <div class="meth-tiers">
             {#each Object.values(EVIDENCE_TIERS) as tier}
               <div class="meth-tier-item">
-                <strong>Důkazy {tier.tier} — {tier.label}:</strong>
+                <strong>
+                  Ověřený dopad ({tier.tier}){tier.tier === "A"
+                    ? ""
+                    : ` — ${tier.label}`}:
+                </strong>
                 <span>{tier.desc}</span>
               </div>
             {/each}
@@ -701,368 +1069,11 @@
           <div class="meth-links">
             <span>Další zdroje k efektivnímu altruismu a evaluaci dopadu:</span>
             {#each EVIDENCE_METHODOLOGY.sources as src}
-              <a href={src.url} target="_blank" rel="noopener noreferrer"
-                >{src.label} ↗</a
-              >
+              <a href={src.url} target="_blank" rel="noopener noreferrer">
+                <span>{src.label}</span>
+                <AppIcon name="arrow-up-right" size={13} strokeWidth={2} />
+              </a>
             {/each}
-          </div>
-        </div>
-      </details>
-    </section>
-
-    <!-- LEFT ROW 2 (Desktop) / REFINEMENT (Mobile): STEP 3 & CONSOLIDATED PARAMETERS DRAWER -->
-    <section class="compass-shell adaptive-step-block" aria-label="Upřesňující volby">
-      {#if selectedTopics.length === 0 && recipientMacro === "any"}
-        <div class="block-label">
-          3. Komu chceš dnes nejvíc pomoct? <span class="opt-tag"
-            >(nepovinné)</span
-          >
-        </div>
-        <div class="topic-pills">
-          <button
-            type="button"
-            class="topic-pill"
-            class:selected={String(recipientMacro) === "people"}
-            on:click={() =>
-              applyAdaptiveFilter(() => (recipientMacro = "people"), "recipient")}
-          >
-            👥 Lidem
-          </button>
-          <button
-            type="button"
-            class="topic-pill"
-            class:selected={String(recipientMacro) === "animals"}
-            on:click={() =>
-              applyAdaptiveFilter(
-                () => (recipientMacro = "animals"),
-                "recipient",
-              )}
-          >
-            🐾 Zvířatům
-          </button>
-          <button
-            type="button"
-            class="topic-pill"
-            class:selected={String(recipientMacro) === "nature"}
-            on:click={() =>
-              applyAdaptiveFilter(() => (recipientMacro = "nature"), "recipient")}
-          >
-            🌿 Přírodě
-          </button>
-        </div>
-      {:else if activeSituationId === "couch" || activeSituationId === "focus"}
-        <div class="block-label">
-          3. Chceš zůstat úplně anonymní? <span class="opt-tag"
-            >(nepovinné)</span
-          >
-        </div>
-        <div class="topic-pills">
-          <button
-            type="button"
-            class="topic-pill"
-            class:selected={contactLevel === "any"}
-            on:click={() =>
-              applyAdaptiveFilter(() => (contactLevel = "any"), "contact")}
-          >
-            Nezáleží
-          </button>
-          <button
-            type="button"
-            class="topic-pill"
-            class:selected={contactLevel === "anonymous"}
-            on:click={() =>
-              applyAdaptiveFilter(
-                () => (contactLevel = "anonymous"),
-                "contact",
-              )}
-          >
-            🔒 Zcela anonymně
-          </button>
-          <button
-            type="button"
-            class="topic-pill"
-            class:selected={contactLevel === "contact_ok"}
-            on:click={() =>
-              applyAdaptiveFilter(
-                () => (contactLevel = "contact_ok"),
-                "contact",
-              )}
-          >
-            👋 Nevadí mi kontakt
-          </button>
-        </div>
-      {:else}
-        <div class="block-label">
-          3. Jednorázově, nebo dlouhodobě? <span class="opt-tag"
-            >(nepovinné)</span
-          >
-        </div>
-        <div class="topic-pills">
-          <button
-            type="button"
-            class="topic-pill"
-            class:selected={commitment === "any"}
-            on:click={() =>
-              applyAdaptiveFilter(() => (commitment = "any"), "commitment")}
-          >
-            Nezáleží
-          </button>
-          <button
-            type="button"
-            class="topic-pill"
-            class:selected={commitment === "one_off"}
-            on:click={() =>
-              applyAdaptiveFilter(
-                () => (commitment = "one_off"),
-                "commitment",
-              )}
-          >
-            ⚡ Jednorázově
-          </button>
-          <button
-            type="button"
-            class="topic-pill"
-            class:selected={commitment === "long_term"}
-            on:click={() =>
-              applyAdaptiveFilter(
-                () => (commitment = "long_term"),
-                "commitment",
-              )}
-          >
-            🌱 Dlouhodobě
-          </button>
-        </div>
-      {/if}
-
-      <details class="adaptive-params-drawer">
-        <summary>⚙️ Upřesnit další volby: podrobnější filtry (anonymita, závazek, důkazy)</summary>
-        <div class="adaptive-params-grid">
-          <div class="ap-group">
-            <span class="ap-label">Závazek:</span>
-            <div class="ap-pills">
-              <button
-                type="button"
-                class:active={commitment === "any"}
-                on:click={() =>
-                  applyAdaptiveFilter(() => (commitment = "any"), "commitment")}
-                >Vše</button
-              >
-              <button
-                type="button"
-                class:active={commitment === "one_off"}
-                on:click={() =>
-                  applyAdaptiveFilter(
-                    () => (commitment = "one_off"),
-                    "commitment",
-                  )}>Jednorázově</button
-              >
-              <button
-                type="button"
-                class:active={commitment === "long_term"}
-                on:click={() =>
-                  applyAdaptiveFilter(
-                    () => (commitment = "long_term"),
-                    "commitment",
-                  )}>Dlouhodobě</button
-              >
-            </div>
-          </div>
-
-          <div class="ap-group">
-            <span class="ap-label">Anonymita:</span>
-            <div class="ap-pills">
-              <button
-                type="button"
-                class:active={contactLevel === "any"}
-                on:click={() =>
-                  applyAdaptiveFilter(() => (contactLevel = "any"), "contact")}
-                >Vše</button
-              >
-              <button
-                type="button"
-                class:active={contactLevel === "anonymous"}
-                on:click={() =>
-                  applyAdaptiveFilter(
-                    () => (contactLevel = "anonymous"),
-                    "contact",
-                  )}>Anonymně</button
-              >
-              <button
-                type="button"
-                class:active={contactLevel === "contact_ok"}
-                on:click={() =>
-                  applyAdaptiveFilter(
-                    () => (contactLevel = "contact_ok"),
-                    "contact",
-                  )}
-                >Nevadí kontakt</button
-              >
-            </div>
-          </div>
-
-          <div class="ap-group">
-            <span class="ap-label">Komu pomoci:</span>
-            <div class="ap-pills">
-              <button
-                type="button"
-                class:active={recipientMacro === "any"}
-                on:click={() =>
-                  applyAdaptiveFilter(
-                    () => (recipientMacro = "any"),
-                    "recipient",
-                  )}>Všem</button
-              >
-              <button
-                type="button"
-                class:active={recipientMacro === "people"}
-                on:click={() =>
-                  applyAdaptiveFilter(
-                    () => (recipientMacro = "people"),
-                    "recipient",
-                  )}>Lidem</button
-              >
-              <button
-                type="button"
-                class:active={recipientMacro === "animals"}
-                on:click={() =>
-                  applyAdaptiveFilter(
-                    () => (recipientMacro = "animals"),
-                    "recipient",
-                  )}>Zvířatům</button
-              >
-              <button
-                type="button"
-                class:active={recipientMacro === "nature"}
-                on:click={() =>
-                  applyAdaptiveFilter(
-                    () => (recipientMacro = "nature"),
-                    "recipient",
-                  )}>Přírodě</button
-              >
-            </div>
-          </div>
-
-          <div class="ap-group">
-            <span class="ap-label">Sám / s lidmi:</span>
-            <div class="ap-pills">
-              <button
-                type="button"
-                class:active={socialOverride === "any"}
-                on:click={() =>
-                  applyAdaptiveFilter(() => (socialOverride = "any"), "social")}
-                >Podle situace</button
-              >
-              <button
-                type="button"
-                class:active={socialOverride === "solo"}
-                on:click={() =>
-                  applyAdaptiveFilter(() => (socialOverride = "solo"), "social")}
-                >Sám</button
-              >
-              <button
-                type="button"
-                class:active={socialOverride === "group"}
-                on:click={() =>
-                  applyAdaptiveFilter(
-                    () => (socialOverride = "group"),
-                    "social",
-                  )}
-                >S ostatními</button
-              >
-            </div>
-          </div>
-
-          <div class="ap-group">
-            <span class="ap-label">Prostředí:</span>
-            <div class="ap-pills">
-              <button
-                type="button"
-                class:active={modeOverride === "any"}
-                on:click={() =>
-                  applyAdaptiveFilter(() => (modeOverride = "any"), "mode")}
-                >Podle situace</button
-              >
-              <button
-                type="button"
-                class:active={modeOverride === "online"}
-                on:click={() =>
-                  applyAdaptiveFilter(() => (modeOverride = "online"), "mode")}
-                >Z domova</button
-              >
-              <button
-                type="button"
-                class:active={modeOverride === "local"}
-                on:click={() =>
-                  applyAdaptiveFilter(() => (modeOverride = "local"), "mode")}
-                >Venku</button
-              >
-            </div>
-          </div>
-
-          <div class="ap-group">
-            <span class="ap-label">Finanční náročnost:</span>
-            <div class="ap-pills">
-              <button
-                type="button"
-                class:active={costOverride === "any"}
-                on:click={() =>
-                  applyAdaptiveFilter(() => (costOverride = "any"), "cost")}
-                >Podle situace</button
-              >
-              <button
-                type="button"
-                class:active={costOverride === "free"}
-                on:click={() =>
-                  applyAdaptiveFilter(() => (costOverride = "free"), "cost")}
-                >Bez peněz (0 Kč)</button
-              >
-              <button
-                type="button"
-                class:active={costOverride === "donation"}
-                on:click={() =>
-                  applyAdaptiveFilter(
-                    () => (costOverride = "donation"),
-                    "cost",
-                  )}
-                >Mohu darovat</button
-              >
-            </div>
-          </div>
-
-          <div class="ap-group">
-            <span class="ap-label">Třída důkazů účinnosti:</span>
-            <div class="ap-pills">
-              <button
-                type="button"
-                class:active={evidenceTier === "any"}
-                on:click={() =>
-                  applyAdaptiveFilter(
-                    () => (evidenceTier = "any"),
-                    "evidence",
-                  )}>Vše (A–C)</button
-              >
-              <button
-                type="button"
-                class:active={evidenceTier === "A"}
-                on:click={() =>
-                  applyAdaptiveFilter(() => (evidenceTier = "A"), "evidence")}
-                >A · Silné důkazy</button
-              >
-              <button
-                type="button"
-                class:active={evidenceTier === "B"}
-                on:click={() =>
-                  applyAdaptiveFilter(() => (evidenceTier = "B"), "evidence")}
-                >B · Doložený přínos</button
-              >
-              <button
-                type="button"
-                class:active={evidenceTier === "C"}
-                on:click={() =>
-                  applyAdaptiveFilter(() => (evidenceTier = "C"), "evidence")}
-                >C · Komunitní smysl</button
-              >
-            </div>
           </div>
         </div>
       </details>
@@ -1072,7 +1083,10 @@
   <!-- LOCAL PLACES IN YOUR CITY — AUTO-OPENED ONLY FOR WALK / PEOPLE -->
   <details class="calm-drawer local-drawer" bind:open={localDrawerOpen}>
     <summary>
-      <span>📍 Místa pro osobní zapojení v okolí města {activeCity.name}</span>
+      <span class="summary-label">
+        <AppIcon name="map-pin" size={16} strokeWidth={2} />
+        <span>Místa pro osobní zapojení v okolí města {activeCity.name}</span>
+      </span>
     </summary>
 
     <section class="local-section" aria-label="Místa v okolí">
@@ -1093,7 +1107,10 @@
               <option value={c.id}>{c.name}</option>
             {/each}
           </select>
-          <a href={nearUrl} class="map-jump-link">Celá mapa →</a>
+          <a href={nearUrl} class="map-jump-link">
+            <span>Celá mapa</span>
+            <AppIcon name="arrow-right" size={14} strokeWidth={2} />
+          </a>
         </div>
       </div>
 
@@ -1109,7 +1126,10 @@
             <h3>{place.name}</h3>
             <p class="lc-desc">{place.quickMission || place.description}</p>
             {#if place.address}
-              <div class="lc-addr">📍 {place.address}</div>
+              <div class="lc-addr">
+                <AppIcon name="map-pin" size={13} strokeWidth={2} />
+                <span>{place.address}</span>
+              </div>
             {/if}
 
             <div class="lc-actions">
@@ -1131,7 +1151,8 @@
                       "guided_local",
                     )}
                 >
-                  Web ↗
+                  <span>Web</span>
+                  <AppIcon name="arrow-up-right" size={14} strokeWidth={2} />
                 </a>
               {/if}
               <button
@@ -1141,7 +1162,8 @@
                   (openTemplateId =
                     openTemplateId === place.id ? null : place.id)}
               >
-                💬 Vzor zprávy
+                <AppIcon name="message-circle" size={14} strokeWidth={2} />
+                <span>Vzor zprávy</span>
               </button>
             </div>
 
@@ -1150,12 +1172,19 @@
                 <pre>{tpl.body}</pre>
                 <div class="tpl-btns">
                   <button type="button" on:click={() => copyTemplate(place)}>
-                    {copiedTemplateId === place.id
-                      ? "✓ Zkopírováno"
-                      : "📋 Zkopírovat"}
+                    {#if copiedTemplateId === place.id}
+                      <AppIcon name="check" size={14} strokeWidth={2.2} />
+                      <span>Zkopírováno</span>
+                    {:else}
+                      <AppIcon name="copy" size={14} strokeWidth={2} />
+                      <span>Zkopírovat</span>
+                    {/if}
                   </button>
                   {#if tpl.mailtoUrl}
-                    <a href={tpl.mailtoUrl}>✉️ E-mail</a>
+                    <a href={tpl.mailtoUrl}>
+                      <AppIcon name="mail" size={14} strokeWidth={2} />
+                      <span>E-mail</span>
+                    </a>
                   {/if}
                 </div>
               </div>
@@ -1169,46 +1198,11 @@
 
 <style>
   .page {
+    width: 100%;
     max-width: 1140px;
+    box-sizing: border-box;
     margin: 0 auto;
-    padding: 0.45rem 1.25rem 5rem;
-  }
-
-  .subpage-hero.header {
-    text-align: center;
-    padding: 1.05rem 1.4rem !important;
-    margin-bottom: 0.65rem !important;
-  }
-
-  .hero-kicker {
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    color: #fde68a;
-    margin-bottom: 0.25rem;
-  }
-
-  .title {
-    font-family: var(--font-sans);
-    font-weight: 800;
-    color: #ffffff;
-    font-size: clamp(1.75rem, 3vw, 2.35rem);
-    margin: 0;
-    letter-spacing: -0.03em;
-    line-height: 1.1;
-  }
-
-  .title .serif-accent {
-    color: #fde68a;
-    font-weight: 400;
-  }
-
-  .subtitle {
-    color: rgba(236, 248, 241, 0.9);
-    margin: 0.35rem auto 0;
-    max-width: 54ch;
-    font-size: 0.9rem;
-    line-height: 1.48;
+    padding: 0.5rem 1.25rem 3rem;
   }
 
   .guided-workspace {
@@ -1220,69 +1214,72 @@
 
   /* COMPASS SHELL */
   .compass-shell {
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(22, 82, 56, 0.1);
-    border-radius: 24px;
-    padding: 1.15rem 1.25rem;
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    border-radius: 20px;
+    padding: 1.2rem 1.25rem;
     box-shadow: var(--shadow-sm);
   }
 
   .compass-shell.compass-foundations {
     grid-column: 1;
-    grid-row: 1;
-  }
-
-  .compass-shell.adaptive-step-block {
-    grid-column: 1;
-    grid-row: 2;
   }
 
   .block-label {
-    font-size: 0.82rem;
+    font-size: 0.84rem;
     font-weight: 800;
-    color: var(--text-primary);
+    color: var(--ink-primary, #14281d);
     margin-bottom: 0.5rem;
   }
 
   .opt-tag {
     font-weight: 600;
-    color: var(--text-muted);
+    color: var(--ink-secondary, #3f574a);
   }
 
   .situation-grid {
     display: flex;
     flex-direction: column;
-    gap: 0.36rem;
+    gap: 0.38rem;
   }
 
   .situation-card {
     display: flex;
     align-items: center;
     gap: 0.65rem;
+    width: 100%;
+    min-height: 44px;
+    box-sizing: border-box;
     text-align: left;
-    padding: 0.54rem 0.8rem;
+    padding: 0.55rem 0.8rem;
     border-radius: 13px;
-    background: transparent;
-    border: 1px solid rgba(22, 82, 56, 0.09);
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    color: var(--ink-primary, #14281d);
     cursor: pointer;
     font-family: var(--font-sans);
-    transition: all 0.16s ease;
+    transition:
+      background-color 0.16s ease,
+      border-color 0.16s ease,
+      color 0.16s ease;
   }
 
   .situation-card:hover {
-    background: #f5faf7;
-    border-color: rgba(16, 185, 129, 0.35);
+    background: var(--bg-subtle, #edf2ee);
+    border-color: var(--accent-primary, #1b5e42);
   }
 
   .situation-card.active {
-    background: #0f3022;
-    border-color: #0f3022;
+    background: var(--accent-primary, #1b5e42);
+    border-color: var(--accent-primary, #1b5e42);
     color: #ffffff;
-    box-shadow: 0 8px 18px -8px rgba(9, 29, 20, 0.3);
+    box-shadow: var(--shadow-sm);
   }
 
-  .sit-emoji {
-    font-size: 1.25rem;
+  .sit-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
   }
 
@@ -1290,6 +1287,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.06rem;
+    min-width: 0;
   }
 
   .sit-title {
@@ -1299,18 +1297,18 @@
   }
 
   .sit-sub {
-    font-size: 0.75rem;
-    color: var(--text-muted);
+    font-size: 0.76rem;
+    color: var(--ink-secondary, #3f574a);
   }
 
   .situation-card.active .sit-sub {
-    color: rgba(167, 243, 208, 0.88);
+    color: rgba(255, 255, 255, 0.88);
   }
 
   .divider {
     height: 1px;
-    background: rgba(22, 82, 56, 0.08);
-    margin: 0.8rem 0;
+    background: var(--border-subtle, #dce3dd);
+    margin: 0.85rem 0;
   }
 
   .topic-pills {
@@ -1320,66 +1318,92 @@
   }
 
   .topic-pill {
-    padding: 0.42rem 0.82rem;
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.36rem;
+    padding: 0.45rem 0.85rem;
     border-radius: 999px;
-    border: 1px solid rgba(22, 82, 56, 0.12);
-    background: #f6faf7;
-    color: var(--text-primary);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--ink-primary, #14281d);
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 0.8rem;
+    font-size: 0.81rem;
     cursor: pointer;
-    transition: all 0.16s ease;
+    transition:
+      background-color 0.16s ease,
+      border-color 0.16s ease,
+      color 0.16s ease;
   }
 
   .topic-pill:hover {
-    border-color: rgba(16, 185, 129, 0.4);
-    background: #ffffff;
+    border-color: var(--accent-primary, #1b5e42);
+    background: var(--bg-surface, #ffffff);
   }
 
   .topic-pill.selected {
-    background: #0f3022;
-    border-color: #0f3022;
-    color: #fde68a;
+    background: var(--accent-primary, #1b5e42);
+    border-color: var(--accent-primary, #1b5e42);
+    color: #ffffff;
+  }
+
+  .summary-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+    flex: 1;
+    text-align: left;
   }
 
   .adaptive-params-drawer {
     margin-top: 0.85rem;
-    font-size: 0.8rem;
+    font-size: 0.81rem;
   }
 
   .adaptive-params-drawer summary {
     cursor: pointer;
     font-weight: 700;
-    color: var(--emerald-600);
+    color: var(--accent-primary, #1b5e42);
     list-style: none;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.4rem 0.65rem;
+    gap: 0.5rem;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding: 0.48rem 0.75rem;
     border-radius: 12px;
-    background: rgba(22, 82, 56, 0.05);
-    border: 1px solid rgba(22, 82, 56, 0.1);
-    transition: background 0.15s ease, border-color 0.15s ease;
+    background: var(--bg-subtle, #edf2ee);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease;
   }
 
   .adaptive-params-drawer summary:hover {
-    background: rgba(22, 82, 56, 0.09);
-    border-color: rgba(22, 82, 56, 0.2);
+    background: var(--bg-surface, #ffffff);
+    border-color: var(--accent-primary, #1b5e42);
   }
 
   .adaptive-params-drawer summary::-webkit-details-marker {
     display: none;
   }
 
-  .adaptive-params-drawer summary::after {
-    content: "▾";
-    font-size: 0.85rem;
-    color: var(--forest-600);
+  .drawer-chevron-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--accent-primary, #1b5e42);
     transition: transform 0.2s ease;
   }
 
-  .adaptive-params-drawer[open] summary::after {
+  .adaptive-params-drawer[open] .drawer-chevron-wrap {
     transform: rotate(180deg);
   }
 
@@ -1387,43 +1411,58 @@
     margin-top: 0.75rem;
     display: flex;
     flex-direction: column;
-    gap: 0.65rem;
+    gap: 0.7rem;
   }
 
   .ap-group {
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
+    gap: 0.35rem;
   }
 
   .ap-label {
-    font-size: 0.74rem;
+    font-size: 0.76rem;
     font-weight: 700;
-    color: var(--text-muted);
+    color: var(--ink-secondary, #3f574a);
   }
 
   .ap-pills {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.3rem;
+    gap: 0.35rem;
   }
 
   .ap-pills button {
-    border: 1px solid rgba(22, 82, 56, 0.12);
-    background: #f6faf7;
-    color: var(--text-primary);
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--ink-primary, #14281d);
     font-family: var(--font-sans);
-    font-size: 0.75rem;
+    font-size: 0.78rem;
     font-weight: 700;
-    padding: 0.3rem 0.65rem;
+    padding: 0.4rem 0.78rem;
     border-radius: 999px;
     cursor: pointer;
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .ap-pills button:hover {
+    border-color: var(--accent-primary, #1b5e42);
+    background: var(--bg-surface, #ffffff);
   }
 
   .ap-pills button.active {
-    background: #0f3022;
-    border-color: #0f3022;
-    color: #fde68a;
+    background: var(--accent-primary, #1b5e42);
+    border-color: var(--accent-primary, #1b5e42);
+    color: #ffffff;
   }
 
   .rec-top-actions {
@@ -1431,17 +1470,17 @@
     align-items: center;
     gap: 0.4rem;
     flex-wrap: wrap;
-    margin-bottom: 0.65rem;
+    margin-bottom: 0.55rem;
   }
 
   .alt-impact-note {
-    font-size: 0.78rem;
-    color: var(--text-secondary);
-    margin: 0 0 0.55rem;
+    font-size: 0.79rem;
+    color: var(--ink-secondary, #3f574a);
+    margin: 0 0 0.65rem;
   }
 
   .methodology-drawer {
-    margin-top: 0.85rem;
+    margin-top: 0.5rem;
   }
 
   .methodology-body {
@@ -1450,7 +1489,7 @@
     flex-direction: column;
     gap: 0.85rem;
     font-size: 0.85rem;
-    color: var(--text-secondary);
+    color: var(--ink-secondary, #3f574a);
     line-height: 1.55;
   }
 
@@ -1465,16 +1504,16 @@
   }
 
   .meth-tier-item strong {
-    color: var(--forest-850);
+    color: var(--ink-primary, #14281d);
   }
 
   .meth-table-wrap {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     max-width: 100%;
-    margin: 0.75rem 0;
+    margin: 0.5rem 0;
     border-radius: 12px;
-    border: 1px solid rgba(22, 82, 56, 0.08);
+    border: 1px solid var(--border-subtle, #dce3dd);
   }
 
   .meth-table {
@@ -1487,80 +1526,100 @@
   .meth-table th,
   .meth-table td {
     text-align: left;
-    padding: 0.45rem 0.6rem;
-    border-bottom: 1px solid rgba(22, 82, 56, 0.1);
+    padding: 0.5rem 0.65rem;
+    border-bottom: 1px solid var(--border-subtle, #dce3dd);
   }
 
   .meth-table th {
     font-weight: 800;
-    color: var(--forest-850);
+    color: var(--ink-primary, #14281d);
+    background: var(--bg-subtle, #edf2ee);
   }
 
   .meth-links {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
+    gap: 0.5rem;
     flex-wrap: wrap;
-    font-size: 0.8rem;
+    font-size: 0.81rem;
   }
 
   .meth-links a {
-    color: var(--emerald-600);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
+    padding: 0.35rem 0.65rem;
+    border-radius: 10px;
+    color: var(--accent-primary, #1b5e42);
     font-weight: 700;
     text-decoration: none;
   }
 
   .meth-links a:hover {
     text-decoration: underline;
+    background: var(--bg-subtle, #edf2ee);
   }
 
   /* CLEAN PERSONAL RECOMMENDATION CARD */
   .plan-section {
     grid-column: 2;
-    grid-row: 1 / span 2;
     position: sticky;
-    top: 1.5rem;
+    top: 5.5rem;
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 1rem;
   }
 
   .plan-section.flash .highlight-card {
     box-shadow:
-      0 22px 44px -14px rgba(16, 185, 129, 0.24),
-      0 0 0 2px rgba(16, 185, 129, 0.42);
+      var(--shadow-md),
+      0 0 0 2px rgba(27, 94, 66, 0.36);
   }
 
   .highlight-card {
-    background: rgba(255, 255, 255, 0.97);
-    color: var(--text-primary);
-    border-radius: 26px;
-    padding: 2rem;
-    border: 1px solid rgba(22, 82, 56, 0.11);
+    background: var(--bg-surface, #ffffff);
+    color: var(--ink-primary, #14281d);
+    border-radius: 20px;
+    padding: 1.5rem 1.75rem;
+    border: 1px solid var(--border-subtle, #dce3dd);
     box-shadow: var(--shadow-md);
     transition: box-shadow 0.25s ease;
   }
 
   .btn-cycle-inline {
-    border: none;
-    background: transparent;
-    color: var(--emerald-600);
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.38rem;
+    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--accent-primary, #1b5e42);
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 0.82rem;
+    font-size: 0.83rem;
     cursor: pointer;
-    padding: 0.2rem 0.45rem;
-    border-radius: 8px;
+    padding: 0.45rem 0.85rem;
+    border-radius: 999px;
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease;
   }
 
   .btn-cycle-inline:hover {
-    background: rgba(16, 185, 129, 0.09);
-    color: var(--forest-850);
+    background: var(--bg-surface, #ffffff);
+    border-color: var(--accent-primary, #1b5e42);
+    color: var(--accent-primary-hover, #144732);
   }
 
   /* ALTERNATIVES */
   .alts-drawer {
-    margin-top: 0.9rem;
+    margin-top: 0.25rem;
   }
 
   .alts-drawer .alts-grid {
@@ -1571,8 +1630,8 @@
   }
 
   .alt-card {
-    background: #ffffff;
-    border: 1px solid rgba(22, 82, 56, 0.09);
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-subtle, #dce3dd);
     border-radius: 16px;
     padding: 1rem;
     display: flex;
@@ -1580,24 +1639,24 @@
   }
 
   .alt-meta {
-    font-size: 0.73rem;
+    font-size: 0.74rem;
     font-weight: 700;
-    color: var(--emerald-600);
-    margin-bottom: 0.25rem;
+    color: var(--accent-primary, #1b5e42);
+    margin-bottom: 0.28rem;
   }
 
   .alt-card h4 {
     margin: 0 0 0.35rem;
     font-size: 0.92rem;
     font-weight: 800;
-    color: var(--text-primary);
+    color: var(--ink-primary, #14281d);
   }
 
   .alt-card p {
     margin: 0 0 0.75rem;
-    font-size: 0.81rem;
-    color: var(--text-secondary);
-    line-height: 1.46;
+    font-size: 0.82rem;
+    color: var(--ink-secondary, #3f574a);
+    line-height: 1.48;
     flex: 1;
   }
 
@@ -1606,27 +1665,53 @@
     justify-content: space-between;
     align-items: center;
     gap: 0.45rem;
+    flex-wrap: wrap;
   }
 
   .alt-open {
-    font-size: 0.8rem;
-    font-weight: 800;
-    color: #0f3626;
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 10px;
+    background: var(--bg-subtle, #edf2ee);
+    font-size: 0.81rem;
+    font-weight: 700;
+    color: var(--accent-primary, #1b5e42);
     text-decoration: none;
   }
 
+  .alt-open:hover {
+    background: var(--accent-primary, #1b5e42);
+    color: #ffffff;
+  }
+
   .alt-detail {
-    border: none;
-    background: transparent;
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.28rem;
+    padding: 0.45rem 0.7rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bg-surface, #ffffff);
     font-family: var(--font-sans);
-    font-size: 0.76rem;
+    font-size: 0.78rem;
     font-weight: 700;
-    color: var(--text-muted);
+    color: var(--ink-secondary, #3f574a);
     cursor: pointer;
   }
 
   .alt-detail:hover {
-    color: var(--text-primary);
+    color: var(--ink-primary, #14281d);
+    border-color: var(--border-strong, #c2cec5);
   }
 
   /* LOCAL PLACES */
@@ -1637,7 +1722,7 @@
   .local-section {
     margin-top: 1rem;
     padding-top: 0.9rem;
-    border-top: 1px solid rgba(22, 82, 56, 0.09);
+    border-top: 1px solid var(--border-subtle, #dce3dd);
   }
 
   .local-head {
@@ -1653,7 +1738,7 @@
     margin: 0;
     font-size: 1.15rem;
     font-weight: 800;
-    color: var(--text-primary);
+    color: var(--ink-primary, #14281d);
   }
 
   .city-picker-wrap {
@@ -1664,28 +1749,44 @@
   }
 
   .city-picker-wrap label {
-    font-size: 0.82rem;
+    font-size: 0.84rem;
     font-weight: 700;
-    color: var(--text-secondary);
+    color: var(--ink-secondary, #3f574a);
   }
 
   .city-select {
+    min-height: 44px;
+    box-sizing: border-box;
     padding: 0.45rem 0.8rem;
     border-radius: 10px;
-    border: 1px solid rgba(22, 82, 56, 0.16);
-    background: #ffffff;
+    border: 1px solid var(--border-strong, #c2cec5);
+    background: var(--bg-surface, #ffffff);
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 0.85rem;
-    color: var(--text-primary);
+    font-size: 0.88rem;
+    color: var(--ink-primary, #14281d);
     cursor: pointer;
   }
 
   .map-jump-link {
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.34rem;
+    padding: 0.45rem 0.78rem;
+    border-radius: 10px;
     font-size: 0.84rem;
-    font-weight: 800;
-    color: #059669;
+    font-weight: 700;
+    color: var(--accent-primary, #1b5e42);
     text-decoration: none;
+  }
+
+  .map-jump-link:hover {
+    background: var(--bg-subtle, #edf2ee);
+    text-decoration: underline;
   }
 
   .local-grid {
@@ -1697,8 +1798,8 @@
   .local-card {
     padding: 1.15rem;
     border-radius: 18px;
-    background: #ffffff;
-    border: 1px solid rgba(22, 82, 56, 0.09);
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-subtle, #dce3dd);
     display: flex;
     flex-direction: column;
   }
@@ -1707,34 +1808,37 @@
     display: flex;
     justify-content: space-between;
     gap: 0.4rem;
-    font-size: 0.74rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    color: #059669;
+    color: var(--accent-primary, #1b5e42);
     margin-bottom: 0.3rem;
   }
 
   .lc-dist {
-    color: var(--text-muted);
+    color: var(--ink-secondary, #3f574a);
   }
 
   .local-card h3 {
     margin: 0 0 0.35rem;
     font-size: 0.98rem;
     font-weight: 800;
-    color: var(--text-primary);
+    color: var(--ink-primary, #14281d);
   }
 
   .lc-desc {
     margin: 0 0 0.55rem;
     font-size: 0.83rem;
-    color: var(--text-secondary);
+    color: var(--ink-secondary, #3f574a);
     line-height: 1.48;
     flex: 1;
   }
 
   .lc-addr {
-    font-size: 0.76rem;
-    color: var(--text-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+    font-size: 0.78rem;
+    color: var(--ink-secondary, #3f574a);
     margin-bottom: 0.7rem;
   }
 
@@ -1745,9 +1849,16 @@
   }
 
   .lc-btn {
-    padding: 0.45rem 0.78rem;
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.36rem;
+    padding: 0.5rem 0.88rem;
     border-radius: 10px;
-    font-size: 0.78rem;
+    font-size: 0.81rem;
     font-weight: 700;
     text-decoration: none;
     cursor: pointer;
@@ -1755,30 +1866,38 @@
   }
 
   .lc-btn.primary {
-    background: #123828;
-    color: #fde68a;
-    border: none;
+    background: var(--accent-primary, #1b5e42);
+    color: #ffffff;
+    border: 1px solid var(--accent-primary, #1b5e42);
+  }
+
+  .lc-btn.primary:hover {
+    background: var(--accent-primary-hover, #144732);
   }
 
   .lc-btn.ghost {
-    background: #f5f9f6;
-    border: 1px solid rgba(22, 82, 56, 0.12);
-    color: var(--text-primary);
+    background: var(--bg-subtle, #edf2ee);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    color: var(--ink-primary, #14281d);
+  }
+
+  .lc-btn.ghost:hover {
+    border-color: var(--accent-primary, #1b5e42);
   }
 
   .tpl-drawer {
-    margin-top: 0.65rem;
-    padding-top: 0.65rem;
-    border-top: 1px solid rgba(22, 82, 56, 0.09);
+    margin-top: 0.7rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--border-subtle, #dce3dd);
   }
 
   .tpl-drawer pre {
     white-space: pre-wrap;
     font-family: var(--font-sans);
-    font-size: 0.76rem;
-    color: var(--text-secondary);
-    margin: 0 0 0.5rem;
-    line-height: 1.42;
+    font-size: 0.78rem;
+    color: var(--ink-secondary, #3f574a);
+    margin: 0 0 0.55rem;
+    line-height: 1.44;
   }
 
   .tpl-btns {
@@ -1789,35 +1908,46 @@
 
   .tpl-btns button,
   .tpl-btns a {
-    padding: 0.35rem 0.68rem;
-    border-radius: 8px;
-    border: none;
-    background: #065f46;
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.36rem;
+    padding: 0.48rem 0.85rem;
+    border-radius: 10px;
+    border: 1px solid var(--accent-primary, #1b5e42);
+    background: var(--accent-primary, #1b5e42);
     color: #ffffff;
-    font-size: 0.75rem;
+    font-family: var(--font-sans);
+    font-size: 0.79rem;
     font-weight: 700;
     text-decoration: none;
     cursor: pointer;
+  }
+
+  .tpl-btns button:hover,
+  .tpl-btns a:hover {
+    background: var(--accent-primary-hover, #144732);
   }
 
   @media (max-width: 980px) {
     .guided-workspace {
       display: flex;
       flex-direction: column;
-      gap: 0.55rem;
+      gap: 0.75rem;
     }
     .compass-shell.compass-foundations {
       order: 1;
-    }
-    .compass-shell.adaptive-step-block {
-      order: 2;
-    }
-    .mobile-guided-preview-bar {
-      order: 3;
+      width: 100%;
+      box-sizing: border-box;
     }
     .plan-section {
-      order: 4;
+      order: 2;
       position: static;
+      width: 100%;
+      box-sizing: border-box;
     }
     .alts-drawer .alts-grid,
     .local-grid {
@@ -1825,41 +1955,13 @@
     }
   }
 
-  @media (max-width: 600px) {
-    .compass-shell,
-    .highlight-card {
-      padding: 1.35rem 1.2rem;
-    }
-  }
-
-  .mobile-guided-preview-bar {
-    display: none;
-  }
-
   @media (max-width: 680px) {
     .page {
-      padding: 0.35rem 0.65rem 4.2rem;
-    }
-
-    .subpage-hero.header {
-      padding: 0.55rem 0.85rem;
-      margin-bottom: 0.45rem;
-      border-radius: 16px;
-    }
-
-    .header .hero-kicker,
-    .header .subtitle {
-      display: none !important;
-    }
-
-    .header .title {
-      font-size: 1.18rem;
-      line-height: 1.18;
-      margin: 0;
+      padding: 0.25rem 0.75rem 2rem;
     }
 
     .guided-workspace {
-      gap: 0.55rem;
+      gap: 0.6rem;
     }
 
     .compass-shell,
@@ -1870,36 +1972,32 @@
 
     .compass-shell,
     .highlight-card {
-      padding: 0.68rem 0.78rem;
+      padding: 0.85rem 0.9rem;
       border-radius: 18px;
     }
 
     .block-label {
-      font-size: 0.78rem;
+      font-size: 0.8rem;
       margin-bottom: 0.42rem;
     }
 
     .situation-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 0.34rem;
+      gap: 0.38rem;
     }
 
     .situation-card {
       min-height: 44px;
-      padding: 0.36rem 0.5rem;
+      padding: 0.42rem 0.55rem;
       border-radius: 12px;
-      gap: 0.35rem;
+      gap: 0.4rem;
       box-sizing: border-box;
     }
 
     .situation-card:last-child {
       grid-column: 1 / -1;
-      justify-content: center;
-    }
-
-    .sit-emoji {
-      font-size: 0.95rem;
+      justify-content: flex-start;
     }
 
     .sit-sub {
@@ -1907,12 +2005,12 @@
     }
 
     .sit-title {
-      font-size: 0.74rem;
-      line-height: 1.15;
+      font-size: 0.77rem;
+      line-height: 1.2;
     }
 
     .divider {
-      margin: 0.42rem 0;
+      margin: 0.55rem 0;
     }
 
     .compass-foundations .topic-pills,
@@ -1922,10 +2020,20 @@
       overflow-x: auto;
       scrollbar-width: none;
       -webkit-overflow-scrolling: touch;
-      gap: 0.28rem;
+      gap: 0.32rem;
       padding: 0.05rem 1.1rem 0.15rem 0.02rem;
-      mask-image: linear-gradient(to right, black 0%, black calc(100% - 24px), transparent 100%);
-      -webkit-mask-image: linear-gradient(to right, black 0%, black calc(100% - 24px), transparent 100%);
+      mask-image: linear-gradient(
+        to right,
+        black 0%,
+        black calc(100% - 24px),
+        transparent 100%
+      );
+      -webkit-mask-image: linear-gradient(
+        to right,
+        black 0%,
+        black calc(100% - 24px),
+        transparent 100%
+      );
     }
 
     .compass-foundations .topic-pills::-webkit-scrollbar,
@@ -1934,7 +2042,7 @@
     }
 
     .topic-pills {
-      gap: 0.28rem;
+      gap: 0.32rem;
     }
 
     .topic-pill {
@@ -1944,61 +2052,14 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 0.35rem 0.65rem;
-      font-size: 0.74rem;
+      padding: 0.38rem 0.72rem;
+      font-size: 0.78rem;
       box-sizing: border-box;
     }
 
-    .highlight-card :global(.impact-payoff-canvas) {
-      height: 54px;
-    }
-
-    .mobile-guided-preview-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem;
-      min-width: 0;
-      max-width: 100%;
-      box-sizing: border-box;
-      padding: 0.35rem 0.65rem;
-      border-radius: 14px;
-      background: rgba(15, 48, 34, 0.95);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(253, 230, 138, 0.4);
-      color: #f8faf8;
-      box-shadow: 0 10px 24px rgba(6, 22, 15, 0.28);
-    }
-
-    .mgp-title {
-      font-size: 0.76rem;
-      font-weight: 700;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      flex: 1;
-      min-width: 0;
-    }
-
-    .mgp-btn {
-      appearance: none;
-      border: none;
-      border-radius: 999px;
+    .city-select {
+      font-size: 1rem;
       min-height: 44px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0.36rem 0.75rem;
-      background: linear-gradient(135deg, #fde68a 0%, #6ee7b7 100%);
-      color: #062015;
-      font-family: inherit;
-      font-size: 0.74rem;
-      font-weight: 800;
-      cursor: pointer;
-      white-space: nowrap;
-      flex-shrink: 0;
-      box-sizing: border-box;
     }
   }
 </style>

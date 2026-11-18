@@ -7,8 +7,10 @@
     restoreProgressFromBackupCode
   } from '../../../progress.js';
   import { MICRO_ACTIONS } from '../../../data/czech-actions.js';
-  import { cleanTitle, isInAppBrowser } from '../../../utils.js';
+  import { cleanTitle } from '../../../utils.js';
   import { trackEvent } from '../../../analytics.js';
+  import AppIcon from '$lib/components/AppIcon.svelte';
+  import { resolveIconKey } from '$lib/icons/iconRegistry.js';
 
   export let activeLights = [];
   export let myDeedsCount = 0;
@@ -110,7 +112,7 @@
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(code);
-        backupStatusMsg = '✓ Záložní kód zkopírován do schránky.';
+        backupStatusMsg = 'Záložní kód zkopírován do schránky.';
         return;
       }
     } catch {}
@@ -120,7 +122,7 @@
   function handleRestoreBackupCode() {
     const ok = restoreProgressFromBackupCode(backupCodeInput);
     if (ok) {
-      backupStatusMsg = `✓ Zápisník obnoven (${($completedSteps || []).length} skutků).`;
+      backupStatusMsg = `Zápisník obnoven (${($completedSteps || []).length} skutků).`;
       backupCodeInput = '';
     } else {
       backupStatusMsg = 'Kód se nepodařilo přečíst. Zkontroluj prosím celé znění.';
@@ -135,7 +137,10 @@
 <div class="optional-drawers">
   <details class="calm-drawer" bind:open={storyDrawerOpen}>
     <summary>
-      <span>🎨 Vytvořit si 9:16 pohlednici Krajiny dobra</span>
+      <span class="drawer-summary-label">
+        <AppIcon name="image" size={16} strokeWidth={2} />
+        <span>Vytvořit si 9:16 pohlednici Krajiny dobra</span>
+      </span>
     </summary>
     <div class="drawer-inner story-studio-inner">
       <p class="drawer-note">
@@ -147,14 +152,16 @@
           class:active={storyMode === 'quiet'}
           on:click={() => (storyMode = 'quiet')}
         >
-          🌿 Klidná krajina
+          <AppIcon name="leaf" size={14} strokeWidth={2} />
+          <span>Klidná krajina</span>
         </button>
         <button
           type="button"
           class:active={storyMode === 'tip'}
           on:click={() => (storyMode = 'tip')}
         >
-          💡 S tipem na skutek
+          <AppIcon name="lightbulb" size={14} strokeWidth={2} />
+          <span>S tipem na skutek</span>
         </button>
       </div>
 
@@ -167,7 +174,8 @@
       </div>
 
       <button type="button" class="story-dl-btn" on:click={downloadOrShareStory} disabled={storyBusy}>
-        {storyBusy ? 'Připravuji…' : '↓ Stáhnout pohlednici (1080×1920)'}
+        <AppIcon name="download" size={15} strokeWidth={2} />
+        <span>{storyBusy ? 'Připravuji…' : 'Stáhnout pohlednici (1080×1920)'}</span>
       </button>
       {#if storyCopiedMsg}
         <p class="story-msg">{storyCopiedMsg}</p>
@@ -177,7 +185,10 @@
 
   <details class="calm-drawer">
     <summary>
-      <span>📖 Soukromý zápisník mých dobrých skutků ({($completedSteps || []).length})</span>
+      <span class="drawer-summary-label">
+        <AppIcon name="book-open" size={16} strokeWidth={2} />
+        <span>Soukromý zápisník mých dobrých skutků ({($completedSteps || []).length})</span>
+      </span>
     </summary>
     <div class="drawer-inner">
       <p class="drawer-note">
@@ -193,7 +204,10 @@
             {@const meta = ELEMENT_MAP[step.element] || SANCTUARY_ELEMENTS[3]}
             <li class="journal-item">
               <div class="ji-top">
-                <span class="ji-title">{meta.icon} {cleanTitle(step.title)}</span>
+                <span class="ji-title">
+                  <AppIcon name={resolveIconKey(meta.icon)} size={14} strokeWidth={2} />
+                  <span>{cleanTitle(step.title)}</span>
+                </span>
                 <span class="ji-date">{new Date(step.timestamp).toLocaleDateString('cs-CZ')}</span>
               </div>
               {#if editingUid === step.uid}
@@ -212,7 +226,8 @@
                 <p class="ji-note">„{step.note}“</p>
               {:else}
                 <button type="button" class="ji-add-note" on:click={() => startEditNote(step)}>
-                  + Připsat poznámku
+                  <AppIcon name="plus" size={14} strokeWidth={2} />
+                  <span>Připsat poznámku</span>
                 </button>
               {/if}
             </li>
@@ -223,12 +238,16 @@
       <div class="backup-box">
         {#if inAppBrowserDetected}
           <p class="inapp-warning">
-            ⚠️ Prohlížíš web uvnitř aplikace (Instagram/FB/TikTok), která po zavření maže paměť. Zkopíruj si záložní kód nebo stránku otevři v Safari/Chrome.
+            <AppIcon name="alert-triangle" size={15} strokeWidth={2} />
+            <span>
+              Prohlížíš web uvnitř aplikace (Instagram/FB/TikTok), která po zavření maže paměť. Zkopíruj si záložní kód nebo stránku otevři v Safari/Chrome.
+            </span>
           </p>
         {/if}
         <div class="backup-actions">
           <button type="button" class="ji-add-note" on:click={handleCopyBackupCode}>
-            🔑 Vygenerovat záložní kód zápisníku
+            <AppIcon name="key-round" size={14} strokeWidth={2} />
+            <span>Vygenerovat záložní kód zápisníku</span>
           </button>
           <div class="ji-edit">
             <input
@@ -255,19 +274,25 @@
   .optional-drawers {
     display: flex;
     flex-direction: column;
-    gap: 0.8rem;
+    gap: 0.85rem;
+  }
+
+  .drawer-summary-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
   }
 
   .drawer-inner {
     margin-top: 1rem;
     padding-top: 0.95rem;
-    border-top: 1px solid rgba(22, 82, 56, 0.09);
+    border-top: 1px solid var(--border-subtle);
   }
 
   .drawer-note {
     margin: 0 0 0.95rem 0;
     font-size: 0.86rem;
-    color: var(--text-secondary, #374151);
+    color: var(--ink-secondary);
     line-height: 1.55;
   }
 
@@ -280,38 +305,51 @@
 
   .story-mode-tabs {
     display: inline-flex;
-    gap: 0.35rem;
+    gap: 0.4rem;
     margin-bottom: 1rem;
     flex-wrap: wrap;
+    justify-content: center;
   }
 
   .story-mode-tabs button {
-    padding: 0.45rem 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.5rem 0.95rem;
     border-radius: 999px;
-    border: 1px solid rgba(22, 82, 56, 0.14);
-    background: #ffffff;
-    color: var(--text-secondary, #374151);
+    border: 1px solid var(--border-strong);
+    background: var(--bg-surface);
+    color: var(--ink-secondary);
     font-family: inherit;
     font-weight: 700;
-    font-size: 0.82rem;
+    font-size: 0.83rem;
     cursor: pointer;
+    transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+  }
+
+  .story-mode-tabs button:hover {
+    border-color: var(--accent-primary);
+    color: var(--ink-primary);
   }
 
   .story-mode-tabs button.active {
-    background: #123828;
-    color: #fde68a;
-    border-color: #123828;
+    background: var(--accent-primary);
+    color: #ffffff;
+    border-color: var(--accent-primary);
   }
 
   .story-preview-frame {
     width: 220px;
     aspect-ratio: 9 / 16;
-    border-radius: 18px;
+    border-radius: 16px;
     overflow: hidden;
     box-shadow: var(--shadow-md);
-    border: 1px solid rgba(22, 82, 56, 0.15);
+    border: 1px solid var(--border-strong);
     margin-bottom: 0.95rem;
-    background: #0c291d;
+    background: var(--ink-primary);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -325,34 +363,45 @@
   }
 
   .story-loading {
-    color: rgba(236, 253, 245, 0.78);
+    color: rgba(246, 247, 243, 0.85);
     font-size: 0.82rem;
     padding: 1rem;
   }
 
   .story-dl-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.42rem;
+    min-height: 44px;
+    min-width: 44px;
     border: none;
     border-radius: 999px;
-    padding: 0.72rem 1.35rem;
-    background: linear-gradient(135deg, #0f3626 0%, #1b573e 100%);
-    color: #fde68a;
+    padding: 0.68rem 1.35rem;
+    background: var(--accent-primary);
+    color: #ffffff;
     font-family: inherit;
-    font-weight: 800;
+    font-weight: 700;
     font-size: 0.86rem;
     cursor: pointer;
+    transition: background-color 0.16s ease;
+  }
+
+  .story-dl-btn:hover:not(:disabled) {
+    background: var(--accent-primary-hover);
   }
 
   .story-msg {
     margin: 0.6rem 0 0;
-    font-size: 0.82rem;
-    color: var(--emerald-600, #059669);
+    font-size: 0.84rem;
+    color: var(--accent-primary);
     font-weight: 600;
   }
 
   .empty-journal {
     margin: 0;
     font-size: 0.86rem;
-    color: var(--text-muted, #6b7280);
+    color: var(--ink-muted);
   }
 
   .journal-list {
@@ -364,10 +413,10 @@
   }
 
   .journal-item {
-    padding: 0.75rem 0.95rem;
+    padding: 0.78rem 0.95rem;
     border-radius: 14px;
-    background: #ffffff;
-    border: 1px solid rgba(22, 82, 56, 0.08);
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
   }
 
   .ji-top {
@@ -379,75 +428,106 @@
   }
 
   .ji-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.38rem;
     font-weight: 700;
     font-size: 0.88rem;
-    color: var(--text-primary, #0c2b1e);
+    color: var(--ink-primary);
   }
 
   .ji-date {
     font-size: 0.76rem;
-    color: var(--text-muted, #6b7280);
+    color: var(--ink-secondary, #3f574a);
   }
 
   .ji-note {
-    margin: 0.3rem 0 0;
+    margin: 0.35rem 0 0;
     font-size: 0.82rem;
-    color: var(--text-secondary, #374151);
+    color: var(--ink-secondary);
     font-style: italic;
   }
 
   .ji-add-note {
-    margin-top: 0.25rem;
-    border: none;
-    background: transparent;
-    color: var(--emerald-600, #059669);
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: 0.35rem;
+    min-height: 44px;
+    min-width: 44px;
+    margin-top: 0.35rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    background: var(--bg-subtle);
+    color: var(--accent-primary);
     font-family: inherit;
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     font-weight: 700;
     cursor: pointer;
-    padding: 0;
+    padding: 0.45rem 0.8rem;
+    transition: background-color 0.16s ease, border-color 0.16s ease;
+  }
+
+  .ji-add-note:hover {
+    background: var(--bg-surface);
+    border-color: var(--accent-primary);
   }
 
   .ji-edit {
     margin-top: 0.45rem;
     display: flex;
     gap: 0.45rem;
+    align-items: center;
   }
 
   .ji-edit input {
     flex: 1;
-    padding: 0.42rem 0.7rem;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0.48rem 0.75rem;
     border-radius: 10px;
-    border: 1px solid rgba(22, 82, 56, 0.16);
+    border: 1px solid var(--border-strong);
+    background: var(--bg-surface);
+    color: var(--ink-primary);
     font-family: inherit;
-    font-size: 0.82rem;
+    font-size: 0.88rem;
   }
 
   .ji-edit button {
-    padding: 0.42rem 0.8rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.48rem 0.9rem;
     border-radius: 10px;
     border: none;
-    background: #0f3022;
+    background: var(--accent-primary);
     color: #ffffff;
     font-family: inherit;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .ji-edit button:hover {
+    background: var(--accent-primary-hover);
   }
 
   .backup-box {
     margin-top: 1rem;
     padding-top: 0.95rem;
-    border-top: 1px solid rgba(22, 82, 56, 0.09);
+    border-top: 1px solid var(--border-subtle);
   }
 
   .inapp-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
     margin: 0 0 0.8rem 0;
-    padding: 0.65rem 0.85rem;
+    padding: 0.7rem 0.9rem;
     border-radius: 12px;
-    background: #fef3c7;
-    border: 1px solid #f59e0b;
-    color: #92400e;
+    background: var(--accent-warm-tint);
+    border: 1px solid rgba(184, 101, 27, 0.35);
+    color: var(--ink-primary);
     font-size: 0.82rem;
     line-height: 1.45;
   }
@@ -457,5 +537,21 @@
     flex-direction: column;
     gap: 0.6rem;
   }
-</style>
 
+  @media (max-width: 680px) {
+    .ji-edit {
+      flex-wrap: wrap;
+    }
+
+    .ji-edit input {
+      width: 100%;
+      font-size: 1rem;
+      min-height: 44px;
+      box-sizing: border-box;
+    }
+
+    .ji-edit button {
+      min-height: 44px;
+    }
+  }
+</style>

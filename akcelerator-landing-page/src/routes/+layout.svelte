@@ -1,14 +1,21 @@
 <script>
   import { onMount } from "svelte";
-  import { page } from "$app/stores";
+  import { dev } from "$app/environment";
+  import { page } from "$app/state";
+  import { afterNavigate } from "$app/navigation";
   import { inject } from "@vercel/analytics";
   import { injectSpeedInsights } from "@vercel/speed-insights/sveltekit";
   import ImmediateHelp from "../components/ImmediateHelp.svelte";
   import SmallWinCelebration from "../components/SmallWinCelebration.svelte";
   import FeedbackModal from "../components/FeedbackModal.svelte";
   import MollyCompanion from "../components/MollyCompanion.svelte";
+  import MollyDock, { isCompactDock } from "../components/MollyDock.svelte";
+  import AppIcon from "$lib/components/AppIcon.svelte";
   import { openFeedbackModal, toggleCrisisModal } from "$lib/utils.js";
   import "../styles/czech-theme.css";
+
+  /** @type {{ children?: import('svelte').Snippet }} */
+  let { children } = $props();
 
   const siteMeta = {
     title: "Akcelerátor altruismu — Pomáháme lidem pomáhat",
@@ -18,20 +25,150 @@
       "altruismus, pomoc, dobrovolnictví, mapa pomoci, neziskovky v okolí, dobré skutky",
   };
 
-  $: pathname = $page.url.pathname;
-  $: originUrl = $page.url.origin || "https://akcelerator-altruismu.cz";
-  $: canonicalUrl = `${originUrl}${pathname}`;
-  $: ogImageUrl = `${originUrl}/og-image-czech.jpg`;
-  let hydrated = false;
+  /** @type {Array<{ href: string, label: string, icon: string, match: (p: string) => boolean, extraClass?: string }>} */
+  const NAV_ITEMS = [
+    {
+      href: "/",
+      label: "Rychlý start",
+      icon: "zap",
+      match: (p) => p === "/",
+    },
+    {
+      href: "/app/guided",
+      label: "Průvodce",
+      icon: "compass",
+      match: (p) => p.startsWith("/app/guided"),
+    },
+    {
+      href: "/app/online",
+      label: "Drobné skutky",
+      icon: "sun",
+      match: (p) => p.startsWith("/app/online"),
+    },
+    {
+      href: "/near",
+      label: "Mapa v okolí",
+      icon: "map-pin",
+      match: (p) => p.startsWith("/near"),
+    },
+    {
+      href: "/svet",
+      label: "Krajina dobra",
+      icon: "trees",
+      match: (p) => p.startsWith("/svet"),
+      extraClass: "world-pill",
+    },
+    {
+      href: "/submit",
+      label: "Přidat tip",
+      icon: "plus",
+      match: (p) => p.startsWith("/submit"),
+      extraClass: "add-tip",
+    },
+  ];
+
+  const pathname = $derived(page.url.pathname);
+  const originUrl = $derived(page.url.origin || "https://akcelerator-altruismu.cz");
+  const canonicalUrl = $derived(`${originUrl}${pathname}`);
+  const ogImageUrl = $derived(`${originUrl}/og-image-czech.jpg`);
+
+  let hydrated = $state(false);
+  let menuOpen = $state(false);
+  let isNarrowMobile = $state(false);
+  let drawerTopPx = $state(64);
+
+  /** @type {HTMLElement | null} */
+  let headerEl = $state(null);
+  /** @type {HTMLElement | null} */
+  let drawerEl = $state(null);
+
+  function updateDrawerTop() {
+    if (headerEl) {
+      const rect = headerEl.getBoundingClientRect();
+      if (rect.bottom > 0) {
+        drawerTopPx = Math.ceil(rect.bottom + 6);
+      }
+    }
+  }
+
+  function toggleMenu() {
+    if (!menuOpen) {
+      updateDrawerTop();
+    }
+    menuOpen = !menuOpen;
+  }
+
+  function closeMenu() {
+    menuOpen = false;
+  }
+
+  afterNavigate(() => {
+    menuOpen = false;
+  });
 
   onMount(() => {
     hydrated = true;
-    try {
-      inject();
-    } catch {}
-    try {
-      injectSpeedInsights();
-    } catch {}
+    if (!dev) {
+      try {
+        inject();
+      } catch {}
+      try {
+        injectSpeedInsights();
+      } catch {}
+    }
+
+    const syncBreakpoints = () => {
+      const vw = window.innerWidth || 1280;
+      const compact = window.matchMedia
+        ? window.matchMedia("(max-width: 1024px)").matches
+        : vw <= 1024;
+      const narrow = window.matchMedia
+        ? window.matchMedia("(max-width: 680px)").matches
+        : vw <= 680;
+      isCompactDock.set(compact);
+      isNarrowMobile = narrow;
+      if (!compact && menuOpen) {
+        menuOpen = false;
+      }
+      if (menuOpen) {
+        updateDrawerTop();
+      }
+    };
+
+    syncBreakpoints();
+
+    const compactMql = window.matchMedia ? window.matchMedia("(max-width: 1024px)") : null;
+    const narrowMql = window.matchMedia ? window.matchMedia("(max-width: 680px)") : null;
+    compactMql?.addEventListener?.("change", syncBreakpoints);
+    narrowMql?.addEventListener?.("change", syncBreakpoints);
+    window.addEventListener("resize", syncBreakpoints, { passive: true });
+
+    /** @param {KeyboardEvent} e */
+    const onKeyDown = (e) => {
+      if (e.key === "Escape" && menuOpen) {
+        menuOpen = false;
+      }
+    };
+
+    /** @param {PointerEvent} e */
+    const onPointerDownOutside = (e) => {
+      if (!menuOpen) return;
+      const target = /** @type {Node | null} */ (e.target);
+      if (!target) return;
+      if (headerEl?.contains(target) || drawerEl?.contains(target)) return;
+      menuOpen = false;
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("pointerdown", onPointerDownOutside);
+
+    return () => {
+      compactMql?.removeEventListener?.("change", syncBreakpoints);
+      narrowMql?.removeEventListener?.("change", syncBreakpoints);
+      window.removeEventListener("resize", syncBreakpoints);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("pointerdown", onPointerDownOutside);
+    };
   });
 </script>
 
@@ -49,10 +186,6 @@
   <meta property="og:image" content={ogImageUrl} />
   <meta property="og:locale" content="cs_CZ" />
 
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="alternate icon" type="image/png" href="/favicon-czech.png" />
-  <link rel="apple-touch-icon" href="/apple-touch-icon-czech.png" />
-  <link rel="manifest" href="/manifest.webmanifest" />
   <link
     rel="preload"
     href="/fonts/plus-jakarta-sans-var-latin-ext.woff2"
@@ -70,170 +203,122 @@
 </svelte:head>
 
 <div class="app-shell" data-hydrated={hydrated ? "true" : undefined}>
-  <header class="top-nav">
+  <header class="top-nav" class:is-drawer-open={menuOpen} bind:this={headerEl}>
     <div class="nav-capsule">
       <a href="/" class="brand">
         <span class="brand-mark" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M12 21V11M12 11C12 7 15.5 4 20 4C20 8.5 17 12 12 12M12 13C12 9.5 9 6.5 4.5 6.5C4.5 10.5 7.5 13.5 12 13.5"
-              stroke="url(#brandGrad)"
-              stroke-width="2.2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-            <circle cx="19" cy="5" r="2" fill="#FBBF24" />
-            <defs>
-              <linearGradient
-                id="brandGrad"
-                x1="4"
-                y1="4"
-                x2="20"
-                y2="21"
-                gradientUnits="userSpaceOnUse"
-              >
-                <stop stop-color="#34D399" />
-                <stop offset="1" stop-color="#FBBF24" />
-              </linearGradient>
-            </defs>
-          </svg>
+          <AppIcon name="sprout" size={18} strokeWidth={2} />
         </span>
         <span class="brand-copy">
           <span class="brand-text"
-            >Akcelerátor <span class="brand-accent">altruismu</span></span
+            ><span class="brand-word">Akcelerátor</span> <span class="brand-accent">altruismu</span></span
           >
           <span class="brand-sub brand-claim">Pomáháme lidem pomáhat</span>
         </span>
       </a>
 
+      {#if $isCompactDock}
+        <MollyDock variant="header" compact={isNarrowMobile} />
+      {/if}
+
       <nav class="nav-links" aria-label="Hlavní navigace" data-sveltekit-preload-data="tap">
-        <a href="/" class="nav-pill" class:active={pathname === "/"}>
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            ><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg
+        {#each NAV_ITEMS as item (item.href)}
+          <a
+            href={item.href}
+            class="nav-pill {item.extraClass || ''}"
+            class:active={item.match(pathname)}
           >
-          <span>Rychlý start</span>
-        </a>
-        <a
-          href="/app/guided"
-          class="nav-pill"
-          class:active={pathname.startsWith("/app/guided")}
-        >
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            ><circle cx="12" cy="12" r="10" /><polygon
-              points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"
-            /></svg
-          >
-          <span>Průvodce</span>
-        </a>
-        <a
-          href="/app/online"
-          class="nav-pill"
-          class:active={pathname.startsWith("/app/online")}
-        >
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            ><path
-              d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
-            /></svg
-          >
-          <span>Drobné skutky</span>
-        </a>
-        <a
-          href="/near"
-          class="nav-pill"
-          class:active={pathname.startsWith("/near")}
-        >
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            ><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle
-              cx="12"
-              cy="10"
-              r="3"
-            /></svg
-          >
-          <span>Mapa v okolí</span>
-        </a>
-        <a
-          href="/svet"
-          class="nav-pill world-pill"
-          class:active={pathname.startsWith("/svet")}
-        >
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            ><path
-              d="M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3L12 3z"
-            /></svg
-          >
-          <span>Krajina dobra</span>
-        </a>
-        <a
-          href="/submit"
-          class="nav-pill add-tip"
-          class:active={pathname.startsWith("/submit")}
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.4"
-            stroke-linecap="round"
-            stroke-linejoin="round"><path d="M12 5v14M5 12h14" /></svg
-          >
-          <span>Přidat tip</span>
-        </a>
+            <AppIcon
+              name={item.icon}
+              size={15}
+              strokeWidth={item.href === "/submit" ? 2.2 : 1.95}
+            />
+            <span>{item.label}</span>
+          </a>
+        {/each}
       </nav>
+
+      <button
+        type="button"
+        class="mobile-nav-toggle"
+        aria-expanded={menuOpen ? "true" : "false"}
+        aria-controls="mobile-top-nav-drawer"
+        aria-label={menuOpen ? "Zavřít navigaci" : "Otevřít navigaci"}
+        onclick={toggleMenu}
+      >
+        <AppIcon name={menuOpen ? "x" : "menu"} size={20} strokeWidth={2} />
+      </button>
     </div>
   </header>
 
+  {#if menuOpen}
+    <div
+      class="mobile-drawer-backdrop"
+      aria-hidden="true"
+      onclick={closeMenu}
+    ></div>
+    <nav
+      bind:this={drawerEl}
+      id="mobile-top-nav-drawer"
+      class="mobile-top-nav-drawer"
+      style="top: {drawerTopPx}px;"
+      aria-label="Mobilní navigace"
+      data-sveltekit-preload-data="tap"
+    >
+      <div class="mobile-drawer-routes">
+        {#each NAV_ITEMS as item (item.href)}
+          <a
+            href={item.href}
+            class="mobile-drawer-link"
+            class:active={item.match(pathname)}
+            onclick={closeMenu}
+          >
+            <span class="drawer-link-icon" aria-hidden="true">
+              <AppIcon name={item.icon} size={17} strokeWidth={2} />
+            </span>
+            <span>{item.label}</span>
+          </a>
+        {/each}
+      </div>
+
+      <div class="mobile-drawer-divider" aria-hidden="true"></div>
+
+      <div class="mobile-drawer-actions">
+        <button
+          type="button"
+          class="mobile-drawer-action is-crisis"
+          onclick={() => {
+            closeMenu();
+            toggleCrisisModal();
+          }}
+        >
+          <AppIcon name="life-buoy" size={17} strokeWidth={2} />
+          <span>Tichá opora 24/7</span>
+        </button>
+        <button
+          type="button"
+          class="mobile-drawer-action"
+          onclick={() => {
+            closeMenu();
+            openFeedbackModal();
+          }}
+        >
+          <AppIcon name="message-circle" size={17} strokeWidth={2} />
+          <span>Napsat názor</span>
+        </button>
+      </div>
+    </nav>
+  {/if}
+
   <main class="main-content">
-    <slot />
+    {@render children?.()}
   </main>
 
   <footer class="site-footer">
-    <div class="footer-glow"></div>
     <div class="footer-inner">
       <div class="footer-col">
         <div class="footer-brand">
-          <span class="footer-dot"></span>
+          <span class="footer-dot" aria-hidden="true"></span>
           Akcelerátor altruismu ·
           <span class="footer-subbrand">Pomáháme lidem pomáhat</span>
         </div>
@@ -244,9 +329,9 @@
         </p>
         <div class="footer-trust">
           <span>Zdarma a bez účtu</span>
-          <span>•</span>
+          <span aria-hidden="true">•</span>
           <span>Ověřené zdroje a poctivě popsaný dopad</span>
-          <span>•</span>
+          <span aria-hidden="true">•</span>
           <span>V okolí i z domova</span>
         </div>
       </div>
@@ -271,59 +356,31 @@
             class:active={pathname.startsWith("/submit")}
             aria-label="Přidat tip"
           >
-            ➕ Přidat tip
+            <AppIcon name="plus" size={15} strokeWidth={2} />
+            <span>Přidat tip</span>
           </a>
           <button
             type="button"
             class="fc-btn fc-crisis"
-            on:click={() => toggleCrisisModal()}
+            onclick={() => toggleCrisisModal()}
             aria-label="Krizové kontakty a okamžitá opora"
           >
-            🛡️ Tichá opora 24/7
+            <AppIcon name="life-buoy" size={15} strokeWidth={2} />
+            <span>Tichá opora 24/7</span>
           </button>
           <button
             type="button"
             class="fc-btn fc-feedback"
-            on:click={() => openFeedbackModal()}
+            onclick={() => openFeedbackModal()}
             aria-label="Poslat zpětnou vazbu"
           >
-            💬 Napsat názor
+            <AppIcon name="message-circle" size={15} strokeWidth={2} />
+            <span>Napsat názor</span>
           </button>
         </div>
       </div>
     </div>
   </footer>
-
-  <nav class="mobile-bottom-nav" aria-label="Mobilní navigace" data-sveltekit-preload-data="tap">
-    <a href="/" class="mb-tab" class:active={pathname === "/"}>
-      <span class="mb-icon" aria-hidden="true">⚡</span>
-      <span class="mb-label">Dnes</span>
-    </a>
-    <a
-      href="/app/online"
-      class="mb-tab"
-      class:active={pathname.startsWith("/app/online")}
-    >
-      <span class="mb-icon" aria-hidden="true">⏱️</span>
-      <span class="mb-label">Skutky</span>
-    </a>
-    <a href="/near" class="mb-tab" class:active={pathname.startsWith("/near")}>
-      <span class="mb-icon" aria-hidden="true">📍</span>
-      <span class="mb-label">V okolí</span>
-    </a>
-    <a href="/svet" class="mb-tab" class:active={pathname.startsWith("/svet")}>
-      <span class="mb-icon" aria-hidden="true">✨</span>
-      <span class="mb-label">Krajina dobra</span>
-    </a>
-    <a
-      href="/app/guided"
-      class="mb-tab"
-      class:active={pathname.startsWith("/app/guided")}
-    >
-      <span class="mb-icon" aria-hidden="true">🧭</span>
-      <span class="mb-label">Průvodce</span>
-    </a>
-  </nav>
 </div>
 
 <ImmediateHelp />
@@ -338,15 +395,20 @@
     flex-direction: column;
   }
 
-  /* Floating Glassmorphic Capsule Header */
+  /* Flat Daylight Editorial Header */
   .top-nav {
     position: sticky;
     top: 0;
     z-index: 100;
-    padding: max(0.8rem, env(safe-area-inset-top, 0px))
+    padding: max(0.65rem, env(safe-area-inset-top, 0px))
       max(1.25rem, env(safe-area-inset-right, 0px)) 0.35rem
       max(1.25rem, env(safe-area-inset-left, 0px));
     pointer-events: none;
+    overflow: visible;
+  }
+
+  .top-nav.is-drawer-open {
+    z-index: 949;
   }
 
   .nav-capsule {
@@ -355,55 +417,51 @@
     max-width: 1140px;
     box-sizing: border-box;
     margin: 0 auto;
-    padding: 0.5rem 0.7rem 0.5rem 0.85rem;
+    padding: 0.42rem 0.65rem 0.42rem 0.8rem;
     border-radius: 999px;
-    background: rgba(252, 254, 251, 0.92);
-    backdrop-filter: blur(20px) saturate(160%);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
-    border: 1px solid rgba(22, 82, 56, 0.14);
-    box-shadow:
-      0 14px 32px -12px rgba(12, 38, 26, 0.13),
-      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    box-shadow: var(--shadow-sm, 0 2px 8px rgba(18, 42, 30, 0.05));
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
-    flex-wrap: wrap;
+    gap: 0.65rem;
+    flex-wrap: nowrap;
+    overflow: visible;
   }
 
   .brand {
     display: inline-flex;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.55rem;
+    min-height: 44px;
     text-decoration: none;
-    color: #0e281c;
+    color: var(--ink-primary, #14281d);
     font-weight: 800;
-    font-size: 1.02rem;
+    font-size: 1rem;
     letter-spacing: -0.02em;
+    flex-shrink: 0;
   }
 
   .brand-mark {
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
-    background: radial-gradient(
-      circle at 30% 30%,
-      rgba(16, 185, 129, 0.2),
-      rgba(251, 191, 36, 0.16)
-    );
-    border: 1px solid rgba(5, 150, 105, 0.28);
+    background: var(--bg-subtle, #edf2ee);
+    border: 1px solid var(--border-subtle, #dce3dd);
+    color: var(--accent-primary, #1b5e42);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.14);
+    flex-shrink: 0;
   }
 
   .brand-accent {
     font-family: var(--font-serif);
     font-style: italic;
     font-weight: 400;
-    font-size: 1.24rem;
-    color: #047857;
+    font-size: 1.2rem;
+    color: var(--accent-primary, #1b5e42);
     letter-spacing: 0.01em;
   }
 
@@ -416,7 +474,7 @@
   .brand-sub {
     font-size: 0.68rem;
     font-weight: 600;
-    color: #4b6859;
+    color: var(--ink-secondary, #3f574a);
     letter-spacing: 0.02em;
   }
 
@@ -424,85 +482,198 @@
     display: flex;
     align-items: center;
     gap: 0.25rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 
   .nav-pill {
     display: inline-flex;
     align-items: center;
-    gap: 0.42rem;
+    gap: 0.38rem;
+    min-height: 44px;
+    box-sizing: border-box;
     text-decoration: none;
-    color: #2f4b3d;
+    color: var(--ink-secondary, #3f574a);
     font-weight: 600;
-    font-size: 0.87rem;
-    padding: 0.46rem 0.85rem;
+    font-size: 0.85rem;
+    padding: 0.45rem 0.72rem;
     border-radius: 999px;
     border: 1px solid transparent;
-    transition: all 0.2s var(--ease-gentle);
+    white-space: nowrap;
+    transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
   }
 
   .nav-pill:hover {
-    color: #0b2419;
-    background: rgba(16, 185, 129, 0.09);
+    color: var(--ink-primary, #14281d);
+    background: var(--bg-subtle, #edf2ee);
   }
 
   .nav-pill.active {
-    color: #072317;
-    background: linear-gradient(135deg, #bbf7d0 0%, #fef3c7 100%);
-    border-color: rgba(5, 150, 105, 0.26);
+    color: #ffffff;
+    background: var(--accent-primary, #1b5e42);
+    border-color: var(--accent-primary, #1b5e42);
     font-weight: 700;
-    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.18);
   }
 
   .nav-pill.world-pill {
-    background: rgba(16, 185, 129, 0.09);
-    border-color: rgba(5, 150, 105, 0.22);
-    color: #065f46;
+    background: var(--bg-subtle, #edf2ee);
+    border-color: var(--border-subtle, #dce3dd);
+    color: var(--accent-primary, #1b5e42);
   }
 
   .nav-pill.world-pill.active {
-    background: linear-gradient(135deg, #bbf7d0 0%, #fef3c7 100%);
-    color: #072317;
-    border-color: rgba(5, 150, 105, 0.3);
+    background: var(--accent-primary, #1b5e42);
+    border-color: var(--accent-primary, #1b5e42);
+    color: #ffffff;
   }
 
   .nav-pill.add-tip {
-    border-color: rgba(22, 82, 56, 0.16);
-    color: #1e4633;
-    background: rgba(255, 255, 255, 0.65);
+    border-color: var(--border-subtle, #dce3dd);
+    color: var(--ink-primary, #14281d);
+    background: var(--bg-surface, #ffffff);
   }
 
   .nav-pill.add-tip.active {
-    color: #072317;
+    background: var(--accent-primary, #1b5e42);
+    border-color: var(--accent-primary, #1b5e42);
+    color: #ffffff;
+  }
+
+  .mobile-nav-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--ink-primary, #14281d);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background-color 0.18s ease, border-color 0.18s ease;
+  }
+
+  .mobile-nav-toggle:hover {
+    background: var(--bg-surface, #ffffff);
+    border-color: var(--border-strong, #c2cec5);
+  }
+
+  /* Mobile / Tablet Top-Down Navigation Drawer (rendered outside </header>) */
+  .mobile-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 948;
+    background: rgba(20, 40, 29, 0.28);
+  }
+
+  .mobile-top-nav-drawer {
+    position: fixed;
+    left: max(0.65rem, env(safe-area-inset-left, 0px));
+    right: max(0.65rem, env(safe-area-inset-right, 0px));
+    max-width: 540px;
+    margin: 0 auto;
+    z-index: 950;
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-strong, #c2cec5);
+    border-radius: 20px;
+    box-shadow: var(--shadow-lg, 0 14px 32px -10px rgba(18, 42, 30, 0.11));
+    padding: 0.75rem;
+    box-sizing: border-box;
+    max-height: calc(100dvh - 84px);
+    overflow-y: auto;
+  }
+
+  .mobile-drawer-routes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .mobile-drawer-link {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-height: 44px;
+    padding: 0.55rem 0.85rem;
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--ink-primary, #14281d);
+    font-weight: 600;
+    font-size: 0.94rem;
+    box-sizing: border-box;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  .mobile-drawer-link:hover {
+    background: var(--bg-subtle, #edf2ee);
+  }
+
+  .mobile-drawer-link.active {
+    background: var(--accent-primary, #1b5e42);
+    color: #ffffff;
+    font-weight: 700;
+  }
+
+  .drawer-link-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .mobile-drawer-divider {
+    height: 1px;
+    background: var(--border-subtle, #dce3dd);
+    margin: 0.65rem 0.25rem;
+  }
+
+  .mobile-drawer-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .mobile-drawer-action {
+    appearance: none;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    width: 100%;
+    min-height: 44px;
+    padding: 0.55rem 0.85rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--ink-primary, #14281d);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    box-sizing: border-box;
+  }
+
+  .mobile-drawer-action.is-crisis {
+    background: var(--accent-warm-tint, #fef6e8);
+    border-color: rgba(143, 75, 14, 0.28);
+    color: #8f4b0e;
   }
 
   .main-content {
     flex: 1;
   }
 
-  /* Calm Botanical Sage Footer */
+  /* Calm Editorial Daylight Footer */
   .site-footer {
     position: relative;
-    overflow: hidden;
-    margin-top: 4rem;
-    background: linear-gradient(180deg, #e5efe8 0%, #dbe8df 100%);
-    color: #274235;
-    padding: 3.25rem 1.25rem 5.5rem 1.25rem;
-    border-top: 1px solid rgba(22, 82, 56, 0.13);
-  }
-
-  .footer-glow {
-    position: absolute;
-    top: -120px;
-    right: 10%;
-    width: 420px;
-    height: 240px;
-    background: radial-gradient(
-      circle,
-      rgba(254, 243, 199, 0.55) 0%,
-      transparent 70%
-    );
-    pointer-events: none;
+    margin-top: 3.5rem;
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--ink-secondary, #3f574a);
+    padding: 2.75rem 1.25rem;
+    border-top: 1px solid var(--border-subtle, #dce3dd);
   }
 
   .footer-inner {
@@ -525,25 +696,31 @@
   .footer-brand {
     display: inline-flex;
     align-items: center;
-    gap: 0.55rem;
+    flex-wrap: wrap;
+    gap: 0.2rem 0.55rem;
     font-weight: 800;
-    color: #0e281c;
-    font-size: 1.15rem;
+    color: var(--ink-primary, #14281d);
+    font-size: 1.12rem;
     margin-bottom: 0.65rem;
     letter-spacing: -0.02em;
   }
 
   .footer-dot {
-    width: 10px;
-    height: 10px;
+    width: 9px;
+    height: 9px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #10b981, #f59e0b);
-    box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
+    background: var(--accent-primary, #1b5e42);
+    flex-shrink: 0;
+  }
+
+  .footer-subbrand {
+    font-weight: 600;
+    color: var(--ink-secondary, #3f574a);
   }
 
   .footer-desc {
     margin: 0 0 1rem 0;
-    color: #365244;
+    color: var(--ink-secondary, #3f574a);
     font-size: 0.94rem;
     line-height: 1.65;
   }
@@ -554,7 +731,7 @@
     flex-wrap: wrap;
     font-size: 0.82rem;
     font-weight: 700;
-    color: #047857;
+    color: var(--accent-primary, #1b5e42);
   }
 
   .footer-nav-group {
@@ -567,7 +744,7 @@
     font-size: 0.78rem;
     text-transform: uppercase;
     letter-spacing: 0.09em;
-    color: #4b6859;
+    color: var(--ink-secondary, #3f574a);
     font-weight: 800;
   }
 
@@ -578,41 +755,43 @@
   }
 
   .footer-links a {
-    color: #163a2a;
+    color: var(--ink-primary, #14281d);
     font-weight: 600;
     font-size: 0.92rem;
     text-decoration: none;
-    transition:
-      color 0.15s ease,
-      transform 0.15s ease;
+    transition: color 0.15s ease;
   }
 
   .footer-links a:hover {
-    color: #059669;
-    transform: translateX(3px);
+    color: var(--accent-primary, #1b5e42);
+    text-decoration: underline;
   }
 
   .footer-calm-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.45rem;
+    gap: 0.5rem;
     margin-top: 0.45rem;
-    padding-top: 0.55rem;
-    border-top: 1px solid rgba(22, 82, 56, 0.12);
+    padding-top: 0.65rem;
+    border-top: 1px solid var(--border-subtle, #dce3dd);
   }
 
   .fc-btn {
     appearance: none;
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0.36rem 0.65rem;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
+    padding: 0.55rem 0.95rem;
     border-radius: 999px;
-    border: 1px solid rgba(22, 82, 56, 0.16);
-    background: rgba(255, 255, 255, 0.85);
-    color: #163a2a;
+    border: 1px solid var(--border-strong, #c2cec5);
+    background: var(--bg-surface, #ffffff);
+    color: var(--ink-primary, #14281d);
     font-family: inherit;
-    font-size: 0.78rem;
+    font-size: 0.84rem;
     font-weight: 700;
     text-decoration: none;
     cursor: pointer;
@@ -620,133 +799,79 @@
     white-space: nowrap;
   }
 
+  .fc-btn:hover {
+    background: var(--bg-canvas, #f6f7f3);
+  }
+
   .fc-btn.fc-crisis {
-    border-color: rgba(180, 83, 9, 0.24);
-    background: rgba(254, 243, 199, 0.58);
-    color: #78350f;
+    border-color: rgba(143, 75, 14, 0.3);
+    background: var(--accent-warm-tint, #fef6e8);
+    color: #8f4b0e;
   }
 
   .fc-btn.active {
-    background: #bbf7d0;
-    border-color: rgba(5, 150, 105, 0.32);
+    background: var(--accent-primary, #1b5e42);
+    border-color: var(--accent-primary, #1b5e42);
+    color: #ffffff;
+  }
+
+  @media (min-width: 1025px) {
+    .site-footer {
+      padding-bottom: 5.25rem;
+    }
+  }
+
+  @media (min-width: 1025px) and (max-width: 1160px) {
+    .top-nav {
+      padding-inline: 0.85rem;
+    }
+
+    .nav-capsule {
+      padding: 0.38rem 0.55rem 0.38rem 0.7rem;
+      gap: 0.45rem;
+    }
+
+    .brand {
+      font-size: 0.94rem;
+      gap: 0.45rem;
+    }
+
+    .brand-accent {
+      font-size: 1.12rem;
+    }
+
+    .nav-links {
+      gap: 0.18rem;
+    }
+
+    .nav-pill {
+      font-size: 0.81rem;
+      padding: 0.42rem 0.58rem;
+      gap: 0.3rem;
+    }
   }
 
   @media (max-width: 1024px) {
     .top-nav {
-      padding: 0.45rem 0.65rem 0.25rem;
-    }
-    .nav-capsule {
-      border-radius: 999px;
-      padding: 0.38rem 0.58rem 0.38rem 0.68rem;
-      gap: 0.35rem;
-      flex-wrap: nowrap;
-      justify-content: space-between;
-    }
-    .brand {
-      font-size: 0.86rem;
-      gap: 0.4rem;
-      flex-shrink: 0;
-    }
-    .brand-mark {
-      width: 26px;
-      height: 26px;
-    }
-    .brand-accent {
-      font-size: 1.02rem;
-    }
-    .brand-sub,
-    .nav-pill.add-tip {
-      display: none;
-    }
-    .nav-links {
-      width: auto;
-      flex: 0 1 auto;
-      min-width: 0;
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      justify-content: flex-start;
-      margin-left: auto;
-      gap: 0.2rem;
-      scrollbar-width: none;
-      -webkit-overflow-scrolling: touch;
-      padding-right: 0.35rem;
-    }
-    .nav-links::-webkit-scrollbar {
-      display: none;
-    }
-    .nav-pill {
-      flex-shrink: 0;
-      white-space: nowrap;
-      font-size: 0.74rem;
-      padding: 0.28rem 0.44rem;
-      gap: 0.22rem;
-    }
-    .nav-pill.world-pill {
-      flex-shrink: 0;
-      font-weight: 700;
-      background: linear-gradient(
-        135deg,
-        rgba(16, 185, 129, 0.14) 0%,
-        rgba(245, 158, 11, 0.16) 100%
-      );
-      border-color: rgba(16, 185, 129, 0.32);
-      color: #065f46;
-    }
-  }
-
-  @media (min-width: 681px) and (max-width: 767px) {
-    .nav-capsule {
-      padding: 0.35rem 0.5rem;
-    }
-    .nav-pill span {
-      display: none;
-    }
-    .nav-pill.world-pill span {
-      display: inline;
-      font-size: 0.72rem;
-    }
-    .nav-pill {
-      padding: 0.32rem 0.44rem;
-    }
-  }
-
-  .mobile-bottom-nav {
-    display: none;
-  }
-
-  @media (max-width: 680px) {
-    .app-shell {
-      min-height: 100dvh;
-      padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px));
-    }
-
-    .top-nav {
-      padding: max(0.3rem, env(safe-area-inset-top, 0px))
-        max(0.65rem, env(safe-area-inset-right, 0px)) 0.2rem
+      padding: max(0.35rem, env(safe-area-inset-top, 0px))
+        max(0.65rem, env(safe-area-inset-right, 0px)) 0.25rem
         max(0.65rem, env(safe-area-inset-left, 0px));
     }
 
     .nav-capsule {
-      min-height: 44px;
-      padding: 0.28rem 6.5rem 0.28rem 0.78rem;
-      border-radius: 999px;
+      padding: 0.25rem 0.45rem 0.25rem 0.65rem;
+      gap: 0.4rem;
       flex-wrap: nowrap;
       justify-content: space-between;
-      gap: 0.4rem;
-      max-width: 100%;
-      box-sizing: border-box;
-      overflow: hidden;
-      background: rgba(252, 254, 251, 0.98);
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
     }
 
     .brand {
-      font-size: 0.92rem;
-      gap: 0.42rem;
-      white-space: nowrap;
+      flex: 0 1 auto;
+      margin-right: auto;
       min-width: 0;
       overflow: hidden;
+      font-size: 0.9rem;
+      gap: 0.42rem;
     }
 
     .brand-copy {
@@ -761,9 +886,8 @@
     }
 
     .brand-mark {
-      width: 24px;
-      height: 24px;
-      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
     }
 
     .brand-accent {
@@ -776,74 +900,112 @@
       display: none !important;
     }
 
-    .mobile-bottom-nav {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      z-index: 950;
-      height: calc(58px + env(safe-area-inset-bottom, 0px));
-      padding-bottom: env(safe-area-inset-bottom, 0px);
-      background: rgba(252, 250, 245, 0.98);
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
-      border-top: 1px solid rgba(20, 62, 48, 0.12);
-      box-shadow: 0 -4px 20px rgba(15, 42, 32, 0.06);
+    .mobile-nav-toggle {
+      display: inline-flex;
+    }
+  }
+
+  @media (max-width: 680px) {
+    .nav-capsule {
+      padding: 0.22rem 0.38rem 0.22rem 0.55rem;
+      gap: 0.3rem;
     }
 
-    .mb-tab {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 0.12rem;
-      text-decoration: none;
-      color: #466354;
-      font-size: 0.7rem;
-      font-weight: 600;
-      padding: 0.25rem 0.15rem;
-      border-top: 2px solid transparent;
-      transition:
-        color 0.15s ease,
-        background 0.15s ease;
+    .brand {
+      font-size: 0.86rem;
+      gap: 0.36rem;
     }
 
-    .mb-icon {
-      font-size: 1.05rem;
-      line-height: 1;
+    .brand-mark {
+      width: 26px;
+      height: 26px;
     }
 
-    .mb-label {
-      line-height: 1.1;
-      white-space: nowrap;
-    }
-
-    .mb-tab.active {
-      color: #064e3b;
-      font-weight: 800;
-      border-top-color: #059669;
-      background: linear-gradient(
-        180deg,
-        rgba(16, 185, 129, 0.12) 0%,
-        transparent 100%
-      );
+    .brand-accent {
+      font-size: 1rem;
     }
 
     .site-footer {
       padding: 2rem 1rem 2.5rem 1rem;
-      margin-top: 2rem;
+      margin-top: 2.25rem;
     }
   }
 
-  /* Dotykové tablety: rozmazání pod lepivou hlavičkou se při každém scrollu přepočítává
-     a na slabších GPU trhá posun stránky. Téměř neprůhledné pozadí vypadá stejně a je zdarma. */
-  @media (pointer: coarse) {
+  @media (max-width: 480px) {
+    .top-nav {
+      padding: max(0.35rem, env(safe-area-inset-top, 0px))
+        max(0.5rem, env(safe-area-inset-right, 0px)) 0.25rem
+        max(0.5rem, env(safe-area-inset-left, 0px));
+    }
+
     .nav-capsule {
-      background: rgba(252, 254, 251, 0.97);
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
+      padding: 0.18rem 0.32rem 0.18rem 0.48rem;
+      gap: 0.25rem;
+    }
+
+    .brand {
+      flex: 0 0 auto;
+      margin-right: auto;
+      overflow: visible;
+      gap: 0.34rem;
+    }
+
+    .brand-copy {
+      overflow: visible;
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0;
+      line-height: 1.02;
+      overflow: visible;
+      text-overflow: clip;
+      white-space: nowrap;
+    }
+
+    .brand-word {
+      font-size: 0.8rem;
+      font-weight: 800;
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+    }
+
+    .brand-accent {
+      font-size: 0.92rem;
+      line-height: 1.02;
+      letter-spacing: 0.005em;
+    }
+  }
+
+  @media (max-width: 359px) {
+    .top-nav {
+      padding: max(0.3rem, env(safe-area-inset-top, 0px))
+        max(0.35rem, env(safe-area-inset-right, 0px)) 0.22rem
+        max(0.35rem, env(safe-area-inset-left, 0px));
+    }
+
+    .nav-capsule {
+      padding: 0.16rem 0.25rem 0.16rem 0.38rem;
+      gap: 0.18rem;
+    }
+
+    .brand {
+      gap: 0.25rem;
+    }
+
+    .brand-mark {
+      width: 22px;
+      height: 22px;
+    }
+
+    .brand-word {
+      font-size: 0.74rem;
+    }
+
+    .brand-accent {
+      font-size: 0.85rem;
     }
   }
 </style>

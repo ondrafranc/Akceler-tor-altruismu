@@ -84,7 +84,7 @@ test.describe('Empirical Challenger R2 — Delayed Gratification & Anti-Spam Imm
     expect(parsed.petCount).toBeGreaterThanOrEqual(50);
   });
 
-  test('EC-2: Rapid clicks on "✨ Impuls" button do NOT increment treats or unearned treats', async ({ page }) => {
+  test('EC-2: Rapid clicks on "Impuls" button do NOT increment treats or unearned treats', async ({ page }) => {
     const companion = page.locator('.molly-companion-layer');
     await expect(companion).toBeAttached();
 
@@ -97,8 +97,8 @@ test.describe('Empirical Challenger R2 — Delayed Gratification & Anti-Spam Imm
 
       const treats = Number(await companion.getAttribute('data-molly-treats') || '0');
       const available = Number(await companion.getAttribute('data-molly-available-treats') || '0');
-      expect(treats, '✨ Impuls must strictly NOT award treats').toBe(0);
-      expect(available, '✨ Impuls must strictly NOT unlock available treats').toBe(0);
+      expect(treats, 'Impuls must strictly NOT award treats').toBe(0);
+      expect(available, 'Impuls must strictly NOT unlock available treats').toBe(0);
     }
   });
 
@@ -247,6 +247,7 @@ test.describe('Empirical Challenger R2 — Delayed Gratification & Anti-Spam Imm
 
   test('EC-6: Emotional copy tone verification — warm Czech guidance without gamification tokens', async ({ page }) => {
     await page.goto('/');
+    await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 20000 });
     const petBtn = page.locator('.molly-pelisek-dock .molly-dock-pet-btn');
     await petBtn.click();
     await page.waitForTimeout(300);

@@ -12,6 +12,6 @@
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
-    scroll-margin-top: 2rem;
+    scroll-margin-top: 5rem;
   }
 </style>
