@@ -91,9 +91,9 @@
     gap: 0.5rem;
     padding: 0.28rem 0.72rem;
     border-radius: 999px;
-    background: var(--bg-subtle, #edf2ee);
-    border: 1px solid var(--border-subtle, #dce3dd);
-    color: var(--ink-secondary, #3f574a);
+    background: #e3f0e8;
+    border: 1px solid #bdd8c8;
+    color: #195239;
     font-size: 0.8rem;
     font-weight: 700;
     letter-spacing: 0.015em;
@@ -104,7 +104,7 @@
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: var(--accent-primary, #1b5e42);
+    background: #1f7a52;
     flex-shrink: 0;
   }
 
@@ -126,7 +126,7 @@
     font-size: clamp(2.4rem, 4.5vw, 3.85rem);
     line-height: 1.06;
     letter-spacing: 0;
-    color: var(--accent-primary, #1b5e42);
+    color: var(--czech-forest, #1d5c40);
     margin-top: 0.2rem;
   }
 
@@ -166,15 +166,15 @@
   }
 
   .hero-btn.primary {
-    background: var(--accent-primary, #1b5e42);
+    background: var(--czech-forest, #1d5c40);
     color: #ffffff;
-    border: 1px solid var(--accent-primary, #1b5e42);
+    border: 1px solid var(--czech-forest, #1d5c40);
     box-shadow: var(--shadow-sm, 0 2px 8px rgba(18, 42, 30, 0.05));
   }
 
   .hero-btn.primary:hover {
-    background: var(--accent-primary-hover, #144732);
-    border-color: var(--accent-primary-hover, #144732);
+    background: var(--czech-forest-hover, #164932);
+    border-color: var(--czech-forest-hover, #164932);
   }
 
   .hero-btn.primary .arrow {
@@ -198,54 +198,25 @@
   .sanctuary-hero-btn {
     background: var(--bg-surface, #ffffff);
     color: var(--ink-primary, #14281d);
-    border: 1px solid var(--border-strong, #c2cec5);
+    border: 1px solid var(--border-forest-strong, #a7c4b3);
     box-shadow: var(--shadow-sm, 0 2px 8px rgba(18, 42, 30, 0.05));
   }
 
   .sanctuary-hero-btn:hover {
-    background: var(--bg-subtle, #edf2ee);
-    border-color: var(--accent-primary, #1b5e42);
+    background: var(--bohemian-mist, #e6f0ea);
+    border-color: var(--czech-linden, #256f4e);
+    color: #195239;
   }
 
   @media (min-width: 960px) {
     .hero-stage {
       background: linear-gradient(
         180deg,
-        var(--forest-wash, #e7efea) 0%,
-        var(--forest-wash-soft, #eef4f0) 56%,
+        #eaf2ed 0%,
+        #f1f6f2 58%,
         var(--bg-canvas, #f6f7f3) 100%
       );
-      border-bottom-color: var(--border-forest, #c8d7cd);
-    }
-
-    .hero-overline {
-      background: var(--forest-deep, #11291e);
-      border-color: var(--forest-canopy, #173829);
-      color: #eef4f0;
-    }
-
-    .live-dot {
-      background: #7be0ad;
-    }
-
-    .hero-btn.primary {
-      background: var(--forest-canopy, #173829);
-      border-color: var(--forest-deep, #11291e);
-    }
-
-    .hero-btn.primary:hover {
-      background: var(--forest-deep, #11291e);
-      border-color: var(--forest-deep, #11291e);
-    }
-
-    .sanctuary-hero-btn {
-      border-color: var(--border-forest-strong, #aebfb4);
-      color: var(--forest-deep, #11291e);
-    }
-
-    .sanctuary-hero-btn:hover {
-      background: var(--forest-wash, #e7efea);
-      border-color: var(--forest-canopy, #173829);
+      border-bottom-color: var(--border-forest, #c5d9cd);
     }
   }
 

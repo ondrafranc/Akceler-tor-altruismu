@@ -447,9 +447,9 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: var(--bg-subtle, #edf2ee);
-    border: 1px solid var(--border-subtle, #dce3dd);
-    color: var(--accent-primary, #1b5e42);
+    background: #e4f0e8;
+    border: 1px solid #b9d5c4;
+    color: var(--czech-forest, #1d5c40);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -461,7 +461,7 @@
     font-style: italic;
     font-weight: 400;
     font-size: 1.2rem;
-    color: var(--accent-primary, #1b5e42);
+    color: var(--czech-forest, #1d5c40);
     letter-spacing: 0.01em;
   }
 
@@ -503,38 +503,38 @@
   }
 
   .nav-pill:hover {
-    color: var(--ink-primary, #14281d);
-    background: var(--bg-subtle, #edf2ee);
+    color: #195239;
+    background: var(--bohemian-sage, #eef5f0);
   }
 
   .nav-pill.active {
     color: #ffffff;
-    background: var(--accent-primary, #1b5e42);
-    border-color: var(--accent-primary, #1b5e42);
+    background: var(--czech-forest, #1d5c40);
+    border-color: var(--czech-forest, #1d5c40);
     font-weight: 700;
   }
 
   .nav-pill.world-pill {
-    background: var(--bg-subtle, #edf2ee);
-    border-color: var(--border-subtle, #dce3dd);
-    color: var(--accent-primary, #1b5e42);
+    background: var(--bohemian-mist, #e6f0ea);
+    border-color: var(--border-forest, #c5d9cd);
+    color: #195239;
   }
 
   .nav-pill.world-pill.active {
-    background: var(--accent-primary, #1b5e42);
-    border-color: var(--accent-primary, #1b5e42);
+    background: var(--czech-forest, #1d5c40);
+    border-color: var(--czech-forest, #1d5c40);
     color: #ffffff;
   }
 
   .nav-pill.add-tip {
-    border-color: var(--border-subtle, #dce3dd);
+    border-color: var(--border-forest, #c5d9cd);
     color: var(--ink-primary, #14281d);
     background: var(--bg-surface, #ffffff);
   }
 
   .nav-pill.add-tip.active {
-    background: var(--accent-primary, #1b5e42);
-    border-color: var(--accent-primary, #1b5e42);
+    background: var(--czech-forest, #1d5c40);
+    border-color: var(--czech-forest, #1d5c40);
     color: #ffffff;
   }
 
@@ -816,103 +816,84 @@
   }
 
   @media (min-width: 960px) {
-    .app-shell {
-      border-top: 3px solid var(--forest-deep, #11291e);
-    }
-
     .site-footer {
-      background: #e5eee8;
-      border-top: 2px solid var(--forest-canopy, #173829);
-      color: #2e473a;
+      background: #eaf2ec;
+      border-top: 1px solid var(--border-forest, #c5d9cd);
+      color: #2f4b3d;
     }
 
     .footer-brand {
-      color: var(--forest-deep, #11291e);
+      color: var(--ink-primary, #14281d);
     }
 
     .footer-dot {
-      background: var(--forest-deep, #11291e);
+      background: var(--czech-linden, #256f4e);
     }
 
     .footer-subbrand,
     .footer-desc {
-      color: #2e473a;
+      color: #335041;
     }
 
     .footer-trust {
-      color: #174d35;
+      color: var(--czech-forest, #1d5c40);
     }
 
     .footer-heading {
-      color: #2b4638;
+      color: #2f4b3d;
     }
 
     .footer-links a {
-      color: var(--forest-deep, #11291e);
+      color: var(--ink-primary, #14281d);
+    }
+
+    .footer-links a:hover {
+      color: var(--czech-forest, #1d5c40);
     }
 
     .footer-calm-actions {
-      border-top-color: var(--border-forest, #c8d7cd);
+      border-top-color: var(--border-forest, #c5d9cd);
     }
 
     .fc-btn {
-      border-color: var(--border-forest-strong, #aebfb4);
+      border-color: var(--border-forest-strong, #a7c4b3);
     }
 
     .fc-btn.active {
-      background: var(--forest-canopy, #173829);
-      border-color: var(--forest-deep, #11291e);
+      background: var(--czech-forest, #1d5c40);
+      border-color: var(--czech-forest, #1d5c40);
       color: #ffffff;
     }
   }
 
   @media (min-width: 1025px) {
+    .app-shell {
+      border-top: 2px solid var(--czech-linden, #256f4e);
+    }
+
     .nav-capsule {
-      background: rgba(255, 255, 255, 0.97);
-      border-color: var(--border-forest-strong, #aebfb4);
-      box-shadow: 0 6px 20px -8px rgba(17, 41, 30, 0.12),
-        0 1px 3px rgba(17, 41, 30, 0.05);
+      background: rgba(255, 255, 255, 0.98);
+      border-color: var(--border-forest, #c5d9cd);
+      box-shadow: 0 6px 20px -8px rgba(24, 62, 44, 0.09),
+        0 1px 3px rgba(24, 62, 44, 0.04);
     }
 
     .brand-mark {
-      background: var(--forest-deep, #11291e);
-      border-color: var(--forest-canopy, #173829);
-      color: #e8f2ec;
-    }
-
-    .nav-pill:hover {
-      background: var(--forest-wash, #e7efea);
-      color: var(--forest-deep, #11291e);
-    }
-
-    .nav-pill.world-pill {
-      background: var(--forest-wash, #e7efea);
-      border-color: var(--border-forest, #c8d7cd);
-      color: var(--forest-canopy, #173829);
+      background: #e4f0e8;
+      border-color: #b9d5c4;
+      color: var(--czech-forest, #1d5c40);
     }
 
     .nav-pill.world-pill:hover {
-      background: #dce8e0;
-      border-color: var(--border-forest-strong, #aebfb4);
-      color: var(--forest-deep, #11291e);
-    }
-
-    .nav-pill.add-tip {
-      border-color: var(--border-forest, #c8d7cd);
+      background: #daeae0;
+      border-color: var(--border-forest-strong, #a7c4b3);
+      color: var(--ink-primary, #14281d);
     }
 
     .nav-pill.add-tip:hover {
-      background: var(--forest-wash, #e7efea);
-      border-color: var(--border-forest-strong, #aebfb4);
-      color: var(--forest-deep, #11291e);
-    }
-
-    .nav-pill.active,
-    .nav-pill.world-pill.active,
-    .nav-pill.add-tip.active {
-      background: var(--forest-canopy, #173829);
-      border-color: var(--forest-deep, #11291e);
-      color: #ffffff;
+      background: var(--bohemian-sage, #eef5f0);
+      border-color: var(--border-forest-strong, #a7c4b3);
+      color: #195239;
     }
 
     .site-footer {

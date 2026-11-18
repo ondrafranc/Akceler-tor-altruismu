@@ -26,15 +26,15 @@
 
       <div class="sanctuary-features-strip" aria-hidden="true">
         <span class="feature-tag">
-          <AppIcon name="flame" size={13} strokeWidth={2} />
+          <span class="feature-icon"><AppIcon name="flame" size={13} strokeWidth={2} /></span>
           <span>Plovoucí lucerny</span>
         </span>
         <span class="feature-tag">
-          <AppIcon name="star" size={13} strokeWidth={2} />
+          <span class="feature-icon"><AppIcon name="star" size={13} strokeWidth={2} /></span>
           <span>Zářící hvězdy</span>
         </span>
         <span class="feature-tag">
-          <AppIcon name="wind" size={13} strokeWidth={2} />
+          <span class="feature-icon"><AppIcon name="wind" size={13} strokeWidth={2} /></span>
           <span>Klidný dech</span>
         </span>
       </div>
@@ -110,7 +110,7 @@
     background: var(--bg-surface, #ffffff);
     color: var(--ink-primary, #14281d);
     border: 1px solid var(--border-subtle, #dce3dd);
-    border-top: 3px solid var(--forest-canopy, #173829);
+    border-top: 3px solid var(--czech-linden, #256f4e);
     box-shadow: var(--shadow-md, 0 8px 20px -6px rgba(18, 42, 30, 0.08));
     overflow: hidden;
   }
@@ -122,10 +122,10 @@
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.08em;
-    color: var(--accent-warm, #b8651b);
+    color: #8f4b0e;
     text-transform: uppercase;
     background: var(--accent-warm-tint, #fef6e8);
-    border: 1px solid rgba(184, 101, 27, 0.24);
+    border: 1px solid rgba(143, 75, 14, 0.24);
     padding: 0.26rem 0.68rem;
     border-radius: 999px;
     margin-bottom: 0.85rem;
@@ -144,7 +144,7 @@
     font-family: var(--font-serif, "Georgia", serif);
     font-style: italic;
     font-weight: 400;
-    color: var(--accent-primary, #1b5e42);
+    color: var(--czech-forest, #1d5c40);
   }
 
   .sanctuary-copy p {
@@ -175,6 +175,12 @@
     border-radius: 999px;
   }
 
+  .feature-icon {
+    display: inline-flex;
+    align-items: center;
+    color: var(--czech-forest, #1d5c40);
+  }
+
   .sanctuary-cta-row {
     display: flex;
     align-items: center;
@@ -190,8 +196,8 @@
     min-height: 44px;
     padding: 0.76rem 1.35rem;
     border-radius: 999px;
-    background: var(--accent-primary, #1b5e42);
-    border: 1px solid var(--accent-primary, #1b5e42);
+    background: var(--czech-forest, #1d5c40);
+    border: 1px solid var(--czech-forest, #1d5c40);
     color: #ffffff;
     font-weight: 700;
     font-size: 0.94rem;
@@ -202,8 +208,8 @@
   }
 
   .sanctuary-open-btn:hover {
-    background: var(--accent-primary-hover, #144732);
-    border-color: var(--accent-primary-hover, #144732);
+    background: var(--czech-forest-hover, #164932);
+    border-color: var(--czech-forest-hover, #164932);
   }
 
   .sanctuary-open-btn .btn-arrow {
@@ -344,87 +350,92 @@
 
   @media (min-width: 961px) {
     .sanctuary-portal-card {
-      background: var(--forest-deep, #11291e);
-      color: #f4f7f3;
-      border: 1px solid #224433;
-      box-shadow: 0 14px 34px -12px rgba(14, 34, 24, 0.22),
-        0 2px 8px rgba(14, 34, 24, 0.08);
+      background: linear-gradient(135deg, #eaf3ed 0%, #dfece4 100%);
+      color: var(--ink-primary, #14281d);
+      border: 1px solid #bcd5c6;
+      border-top: 3px solid var(--czech-linden, #256f4e);
+      box-shadow: 0 12px 30px -12px rgba(24, 62, 44, 0.12),
+        0 2px 8px rgba(24, 62, 44, 0.05);
     }
 
     .stage-kicker {
-      background: rgba(254, 246, 232, 0.1);
-      border-color: rgba(245, 207, 139, 0.32);
-      color: #f5cf8b;
+      background: #ffffff;
+      border-color: #bdd5c7;
+      color: #195239;
     }
 
     .sanctuary-copy h2 {
-      color: #f4f7f3;
+      color: var(--ink-primary, #14281d);
     }
 
     .serif-gold {
-      color: #ebc983;
+      color: var(--czech-forest, #1d5c40);
     }
 
     .sanctuary-copy p {
-      color: #d2e1d8;
+      color: #355243;
     }
 
     .feature-tag {
-      background: rgba(231, 239, 234, 0.1);
-      border-color: rgba(200, 215, 205, 0.24);
-      color: #dfebe4;
+      background: #ffffff;
+      border-color: #c2d9cb;
+      color: #244334;
+    }
+
+    .feature-icon {
+      color: var(--czech-forest, #1d5c40);
     }
 
     .sanctuary-open-btn {
-      background: #e8f1ec;
-      border-color: #e8f1ec;
-      color: #11291e;
+      background: var(--czech-forest, #1d5c40);
+      border-color: var(--czech-forest, #1d5c40);
+      color: #ffffff;
     }
 
     .sanctuary-open-btn:hover {
-      background: #ffffff;
-      border-color: #ffffff;
-      color: #0c1f16;
+      background: var(--czech-forest-hover, #164932);
+      border-color: var(--czech-forest-hover, #164932);
+      color: #ffffff;
     }
 
     .sanctuary-breath-link {
-      background: rgba(255, 255, 255, 0.09);
-      border-color: rgba(200, 215, 205, 0.3);
-      color: #f3f6f2;
+      background: #ffffff;
+      border-color: #b4cebf;
+      color: var(--ink-primary, #14281d);
     }
 
     .sanctuary-breath-link:hover {
-      background: rgba(255, 255, 255, 0.16);
-      border-color: #9ad4b5;
+      background: #f4f9f6;
+      border-color: var(--czech-linden, #256f4e);
     }
 
     .breath-icon {
-      color: #9ad4b5;
+      color: var(--czech-forest, #1d5c40);
     }
 
     .breath-pill-time {
-      background: rgba(12, 28, 20, 0.55);
-      border-color: rgba(200, 215, 205, 0.26);
-      color: #dfebe4;
+      background: var(--bohemian-sage, #eef5f0);
+      border-color: #c2d9cb;
+      color: #2c4a3b;
     }
 
     .sanctuary-preview-window {
-      border-color: rgba(200, 215, 205, 0.28);
-      background: #0e2118;
+      border-color: #b4cebf;
+      background: var(--bohemian-mist, #e6f0ea);
     }
 
     .sanctuary-preview-window:hover {
-      border-color: #9ad4b5;
+      border-color: var(--czech-linden, #256f4e);
     }
 
     .spw-live-pill {
-      background: rgba(17, 41, 30, 0.9);
-      border-color: rgba(231, 239, 234, 0.26);
-      color: #f3f6f2;
+      background: rgba(255, 255, 255, 0.95);
+      border-color: #c5d9cd;
+      color: var(--ink-primary, #14281d);
     }
 
     .live-pulse-dot {
-      background: #7be0ad;
+      background: #1f7a52;
     }
   }
 

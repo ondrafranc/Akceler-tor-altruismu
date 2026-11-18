@@ -75,7 +75,7 @@
     font-size: 0.76rem;
     font-weight: 700;
     letter-spacing: 0.08em;
-    color: var(--accent-warm, #b8651b);
+    color: #944f12;
     text-transform: uppercase;
     display: block;
     margin-bottom: 0.45rem;
@@ -94,7 +94,7 @@
     font-family: var(--font-serif);
     font-style: italic;
     font-weight: 400;
-    color: var(--accent-primary, #1b5e42);
+    color: var(--czech-forest, #1d5c40);
   }
 
   .bento-paths {
@@ -119,7 +119,7 @@
   .bento-card:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-md, 0 8px 20px -6px rgba(18, 42, 30, 0.08));
-    border-color: var(--accent-primary, #1b5e42);
+    border-color: var(--czech-linden, #256f4e);
   }
 
   .bento-icon-wrap {
@@ -133,21 +133,21 @@
   }
 
   .bento-icon-wrap.pine {
-    background: var(--forest-deep, #11291e);
-    color: #eef4f0;
-    border: 1px solid var(--forest-canopy, #173829);
+    background: #dff0e6;
+    color: #1b5e42;
+    border: 1px solid #bed9c9;
   }
 
   .bento-icon-wrap.forest {
-    background: var(--forest-wash, #e7efea);
-    color: var(--forest-canopy, #173829);
-    border: 1px solid var(--border-forest, #c8d7cd);
+    background: var(--bohemian-sage, #eef5f0);
+    color: var(--czech-linden, #256f4e);
+    border: 1px solid var(--border-forest, #c5d9cd);
   }
 
   .bento-icon-wrap.warm {
     background: var(--accent-warm-tint, #fef6e8);
-    color: var(--accent-warm, #b8651b);
-    border: 1px solid rgba(184, 101, 27, 0.24);
+    color: #944f12;
+    border: 1px solid rgba(184, 101, 27, 0.26);
   }
 
   .bento-card h3 {
@@ -168,7 +168,7 @@
   .bento-cta {
     font-size: 0.9rem;
     font-weight: 700;
-    color: var(--accent-primary, #1b5e42);
+    color: var(--czech-forest, #1d5c40);
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
@@ -176,15 +176,15 @@
 
   @media (min-width: 960px) {
     .bento-card {
-      border-color: var(--border-forest, #c8d7cd);
+      border-color: var(--border-forest, #c5d9cd);
     }
 
     .bento-card:hover {
-      border-color: var(--forest-canopy, #173829);
+      border-color: var(--czech-linden, #256f4e);
     }
 
     .bento-cta {
-      color: var(--forest-canopy, #173829);
+      color: var(--czech-forest, #1d5c40);
     }
   }
 

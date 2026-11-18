@@ -85,13 +85,20 @@
   --accent-warm: #b8651b;
   --accent-warm-tint: #fef6e8;
 
-  /* Subtle Botanical Deep-Forest Accents (Desktop Grounding) */
-  --forest-deep: #11291e;
-  --forest-canopy: #173829;
-  --forest-wash: #e7efea;
-  --forest-wash-soft: #eef4f0;
-  --border-forest: #c8d7cd;
-  --border-forest-strong: #aebfb4;
+  /* Authentic Czech Bohemian Linden & Šumava Meadow/Forest Accents */
+  --czech-forest: #1d5c40;
+  --czech-forest-hover: #164932;
+  --czech-linden: #256f4e;
+  --bohemian-mist: #e6f0ea;
+  --bohemian-sage: #eef5f0;
+  --border-forest: #c5d9cd;
+  --border-forest-strong: #a7c4b3;
+
+  /* Harmonized Botanical Tokens (Warm Czech Daylight Grounding) */
+  --forest-deep: var(--czech-forest-hover);
+  --forest-canopy: var(--czech-forest);
+  --forest-wash: var(--bohemian-mist);
+  --forest-wash-soft: var(--bohemian-sage);
 
   /* Typography Families */
   --font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -124,7 +131,6 @@
   --surface-warm: var(--bg-subtle);
   --surface-card: var(--bg-surface);
   --surface-glass: var(--bg-surface);
-  --bohemian-mist: var(--bg-subtle);
   --warm-stone: var(--bg-canvas);
 
   --text-primary: var(--ink-primary);
@@ -135,15 +141,14 @@
   --subtle-border: var(--border-subtle);
   --strong-border: var(--border-strong);
 
-  --forest-950: #0c1a12;
+  --forest-950: var(--ink-primary);
   --forest-900: var(--ink-primary);
   --forest-850: var(--ink-primary);
-  --forest-800: var(--accent-primary-hover);
-  --forest-700: var(--accent-primary);
-  --forest-600: var(--accent-primary);
-  --czech-forest: var(--accent-primary);
-  --czech-forest-light: #257352;
-  --czech-forest-dark: var(--ink-primary);
+  --forest-800: var(--czech-forest-hover);
+  --forest-700: var(--czech-forest);
+  --forest-600: var(--czech-linden);
+  --czech-forest-light: var(--czech-linden);
+  --czech-forest-dark: var(--czech-forest-hover);
 
   --emerald-600: var(--accent-primary);
   --emerald-500: var(--accent-primary);
@@ -423,9 +428,9 @@ h4 {
   }
 
   .calm-drawer > summary::after {
-    background: var(--forest-wash);
+    background: var(--bohemian-mist);
     border-color: var(--border-forest);
-    color: var(--forest-canopy);
+    color: var(--czech-forest);
   }
 }
 

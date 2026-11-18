@@ -28,18 +28,23 @@
   let mounted = false;
   const LOGICAL_W = 94;
   const LOGICAL_H = 80;
-  const CAT_SAFETY_X = 1.5;
-  const CAT_SAFETY_TOP = 2;
-  const CAT_SAFETY_BOTTOM = 1.5;
+  const CAT_SAFETY_X = 0.5;
+  const CAT_SAFETY_TOP = 0.5;
+  const CAT_SAFETY_BOTTOM = 0.5;
   // Poslední zapsaná transformace — DOM zapisujeme jen při skutečné změně (žádný layout thrash)
   let lastActorTransform = '';
+  let lastActorBehavior = '';
+  let activeDesktopScale = 0;
+  let targetDesktopScale = 0;
   // Bublina se šeptandou je MIMO herce (nezmenšuje se s kočkou na mobilu) a umisťuje se mimo rAF
   let bubbleEl = null;
   let bubbleW = 0;
   let bubbleH = 0;
   let lastBubbleTransform = '';
-  // Molly spěchá na volné místo (aby bublina ani kočka nepřekrývaly tlačítka a nadpisy)
+  // Molly svižněji popojde z tlačítka nebo pro bublinu (bez trhavého sprintu a bez teleportů)
   let hurry = false;
+  let stepAside = false;
+  let urgentStepAside = false;
   let pendingWhisperMs = 0;
   let relocateTimer = null;
   // Nevyžádaný tip (průvodce), pro který teď není volné místo: zkusíme to znovu, a když ani pak
@@ -73,7 +78,8 @@
   let groomPhase = 0;
   let eatTimer = 0;
   let petBlissTimer = 0;
-  let perchedOnLedge = false;
+  let lastAvoidTriggerTs = 0;
+  let scrolledOnCurrentRoute = false;
 
   // Pointer tracking for emerald eyes & button avoidance
   let pointerX = 640;
@@ -274,10 +280,10 @@
       whisperHideTimer = setTimeout(hideWhisperBubble, pendingWhisperMs || 4800);
       if (currentState.mode === 'roaming' && !atHome) {
         const curRaw = scoreSpot(posX, posY, actorScale(vw), vw, collectObstacles(vw, vh, false), false);
-        if (curRaw > 0) snapMollyToFreeSpot();
+        if (curRaw > 0) {
+          relocateToFreeSpot(false);
+        }
       }
-      targetX = posX;
-      targetY = posY;
       updateBubbleAnchorMode(posX, posY);
       evaluateDockWhisperFallback(posX, posY);
       applyActorTransform();
@@ -287,17 +293,16 @@
     const moving = relocateToFreeSpot(true);
     if (moving && Math.hypot(targetX - posX, targetY - posY) > 18) {
       hurry = true;
+      stepAside = true;
       bubbleTravelling = true;
       bubbleEl.classList.add('is-travelling');
       if (whisperHideTimer) clearTimeout(whisperHideTimer);
       if (walkArriveSafetyTimer) clearTimeout(walkArriveSafetyTimer);
       walkArriveSafetyTimer = setTimeout(() => {
         walkArriveSafetyTimer = null;
-        posX = targetX;
-        posY = targetY;
         onArrived();
         applyActorTransform();
-      }, 320);
+      }, 850);
     } else {
       bubbleTravelling = false;
       bubbleEl.classList.remove('is-travelling');
@@ -392,7 +397,7 @@
   // Molly i její bublina jsou pevně umístěné nad stránkou. Vybírá si místo podle toho,
   // co je zrovna pod ní: tlačítka, odkazy, pole formuláře, nadpisy, odstavce ani mapu nikdy nepřekrývá.
   const OBSTACLE_SELECTOR =
-    'a[href], button, input, select, textarea, label, summary, [role="button"], [data-molly-guide], h1, h2, h3, h4, p, .hero-overline, .page-header-kicker, .section-overline, .smart-nearest-banner, .count-heading, .deed-preview-stage, .card-effect-stage, .chip, .pill, .cat-pill, .city-chip, .q-pill, .preset-pill, .topic-pill, .filter-chip, .source-chip, .radius-pill, .energy-tab, .mobile-guided-preview-bar, .feedback-pill, .deck-header-bar, .deck-indicator, .deck-nav-btn, .instant-card, .action-card, .place-card, .nav-capsule, .top-nav, .card, .compass-shell, .highlight-card, .alt-card, .local-card, .side-note, .empty-box, .calm-drawer, .footer-col, .footer-brand, .footer-desc, .footer-heading, .footer-trust, .map-frame, .leaflet-container';
+    'a[href], button, input, select, textarea, label, summary, [role="button"], [data-molly-guide], h1, h2, h3, h4, p, .hero-overline, .page-header-kicker, .section-overline, .smart-nearest-banner, .count-heading, .deed-preview-stage, .card-effect-stage, .bento-cta, .card-cta, .card-title, .card-overline, .chip, .pill, .cat-pill, .city-chip, .q-pill, .preset-pill, .topic-pill, .filter-chip, .source-chip, .radius-pill, .energy-tab, .mobile-guided-preview-bar, .feedback-pill, .deck-header-bar, .deck-indicator, .deck-nav-btn, .instant-card, .action-card, .place-card, .bento-card, .portal-card, .portal-mini, .nav-capsule, .top-nav, .card, .compass-shell, .highlight-card, .alt-card, .local-card, .side-note, .empty-box, .calm-drawer, .footer-col, .footer-brand, .footer-desc, .footer-heading, .footer-trust, .map-frame, .leaflet-container';
   const MOBILE_MAX_W = 680;
 
   function viewportSize() {
@@ -410,13 +415,23 @@
   }
 
   /**
+   * Přirozené cílové měřítko Molly pro danou šířku viewportu (`0.78` na laptopu, `0.92` na širokém PC).
+   * @param {number} vw
+   * @returns {number}
+   */
+  function baseActorScale(vw) {
+    if (vw <= MOBILE_MAX_W) return 0.72;
+    if (vw <= 1365) return 0.78;
+    return 0.92;
+  }
+
+  /**
    * @param {number} vw
    * @returns {number}
    */
   function actorScale(vw) {
     if (vw <= MOBILE_MAX_W) return 0.72;
-    if (vw <= 1365) return 0.78;
-    return 0.96;
+    return activeDesktopScale > 0 ? activeDesktopScale : baseActorScale(vw);
   }
 
   /**
@@ -444,9 +459,22 @@
     feedback: null
   };
 
-  /** @type {Array<{ l: number, t: number, r: number, b: number, w: number }>} */
+  /**
+   * @typedef {{
+   *   l: number,
+   *   t: number,
+   *   r: number,
+   *   b: number,
+   *   w: number,
+   *   hard: boolean,
+   *   heading: boolean,
+   *   text: boolean
+   * }} MeasuredObstacle
+   */
+
+  /** @type {MeasuredObstacle[]} */
   let cachedObstacles = [];
-  /** @type {Array<{ l: number, t: number, r: number, b: number, w: number }>} */
+  /** @type {MeasuredObstacle[]} */
   let cachedFullObstacles = [];
   /** @type {Array<{ l: number, t: number, r: number, b: number }>} */
   let cachedControlRects = [];
@@ -568,10 +596,14 @@
     return ensureLayoutMetrics(vw, vh).feedback;
   }
 
-  function roamRange(vw) {
+  /**
+   * @param {number} vw
+   * @param {number} [scaleOverride]
+   */
+  function roamRange(vw, scaleOverride) {
     const { vh } = viewportSize();
     const clientW = ensureLayoutMetrics(vw, vh).clientW || vw;
-    const s = actorScale(vw);
+    const s = scaleOverride || actorScale(vw);
     const half = LOGICAL_W * 0.5 * s;
     const c = crisisRect();
     const d = dockRect();
@@ -831,18 +863,19 @@
   }
 
   /**
-   * Jediný průchod DOM pro přesné obdélníky překážek kočky (pad 1.5px) i bubliny (pad 3px).
-   * U volně stojících nadpisů h2–h4 a odstavců mimo .instant-card/.site-footer měří skutečný rozsah textu,
-   * aby centrované nadpisy s prázdným blokovým okrajem falešně neblokovaly volné okraje stránky.
+   * Jediný průchod DOM pro přesné obdélníky překážek kočky i bubliny VÝHRADNĚ mimo rAF.
+   * Rozlišuje tvrdé interaktivní překážky (tlačítka, odkazy, vstupy, pelíšek, opora, mapa,
+   * primární CTA a texty .instant-card) od měkkého papírového podkladu karet, takže Molly na
+   * desktopu vždy přirozeně chodí po klidné spodní podlaze bez poskakování po římsách.
    * @param {number} vw
    * @param {number} vh
    */
   function measureObstaclesPair(vw, vh) {
-    /** @type {Array<{ l: number, t: number, r: number, b: number, w: number }>} */
+    /** @type {MeasuredObstacle[]} */
     const catObstacles = [];
-    /** @type {Array<{ l: number, t: number, r: number, b: number, w: number }>} */
+    /** @type {MeasuredObstacle[]} */
     const bubbleObstacles = [];
-    const catPad = 1.5;
+    const isMobile = vw <= MOBILE_MAX_W;
     const bubPad = 3;
     const topNavEl = document.querySelector('.navbar, .top-nav');
     const topNavRect = topNavEl ? topNavEl.getBoundingClientRect() : null;
@@ -870,17 +903,30 @@
       const r = el.getBoundingClientRect();
       if (r.width < 2 || r.height < 2) continue;
 
+      const isBlockCardLink = el.matches(
+        'a.bento-card, a.card, a.portal-card, a.portal-mini, a.alt-card, a.local-card'
+      );
+
       let boxLeft = r.left;
       let boxTop = r.top;
       let boxRight = r.right;
       let boxBottom = r.bottom;
       if (
         textRange &&
-        el.matches('h2, h3, h4, p, .section-overline, .page-header-kicker, .count-heading') &&
-        !el.closest('.instant-card, .site-footer, a[href], button, summary')
+        (el.matches(
+          'h2, h3, h4, p, label, .hero-overline, .section-overline, .page-header-kicker, .count-heading, .bento-cta, .card-cta, .card-title, .card-overline'
+        ) ||
+          (el.tagName === 'SUMMARY' && !el.closest('.instant-card'))) &&
+        !el.closest('.instant-card, .site-footer, button') &&
+        (el.tagName === 'SUMMARY' || !el.closest('summary')) &&
+        (!el.closest('a[href]') ||
+          Boolean(
+            el.closest('a.bento-card, a.card, a.portal-card, a.portal-mini, a.alt-card, a.local-card')
+          ))
       ) {
-        if (!el.textContent || !el.textContent.trim()) continue;
-        textRange.selectNodeContents(el);
+        const labelEl = el.tagName === 'SUMMARY' ? el.querySelector('.summary-label') || el : el;
+        if (!labelEl.textContent || !labelEl.textContent.trim()) continue;
+        textRange.selectNodeContents(labelEl);
         const tr = textRange.getBoundingClientRect();
         if (tr.width >= 2 && tr.height >= 2) {
           boxLeft = tr.left;
@@ -894,35 +940,71 @@
       const visBottom = Math.min(boxBottom, vh);
       if (visBottom - visTop < 2) continue;
       if (visBottom < 0 || visTop > vh || boxRight < 0 || boxLeft > vw) continue;
+
       const isHeading = /^H[1-4]$/.test(el.tagName);
-      const catWeight = isHeading ? 1.5 : 2;
+      const inInstantCard = Boolean(el.closest('.instant-card'));
+      const isHardDesktopCatTarget =
+        el.tagName === 'BUTTON' ||
+        el.tagName === 'INPUT' ||
+        el.tagName === 'SELECT' ||
+        el.tagName === 'TEXTAREA' ||
+        el.tagName === 'H1' ||
+        el.matches('[role="button"]') ||
+        (el.matches('a[href]') && !isBlockCardLink) ||
+        (inInstantCard && el.matches('h1, h2, p, summary')) ||
+        el.matches(
+          '.deck-header-bar, .deck-indicator, .deck-nav-btn, .energy-tab, .filter-chip, .source-chip, .radius-pill, .preset-pill, .topic-pill, .chip, .pill, .cat-pill, .city-chip, .q-pill, .mobile-guided-preview-bar, .map-frame, .leaflet-container, .deed-preview-stage, .card-effect-stage, .footer-brand, .footer-desc, .footer-heading'
+        );
+      const catHard = isMobile ? true : isHardDesktopCatTarget;
+      const isProminentHeading =
+        !catHard &&
+        el.matches('h2, h3, .section-overline, .page-header-kicker, .count-heading');
+      const isSoftText =
+        !catHard &&
+        !isProminentHeading &&
+        (el.tagName === 'SUMMARY' ||
+          el.matches(
+            'h4, p, label, .hero-overline, .bento-cta, .card-cta, .card-title, .card-overline'
+          ));
+      const catPadX = catHard ? 1.5 : isProminentHeading ? 5 : 1;
+      const catPadY = catHard ? 1.5 : isProminentHeading ? 3 : 1;
+      const catWeight = catHard ? (isHeading ? 1.5 : 2) : isProminentHeading ? 4 : isSoftText ? 2.4 : 0.25;
+
       const isHardBubbleTarget =
         el.tagName === 'H1' ||
         el.tagName === 'BUTTON' ||
         el.matches(
           'a.btn-studio-primary, .deck-header-bar, .deck-indicator, .deck-nav-btn, .map-frame, .leaflet-container, .crisis-trigger, .crisis-mobile-fab, .footer-brand, .footer-desc, .footer-heading'
         ) ||
-        Boolean(el.closest('.instant-card'));
+        inInstantCard;
       const isSoftCardSurface =
         !isHardBubbleTarget &&
-        el.matches(
-          '.card, .action-card, .place-card, .compass-shell, .highlight-card, .side-note, .empty-box, .calm-drawer, .footer-col'
-        ) &&
-        !el.matches('a[href], button, summary');
+        (isBlockCardLink ||
+          (el.matches(
+            '.card, .bento-card, .portal-card, .action-card, .place-card, .compass-shell, .highlight-card, .side-note, .empty-box, .calm-drawer, .footer-col'
+          ) &&
+            !el.matches('a[href], button, summary')));
       const bubWeight = isHardBubbleTarget ? 16 : isSoftCardSurface ? 0.35 : isHeading ? 2.5 : 2;
+
       catObstacles.push({
-        l: boxLeft - catPad,
-        t: visTop - catPad,
-        r: boxRight + catPad,
-        b: visBottom + catPad,
-        w: catWeight
+        l: boxLeft - catPadX,
+        t: visTop - catPadY,
+        r: boxRight + catPadX,
+        b: visBottom + catPadY,
+        w: catWeight,
+        hard: catHard,
+        heading: isProminentHeading,
+        text: isSoftText
       });
       bubbleObstacles.push({
         l: boxLeft - bubPad,
         t: visTop - bubPad,
         r: boxRight + bubPad,
         b: visBottom + bubPad,
-        w: bubWeight
+        w: bubWeight,
+        hard: true,
+        heading: false,
+        text: false
       });
     }
 
@@ -940,7 +1022,10 @@
           t: topNavRect.top,
           r: topNavRect.right,
           b: topNavRect.bottom + 1,
-          w: 4
+          w: 4,
+          hard: true,
+          heading: false,
+          text: false
         });
       }
       if (capsuleRect && capsuleRect.width > 0 && capsuleRect.height > 0) {
@@ -949,7 +1034,10 @@
           t: capsuleRect.top,
           r: capsuleRect.right,
           b: capsuleRect.bottom + 1,
-          w: 4
+          w: 4,
+          hard: true,
+          heading: false,
+          text: false
         });
       }
     }
@@ -957,25 +1045,85 @@
     // Pelíšek patří Molly, ale kočka na něm ve stavu roaming nesedí a bublina ho nesmí zakrýt
     const d = dockRect();
     if (d) {
-      catObstacles.push({ l: d.left - 2, t: d.top - 2.5, r: d.right + 2, b: d.bottom + 2, w: 2.5 });
-      bubbleObstacles.push({ l: d.left - 3, t: d.top - 3, r: d.right + 3, b: d.bottom + 3, w: 2.5 });
+      catObstacles.push({
+        l: d.left - 2,
+        t: d.top - 2.5,
+        r: d.right + 2,
+        b: d.bottom + 2,
+        w: 2.5,
+        hard: true,
+        heading: false,
+        text: false
+      });
+      bubbleObstacles.push({
+        l: d.left - 3,
+        t: d.top - 3,
+        r: d.right + 3,
+        b: d.bottom + 3,
+        w: 2.5,
+        hard: true,
+        heading: false,
+        text: false
+      });
     }
     // Krizová opora i tlačítko zpětné vazby musí zůstat vždy 100% volné
     const c = crisisRect();
     if (c) {
-      catObstacles.push({ l: c.left - 3, t: c.top - 3, r: c.right + 3, b: c.bottom + 3, w: 3.5 });
-      bubbleObstacles.push({ l: c.left - 4, t: c.top - 4, r: c.right + 4, b: c.bottom + 4, w: 3.5 });
+      catObstacles.push({
+        l: c.left - 3,
+        t: c.top - 3,
+        r: c.right + 3,
+        b: c.bottom + 3,
+        w: 3.5,
+        hard: true,
+        heading: false,
+        text: false
+      });
+      bubbleObstacles.push({
+        l: c.left - 4,
+        t: c.top - 4,
+        r: c.right + 4,
+        b: c.bottom + 4,
+        w: 3.5,
+        hard: true,
+        heading: false,
+        text: false
+      });
     }
     const fb = feedbackRect();
     if (fb) {
-      catObstacles.push({ l: fb.left - 3, t: fb.top - 3, r: fb.right + 3, b: fb.bottom + 3, w: 3.5 });
-      bubbleObstacles.push({ l: fb.left - 4, t: fb.top - 4, r: fb.right + 4, b: fb.bottom + 4, w: 3.5 });
+      catObstacles.push({
+        l: fb.left - 3,
+        t: fb.top - 3,
+        r: fb.right + 3,
+        b: fb.bottom + 3,
+        w: 3.5,
+        hard: true,
+        heading: false,
+        text: false
+      });
+      bubbleObstacles.push({
+        l: fb.left - 4,
+        t: fb.top - 4,
+        r: fb.right + 4,
+        b: fb.bottom + 4,
+        w: 3.5,
+        hard: true,
+        heading: false,
+        text: false
+      });
     }
 
     return { catObstacles, bubbleObstacles };
   }
 
-  function collectObstacles(vw, vh, fullViewport = false) {
+  /**
+   * @param {number} _vw
+   * @param {number} _vh
+   * @param {boolean} [fullViewport]
+   * @returns {MeasuredObstacle[]}
+   */
+  function collectObstacles(_vw, _vh, fullViewport = false) {
     return fullViewport ? cachedFullObstacles : cachedObstacles;
   }
 
@@ -997,31 +1145,84 @@
     return w > 0 && h > 0 ? w * h : 0;
   }
 
-  function scoreSpot(x, y, s, vw, obstacles, withBubble) {
+  /**
+   * Rozklad kolizního skóre na tvrdé překážky (tlačítka, odkazy, vstupy, pelíšek, mapa, CTA)
+   * a měkké preference (texty mimo .instant-card a papírové pozadí karet).
+   * @param {number} x
+   * @param {number} y
+   * @param {number} s
+   * @param {number} vw
+   * @param {MeasuredObstacle[]} obstacles
+   * @param {boolean} withBubble
+   */
+  function scoreSpotBreakdown(x, y, s, vw, obstacles, withBubble) {
     const cat = catRectAt(x, y, s);
     const bub = withBubble ? defaultBubbleRectAt(x, y, s, vw) : null;
-    let score = 0;
+    const catArea = Math.max(1, LOGICAL_W * LOGICAL_H * s * s);
+    let hard = 0;
+    let headingArea = 0;
+    let softTextArea = 0;
+    let softCardArea = 0;
     for (const o of obstacles) {
-      score += overlapArea(cat, o) * o.w;
-      if (bub) score += overlapArea(bub, o) * o.w * 1.2;
+      const cArea = overlapArea(cat, o);
+      if (cArea > 0) {
+        if (o.hard) {
+          hard += cArea * o.w;
+        } else if (o.heading) {
+          headingArea += cArea;
+        } else if (o.text) {
+          softTextArea += cArea;
+        } else {
+          softCardArea += cArea;
+        }
+      }
+      if (bub) {
+        const bArea = overlapArea(bub, o);
+        if (bArea > 0) {
+          if (o.hard) {
+            hard += bArea * o.w * 1.2;
+          } else {
+            softTextArea += bArea * 0.35;
+          }
+        }
+      }
     }
-    return score;
+    const headingRatio = Math.min(2, headingArea / catArea);
+    const headingCost = headingArea > 0 ? 4500 + headingRatio * 2500 : 0;
+    const softTextRatio = Math.min(2, softTextArea / catArea);
+    const softCardRatio = Math.min(2, softCardArea / catArea);
+    const softCost = headingCost + softTextRatio * 95 + softCardRatio * 20;
+    return { hard, headingArea, softTextRatio, softCardRatio, softCost };
   }
 
   /**
-   * Ověří, že přímá chůze z (x0, y0) do (x1, y1) nikde neprochází přes překážku.
+   * Tvrdý překryv s interaktivními prvky (0 = 100% bez kolize s tlačítky, odkazy, pelíškem i mapou).
+   * @param {number} x
+   * @param {number} y
+   * @param {number} s
+   * @param {number} vw
+   * @param {MeasuredObstacle[]} obstacles
+   * @param {boolean} withBubble
+   */
+  function scoreSpot(x, y, s, vw, obstacles, withBubble) {
+    return scoreSpotBreakdown(x, y, s, vw, obstacles, withBubble).hard;
+  }
+
+  /**
+   * Ověří, že klidná procházka z (x0, y0) do (x1, y1) nikde neprochází přes tvrdou překážku.
+   * Nikdy se nepoužívá k okamžitému teleportu — pouze k výběru cíle volné procházky.
    * @param {number} x0
    * @param {number} y0
    * @param {number} x1
    * @param {number} y1
    * @param {number} s
    * @param {number} vw
-   * @param {Array<{ l: number, t: number, r: number, b: number, w: number }>} obstacles
+   * @param {MeasuredObstacle[]} obstacles
    */
   function isWalkPathClear(x0, y0, x1, y1, s, vw, obstacles) {
     const dist = Math.hypot(x1 - x0, y1 - y0);
     if (dist < 6) return true;
-    if (Math.abs(y1 - y0) > 36) return false;
+    if (Math.abs(y1 - y0) > 22) return false;
     const steps = Math.min(14, Math.max(2, Math.ceil(dist / 34)));
     for (let i = 1; i < steps; i++) {
       const p = i / steps;
@@ -1035,33 +1236,31 @@
   }
 
   /**
-   * Dvoustupňové hledání 100% volného místa pro Molly v aktuálním viewportu:
-   * 1) Primárně spodní přízemní pásmo (včetně čistého okraje nad pelíškem / vedle karet, actorTop >= vh - 168).
-   * 2) Na desktopu (> 680px), kde jsou v přízemí dvousloupcové karty bez bočního okraje (např. 1025×800),
-   *    čistá horní římsa karty či volná plocha sekce pod hlavičkou s nulovým překryvem.
-   * @param {{ preferX?: number, preferY?: number, withBubble?: boolean, avoidX?: number | null, obstacles?: Array<{ l: number, t: number, r: number, b: number, w: number }>, groundOnly?: boolean, requireWalkableFrom?: { x: number, y: number } | null }} [opts]
+   * Hledá nejklidnější místo pro Molly VÝHRADNĚ na konzistentní podlahové linii `groundLine(vw, vh)`
+   * (s jemnou tolerancí u spodního okraje obrazovky, bez 150px svislého pásma a bez skákání po římsách karet).
+   * Primárně používá plné přirozené měřítko (`0.78` na laptopu, `0.92` na širokém PC); pouze pokud na
+   * husté třísloupcové mřížce na `<= 1365px` (např. `/app/online` nahoře) neexistuje volný bod pro `0.78`,
+   * dočasně povolí kompaktní fallback měřítko s nulovou kolizí.
+   * @param {{ preferX?: number, preferY?: number, withBubble?: boolean, avoidX?: number | null, obstacles?: MeasuredObstacle[], groundOnly?: boolean, nearbyBias?: boolean, scaleOverride?: number, requireWalkableFrom?: { x: number, y: number } | null }} [opts]
    */
   function findBestSpot(opts = {}) {
     const { vw, vh } = viewportSize();
     const metrics = ensureLayoutMetrics(vw, vh);
     const clientW = metrics.clientW || vw;
-    const s = actorScale(vw);
-    const halfDomW = LOGICAL_W * 0.5 * s;
-    const fullDomH = LOGICAL_H * s;
     const gY = metrics.groundY;
     const obstacles = opts.obstacles || collectObstacles(vw, vh, false);
     const withBubble = Boolean(opts.withBubble);
     const preferX = Number.isFinite(opts.preferX) ? /** @type {number} */ (opts.preferX) : posX;
-    const preferY = Number.isFinite(opts.preferY) ? /** @type {number} */ (opts.preferY) : gY;
 
     if (vw <= MOBILE_MAX_W) {
-      const { minX, maxX } = roamRange(vw);
+      const s = 0.72;
+      const { minX, maxX } = roamRange(vw, s);
       let best = {
         x: Math.max(minX, Math.min(maxX, preferX)),
         y: gY,
         score: Infinity,
         raw: Infinity,
-        perched: false
+        scale: s
       };
       for (let x = minX; x <= maxX + 0.1; x += 10) {
         if (
@@ -1071,180 +1270,105 @@
           continue;
         }
         const raw = scoreSpot(x, gY, s, vw, obstacles, withBubble);
-        let score = raw * 120 + Math.abs(x - preferX) * 0.4;
+        let score = raw * 120 + Math.abs(x - preferX) * 0.45;
         if (Number.isFinite(opts.avoidX) && Math.abs(x - /** @type {number} */ (opts.avoidX)) < 130) {
           score += 6000;
         }
-        if (score < best.score) best = { x, y: gY, score, raw, perched: false };
+        if (score < best.score) best = { x, y: gY, score, raw, scale: s };
       }
       return best;
     }
 
-    const fullMinX = Math.ceil(halfDomW + 2.5);
-    const fullMaxX = Math.max(fullMinX, Math.floor(clientW - halfDomW - 2.5));
-    const { minX: centralMinX, maxX: centralMaxX } = roamRange(vw);
+    const baseS = opts.scaleOverride || baseActorScale(vw);
+    /**
+     * @param {number} s
+     */
+    const searchForScale = (s) => {
+      const halfDomW = LOGICAL_W * 0.5 * s;
+      const fullMinX = Math.ceil(halfDomW + 3);
+      const fullMaxX = Math.max(fullMinX, Math.floor(clientW - halfDomW - 3));
+      const { minX: centralMinX, maxX: centralMaxX } = roamRange(vw, s);
 
-    /** @type {Set<number>} */
-    const xSet = new Set([
-      fullMinX,
-      Math.min(fullMaxX, fullMinX + 2),
-      Math.min(fullMaxX, fullMinX + 8),
-      Math.min(fullMaxX, fullMinX + 22),
-      fullMaxX,
-      Math.max(fullMinX, fullMaxX - 8),
-      Math.max(fullMinX, fullMaxX - 22),
-      Math.max(fullMinX, Math.min(fullMaxX, Math.round(preferX)))
-    ]);
+      /** @type {Set<number>} */
+      const xSet = new Set([
+        Math.max(fullMinX, Math.min(fullMaxX, Math.round(preferX))),
+        Math.max(fullMinX, Math.min(fullMaxX, Math.round(clientW * 0.55)))
+      ]);
 
-    const d = metrics.dock;
-    const c = metrics.crisis;
-    const fb = metrics.feedback;
-    if (d && d.left < vw * 0.35) {
-      const dockCenter = Math.round(d.left + d.width * 0.5);
-      xSet.add(Math.max(fullMinX, Math.min(fullMaxX, dockCenter)));
-    }
-
-    // Přesný střed levého a pravého okraje vedle hlavního kontejneru (např. na 1280px a 1440px)
-    let leftContentEdge = Infinity;
-    let rightContentEdge = -Infinity;
-    for (const o of obstacles) {
-      if (o.b < vh * 0.35) continue;
-      if (d && Math.abs(o.l - (d.left - 2)) < 4 && Math.abs(o.t - (d.top - 2.5)) < 4) continue;
-      if (c && Math.abs(o.l - (c.left - 3)) < 4 && Math.abs(o.t - (c.top - 3)) < 4) continue;
-      if (fb && Math.abs(o.l - (fb.left - 3)) < 4 && Math.abs(o.t - (fb.top - 3)) < 4) continue;
-      if (o.l > 18 && o.l < vw * 0.32 && o.l < leftContentEdge) leftContentEdge = o.l;
-      if (o.r > vw * 0.68 && o.r < clientW - 18 && o.r > rightContentEdge) rightContentEdge = o.r;
-    }
-    if (Number.isFinite(leftContentEdge)) {
-      const maxLeftPocketX = leftContentEdge - halfDomW - CAT_SAFETY_X - 0.5;
-      if (maxLeftPocketX >= fullMinX - 0.5) {
-        const pocketMid = Math.max(fullMinX, Math.min(fullMaxX, (fullMinX + maxLeftPocketX) * 0.5));
-        xSet.add(Math.round(pocketMid * 2) * 0.5);
-        xSet.add(Math.max(fullMinX, Math.floor(maxLeftPocketX * 2) * 0.5));
+      for (let x = centralMinX; x <= centralMaxX + 0.1; x += 6) {
+        xSet.add(Math.max(fullMinX, Math.min(fullMaxX, Math.round(x))));
       }
-    }
-    if (Number.isFinite(rightContentEdge)) {
-      const minRightPocketX = rightContentEdge + halfDomW + CAT_SAFETY_X + 0.5;
-      if (minRightPocketX <= fullMaxX + 0.5) {
-        const pocketMid = Math.max(fullMinX, Math.min(fullMaxX, (minRightPocketX + fullMaxX) * 0.5));
-        xSet.add(Math.round(pocketMid * 2) * 0.5);
+      for (let x = fullMinX; x <= fullMaxX + 0.1; x += 12) {
+        xSet.add(Math.max(fullMinX, Math.min(fullMaxX, Math.round(x))));
       }
-    }
+      const candXs = Array.from(xSet);
+      const floorYs = opts.groundOnly
+        ? [gY]
+        : Array.from(
+            new Set([
+              gY,
+              Math.min(vh - 4, gY + 8),
+              Math.min(vh - 2, gY + 13),
+              Math.min(vh - 1, gY + 16),
+              Math.max(96, gY - 6)
+            ])
+          );
+      const distWeight = opts.nearbyBias ? 1.18 : 0.44;
 
-    for (let x = centralMinX; x <= centralMaxX + 0.1; x += 16) {
-      xSet.add(Math.max(fullMinX, Math.min(fullMaxX, Math.round(x))));
-    }
-    for (let x = fullMinX; x <= fullMaxX + 0.1; x += 16) {
-      xSet.add(Math.max(fullMinX, Math.min(fullMaxX, Math.round(x))));
-    }
-    const candXs = Array.from(xSet);
+      let best = {
+        x: Math.max(fullMinX, Math.min(fullMaxX, preferX)),
+        y: gY,
+        score: Infinity,
+        raw: Infinity,
+        scale: s
+      };
 
-    const minNavClearY = Math.ceil((metrics.topNavBottom > 0 ? metrics.topNavBottom : 64) + fullDomH + 8);
-    const minTier1Y = Math.max(minNavClearY, Math.ceil(vh - 166 + fullDomH));
-
-    /** @type {Set<number>} */
-    const tier1YSet = new Set([gY]);
-    if (d && d.top > minTier1Y - 24) {
-      const aboveDockY = Math.floor(d.top - 4.5);
-      if (aboveDockY >= minTier1Y && aboveDockY <= gY) tier1YSet.add(aboveDockY);
-    }
-    if (c && c.top > minTier1Y - 24) {
-      const aboveCrisisY = Math.floor(c.top - 4.5);
-      if (aboveCrisisY >= minTier1Y && aboveCrisisY <= gY) tier1YSet.add(aboveCrisisY);
-    }
-    if (fb && fb.top > minTier1Y - 24) {
-      const aboveFbY = Math.floor(fb.top - 4.5);
-      if (aboveFbY >= minTier1Y && aboveFbY <= gY) tier1YSet.add(aboveFbY);
-    }
-    for (const o of obstacles) {
-      const ledgeY = Math.floor(o.t - CAT_SAFETY_BOTTOM - 1);
-      if (ledgeY >= minTier1Y && ledgeY <= gY) {
-        tier1YSet.add(ledgeY);
+      for (const y of floorYs) {
+        for (const x of candXs) {
+          if (
+            opts.requireWalkableFrom &&
+            !isWalkPathClear(opts.requireWalkableFrom.x, opts.requireWalkableFrom.y, x, y, s, vw, obstacles)
+          ) {
+            continue;
+          }
+          const bd = scoreSpotBreakdown(x, y, s, vw, obstacles, withBubble);
+          const raw = bd.hard;
+          const edgeBias = x < 72 || x > clientW - 72 ? 24 : 0;
+          let score =
+            raw * 150 +
+            bd.softCost +
+            Math.abs(x - preferX) * distWeight +
+            Math.abs(y - gY) * 2.5 +
+            edgeBias;
+          if (Number.isFinite(opts.avoidX) && Math.abs(x - /** @type {number} */ (opts.avoidX)) < 130) {
+            score += 6000;
+          }
+          if (score < best.score) {
+            best = { x, y, score, raw, scale: s };
+          }
+        }
       }
-    }
-    for (let y = gY; y >= minTier1Y; y -= 14) {
-      tier1YSet.add(y);
-    }
-
-    let best = {
-      x: Math.max(fullMinX, Math.min(fullMaxX, preferX)),
-      y: gY,
-      score: Infinity,
-      raw: Infinity,
-      perched: false
+      return best;
     };
 
-    for (const y of tier1YSet) {
-      for (const x of candXs) {
-        if (
-          opts.requireWalkableFrom &&
-          !isWalkPathClear(opts.requireWalkableFrom.x, opts.requireWalkableFrom.y, x, y, s, vw, obstacles)
-        ) {
-          continue;
-        }
-        const raw = scoreSpot(x, y, s, vw, obstacles, withBubble);
-        const edgeBias = x < 95 || x > clientW - 95 ? 28 : 0;
-        let score =
-          raw * 140 +
-          Math.abs(x - preferX) * 0.28 +
-          Math.abs(y - preferY) * 0.15 +
-          (gY - y) * 0.35 +
-          edgeBias;
-        if (Number.isFinite(opts.avoidX) && Math.abs(x - /** @type {number} */ (opts.avoidX)) < 130) {
-          score += 6000;
-        }
-        if (score < best.score) {
-          best = { x, y, score, raw, perched: y < gY - 24 };
-        }
+    const primaryBest = searchForScale(baseS);
+    if (primaryBest.raw <= 0 || opts.scaleOverride || vw > 1365) {
+      return primaryBest;
+    }
+
+    for (const fallbackScale of [0.66, 0.58, 0.54]) {
+      const fbBest = searchForScale(fallbackScale);
+      if (fbBest.raw <= 0) {
+        return fbBest;
       }
     }
 
-    if (best.raw <= 0 || opts.groundOnly || (vw <= 900 && vh >= 1100)) {
-      return best;
-    }
-
-    // Tier 2A: Čistá římsa / volná plocha ve vyšší části desktopového viewportu (pouze s nulovým překryvem)
-    /** @type {Set<number>} */
-    const tier2YSet = new Set();
-    for (const o of obstacles) {
-      if (o.b - o.t < 32) continue;
-      const ledgeY = Math.floor(o.t - CAT_SAFETY_BOTTOM - 1);
-      if (ledgeY >= minNavClearY && ledgeY < minTier1Y) {
-        tier2YSet.add(ledgeY);
-      }
-    }
-    for (let y = minTier1Y - 12; y >= minNavClearY; y -= 22) {
-      tier2YSet.add(y);
-    }
-
-    let bestPerch = null;
-    let bestPerchScore = Infinity;
-    for (const y of tier2YSet) {
-      for (const x of candXs) {
-        if (
-          opts.requireWalkableFrom &&
-          !isWalkPathClear(opts.requireWalkableFrom.x, opts.requireWalkableFrom.y, x, y, s, vw, obstacles)
-        ) {
-          continue;
-        }
-        const raw = scoreSpot(x, y, s, vw, obstacles, withBubble);
-        if (raw > 0) continue;
-        let score = (gY - y) * 0.22 + Math.abs(x - preferX) * 0.24;
-        if (Number.isFinite(opts.avoidX) && Math.abs(x - /** @type {number} */ (opts.avoidX)) < 130) {
-          score += 6000;
-        }
-        if (score < bestPerchScore) {
-          bestPerchScore = score;
-          bestPerch = { x, y, score, raw: 0, perched: true };
-        }
-      }
-    }
-
-    return bestPerch || best;
+    return primaryBest;
   }
 
   /**
-   * Okamžitě umístí Molly na nejlepší volné místo bez zdlouhavého přecházení (při načtení a změně stránky).
+   * Okamžitě umístí Molly na nejlepší volné místo POUZE při prvotním načtení, změně stránky
+   * nebo probuzení ze skrytého stavu (`is-docked`), nikdy uprostřed viditelné chůze či scrollu.
    */
   function snapMollyToFreeSpot() {
     if (typeof window === 'undefined' || currentState.mode !== 'roaming' || atHome) return;
@@ -1252,7 +1376,6 @@
     const spot = findBestSpot({ preferX: posX, withBubble: false });
     if (spot.raw > 0) {
       crowdedPark = true;
-      perchedOnLedge = false;
       lastActorTransform = '';
       if (activeWhisper && bubbleW) {
         updateBubbleAnchorMode(posX, posY);
@@ -1264,15 +1387,20 @@
     }
     const wasParked = crowdedPark;
     crowdedPark = false;
+    if (vw > MOBILE_MAX_W && spot.scale) {
+      targetDesktopScale = spot.scale;
+      activeDesktopScale = spot.scale;
+    }
     posX = spot.x;
     posY = spot.y;
     targetX = spot.x;
     targetY = spot.y;
     followTargetX = spot.x;
     followTargetY = spot.y;
-    perchedOnLedge = Boolean(spot.perched);
-    if (posX < vw * 0.22) facing = 1;
-    else if (posX > vw * 0.78) facing = -1;
+    vx = 0;
+    vy = 0;
+    if (posX < vw * 0.25) facing = 1;
+    else if (posX > vw * 0.75) facing = -1;
     lastActorTransform = '';
     if (activeWhisper && bubbleW) {
       updateBubbleAnchorMode(posX, posY);
@@ -1286,7 +1414,8 @@
   }
 
   /**
-   * Když Molly (a případně bublina) na současném místě něco zakrývá, pošle ji na volnější místo.
+   * Když Molly (a případně bublina) po doscrollování nebo změně obsahu zakrývá tlačítko či text,
+   * plynule popojde o pár kroků vedle po stejné podlahové linii `groundLine` — nikdy neteleportuje.
    * @param {boolean} withBubble
    * @returns {boolean} true, pokud se Molly vydala plynulou chůzí jinam
    */
@@ -1296,49 +1425,100 @@
     const s = actorScale(vw);
     const obstacles = collectObstacles(vw, vh, false);
     const walking =
-      behavior === 'WALK_ROAM' && Math.hypot(targetX - posX, targetY - posY) > 4 && !prefersReducedMotion();
+      behavior === 'WALK_ROAM' && Math.hypot(targetX - posX, targetY - posY) > 3 && !prefersReducedMotion();
     const baseX = walking ? targetX : posX;
     const baseY = walking ? targetY : posY;
     const gY = groundLine(vw, vh);
-    const curValidY = baseY >= 64 && baseY <= gY + 4;
-    const here = curValidY && !crowdedPark ? scoreSpot(baseX, baseY, s, vw, obstacles, withBubble) : Infinity;
-    const spot = findBestSpot({ preferX: baseX, preferY: gY, withBubble, obstacles });
-    const catSpot = withBubble ? findBestSpot({ preferX: baseX, preferY: gY, withBubble: false, obstacles }) : spot;
-    if (catSpot.raw > 0) {
+    const curOnFloor = Math.abs(baseY - gY) <= 18;
+    const hereBd =
+      curOnFloor && !crowdedPark
+        ? scoreSpotBreakdown(baseX, baseY, s, vw, obstacles, withBubble)
+        : { hard: Infinity, headingArea: Infinity, softTextRatio: 1, softCardRatio: 1, softCost: Infinity };
+
+    const spot = findBestSpot({
+      preferX: baseX,
+      preferY: gY,
+      withBubble,
+      obstacles,
+      nearbyBias: true
+    });
+    const catSpot = withBubble
+      ? findBestSpot({ preferX: baseX, preferY: gY, withBubble: false, obstacles, nearbyBias: true })
+      : spot;
+
+    const canAutoPark = vw <= 1024;
+    if (catSpot.raw > 0 && (canAutoPark || crowdedPark)) {
       crowdedPark = true;
-      perchedOnLedge = false;
       applyActorTransform();
       return false;
     }
+
     const wasParked = crowdedPark;
     crowdedPark = false;
+
+    // Když byla Molly schovaná v pelíšku (`wasParked`), vyjde z klidného místa na podlaze
     if (wasParked) {
+      if (vw > MOBILE_MAX_W && spot.scale) {
+        targetDesktopScale = spot.scale;
+        activeDesktopScale = spot.scale;
+      }
+      posX = spot.x;
+      posY = spot.y;
+      targetX = spot.x;
+      targetY = spot.y;
+      followTargetX = spot.x;
+      followTargetY = spot.y;
+      vx = 0;
+      vy = 0;
+      if (posX < vw * 0.25) facing = 1;
+      else if (posX > vw * 0.75) facing = -1;
+      lastActorTransform = '';
+      applyActorTransform();
+      ensureLoopRunning();
+      return false;
+    }
+
+    if (vw > MOBILE_MAX_W && spot.scale && Math.abs(spot.scale - targetDesktopScale) > 0.004) {
+      targetDesktopScale = spot.scale;
       ensureLoopRunning();
     }
-    // Pokud je současné místo čisté (a nejsme zbytečně na horní římse, když se uvolnilo přízemí), zůstaneme
-    const canDropToGround = perchedOnLedge && !spot.perched && spot.raw <= 0;
-    if (!wasParked && !canDropToGround && here <= 0) return walking;
-    if (!wasParked && !canDropToGround && spot.raw >= here && Math.hypot(baseX - spot.x, baseY - spot.y) < 8) {
+
+    // Pokud na současném místě nepřekrývá žádný ovládací prvek, nadpis ani výrazný text, v klidu zůstane
+    if (hereBd.hard <= 0 && hereBd.headingArea <= 0 && hereBd.softTextRatio <= 0.18 && curOnFloor) {
+      return walking;
+    }
+    if (
+      spot.raw >= hereBd.hard &&
+      hereBd.headingArea <= 0 &&
+      Math.hypot(baseX - spot.x, baseY - spot.y) < 8
+    ) {
       return walking;
     }
 
-    perchedOnLedge = Boolean(spot.perched);
     targetX = spot.x;
     targetY = spot.y;
     followTargetX = spot.x;
     followTargetY = spot.y;
-    const pathClear = !wasParked && isWalkPathClear(posX, posY, targetX, targetY, s, vw, obstacles);
-    if (prefersReducedMotion() || !pathClear) {
+
+    if (prefersReducedMotion()) {
+      if (vw > MOBILE_MAX_W && spot.scale) {
+        activeDesktopScale = spot.scale;
+      }
       posX = targetX;
       posY = targetY;
-      if (posX < vw * 0.22) facing = 1;
-      else if (posX > vw * 0.78) facing = -1;
+      vx = 0;
+      vy = 0;
       applyActorTransform();
       return false;
     }
-    hurry = true;
+
+    if (behavior !== 'WALK_ROAM' || Math.hypot(vx, vy) < 2) {
+      walkCycle = 0;
+    }
+    stepAside = true;
+    urgentStepAside = hereBd.hard > 0 || hereBd.headingArea > 0;
     behavior = 'WALK_ROAM';
-    behaviorTimer = 4;
+    behaviorTimer = Math.max(4.5, Math.abs(targetX - posX) / 55 + 2.0);
     ensureLoopRunning();
     return true;
   }
@@ -1346,6 +1526,8 @@
   /** Molly došla na místo — teprve teď ukáže bublinu (s plným časem na přečtení). */
   function onArrived() {
     hurry = false;
+    stepAside = false;
+    urgentStepAside = false;
     if (walkArriveSafetyTimer) {
       clearTimeout(walkArriveSafetyTimer);
       walkArriveSafetyTimer = null;
@@ -1384,89 +1566,108 @@
     const { vw, vh } = viewportSize();
     const s = actorScale(vw);
     const obstacles = collectObstacles(vw, vh, false);
+    const gY = groundLine(vw, vh);
     const { minX, maxX } = roamRange(vw);
-    const preferX = minX + Math.random() * Math.max(40, maxX - minX);
-
-    // Při běžné procházce vybíráme jen místa dosažitelná čistou chůzí bez přecházení přes karty/mapu
-    const walkableSpot = findBestSpot({
-      preferX,
-      preferY: posY,
-      withBubble: Boolean(activeWhisper && bubbleW),
-      avoidX: avoidPointer ? pointerX : null,
-      obstacles,
-      requireWalkableFrom: { x: posX, y: posY }
-    });
-
-    if (walkableSpot.raw <= 0 && Math.hypot(walkableSpot.x - posX, walkableSpot.y - posY) >= 10) {
-      crowdedPark = false;
-      perchedOnLedge = Boolean(walkableSpot.perched);
-      targetX = walkableSpot.x;
-      targetY = walkableSpot.y;
-      return;
-    }
 
     if (avoidPointer) {
+      const escapeDir = posX >= pointerX ? 1 : -1;
+      const escapePreferX = Math.max(minX, Math.min(maxX, posX + escapeDir * 150));
       const escapeSpot = findBestSpot({
-        preferX,
+        preferX: escapePreferX,
+        preferY: gY,
         withBubble: Boolean(activeWhisper && bubbleW),
         avoidX: pointerX,
-        obstacles
+        obstacles,
+        nearbyBias: true
       });
-      if (escapeSpot.raw <= 0) {
+      if (escapeSpot.raw <= 0 && Math.abs(escapeSpot.x - posX) >= 12) {
         crowdedPark = false;
-        perchedOnLedge = Boolean(escapeSpot.perched);
         targetX = escapeSpot.x;
         targetY = escapeSpot.y;
-        if (!isWalkPathClear(posX, posY, targetX, targetY, s, vw, obstacles)) {
-          posX = targetX;
-          posY = targetY;
-          behavior = 'IDLE_SIT';
-          applyActorTransform();
+        if (behavior !== 'WALK_ROAM' || Math.hypot(vx, vy) < 2) {
+          walkCycle = 0;
         }
+        stepAside = true;
+        behavior = 'WALK_ROAM';
+        behaviorTimer = Math.max(3.2, Math.abs(targetX - posX) / 60 + 1.6);
         return;
       }
     }
 
-    // Stojí-li Molly v útulné kapse (např. nad pelíškem vedle mapy), zůstane klidně sedět nebo se mýt
-    const stayRaw = scoreSpot(posX, posY, s, vw, obstacles, false);
-    if (stayRaw <= 0) {
+    // Přirozený kočičí krok (65–195 px kolem současného místa místo pobíhání přes celou obrazovku)
+    let dir = facing >= 0 ? 1 : -1;
+    if (posX > maxX - 75) dir = -1;
+    else if (posX < minX + 75) dir = 1;
+    else if (Math.random() < 0.35) dir = -dir;
+    const strollDist = 65 + Math.random() * 130;
+    const preferX = Math.max(minX, Math.min(maxX, posX + dir * strollDist));
+
+    const walkableSpot = findBestSpot({
+      preferX,
+      preferY: gY,
+      withBubble: Boolean(activeWhisper && bubbleW),
+      obstacles,
+      nearbyBias: true,
+      requireWalkableFrom: { x: posX, y: posY }
+    });
+
+    const walkableBd = scoreSpotBreakdown(walkableSpot.x, walkableSpot.y, walkableSpot.scale || s, vw, obstacles, false);
+    if (
+      walkableSpot.raw <= 0 &&
+      walkableBd.headingArea <= 0 &&
+      Math.hypot(walkableSpot.x - posX, walkableSpot.y - posY) >= 16
+    ) {
       crowdedPark = false;
-      targetX = posX;
-      targetY = posY;
-      behavior = Math.random() < 0.55 ? 'IDLE_SIT' : 'GROOM';
-      if (posX < vw * 0.22) facing = 1;
-      else if (posX > vw * 0.78) facing = -1;
+      if (vw > MOBILE_MAX_W && walkableSpot.scale) {
+        targetDesktopScale = walkableSpot.scale;
+      }
+      targetX = walkableSpot.x;
+      targetY = walkableSpot.y;
+      if (behavior !== 'WALK_ROAM' || Math.hypot(vx, vy) < 2) {
+        walkCycle = 0;
+      }
+      stepAside = false;
+      behaviorTimer = Math.max(4.5, Math.abs(targetX - posX) / 42 + 2.0);
       return;
     }
 
-    snapMollyToFreeSpot();
+    const stayBd = scoreSpotBreakdown(posX, posY, s, vw, obstacles, false);
+    if (stayBd.hard <= 0 && stayBd.headingArea <= 0) {
+      crowdedPark = false;
+      targetX = posX;
+      targetY = gY;
+      behavior = Math.random() < 0.6 ? 'IDLE_SIT' : 'GROOM';
+      behaviorTimer = 3.8 + Math.random() * 2.6;
+      return;
+    }
+
+    relocateToFreeSpot(Boolean(activeWhisper && bubbleW));
   }
 
   function chooseNextBehavior() {
-    // Sedí-li Molly na tlačítku či odkazu (obsah se mohl změnit bez scrollu), nejdřív uhne jinam
+    // Sedí-li Molly na tlačítku či odkazu (obsah se mohl změnit bez scrollu), klidně poodejde
     if (relocateToFreeSpot(Boolean(activeWhisper && bubbleW))) {
       hurry = false;
       behavior = 'WALK_ROAM';
-      behaviorTimer = Math.max(behaviorTimer, 4);
       return;
     }
     // Dokud člověk čte zprávu v bublině, Molly klidně sedí nebo se myje (neodchází pryč uprostřed věty)
     if (activeWhisper) {
       behavior = Math.random() < 0.7 ? 'IDLE_SIT' : 'GROOM';
-      behaviorTimer = 2.6 + Math.random() * 1.8;
+      behaviorTimer = 2.8 + Math.random() * 1.8;
       return;
     }
     const roll = Math.random();
-    if (roll < 0.42) {
+    if (roll < 0.34) {
       behavior = 'WALK_ROAM';
-      behaviorTimer = 3.5 + Math.random() * 3.0;
+      behaviorTimer = 4.5 + Math.random() * 2.5;
       pickSafeTarget(false);
-    } else if (roll < 0.66) {
+    } else if (roll < 0.68) {
       behavior = 'IDLE_SIT';
-      behaviorTimer = 3.2 + Math.random() * 2.8;
-    } else if (roll < 0.84) {
+      behaviorTimer = 4.2 + Math.random() * 3.2;
+    } else if (roll < 0.86) {
       behavior = 'GROOM';
-      behaviorTimer = 2.8 + Math.random() * 2.0;
+      behaviorTimer = 3.0 + Math.random() * 2.2;
     } else {
       behavior = 'CHASE_FIREFLY';
       behaviorTimer = 3.4 + Math.random() * 2.0;
@@ -1487,18 +1688,21 @@
     if (typeof window === 'undefined') return;
     invalidateLayoutCache();
     const { vw, vh } = viewportSize();
-    const clientW = clientViewportWidth(vw);
-    const s = actorScale(vw);
-    const halfDomW = LOGICAL_W * 0.5 * s;
-    const fullDomH = LOGICAL_H * s;
     isCompactDock.set(vw <= 1024);
-    const minClampX = Math.ceil(halfDomW + 2.5);
-    const maxClampX = Math.max(minClampX, Math.floor(clientW - halfDomW - 2.5));
+    if (vw > MOBILE_MAX_W) {
+      targetDesktopScale = baseActorScale(vw);
+      if (crowdedPark || activeDesktopScale <= 0) {
+        activeDesktopScale = targetDesktopScale;
+      }
+    }
+    const { minX, maxX } = roamRange(vw);
     const gY = groundLine(vw, vh);
-    posX = Math.max(minClampX, Math.min(maxClampX, posX));
-    targetX = Math.max(minClampX, Math.min(maxClampX, targetX));
-    posY = Math.max(Math.ceil(fullDomH + 64), Math.min(gY, posY));
-    targetY = posY;
+    const minFloorY = vw <= MOBILE_MAX_W ? gY : Math.max(96, gY - 6);
+    const maxFloorY = vw <= MOBILE_MAX_W ? gY : Math.min(vh - 1, gY + 16);
+    posX = Math.max(minX, Math.min(maxX, posX));
+    targetX = Math.max(minX, Math.min(maxX, targetX));
+    posY = Math.max(minFloorY, Math.min(maxFloorY, posY));
+    targetY = Math.max(minFloorY, Math.min(maxFloorY, targetY));
     if (bubbleEl) {
       bubbleW = bubbleEl.offsetWidth;
       bubbleH = bubbleEl.offsetHeight;
@@ -1509,16 +1713,28 @@
     resizeTimer = setTimeout(() => {
       resizeTimer = null;
       measureLayoutAndObstacles();
+      if (bubbleEl) {
+        bubbleW = bubbleEl.offsetWidth;
+        bubbleH = bubbleEl.offsetHeight;
+      }
+      const vs = viewportSize();
+      const range = roamRange(vs.vw);
+      const floorY = groundLine(vs.vw, vs.vh);
+      const minFY = vs.vw <= MOBILE_MAX_W ? floorY : Math.max(96, floorY - 6);
+      const maxFY = vs.vw <= MOBILE_MAX_W ? floorY : Math.min(vs.vh - 1, floorY + 16);
+      posX = Math.max(range.minX, Math.min(range.maxX, posX));
+      targetX = Math.max(range.minX, Math.min(range.maxX, targetX));
+      posY = Math.max(minFY, Math.min(maxFY, posY));
+      targetY = Math.max(minFY, Math.min(maxFY, targetY));
       lastBubbleTransform = '';
       if (currentState.mode === 'roaming' && !atHome) {
-        snapMollyToFreeSpot();
-      } else {
-        if (activeWhisper && bubbleW) {
-          updateBubbleAnchorMode(posX, posY);
-          evaluateDockWhisperFallback(posX, posY);
-        }
-        applyActorTransform();
+        relocateToFreeSpot(Boolean(activeWhisper && bubbleW));
       }
+      if (activeWhisper && bubbleW) {
+        updateBubbleAnchorMode(targetX, targetY);
+        evaluateDockWhisperFallback(targetX, targetY);
+      }
+      applyActorTransform();
     }, 60);
   }
 
@@ -1528,10 +1744,14 @@
    */
   function applyActorTransform() {
     if (!actorEl || typeof window === 'undefined') return;
+    if (lastActorBehavior !== behavior) {
+      lastActorBehavior = behavior;
+      actorEl.dataset.mollyBehavior = behavior;
+    }
     const vw = window.innerWidth || 1280;
     const s = actorScale(vw);
     const tf = `translate3d(${(posX - LOGICAL_W * 0.5).toFixed(1)}px, ${(posY - LOGICAL_H).toFixed(1)}px, 0)${
-      s !== 1 ? ` scale(${s})` : ''
+      s !== 1 ? ` scale(${s.toFixed(3)})` : ''
     }`;
     if (tf !== lastActorTransform) {
       lastActorTransform = tf;
@@ -1562,9 +1782,11 @@
     }
   }
 
-  // Po doscrollování se pod Molly objeví jiný obsah -> když teď něco zakrývá, přejde jinam
+  // Po doscrollování se pod Molly objeví jiný obsah -> během samotného scrollu sedí v klidu
+  // a teprve po ustálení (debounce) případně plynule popojde o kousek vedle po podlaze.
   function handleWindowScroll() {
     lastInteractionTs = Date.now();
+    scrolledOnCurrentRoute = true;
     if (currentState.mode !== 'roaming' || atHome) return;
     if (relocateTimer) clearTimeout(relocateTimer);
     relocateTimer = setTimeout(() => {
@@ -1583,13 +1805,11 @@
         if (walkArriveSafetyTimer) clearTimeout(walkArriveSafetyTimer);
         walkArriveSafetyTimer = setTimeout(() => {
           walkArriveSafetyTimer = null;
-          posX = targetX;
-          posY = targetY;
           onArrived();
           applyActorTransform();
-        }, 320);
+        }, 850);
       }
-    }, 60);
+    }, 95);
   }
 
   function handleWindowPointerMove(e) {
@@ -1598,40 +1818,33 @@
     const now = performance.now();
     lastPointerMoveTs = now;
     if ($mollyState.followMouse && hasFinePointer && !prefersReducedMotion() && currentState.mode === 'roaming' && !atHome) {
-      if (now - lastFollowCalcTs >= 36) {
+      if (now - lastFollowCalcTs >= 42) {
         lastFollowCalcTs = now;
         const { vw, vh } = viewportSize();
         const obstacles = collectObstacles(vw, vh, false);
-        const walkSpot = findBestSpot({
+        const floorSpot = findBestSpot({
           preferX: pointerX,
-          preferY: posY,
+          preferY: groundLine(vw, vh),
           obstacles,
-          requireWalkableFrom: { x: posX, y: posY }
+          nearbyBias: true
         });
-        if (walkSpot.raw <= 0) {
+        if (floorSpot.raw <= 0 || (vw > 1024 && !crowdedPark)) {
           crowdedPark = false;
-          followTargetX = walkSpot.x;
-          followTargetY = walkSpot.y;
-        } else {
-          const anySpot = findBestSpot({ preferX: pointerX, preferY: pointerY, obstacles });
-          if (anySpot.raw <= 0) {
-            crowdedPark = false;
-            posX = anySpot.x;
-            posY = anySpot.y;
-            followTargetX = anySpot.x;
-            followTargetY = anySpot.y;
-            perchedOnLedge = Boolean(anySpot.perched);
-            applyActorTransform();
-          }
+          followTargetX = floorSpot.x;
+          followTargetY = floorSpot.y;
         }
       }
       ensureLoopRunning();
     }
 
-    // Když se kurzor blíží k tlačítku, u kterého Molly sedí, uhne na volné místo
+    // Když se kurzor blíží k tlačítku, u kterého Molly sedí, klidně uhne (s hysterezí bez kmitání)
     if (currentState.mode === 'roaming' && !atHome && !crowdedPark && e.pointerType !== 'touch') {
       const distToMolly = Math.hypot(pointerX - posX, pointerY - (posY - 24));
-      if (distToMolly < 92) {
+      if (
+        distToMolly < 88 &&
+        now - lastAvoidTriggerTs > 950 &&
+        (behavior !== 'WALK_ROAM' || Math.abs(targetX - pointerX) < 110)
+      ) {
         const el = e.target;
         if (
           el &&
@@ -1639,8 +1852,7 @@
           el.closest('button, a, input, select, textarea, [role="button"]') &&
           !el.closest('.molly-pelisek-dock')
         ) {
-          behavior = 'WALK_ROAM';
-          behaviorTimer = 2.4;
+          lastAvoidTriggerTs = now;
           pickSafeTarget(true);
           ensureLoopRunning();
         }
@@ -1834,22 +2046,19 @@
   function guideMollyTo(el, rect, guide) {
     const ctaCx = rect.left + rect.width * 0.5;
     const ctaCy = rect.top + rect.height * 0.5;
+    const { vw } = viewportSize();
 
     // Molly dojde po spodní „chodníkové“ linii co nejblíž pod tlačítko, ale jen na místo,
-    // kde nic nezakrývá (dřív stála na obsahu hned pod tlačítkem). Tlačítko jemně rozzáří.
+    // kde nic nezakrývá. Tlačítko jemně rozzáří.
     const spot = findBestSpot({ preferX: ctaCx, withBubble: false });
-    if (spot.raw > 0) {
+    if (spot.raw > 0 && vw <= 1024) {
       crowdedPark = true;
-      perchedOnLedge = false;
       behavior = 'IDLE_SIT';
       applyActorTransform();
       return;
     }
-    const { vw, vh } = viewportSize();
-    const s = actorScale(vw);
-    const obstacles = collectObstacles(vw, vh, false);
+    const wasParked = crowdedPark;
     crowdedPark = false;
-    perchedOnLedge = Boolean(spot.perched);
     targetX = spot.x;
     targetY = spot.y;
     followTargetX = spot.x;
@@ -1858,16 +2067,24 @@
     // Oči a natočení k tlačítku
     pointerX = ctaCx;
     pointerY = ctaCy;
-    if (prefersReducedMotion() || !isWalkPathClear(posX, posY, targetX, targetY, s, vw, obstacles)) {
+    if (prefersReducedMotion() || wasParked) {
       posX = targetX;
       posY = targetY;
+      vx = 0;
+      vy = 0;
       applyActorTransform();
     } else {
+      if (behavior !== 'WALK_ROAM' || Math.hypot(vx, vy) < 2) {
+        walkCycle = 0;
+      }
       behavior = 'WALK_ROAM';
-      behaviorTimer = 6;
+      behaviorTimer = Math.max(5.5, Math.abs(targetX - posX) / 50 + 2.0);
       hurry = true;
+      stepAside = true;
     }
-    facing = ctaCx >= targetX ? 1 : -1;
+    if (Math.abs(ctaCx - targetX) > 12) {
+      facing = ctaCx >= targetX ? 1 : -1;
+    }
     spawnHeartBurst(4);
     ensureLoopRunning();
 
@@ -1883,28 +2100,40 @@
     lastInteractionTs = Date.now();
   }
 
+  function settleInitialPlacementIfNeeded() {
+    if (!mounted || atHome || typeof window === 'undefined') return;
+    measureLayoutAndObstacles();
+    if (scrolledOnCurrentRoute || window.scrollY > 2) {
+      relocateToFreeSpot(Boolean(activeWhisper && bubbleW));
+      return;
+    }
+    const { vw, vh } = viewportSize();
+    const s = actorScale(vw);
+    const curBd = !crowdedPark
+      ? scoreSpotBreakdown(posX, posY, s, vw, collectObstacles(vw, vh, false), false)
+      : { hard: Infinity, headingArea: Infinity };
+    if (crowdedPark || curBd.hard > 0 || curBd.headingArea > 0) {
+      snapMollyToFreeSpot();
+    }
+  }
+
   function scheduleLayoutSettleSnap() {
     if (settleTimer1) clearTimeout(settleTimer1);
     if (settleTimer2) clearTimeout(settleTimer2);
     settleTimer1 = setTimeout(() => {
       settleTimer1 = null;
-      if (!atHome) {
-        measureLayoutAndObstacles();
-        snapMollyToFreeSpot();
-      }
+      settleInitialPlacementIfNeeded();
     }, 110);
     settleTimer2 = setTimeout(() => {
       settleTimer2 = null;
-      if (!atHome) {
-        measureLayoutAndObstacles();
-        snapMollyToFreeSpot();
-      }
+      settleInitialPlacementIfNeeded();
     }, 310);
   }
 
   function handleRouteChange(path) {
     if (!path || path === currentPath) return;
     currentPath = path;
+    scrolledOnCurrentRoute = false;
     lastInteractionTs = Date.now();
     clearGuideGlow();
     // Tip patřil předchozí stránce
@@ -1925,10 +2154,19 @@
 
   onMount(() => {
     mounted = true;
+    scrolledOnCurrentRoute = false;
     measureLayoutAndObstacles();
     const { vw, vh } = viewportSize();
+    if (vw > MOBILE_MAX_W) {
+      activeDesktopScale = baseActorScale(vw);
+      targetDesktopScale = activeDesktopScale;
+    }
     const range = roamRange(vw);
-    posX = vw <= MOBILE_MAX_W ? Math.max(range.minX, Math.min(range.maxX, vw * 0.3)) : 280;
+    const defaultDesktopX = Math.round(clientViewportWidth(vw) * 0.55);
+    posX =
+      vw <= MOBILE_MAX_W
+        ? Math.max(range.minX, Math.min(range.maxX, vw * 0.3))
+        : Math.max(range.minX, Math.min(range.maxX, defaultDesktopX));
     posY = groundLine(vw, vh);
     targetX = posX;
     targetY = posY;
@@ -1938,10 +2176,7 @@
     scheduleLayoutSettleSnap();
     if (typeof document !== 'undefined' && document.fonts?.ready) {
       document.fonts.ready.then(() => {
-        if (mounted && !atHome) {
-          measureLayoutAndObstacles();
-          snapMollyToFreeSpot();
-        }
+        settleInitialPlacementIfNeeded();
       });
     }
 
@@ -2032,20 +2267,44 @@
 
       // Roaming physics
       let isWalkingNow = false;
+      let isScalingNow = false;
+      if (
+        typeof window !== 'undefined' &&
+        (window.innerWidth || 1280) > MOBILE_MAX_W &&
+        targetDesktopScale > 0 &&
+        activeDesktopScale > 0 &&
+        Math.abs(targetDesktopScale - activeDesktopScale) > 0.002
+      ) {
+        activeDesktopScale += (targetDesktopScale - activeDesktopScale) * Math.min(1, dt * 5.5);
+        if (Math.abs(targetDesktopScale - activeDesktopScale) <= 0.002) {
+          activeDesktopScale = targetDesktopScale;
+        } else {
+          isScalingNow = true;
+        }
+      }
       // Chůzi na volné místo přerušilo pohlazení / krmení -> bublinu ukážeme hned
       if (hurry && behavior !== 'WALK_ROAM') onArrived();
       if (currentState.mode === 'roaming' && !reduced && !atHome && !crowdedPark) {
         behaviorTimer -= dt;
         if (behaviorTimer <= 0 && !hurry) {
-          chooseNextBehavior();
+          if (behavior === 'WALK_ROAM' && Math.hypot(targetX - posX, targetY - posY) > 3) {
+            targetX = posX;
+            targetY = posY;
+            stepAside = false;
+            behavior = 'IDLE_SIT';
+            behaviorTimer = 4.0 + Math.random() * 2.5;
+            onArrived();
+          } else {
+            chooseNextBehavior();
+          }
         }
 
         if ($mollyState.followMouse && hasFinePointer && behavior !== 'CATCH_TREAT' && behavior !== 'PET_BLISS' && !activeWhisper) {
-          // Optional Mouse-Follow Mode (R2): gentle spring physics, sitting after 3s idle
+          // Optional Mouse-Follow Mode (R2): gentle spring physics along floor, sitting after 3s idle
           const pointerIdle = now - lastPointerMoveTs > 3000;
           if (pointerIdle) {
-            vx *= 0.8;
-            vy *= 0.8;
+            vx *= 0.82;
+            vy *= 0.82;
             if (Math.hypot(vx, vy) < 1.5) {
               vx = 0;
               vy = 0;
@@ -2058,22 +2317,25 @@
             const dy = targetY - posY;
             const dist = Math.hypot(dx, dy);
 
-            if (dist > 18) {
+            if (dist > 16) {
+              if (behavior !== 'WALK_ROAM' && Math.hypot(vx, vy) < 2) {
+                walkCycle = 0;
+              }
               isWalkingNow = true;
-              const desiredVx = (dx / dist) * Math.min(220, dist * 3.5);
-              const desiredVy = (dy / dist) * Math.min(220, dist * 3.5);
-              vx += (desiredVx - vx) * Math.min(1, dt * 8.5);
-              vy += (desiredVy - vy) * Math.min(1, dt * 8.5);
+              const desiredVx = (dx / dist) * Math.min(185, dist * 3.0);
+              const desiredVy = (dy / dist) * Math.min(48, Math.abs(dy) * 4.0);
+              vx += (desiredVx - vx) * Math.min(1, dt * 7.5);
+              vy += (desiredVy - vy) * Math.min(1, dt * 7.5);
               posX += vx * dt;
               posY += vy * dt;
-              if (Math.abs(dx) > 2) {
+              if (Math.abs(dx) > 10 && Math.abs(vx) > 6 && dx * facing < 0) {
                 facing = dx >= 0 ? 1 : -1;
               }
-              walkCycle += dt * 11;
+              walkCycle += dt * Math.max(2.2, Math.min(11.0, Math.hypot(vx, vy) * 0.095));
               behavior = 'WALK_ROAM';
             } else {
-              vx *= 0.72;
-              vy *= 0.72;
+              vx *= 0.76;
+              vy *= 0.76;
               if (Math.hypot(vx, vy) < 1.5) {
                 vx = 0;
                 vy = 0;
@@ -2085,28 +2347,38 @@
           const dx = targetX - posX;
           const dy = targetY - posY;
           const dist = Math.hypot(dx, dy);
-          if (dist > 4) {
+          if (dist > 2.5 && !(dist <= 5 && Math.hypot(vx, vy) < 10)) {
             isWalkingNow = true;
-            // Spěch na volné místo (bublina čeká) a velké svislé přesuny jsou svižné, běžná procházka pomalá
-            const maxSpd = hurry ? 460 : Math.abs(dy) > 60 ? 240 : 88;
-            vx = (dx / dist) * Math.min(maxSpd, dist * (hurry ? 6 : 3.2));
-            vy = (dy / dist) * Math.min(maxSpd, dist * (hurry ? 6 : 3.2));
+            const brisk = stepAside || hurry;
+            const maxSpd = urgentStepAside ? 320 : brisk ? 225 : 94;
+            const accel = urgentStepAside ? 14.5 : brisk ? 10.5 : 6.8;
+            const arrivalSpd = Math.min(maxSpd, dist * (urgentStepAside ? 5.2 : brisk ? 4.2 : 2.6));
+            const desiredVx = (dx / dist) * arrivalSpd;
+            const desiredVy = (dy / dist) * Math.min(48, Math.abs(dy) * 4.0);
+            vx += (desiredVx - vx) * Math.min(1, dt * accel);
+            vy += (desiredVy - vy) * Math.min(1, dt * accel);
             posX += vx * dt;
             posY += vy * dt;
-            if (Math.abs(vx) > 2) {
-              facing = vx >= 0 ? 1 : -1;
+            if (Math.abs(dx) > 10 && Math.abs(vx) > 6 && dx * facing < 0) {
+              facing = dx >= 0 ? 1 : -1;
             }
-            walkCycle += dt * (hurry ? 14 : 9.5);
+            walkCycle += dt * Math.max(2.2, Math.min(11.5, Math.hypot(vx, vy) * 0.095));
           } else {
-            vx *= 0.7;
-            vy *= 0.7;
+            posX = targetX;
+            posY = targetY;
+            vx = 0;
+            vy = 0;
             behavior = 'IDLE_SIT';
-            behaviorTimer = 3.2;
+            behaviorTimer = 4.2 + Math.random() * 2.8;
             onArrived();
           }
         } else {
-          vx *= 0.8;
-          vy *= 0.8;
+          vx *= 0.82;
+          vy *= 0.82;
+          if (Math.hypot(vx, vy) < 0.8) {
+            vx = 0;
+            vy = 0;
+          }
           if (behavior === 'GROOM') {
             groomPhase += dt;
           }
@@ -2122,6 +2394,7 @@
       applyActorTransform();
 
       const hasActiveTransient =
+        isScalingNow ||
         Boolean(flyingTreat) ||
         eatTimer > 0 ||
         petBlissTimer > 0 ||
@@ -2182,10 +2455,11 @@
       } else if (ev.type === 'wake') {
         measureLayoutAndObstacles();
         const curVw = window.innerWidth || 1280;
-        const spot = findBestSpot({ preferX: posX, withBubble: false });
-        if (spot.raw > 0) {
+        const d = dockRect();
+        const wakePreferX = d && d.left < curVw * 0.35 ? d.right + 64 : posX;
+        const spot = findBestSpot({ preferX: wakePreferX, withBubble: false, nearbyBias: true });
+        if (spot.raw > 0 && curVw <= 1024) {
           crowdedPark = true;
-          perchedOnLedge = false;
           behavior = 'IDLE_SIT';
           applyActorTransform();
           spawnHeartBurst(5);
@@ -2198,11 +2472,13 @@
         targetY = spot.y;
         followTargetX = spot.x;
         followTargetY = spot.y;
-        perchedOnLedge = Boolean(spot.perched);
-        if (posX < curVw * 0.22) facing = 1;
-        else if (posX > curVw * 0.78) facing = -1;
+        vx = 0;
+        vy = 0;
+        walkCycle = 0;
+        if (posX < curVw * 0.25) facing = 1;
+        else if (posX > curVw * 0.75) facing = -1;
         behavior = 'WALK_ROAM';
-        behaviorTimer = 3.2;
+        behaviorTimer = 3.8;
         pickSafeTarget(false);
         applyActorTransform();
         spawnHeartBurst(5);
@@ -2218,16 +2494,26 @@
         svelteTick().then(() => {
           if (!mounted) return;
           measureLayoutAndObstacles();
+          if (bubbleEl) {
+            bubbleW = bubbleEl.offsetWidth;
+            bubbleH = bubbleEl.offsetHeight;
+          }
+          const vs = viewportSize();
+          const range = roamRange(vs.vw);
+          const floorY = groundLine(vs.vw, vs.vh);
+          posX = Math.max(range.minX, Math.min(range.maxX, posX));
+          targetX = Math.max(range.minX, Math.min(range.maxX, targetX));
+          posY = floorY;
+          targetY = floorY;
           lastBubbleTransform = '';
           if (currentState.mode === 'roaming' && !atHome) {
-            snapMollyToFreeSpot();
-          } else {
-            if (activeWhisper && bubbleW) {
-              updateBubbleAnchorMode(posX, posY);
-              evaluateDockWhisperFallback(posX, posY);
-            }
-            applyActorTransform();
+            relocateToFreeSpot(Boolean(activeWhisper && bubbleW));
           }
+          if (activeWhisper && bubbleW) {
+            updateBubbleAnchorMode(targetX, targetY);
+            evaluateDockWhisperFallback(targetX, targetY);
+          }
+          applyActorTransform();
         });
       };
       if (typeof compactDockMql.addEventListener === 'function') {
@@ -2279,8 +2565,12 @@
               layoutChangeTimer = null;
               if (!mounted || atHome) return;
               measureLayoutAndObstacles();
+              if (bubbleEl) {
+                bubbleW = bubbleEl.offsetWidth;
+                bubbleH = bubbleEl.offsetHeight;
+              }
               if (currentState.mode === 'roaming') {
-                snapMollyToFreeSpot();
+                relocateToFreeSpot(Boolean(activeWhisper && bubbleW));
               }
               if (activeWhisper && bubbleW) {
                 updateBubbleAnchorMode(targetX, targetY);
@@ -2288,7 +2578,7 @@
                 lastBubbleTransform = '';
                 applyActorTransform();
               }
-            }, 80);
+            }, 90);
           }
         });
         mainResizeObserver.observe(mainEl);
@@ -2464,7 +2754,7 @@
 
   .molly-roaming-actor.is-docked {
     opacity: 0;
-    transform: translate3d(-200px, -200px, 0) scale(0.5) !important;
+    visibility: hidden;
   }
 
   .molly-cat-canvas {

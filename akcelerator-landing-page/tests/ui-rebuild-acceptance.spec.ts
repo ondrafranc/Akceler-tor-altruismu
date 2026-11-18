@@ -2428,6 +2428,194 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
     expect(await detectHeaderAndMollyCollisions(page)).toEqual([]);
     assertZeroRuntimeErrors(errors, 'T3-17');
   });
+
+  test('T3-18: (Desktop 1440x900 & 1280x800 Smooth Scroll Motion & Czech Linden Palette) Zero Molly teleport/vertical hop across scroll + settle and zero near-black slabs', async ({
+    page
+  }) => {
+    test.setTimeout(90_000);
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    const errors = await setupPageEnvironment(page);
+
+    for (const vp of [
+      { width: 1440, height: 900, label: '1440x900' },
+      { width: 1280, height: 800, label: '1280x800' }
+    ]) {
+      await page.goto('about:blank');
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await gotoHydrated(page, '/');
+
+      if (vp.width === 1440) {
+        const paletteCheck = await page.evaluate(() => {
+          function bgInfo(sel: string) {
+            const el = document.querySelector(sel);
+            if (!el) return null;
+            const cs = window.getComputedStyle(el);
+            return {
+              bg: cs.backgroundColor,
+              bgImg: cs.backgroundImage,
+              color: cs.color
+            };
+          }
+          return {
+            overline: bgInfo('.hero-overline'),
+            brandMark: bgInfo('header.top-nav .brand-mark'),
+            pineIcon: bgInfo('.bento-icon-wrap.pine'),
+            sanctuaryCard: bgInfo('.sanctuary-portal-card')
+          };
+        });
+
+        expect(paletteCheck.overline).not.toBeNull();
+        expect(paletteCheck.brandMark).not.toBeNull();
+        expect(paletteCheck.pineIcon).not.toBeNull();
+        expect(paletteCheck.sanctuaryCard).not.toBeNull();
+        for (const [key, val] of Object.entries(paletteCheck)) {
+          expect(val!.bg, `${key} must not use near-black #11291e`).not.toBe('rgb(17, 41, 30)');
+          expect(val!.bg, `${key} must not use near-black #173829`).not.toBe('rgb(23, 56, 41)');
+          expect(val!.bgImg, `${key} gradient must not use near-black #11291e`).not.toContain(
+            'rgb(17, 41, 30)'
+          );
+        }
+      }
+
+      const initialPolish = await page.evaluate(() => {
+        const actor = document.querySelector('.molly-roaming-actor') as HTMLElement | null;
+        if (!actor) return null;
+        const ar = actor.getBoundingClientRect();
+        const range = document.createRange();
+        const h2Hits: string[] = [];
+        for (const h2 of document.querySelectorAll('main h2')) {
+          if (!h2.textContent?.trim()) continue;
+          range.selectNodeContents(h2);
+          const tr = range.getBoundingClientRect();
+          const ow = Math.min(ar.right, tr.right) - Math.max(ar.left, tr.left);
+          const oh = Math.min(ar.bottom, tr.bottom) - Math.max(ar.top, tr.top);
+          if (ow > 1.5 && oh > 1.5) {
+            h2Hits.push(h2.textContent.trim().slice(0, 45));
+          }
+        }
+        return {
+          width: Math.round(ar.width),
+          height: Math.round(ar.height),
+          h2Hits
+        };
+      });
+      expect(initialPolish, `${vp.label}: initial Molly polish metrics`).not.toBeNull();
+      expect(
+        initialPolish!.width,
+        `${vp.label}: natural Molly width at scrollY===0`
+      ).toBeGreaterThanOrEqual(vp.width >= 1440 ? 82 : 68);
+      expect(
+        initialPolish!.height,
+        `${vp.label}: natural Molly height at scrollY===0`
+      ).toBeGreaterThanOrEqual(vp.width >= 1440 ? 70 : 58);
+      expect(
+        initialPolish!.h2Hits,
+        `${vp.label}: Molly must not sit on top of main h2 heading glyphs at scrollY===0`
+      ).toEqual([]);
+
+      const trace = await page.evaluate(async () => {
+        const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
+        const actor = document.querySelector('.molly-roaming-actor') as HTMLElement | null;
+        if (!actor) {
+          return { missing: true, initialScrollY: window.scrollY, samples: [] as Array<{
+            phase: string;
+            t: number;
+            scrollY: number;
+            x: number;
+            y: number;
+            opacity: string;
+            isDocked: boolean;
+            behavior: string;
+          }> };
+        }
+
+        const samples: Array<{
+          phase: string;
+          t: number;
+          scrollY: number;
+          x: number;
+          y: number;
+          opacity: string;
+          isDocked: boolean;
+          behavior: string;
+        }> = [];
+
+        const record = (phase: string) => {
+          const r = actor.getBoundingClientRect();
+          const cs = window.getComputedStyle(actor);
+          samples.push({
+            phase,
+            t: Math.round(performance.now()),
+            scrollY: Math.round(window.scrollY),
+            x: Math.round((r.left + r.width * 0.5) * 10) / 10,
+            y: Math.round(r.bottom * 10) / 10,
+            opacity: cs.opacity,
+            isDocked: actor.classList.contains('is-docked'),
+            behavior: actor.getAttribute('data-molly-behavior') || ''
+          });
+        };
+
+        const initialScrollY = window.scrollY;
+        record('initial');
+
+        // 8 smooth scroll increments: window.scrollBy(0, 140) every 80ms
+        for (let i = 0; i < 8; i++) {
+          window.scrollBy(0, 140);
+          await sleep(80);
+          record(`scroll-${i + 1}`);
+        }
+
+        // Wait >= 350ms after scroll settles, sampling every 50ms (plus finish any calm sidestep walk)
+        for (let j = 0; j < 8; j++) {
+          await sleep(50);
+          record(`settle-${j + 1}`);
+        }
+        for (let extra = 0; extra < 12; extra++) {
+          if (actor.getAttribute('data-molly-behavior') !== 'WALK_ROAM') break;
+          await sleep(50);
+          record(`walk-finish-${extra + 1}`);
+        }
+
+        return { missing: false, initialScrollY, samples };
+      });
+
+      expect(trace.missing, `${vp.label}: .molly-roaming-actor must exist`).toBe(false);
+      expect(trace.initialScrollY, `${vp.label}: initial scrollY must be 0`).toBe(0);
+      expect(trace.samples.length, `${vp.label}: sample count`).toBeGreaterThanOrEqual(17);
+
+      for (const s of trace.samples) {
+        expect(s.opacity, `${vp.label} [${s.phase}]: Molly opacity must stay '1'`).toBe('1');
+        expect(s.isDocked, `${vp.label} [${s.phase}]: Molly must not enter .is-docked`).toBe(false);
+      }
+
+      for (let i = 1; i < trace.samples.length; i++) {
+        const prev = trace.samples[i - 1];
+        const curr = trace.samples[i];
+        const dx = Math.abs(curr.x - prev.x);
+        const dy = Math.abs(curr.y - prev.y);
+        expect(
+          dx,
+          `${vp.label} [${prev.phase} -> ${curr.phase}]: |Δx|=${dx.toFixed(1)}px > 45px (teleport detected)`
+        ).toBeLessThanOrEqual(45);
+        expect(
+          dy,
+          `${vp.label} [${prev.phase} -> ${curr.phase}]: |Δy|=${dy.toFixed(1)}px > 12px (vertical hop detected)`
+        ).toBeLessThanOrEqual(12);
+      }
+
+      const allCollisions = await detectHeaderAndMollyCollisions(page);
+      const actorCollisions = allCollisions.filter((c) => c.pair.includes('molly-roaming-actor'));
+      expect(
+        actorCollisions,
+        `${vp.label}: zero Molly roaming overlap with interactive controls after settling`
+      ).toEqual([]);
+      if (vp.width >= 1440) {
+        expect(allCollisions, `${vp.label}: zero header/dock/Molly collisions after settling`).toEqual([]);
+      }
+    }
+
+    assertZeroRuntimeErrors(errors, 'T3-18');
+  });
 });
 
 // ============================================================================
