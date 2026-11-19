@@ -19,10 +19,11 @@ export const ACTION_EFFECT_CATALOG = {
     mode: 'shelter_care',
     asmr: 'kibble',
     icon: 'paw',
-    target: CLICK_AND_FEED.gramsPerClick,
-    label: 'Podpora útulku a plná miska',
+    target: 100,
+    label: '100 % daru útulku či projektu na Donio',
     colors: ['#f59e0b', '#fbbf24', '#10b981', '#fde68a'],
-    format: (v) => `+${v} g v misce a péče`
+    format: (v) => `${v} % daru přímo sbírce`,
+    staticMetric: true
   },
   birdlife_ptaci_pasti: {
     mode: 'birds_glass',

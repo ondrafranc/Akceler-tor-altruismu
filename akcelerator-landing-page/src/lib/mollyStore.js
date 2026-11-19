@@ -58,7 +58,7 @@ function countStoredDeeds() {
     try {
       const arr = JSON.parse(safeGetItem(key, 'local') || '[]');
       if (Array.isArray(arr)) n += arr.length;
-    } catch {}
+    } catch { }
   }
   return n;
 }
@@ -117,21 +117,21 @@ function loadMollyState() {
     const availableTreats = Math.max(0, Number(parsed.availableTreats) || 0);
     const earnedTreatQueue = Array.isArray(parsed.earnedTreatQueue)
       ? parsed.earnedTreatQueue
-          .filter((t) => t && typeof t === 'object')
-          .map((t) => ({
-            ...t,
-            icon: MOLLY_TREAT_BY_FOOD[t.foodType]?.icon || 'fish'
-          }))
+        .filter((t) => t && typeof t === 'object')
+        .map((t) => ({
+          ...t,
+          icon: MOLLY_TREAT_BY_FOOD[t.foodType]?.icon || 'fish'
+        }))
       : [];
     const lastTreat =
       parsed.lastTreat &&
-      typeof parsed.lastTreat === 'object' &&
-      !Array.isArray(parsed.lastTreat) &&
-      typeof parsed.lastTreat.icon === 'string'
+        typeof parsed.lastTreat === 'object' &&
+        !Array.isArray(parsed.lastTreat) &&
+        typeof parsed.lastTreat.icon === 'string'
         ? {
-            ...parsed.lastTreat,
-            icon: MOLLY_TREAT_BY_FOOD[parsed.lastTreat.foodType]?.icon || 'fish'
-          }
+          ...parsed.lastTreat,
+          icon: MOLLY_TREAT_BY_FOOD[parsed.lastTreat.foodType]?.icon || 'fish'
+        }
         : null;
     return {
       ...DEFAULT_MOLLY_STATE,
@@ -172,7 +172,7 @@ function saveMollyState(state) {
     };
     safeSetItem(MOLLY_STORAGE_KEY, JSON.stringify(toPersist), 'local');
     safeSetItem(MOLLY_FOLLOW_MOUSE_KEY, state.followMouse ? 'true' : 'false', 'local');
-  } catch {}
+  } catch { }
 }
 
 export const mollyState = writable({ ...DEFAULT_MOLLY_STATE });
@@ -313,7 +313,8 @@ export function feedMolly(sourceOrAction = 'action', opts = {}) {
   const whisper = {
     icon: treat.icon || 'fish',
     text: `Mňam! Děkuji za ${treat.name || 'dobrotu'}, moc mi chutná.`,
-    ts
+    ts,
+    fromDock: Boolean(opts?.fromDock)
   };
 
   const nextDeeds = prevDeeds + 1;
@@ -441,7 +442,7 @@ export function petMolly(customWhisper, opts = {}) {
       if (available <= 0 || opts?.unearned) {
         chosenText =
           MOLLY_UNEARNED_PET_WHISPERS[
-            (nextPetCount - 1) % MOLLY_UNEARNED_PET_WHISPERS.length
+          (nextPetCount - 1) % MOLLY_UNEARNED_PET_WHISPERS.length
           ];
       } else {
         chosenText =

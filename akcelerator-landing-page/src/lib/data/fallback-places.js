@@ -1,5 +1,5 @@
 /**
- * Kurátorovaná záložní místa napříč ČR pro případ výpadku veřejného Overpass API.
+ * Kurátorovaná záložní místa napříč ČR pro okamžité zobrazení bez čekání na síť.
  */
 export const CURATED_FALLBACK_PLACES = [
   {

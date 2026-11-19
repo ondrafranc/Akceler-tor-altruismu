@@ -1,6 +1,6 @@
 <script>
   import { onMount } from "svelte";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import {
     completedSteps,
     unplantedSteps,
@@ -68,8 +68,9 @@
   // ALWAYS 100% FULL BEAUTY — CONNECTED TO REAL GOOD DEEDS
   // =========================================================================
   /** @type {'dawn' | 'night'} */
-  let atmosphereMode = "dawn";
-  $: dawnLayerOpacity = atmosphereMode === "dawn" ? 0.88 : 0.14;
+  let atmosphereMode = $state("dawn");
+  let hasActivatedNight = $state(false);
+  const dawnLayerOpacity = $derived(atmosphereMode === "dawn" ? 0.88 : 0);
 
   // 8 living deed lights seeded across the sky & lake — each linked to a real Czech micro-action
   // 3 semantic light types: lantern (Osobní skutek), star (Inspirace), wave (Pomoc druhému)
@@ -141,10 +142,10 @@
   ];
 
   /** @type {'water' | 'sky' | 'wave'} */
-  let ritualMode = "water";
-  let ritualInput = "";
-  let gentleToast = "";
-  let gentleToastPaw = false;
+  let ritualMode = $state("water");
+  let ritualInput = $state("");
+  let gentleToast = $state("");
+  let gentleToastPaw = $state(false);
   let toastTimer = null;
 
   function showGentleToast(msg, withPaw = false) {
@@ -160,12 +161,17 @@
   // =========================================================================
   // POLYPHONIC HARMONIC SOUNDSCAPE (SHARED AUDIO ENGINE)
   // =========================================================================
-  let soundEnabled = false;
+  let soundEnabled = $state(false);
   let lastHoverChimeAt = 0;
 
   function toggleSound() {
-    const muted = toggleSoundMuted();
-    soundEnabled = !muted;
+    const nextEnabled = !soundEnabled;
+    if (nextEnabled && isSoundMuted()) {
+      toggleSoundMuted();
+    } else if (!nextEnabled && !isSoundMuted()) {
+      toggleSoundMuted();
+    }
+    soundEnabled = nextEnabled;
     if (soundEnabled) {
       playChime("water");
     }
@@ -215,15 +221,15 @@
   }
 
   // =========================================================================
-  let breathingActive = false;
+  let breathingActive = $state(false);
   let breathScale = 1;
   let targetBreathScale = 1;
 
   // =========================================================================
   // ONE QUIET GOOD NEWS WHISPER
   // =========================================================================
-  let proofIndex = 0;
-  $: currentProof = HOPE_PROOFS[proofIndex % HOPE_PROOFS.length];
+  let proofIndex = $state(0);
+  const currentProof = $derived(HOPE_PROOFS[proofIndex % HOPE_PROOFS.length]);
 
   const ACTION_ALIASES = {
     "click-and-feed": "zvirata_utulek_online",
@@ -248,16 +254,18 @@
     );
   }
 
-  let urlSeedPlanted = false;
+  let urlSeedPlanted = $state(false);
   let lastUrlSeedKey = "";
 
-  $: rawUrlSeed = $page?.url?.searchParams?.get("seed") || "";
-  $: rawUrlTitle = $page?.url?.searchParams?.get("title") || "";
-  $: currentUrlSeedKey = `${rawUrlSeed}::${rawUrlTitle}`;
-  $: if (currentUrlSeedKey !== lastUrlSeedKey) {
-    lastUrlSeedKey = currentUrlSeedKey;
-    urlSeedPlanted = false;
-  }
+  const rawUrlSeed = $derived(page?.url?.searchParams?.get("seed") || "");
+  const rawUrlTitle = $derived(page?.url?.searchParams?.get("title") || "");
+  const currentUrlSeedKey = $derived(`${rawUrlSeed}::${rawUrlTitle}`);
+  $effect(() => {
+    if (currentUrlSeedKey !== lastUrlSeedKey) {
+      lastUrlSeedKey = currentUrlSeedKey;
+      urlSeedPlanted = false;
+    }
+  });
 
   function humanizeSeedFallback(raw) {
     const trimmed = cleanTitle(raw);
@@ -272,7 +280,7 @@
     return spaced.charAt(0).toUpperCase() + spaced.slice(1);
   }
 
-  $: urlSeedFallback = (() => {
+  const urlSeedFallback = $derived.by(() => {
     if (urlSeedPlanted || (!rawUrlSeed && !rawUrlTitle)) return null;
     const matched = resolveActionFromSeed(rawUrlSeed);
     const baseTitle = rawUrlTitle
@@ -294,11 +302,12 @@
       ),
       fromUrlFallback: true,
     };
-  })();
+  });
 
-  $: latestStep =
-    ($completedSteps || [])[($completedSteps || []).length - 1] || null;
-  $: nextSeedToPlant = (() => {
+  const latestStep = $derived(
+    ($completedSteps || [])[($completedSteps || []).length - 1] || null,
+  );
+  const nextSeedToPlant = $derived.by(() => {
     const unplanted = $unplantedSteps || [];
     if (urlSeedFallback) {
       const matchingUnplanted = unplanted.find(
@@ -312,8 +321,10 @@
       return urlSeedFallback;
     }
     return unplanted[0] || null;
-  })();
-  $: completedActionIds = new Set(($completedSteps || []).map((s) => s.id));
+  });
+  const completedActionIds = $derived(
+    new Set(($completedSteps || []).map((s) => s.id)),
+  );
 
   function plantActiveSeed(seed, pos) {
     if (!seed) return;
@@ -357,34 +368,37 @@
     return typeof y === "number" && y >= 0.53 ? "water" : "sky";
   }
 
-  $: seededDeedLights = INSPIRING_DEED_SEEDS.filter(
-    (seed) => !completedActionIds.has(seed.actionId),
-  )
-    .map((seed) => {
-      const action = ACTION_BY_ID[seed.actionId];
-      if (!action) return null;
-      return {
-        uid: `seed-${seed.actionId}`,
-        actionId: seed.actionId,
-        action,
-        title: action.title,
-        note: "",
-        concreteImpact:
-          action.concreteImpact || action.whyItMatters || action.desc,
-        orgName: action.org || "",
-        minutes: action.timeMinutes || 0,
-        url: action.url || "",
-        element: seed.element,
-        x: seed.x,
-        y: seed.y,
-        zone: resolveSanctuaryZone(seed.zone, seed.y),
-        lightType: seed.lightType || (seed.zone === "sky" ? "star" : "lantern"),
-        isMine: false,
-      };
-    })
-    .filter(Boolean);
+  const seededDeedLights = $derived(
+    INSPIRING_DEED_SEEDS.filter(
+      (seed) => !completedActionIds.has(seed.actionId),
+    )
+      .map((seed) => {
+        const action = ACTION_BY_ID[seed.actionId];
+        if (!action) return null;
+        return {
+          uid: `seed-${seed.actionId}`,
+          actionId: seed.actionId,
+          action,
+          title: action.title,
+          note: "",
+          concreteImpact:
+            action.concreteImpact || action.whyItMatters || action.desc,
+          orgName: action.org || "",
+          minutes: action.timeMinutes || 0,
+          url: action.url || "",
+          element: seed.element,
+          x: seed.x,
+          y: seed.y,
+          zone: resolveSanctuaryZone(seed.zone, seed.y),
+          lightType:
+            seed.lightType || (seed.zone === "sky" ? "star" : "lantern"),
+          isMine: false,
+        };
+      })
+      .filter(Boolean),
+  );
 
-  $: userLights = [
+  const userLights = $derived([
     ...($completedSteps || [])
       .filter((s) => !s.awaitingPlant || s.plantedPos)
       .map((s, idx) => {
@@ -438,10 +452,10 @@
         isMine: true,
       };
     }),
-  ];
+  ]);
 
-  $: activeLights = [...seededDeedLights, ...userLights];
-  $: myDeedsCount = userLights.length;
+  const activeLights = $derived([...seededDeedLights, ...userLights]);
+  const myDeedsCount = $derived(userLights.length);
 
   /**
    * @typedef {{
@@ -464,23 +478,23 @@
    */
 
   /** @type {LightItem | null} */
-  let selectedLight = null;
+  let selectedLight = $state(null);
   /** @type {LightItem | null} */
-  let hoveredLight = null;
+  let hoveredLight = $state(null);
 
   // =========================================================================
   // SPECTACULAR 60FPS INTERACTIVE VISUAL EFFECTS ENGINE
   // =========================================================================
   /** @type {HTMLCanvasElement | null} */
-  let canvasEl = null;
+  let canvasEl = $state(null);
   /** @type {HTMLDivElement | null} */
-  let stageWrapEl = null;
+  let stageWrapEl = $state(null);
   /** @type {HTMLDivElement | null} */
-  let parallaxEl = null;
+  let parallaxEl = $state(null);
   let pointer = { x: 0.5, y: 0.62, active: false, smoothX: 0.5, smoothY: 0.62 };
   let lastRippleAt = 0;
   let lastTrailAt = 0;
-  let inAppBrowserDetected = false;
+  let inAppBrowserDetected = $state(false);
 
   /** @type {Array<{ x: number, y: number, vx: number, vy: number, r: number, alpha: number, color: string, life: number, maxLife: number, gravity: number, twinkle: number }>} */
   let burstParticles = [];
@@ -1120,7 +1134,6 @@
   onMount(() => {
     let rafId = 0;
     inAppBrowserDetected = isInAppBrowser();
-    soundEnabled = !isSoundMuted();
     const reducedMotion =
       typeof window !== "undefined" &&
       window.matchMedia &&
@@ -2711,7 +2724,7 @@
               <button
                 type="button"
                 class="guide-action-btn"
-                on:click={openRandomInspiringDeed}
+                onclick={openRandomInspiringDeed}
               >
                 <AppIcon name="sparkles" size={14} strokeWidth={2} />
                 <span>Otevřít náhodný skutek na 2 minuty</span>
@@ -2733,21 +2746,24 @@
             type="button"
             class="atmo-btn"
             class:active={atmosphereMode === "dawn"}
-            on:click={() => (atmosphereMode = "dawn")}
+            onclick={() => (atmosphereMode = "dawn")}
             aria-pressed={atmosphereMode === "dawn"}
           >
             <AppIcon name="sunrise" size={15} strokeWidth={2} />
-            <span>Zlaté svítání</span>
+            <span><span class="atmo-prefix">Zlaté</span> <span class="atmo-main">svítání</span></span>
           </button>
           <button
             type="button"
             class="atmo-btn"
             class:active={atmosphereMode === "night"}
-            on:click={() => (atmosphereMode = "night")}
+            onclick={() => {
+              hasActivatedNight = true;
+              atmosphereMode = "night";
+            }}
             aria-pressed={atmosphereMode === "night"}
           >
             <AppIcon name="moon" size={15} strokeWidth={2} />
-            <span>Hvězdná noc</span>
+            <span><span class="atmo-prefix">Hvězdná</span> <span class="atmo-main">noc</span></span>
           </button>
         </div>
 
@@ -2755,18 +2771,19 @@
           <button
             type="button"
             class="explore-deed-btn"
-            on:click={openRandomInspiringDeed}
+            onclick={openRandomInspiringDeed}
             title="Inspirace náhodným dobrým skutkem"
           >
             <AppIcon name="sparkles" size={15} strokeWidth={2} />
-            <span>Náhodný skutek</span>
+            <span><span class="hud-btn-prefix">Náhodný</span> <span class="hud-btn-main">skutek</span></span>
           </button>
           <button
             type="button"
             class="sound-btn"
             class:on={soundEnabled}
-            on:click={toggleSound}
+            onclick={toggleSound}
             title={soundEnabled ? "Vypnout tóny" : "Zapnout jemné tóny"}
+            aria-label={soundEnabled ? "Vypnout tóny" : "Zapnout jemné tóny"}
             aria-pressed={soundEnabled}
           >
             <AppIcon
@@ -2774,37 +2791,39 @@
               size={15}
               strokeWidth={2}
             />
-            <span>{soundEnabled ? "Tóny: zapnuto" : "Jemné tóny"}</span>
+            <span class="sound-btn-label">{soundEnabled ? "Tóny: zapnuto" : "Jemné tóny"}</span>
           </button>
         </div>
       </div>
       <div class="sanctuary-viewport-frame">
-        <!-- svelte-ignore a11y-click-events-have-key-events -->
-        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
         <div
           class="sanctuary-viewport"
           bind:this={stageWrapEl}
-          on:click={handleStageClick}
-          on:pointermove={handlePointerMove}
-          on:pointerleave={handlePointerLeave}
+          onclick={handleStageClick}
+          onpointermove={handlePointerMove}
+          onpointerleave={handlePointerLeave}
           role="application"
           aria-label="Krajina dobra: výběrem světla zobrazíš konkrétní dobrý skutek, dotykem hladiny nebo oblohy rozsvítíš vlastní skutek"
         >
           <div class="art-parallax-wrap" bind:this={parallaxEl}>
-            <picture>
-              <source
-                type="image/webp"
-                srcset="/art/sanctuary-twilight-800.webp 800w, /art/sanctuary-twilight.webp 1400w"
-                sizes="100vw"
-              />
-              <img
-                src="/art/sanctuary-twilight.jpg"
-                alt="Šumavské údolí s lesní tůní a světly dobrých skutků"
-                class="art-layer twilight"
-                decoding="async"
-                draggable="false"
-              />
-            </picture>
+            {#if atmosphereMode === "night" || hasActivatedNight}
+              <picture>
+                <source
+                  type="image/webp"
+                  srcset="/art/sanctuary-twilight-800.webp 800w, /art/sanctuary-twilight.webp 1400w"
+                  sizes="100vw"
+                />
+                <img
+                  src="/art/sanctuary-twilight.jpg"
+                  alt="Šumavské údolí s lesní tůní a světly dobrých skutků"
+                  class="art-layer twilight"
+                  decoding="async"
+                  draggable="false"
+                />
+              </picture>
+            {/if}
 
             <picture>
               <source
@@ -2863,7 +2882,10 @@
           <button
             type="button"
             class="molly-sanctuary-pill"
-            on:click|stopPropagation={() => feedSanctuaryMolly(0.24, 0.72)}
+            onclick={(e) => {
+              e.stopPropagation();
+              feedSanctuaryMolly(0.24, 0.72);
+            }}
             title={$mollyState.availableTreats > 0
               ? "Dát patronce Molly zasloužený pamlsek do mističky u jezera"
               : "Pohladit patronku Molly u jezera"}
@@ -2908,7 +2930,8 @@
             <button
               type="button"
               class="seed-auto-btn"
-              on:click|stopPropagation={() => {
+              onclick={(e) => {
+                e.stopPropagation();
                 plantActiveSeed(nextSeedToPlant, { x: 0.48, y: 0.24 });
                 triggerLightBloom(0.48, 0.24, "#fde68a", false, true);
                 playChime("sky");
@@ -2964,13 +2987,12 @@
       <button
         type="button"
         class="qp-next"
-        on:click={() => (proofIndex = (proofIndex + 1) % HOPE_PROOFS.length)}
+        onclick={() => (proofIndex = (proofIndex + 1) % HOPE_PROOFS.length)}
       >
         <AppIcon name="refresh-cw" size={14} strokeWidth={2} />
         <span>Další dobrá zpráva</span>
       </button>
       {#if currentProof.sourceUrl}
-        <span class="qp-sep" aria-hidden="true">·</span>
         <a
           href={currentProof.sourceUrl}
           target="_blank"
@@ -2983,7 +3005,6 @@
           <AppIcon name="arrow-up-right" size={14} strokeWidth={2} />
         </a>
       {/if}
-      <span class="qp-sep" aria-hidden="true">·</span>
       <a href="/app/guided" class="qp-link">
         <span>Vybrat si dnešní skutek</span>
         <AppIcon name="arrow-right" size={14} strokeWidth={2} />
@@ -3195,6 +3216,7 @@
     border-radius: 20px;
     overflow: hidden;
     cursor: pointer;
+    background: #0d241b;
     border: 1px solid var(--border-strong);
     box-shadow: var(--shadow-md);
     user-select: none;
@@ -3388,7 +3410,7 @@
   .qp-actions {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.45rem 0.9rem;
     flex-wrap: wrap;
     justify-content: center;
     font-size: 0.84rem;
@@ -3440,10 +3462,6 @@
     background: var(--bg-subtle);
   }
 
-  .qp-sep {
-    color: var(--ink-secondary, #3f574a);
-  }
-
   /* =========================================================================
      SANCTUARY ORIENTATION BLOCK & ONBOARDING (R3)
      ========================================================================= */
@@ -3467,6 +3485,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.32rem;
+    min-height: 30px;
     padding: 0.26rem 0.6rem;
     border-radius: 999px;
     background: var(--bg-subtle);
@@ -3526,7 +3545,7 @@
     flex: 0 0 auto;
     max-width: 100%;
     box-sizing: border-box;
-    margin: 0;
+    margin: -7px 0;
     padding: 0;
     background: transparent;
     border: none;
@@ -3538,6 +3557,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
     padding: 0;
     border-radius: 999px;
     background: transparent;
@@ -3554,6 +3575,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.28rem;
+    min-height: 30px;
     padding: 0.26rem 0.64rem;
     border-radius: 999px;
     background: var(--accent-warm-tint);
@@ -3744,36 +3766,40 @@
 
   @media (max-width: 680px) {
     .sanctuary-page {
-      padding: 0.45rem 0.65rem 2rem;
-      gap: 1.25rem;
+      padding: 0.35rem 0.65rem 2rem;
+      gap: 1.15rem;
     }
 
     .sanctuary-stage {
-      padding: 0.75rem 0.65rem 0.9rem;
+      padding: 0.6rem 0.65rem 0.78rem;
       border-radius: 18px;
     }
 
     .sanctuary-top {
       flex-direction: column;
       align-items: stretch;
-      gap: 0.42rem;
-      margin-bottom: 0.6rem;
+      gap: 0.35rem;
+      margin-bottom: 0.42rem;
     }
 
     .kicker {
-      font-size: 0.66rem;
-      margin-bottom: 0.12rem;
+      font-size: 0.64rem;
+      margin-bottom: 0.08rem;
     }
 
     h1 {
-      font-size: 1.32rem;
+      font-size: 1.24rem;
       margin: 0;
     }
 
     .sanctuary-intro .lead {
-      font-size: 0.82rem;
-      line-height: 1.38;
-      margin: 0.25rem 0 0.45rem;
+      font-size: 0.78rem;
+      line-height: 1.32;
+      margin: 0.18rem 0 0.35rem;
+    }
+
+    .sanctuary-orientation-block {
+      margin-top: 0.35rem;
     }
 
     .sanctuary-legend-strip {
@@ -3819,48 +3845,83 @@
     }
 
     .sanctuary-canvas-shell {
-      gap: 0.5rem;
+      gap: 0.42rem;
     }
 
     .sanctuary-canvas-shell .atmosphere-controls {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 0.38rem;
-      padding: 0.35rem;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: nowrap;
+      gap: 0.3rem;
+      padding: 0.28rem;
       border-radius: 14px;
     }
 
     .atmo-pill-group {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      width: 100%;
+      display: inline-flex;
+      width: auto;
       box-sizing: border-box;
+      flex-shrink: 1;
+      min-width: 0;
     }
 
     .atmo-btn {
-      padding: 0.42rem 0.5rem;
+      padding: 0.38rem 0.62rem;
       font-size: 0.74rem;
       min-height: 44px;
+      min-width: 44px;
+    }
+
+    .atmo-prefix,
+    .hud-btn-prefix {
+      display: none;
+    }
+
+    .atmo-main,
+    .hud-btn-main {
+      text-transform: capitalize;
     }
 
     .hud-actions-group {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      width: 100%;
-      gap: 0.35rem;
+      display: inline-flex;
+      width: auto;
+      gap: 0.28rem;
+      flex-shrink: 0;
+      flex-wrap: nowrap;
     }
 
-    .explore-deed-btn,
-    .sound-btn {
-      padding: 0.42rem 0.5rem;
+    .explore-deed-btn {
+      padding: 0.38rem 0.68rem;
       font-size: 0.74rem;
       min-height: 44px;
+      min-width: 44px;
+    }
+
+    .sound-btn {
+      width: 44px;
+      min-width: 44px;
+      min-height: 44px;
+      padding: 0;
+      position: relative;
+    }
+
+    .sound-btn-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
     }
 
     .sanctuary-viewport {
-      min-height: 220px;
-      height: 32dvh;
-      max-height: 260px;
+      min-height: 300px;
+      height: clamp(300px, 44dvh, 360px);
+      max-height: 360px;
       aspect-ratio: auto;
       border-radius: 16px;
     }
@@ -3906,10 +3967,6 @@
       overflow: hidden;
       text-overflow: ellipsis;
       box-sizing: border-box;
-    }
-
-    .qp-sep {
-      display: none;
     }
   }
 

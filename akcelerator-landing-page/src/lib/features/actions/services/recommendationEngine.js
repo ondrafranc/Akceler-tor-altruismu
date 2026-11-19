@@ -357,7 +357,13 @@ export function calculateMatchScore(rawAction, prefsOrCapacity = {}, situation, 
   if (evidenceTier !== 'any') {
     if (action.impactEvidence === evidenceTier) {
       score += 140;
-      reasons.push(`Ověřený dopad (${evidenceTier})`);
+      const tierCzechLabel =
+        evidenceTier === 'A'
+          ? 'přímý měřitelný účinek'
+          : evidenceTier === 'B'
+            ? 'doložený přínos'
+            : 'komunitní smysl';
+      reasons.push(tierCzechLabel);
     } else {
       score -= 140;
     }

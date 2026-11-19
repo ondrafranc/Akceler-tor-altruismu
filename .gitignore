@@ -19,7 +19,6 @@ __pycache__/
 .env.*
 !.env.example
 !akcelerator-landing-page/.env.example
-streamlit-app/.env
 akcelerator-landing-page/.env
 
 # OS
@@ -28,8 +27,7 @@ Thumbs.db
 
 
 # AI / Subagent scratch directories
-.agents/
-.cursor/rules/todo2-overview.mdc
-.cursor/rules/todo2.mdc
+.agents/teamwork/
+.agents/scratch/
 .cursor/mcp.json
 .todo2/

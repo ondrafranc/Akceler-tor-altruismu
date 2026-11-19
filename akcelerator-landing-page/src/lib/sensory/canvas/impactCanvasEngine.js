@@ -25,8 +25,8 @@ export function mountImpactCanvas(cv, o = {}) {
   o = o || {};
   const c = optimizeCanvasContext(cv?.getContext?.('2d'));
   if (!c) {
-    const noop = () => {};
-    noop.setPrimed = () => {};
+    const noop = () => { };
+    noop.setPrimed = () => { };
     return noop;
   }
 
@@ -56,7 +56,7 @@ export function mountImpactCanvas(cv, o = {}) {
   let isVisible = false;
   let lastReportedVal = -1;
   let isClimax = !isPreview && Boolean(o.climax);
-  let peakRatio = isClimax || spec.staticMetric || red ? 1.0 : 0.0;
+  let peakRatio = isPreview ? 0.0 : 1.0;
   let transitionProgress = isPreview
     ? 0.0
     : isClimax
@@ -166,9 +166,7 @@ export function mountImpactCanvas(cv, o = {}) {
     activeControllers.add(controller);
     cv.__triggerBurst = triggerBurst;
 
-    if (red || o.climax || spec.staticMetric) {
-      emitProgress(1);
-    }
+    emitProgress(1);
 
     onDown = (e) => {
       const rect = cv.getBoundingClientRect?.();
@@ -239,8 +237,7 @@ export function mountImpactCanvas(cv, o = {}) {
         transitionProgress = Math.min(0.25, transitionProgress + 0.0045 * step);
       }
       p = easeOut(transitionProgress / 0.25) * 0.25;
-      const initialRamp = red ? 1.0 : Math.min(0.65, Math.max(1, frame) / 75);
-      emitProgress(initialRamp);
+      emitProgress(1);
     }
 
     if (!isPreview) {
@@ -345,8 +342,8 @@ export function mountImpactCanvas(cv, o = {}) {
     const settled = isPreview
       ? Math.abs(previewP - targetPreviewP) < 0.002
       : ripples.length === 0 &&
-        burstEnergy <= 0.01 &&
-        (isClimax ? transitionProgress >= 1.0 : transitionProgress >= 0.25 && frame > 80);
+      burstEnergy <= 0.01 &&
+      (isClimax ? transitionProgress >= 1.0 : transitionProgress >= 0.25 && frame > 80);
 
     if (red && !force) {
       isRunning = false;

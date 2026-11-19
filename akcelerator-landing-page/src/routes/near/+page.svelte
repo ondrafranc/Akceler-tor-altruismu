@@ -16,7 +16,7 @@
     buildFirstContactTemplate
   } from '../../lib/data/czech-actions.js';
   import { recordSmallWin } from '../../lib/progress.js';
-  import { haversineKm, sanitizeHttpUrl as normalizeUrl, safeText } from '../../lib/validation.js';
+  import { haversineKm, sanitizeHttpUrl as normalizeUrl, sanitizePhone, safeText } from '../../lib/validation.js';
   import {
     isSoundMuted,
     toggleSoundMuted
@@ -34,6 +34,7 @@
   import { normSearchStr } from '../../lib/utils.js';
   import { safeGetItem, AA_MY_PENDING_SUBMISSIONS_KEY } from '../../lib/storage/index.js';
   import PlaceCard from '../../lib/features/map/components/PlaceCard.svelte';
+  import { getPlaceActionHint } from '../../lib/features/map/services/contactTemplates.js';
   import AppIcon from '$lib/components/AppIcon.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import { getSvgIconHtml } from '$lib/icons/iconRegistry.js';
@@ -97,32 +98,24 @@
     { label: 'Chrudim, Pardubický kraj', lat: 49.9511, lon: 15.7956 }
   ];
 
-  let activePresetId = 'all';
-  let sourceFilter = 'all'; // 'all' | 'verified_org' | 'community' | 'osm'
-  let selectedCity = CZECH_CITIES[0];
-  let centerLat = selectedCity.lat;
-  let centerLon = selectedCity.lon;
-  let radiusKm = 8;
-  let kinds = ['ngo', 'community', 'food', 'animals'];
-  let includeAssociations = false;
-  let onlyWithWebsite = false;
-  let query = '';
-  let sortBy = 'easy'; // easy | distance | name
+  const INITIAL_CITY = CZECH_CITIES[0];
+  const DEFAULT_RADIUS_KM = 8;
+
+  let activePresetId = $state('all');
+  let sourceFilter = $state('all'); // 'all' | 'verified_org' | 'community' | 'osm'
+  let selectedCity = $state(INITIAL_CITY);
+  let centerLat = $state(INITIAL_CITY.lat);
+  let centerLon = $state(INITIAL_CITY.lon);
+  let radiusKm = $state(DEFAULT_RADIUS_KM);
+  let kinds = $state([...ALL_KINDS]);
+  let onlyWithWebsite = $state(false);
+  let query = $state('');
+  let sortBy = $state('easy'); // easy | distance | name
 
   function formatDist(km) {
     if (!Number.isFinite(km)) return '';
     if (km < 1) return `${Math.max(100, Math.round(km * 10) * 100)} m`;
     return `${km < 10 ? km.toFixed(1).replace('.', ',') : Math.round(km)} km`;
-  }
-
-  function isSelfServicePoint(p) {
-    const text = `${p?.name || ''} ${p?.subcategory || ''}`.toLowerCase();
-    return (
-      /knihobudka|knihovnička|public_bookcase|give_box|reuse skříňka|freeshop|sdílená lednice|food_sharing|potravinová skříňka/.test(
-        text
-      ) ||
-      (p?.visitMode === 'drop_in' && !p?.website && !p?.email && !p?.phone)
-    );
   }
 
   function isFoodOrClothingPlace(p) {
@@ -222,32 +215,32 @@
   }
 
   // Geocode & GPS
-  let locationQuery = '';
-  let geoStatus = 'idle';
-  let geoMessage = '';
+  let locationQuery = $state('');
+  let geoStatus = $state('idle');
+  let geoMessage = $state('');
   /** @type {Array<{label: string, lat: number, lon: number}>} */
-  let geoResults = [];
-  let gpsStatus = 'idle';
-  let gpsMessage = '';
-  let shareMessage = '';
+  let geoResults = $state([]);
+  let gpsStatus = $state('idle');
+  let gpsMessage = $state('');
+  let shareMessage = $state('');
 
-  $: instantTownSuggestions = (() => {
+  const instantTownSuggestions = $derived.by(() => {
     const q = normSearchStr(locationQuery);
     if (q.length < 2 || geoResults.length > 0) return [];
     return QUICK_TOWNS.filter((t) => {
       const n = normSearchStr(t.label);
       return n.includes(q) && n.split(',')[0] !== q;
     }).slice(0, 5);
-  })();
+  });
 
   // Map state
-  let mapEl;
-  let map = null;
-  let leaflet = null;
+  let mapEl = $state();
+  let map = $state.raw(null);
+  let leaflet = $state.raw(null);
   let tileLayer = null;
-  let tileStyle = 'calm'; // 'calm' | 'crisp'
+  let tileStyle = $state('calm'); // 'calm' | 'crisp'
   let tileFallbackUsed = false;
-  let touchGestureHint = false;
+  let touchGestureHint = $state(false);
   let touchHintTimer = null;
   let markersLayer = null;
   let userMarker = null;
@@ -256,40 +249,40 @@
   /** @type {Map<string, { setPopupContent: (c: string) => void, setZIndexOffset: (z: number) => void, getElement?: () => HTMLElement | null, openPopup: () => void, closePopup?: () => void, _aaPopupHtml?: string, [key: string]: unknown }>} */
   let markerById = new Map();
   /** @type {{ lat: number, lon: number } | null} */
-  let pannedCenter = null;
+  let pannedCenter = $state(null);
   /** @type {AbortController | null} */
   let nearbyAbortController = null;
 
-  let isLoadingMap = true;
-  let mapBootError = '';
-  let isFetching = false;
-  let isFallbackData = false;
-  let isExpandedToNearest = false;
+  let isLoadingMap = $state(true);
+  let mapBootError = $state('');
+  let isFetching = $state(false);
+  let isFallbackData = $state(false);
+  let isExpandedToNearest = $state(false);
 
   /**
    * Seed verified & community places immediately at initialization (including SSR)
-   * so the user never sees "0 míst v okolí" on first load and distances never jump.
+   * using module constants to avoid state_referenced_locally warnings.
    * @type {Array<import('$lib/server/nearbyService.js').NearbyPlace>}
    */
-  let places = getInstantCurated(centerLat, centerLon, kinds);
+  let places = $state(getInstantCurated(INITIAL_CITY.lat, INITIAL_CITY.lon, ALL_KINDS));
   /** @type {Array<import('$lib/server/nearbyService.js').NearbyPlace>} */
-  let communityItems = [];
-  let activePlaceId = null;
-  let hoveredPlaceId = null;
-  let visibleCount = 3;
-  let mobileView = 'list'; // 'list' | 'map'
-  let filtersOpen = false;
+  let communityItems = $state([]);
+  let activePlaceId = $state(null);
+  let hoveredPlaceId = $state(null);
+  let visibleCount = $state(3);
+  let mobileView = $state('list'); // 'list' | 'map'
+  let filtersOpen = $state(false);
 
   // First-contact template
-  let openTemplateId = null;
-  let copiedTemplateId = null;
-  let copiedPlaceLinkId = null;
-  let soundMuted = false;
-  let activeEffectPlaceId = null;
+  let openTemplateId = $state(null);
+  let copiedTemplateId = $state(null);
+  let copiedPlaceLinkId = $state(null);
+  let soundMuted = $state(false);
+  let activeEffectPlaceId = $state(null);
   /** @type {Record<string, number>} */
-  let placeMetrics = {};
-  let nearReturnPlace = null;
-  let nearReturnMetric = 0;
+  let placeMetrics = $state({});
+  let nearReturnPlace = $state(null);
+  let nearReturnMetric = $state(0);
   let awaitingNearPlace = null;
   let nearLeaveTimestamp = 0;
 
@@ -329,36 +322,19 @@
     nearReturnPlace = null;
     savePendingPartnerReturn(act, 'near');
     markActionStarted(p.id, 'near_place');
-    trackEvent('aa_clickout', { surface: 'near_place', id: p.id });
   }
 
-  $: nearestVerifiedOrgs = CURATED_FALLBACK_PLACES.map((p) => ({
-    ...p,
-    curated: true,
-    verifiedAt: p.verifiedAt || '11/2026',
-    website: normalizeUrl(p.website),
-    distanceKm: Math.round(haversineKm(centerLat, centerLon, p.lat, p.lon) * 10) / 10
-  }))
-    .sort((a, b) => a.distanceKm - b.distanceKm)
-    .slice(0, 3);
-
-  function concreteActionHint(p) {
-    if (p?.quickMission) return p.quickMission;
-    const sub = (p?.subcategory || '').toLowerCase();
-    if (sub.includes('knihobudka') || isSelfServicePoint(p)) {
-      return 'Vezmi doma přečtenou knížku nebo zachovalou věc a při procházce ji sem vlož pro sousedy (0 Kč, bez domlouvání).';
-    }
-    if (p?.kind === 'animals') {
-      return 'Ozvi se krátkou zprávou (tlačítko „Co napsat“): zeptej se na venčení, staré ručníky a deky nebo granule.';
-    }
-    if (p?.kind === 'food' || sub.includes('šatník')) {
-      return 'Daruj trvanlivé jídlo či čisté sezónní oblečení, nebo nabídni dvě hodiny rukou při třídění.';
-    }
-    if (p?.kind === 'community') {
-      return 'Stav se na sousedskou akci, nabídni drobnou výpomoc nebo přines věci do komunitního oběhu.';
-    }
-    return 'Klikni na „Co napsat“ — připravili jsme krátkou lidskou zprávu, se kterou snadno zjistíš, co se jim teď nejvíc hodí.';
-  }
+  const nearestVerifiedOrgs = $derived.by(() =>
+    CURATED_FALLBACK_PLACES.map((p) => ({
+      ...p,
+      curated: true,
+      verifiedAt: p.verifiedAt || '11/2026',
+      website: normalizeUrl(p.website),
+      distanceKm: Math.round(haversineKm(centerLat, centerLon, p.lat, p.lon) * 10) / 10
+    }))
+      .sort((a, b) => a.distanceKm - b.distanceKm)
+      .slice(0, 3)
+  );
 
   function placeEaseScore(p, currentPreset = activePresetId) {
     let score = (Number.isFinite(p?.distanceKm) ? p.distanceKm : 50) * 0.1;
@@ -386,7 +362,7 @@
     return [...list].sort((a, b) => placeEaseScore(a, preset) - placeEaseScore(b, preset));
   }
 
-  $: candidatePlaces = (() => {
+  const candidatePlaces = $derived.by(() => {
     const q = query.trim().toLowerCase();
     let list = places.filter((p) => {
       if (activePresetId === 'food') {
@@ -409,20 +385,23 @@
       });
     }
     return list;
-  })();
+  });
 
-  $: withinRadiusPlaces = sortPlaceList(
-    candidatePlaces.filter((p) => (p.distanceKm ?? 999) <= radiusKm),
-    sortBy,
-    activePresetId
+  const withinRadiusPlaces = $derived.by(() =>
+    sortPlaceList(
+      candidatePlaces.filter((p) => (p.distanceKm ?? 999) <= radiusKm),
+      sortBy,
+      activePresetId
+    )
   );
 
-  $: isRadiusExpanded =
+  const isRadiusExpanded = $derived(
     !query.trim() &&
-    candidatePlaces.length > withinRadiusPlaces.length &&
-    withinRadiusPlaces.length < 3;
+      candidatePlaces.length > withinRadiusPlaces.length &&
+      withinRadiusPlaces.length < 3
+  );
 
-  $: filteredPlaces = (() => {
+  const filteredPlaces = $derived.by(() => {
     if (query.trim()) return sortPlaceList(candidatePlaces, sortBy, activePresetId);
     if (withinRadiusPlaces.length >= 3) return withinRadiusPlaces;
     const outsideNearest = candidatePlaces
@@ -430,13 +409,22 @@
       .sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999))
       .slice(0, Math.max(0, 3 - withinRadiusPlaces.length));
     return [...withinRadiusPlaces, ...outsideNearest];
-  })();
+  });
 
-  $: visiblePlaces = filteredPlaces.slice(0, visibleCount);
-  $: allOutsideRadius =
+  const visiblePlaces = $derived(filteredPlaces.slice(0, visibleCount));
+  const allOutsideRadius = $derived(
     filteredPlaces.length > 0 &&
-    filteredPlaces.every((p) => (p.distanceKm ?? 0) > radiusKm);
-  $: activePlaceObj = filteredPlaces.find((p) => p.id === activePlaceId) || places.find((p) => p.id === activePlaceId) || null;
+      filteredPlaces.every((p) => (p.distanceKm ?? 0) > radiusKm)
+  );
+  const activePlaceObj = $derived(
+    filteredPlaces.find((p) => p.id === activePlaceId) || places.find((p) => p.id === activePlaceId) || null
+  );
+  const activeFilterCount = $derived(
+    (radiusKm !== DEFAULT_RADIUS_KM ? 1 : 0) +
+      (sourceFilter !== 'all' ? 1 : 0) +
+      (sortBy !== 'easy' ? 1 : 0) +
+      (query.trim() ? 1 : 0)
+  );
 
   function ensureOsmTileLayer() {
     if (!map || !leaflet) return;
@@ -489,13 +477,8 @@
     }
   }
 
-  function moveMapCenter(lat, lon, zoom = 13) {
-    centerLat = lat;
-    centerLon = lon;
-    pannedCenter = null;
+  function updateUserSearchOverlays(lat, lon) {
     if (!map || !leaflet) return;
-    userGestureActive = false;
-    map.setView([lat, lon], zoom, { animate: true });
     if (userMarker) userMarker.remove();
     userMarker = leaflet
       .circleMarker([lat, lon], {
@@ -510,7 +493,17 @@
     updateRadiusOverlay(lat, lon);
   }
 
-  function fitMapToFilteredPlaces() {
+  function moveMapCenter(lat, lon, zoom = 13) {
+    centerLat = lat;
+    centerLon = lon;
+    pannedCenter = null;
+    if (!map || !leaflet) return;
+    userGestureActive = false;
+    map.setView([lat, lon], zoom, { animate: true });
+    updateUserSearchOverlays(lat, lon);
+  }
+
+  function fitMapToFilteredPlaces(animate = true) {
     if (!map || !leaflet) return;
     if (mapEl && (mapEl.clientWidth <= 0 || mapEl.clientHeight <= 0)) return;
     const pts = [[centerLat, centerLon]];
@@ -524,7 +517,16 @@
       try {
         userGestureActive = false;
         const bounds = leaflet.latLngBounds(pts);
-        map.fitBounds(bounds, { padding: [34, 34], maxZoom: 14, animate: true });
+        const curZoom = map.getZoom?.();
+        const curCenter = map.getCenter?.();
+        if (Number.isFinite(curZoom) && curCenter) {
+          const targetZoom = Math.min(14, map.getBoundsZoom(bounds, false, leaflet.point(68, 68)));
+          const bCenter = bounds.getCenter();
+          if (targetZoom === curZoom && haversineKm(curCenter.lat, curCenter.lng, bCenter.lat, bCenter.lng) < 0.05) {
+            return;
+          }
+        }
+        map.fitBounds(bounds, { padding: [34, 34], maxZoom: 14, animate });
       } catch {}
     }
   }
@@ -534,7 +536,8 @@
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   function buildPinHtml(p, isHighlighted) {
@@ -581,7 +584,7 @@
       <div style="font-weight:800;font-size:13.5px;line-height:1.25;color:#14281d;margin-bottom:3px;padding-right:16px;max-height:3.75em;overflow:hidden;">${escapeHtml(p.name)}</div>
       ${p.address ? `<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:#3f574a;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${getSvgIconHtml('map-pin', 11, 2)}<span style="overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.address)}</span></div>` : ''}
       <div style="font-size:11px;line-height:1.38;background:#edf2ee;border:1px solid #dce3dd;padding:5px 7px;border-radius:8px;color:#14281d;margin:4px 0;max-height:76px;overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;">
-        <strong>Jak pomoct:</strong> ${escapeHtml(concreteActionHint(p))}
+        <strong>Jak pomoct:</strong> ${escapeHtml(getPlaceActionHint(p))}
       </div>
       ${linksHtml}
     </div>`;
@@ -605,6 +608,8 @@
 
     for (const p of nextSlice) {
       if (typeof p.lat !== 'number' || typeof p.lon !== 'number') continue;
+      const meta = KIND_META[p.kind] || KIND_META.ngo;
+      const pinLabel = `${p.name} — ${p.subcategory || meta.label} (${formatDist(p.distanceKm)})`;
       const isHighlighted = p.id === activePlaceId || p.id === hoveredPlaceId;
       const popupHtml = buildPopupHtml(p);
 
@@ -618,6 +623,8 @@
         const iconEl = existing.getElement?.();
         if (iconEl) {
           iconEl.classList.toggle('is-active', isHighlighted);
+          iconEl.setAttribute('aria-label', pinLabel);
+          iconEl.setAttribute('title', pinLabel);
         }
         const bubble = iconEl?.querySelector?.('.pin-bubble');
         if (bubble) {
@@ -635,6 +642,8 @@
 
       const marker = leaflet.marker([p.lat, p.lon], {
         icon,
+        title: pinLabel,
+        alt: pinLabel,
         riseOnHover: true,
         zIndexOffset: isHighlighted ? 1000 : p.curated ? 300 : 0
       });
@@ -657,6 +666,8 @@
           userGestureActive = false;
           map?.closePopup();
           map?.panTo([p.lat, p.lon], { animate: true });
+          const sheetEl = document.querySelector('.near-page .map-active-sheet');
+          if (sheetEl) sheetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
           return;
         }
         userGestureActive = false;
@@ -675,6 +686,11 @@
       });
 
       marker.addTo(markersLayer);
+      const addedEl = marker.getElement?.();
+      if (addedEl) {
+        addedEl.setAttribute('aria-label', pinLabel);
+        addedEl.setAttribute('title', pinLabel);
+      }
     }
   }
 
@@ -693,9 +709,11 @@
   }
 
   // Re-render markers whenever filteredPlaces or activePlaceId changes
-  $: if (map && leaflet && (filteredPlaces || activePlaceId)) {
-    renderMarkers();
-  }
+  $effect(() => {
+    if (map && leaflet && (filteredPlaces || activePlaceId)) {
+      renderMarkers();
+    }
+  });
 
   function mergeCuratedAndApiPlaces(curatedList, apiList, commList = [], lat = centerLat, lon = centerLon) {
     const out = [...curatedList];
@@ -774,7 +792,7 @@
       const resp = await fetch(
         `/api/nearby?lat=${encodeURIComponent(qLat)}&lon=${encodeURIComponent(qLon)}&radius_m=${encodeURIComponent(
           radiusKm * 1000
-        )}&kinds=${encodeURIComponent(ALL_KINDS.join(','))}&include_associations=${includeAssociations ? '1' : '0'}`,
+        )}&kinds=${encodeURIComponent(ALL_KINDS.join(','))}`,
         { signal: controller.signal }
       );
       if (resp.ok && !controller.signal.aborted) {
@@ -985,7 +1003,7 @@
     try {
       map.stop();
     } catch {}
-    const targetZoom = Math.max(map.getZoom(), 15);
+    const targetZoom = Math.max(map.getZoom() || 13, 15);
     map.setView([p.lat, p.lon], targetZoom, { animate: false });
   }
 
@@ -999,7 +1017,7 @@
     try {
       map.stop();
     } catch {}
-    const targetZoom = Math.max(map.getZoom(), 15);
+    const targetZoom = Math.max(map.getZoom() || 13, 15);
     const markerPt = map.project([p.lat, p.lon], targetZoom);
     const offsetCenter = map.unproject(leaflet.point(markerPt.x, markerPt.y - 98), targetZoom);
     map.setView(offsetCenter, targetZoom, { animate: false });
@@ -1010,7 +1028,7 @@
     }
   }
 
-  function syncMapToActiveOrFiltered() {
+  function syncMapToActiveOrFiltered(animate = true) {
     if (!map || !leaflet) return;
     if (mapEl && (mapEl.clientWidth <= 0 || mapEl.clientHeight <= 0)) return;
     const active =
@@ -1027,7 +1045,7 @@
       }
       return;
     }
-    fitMapToFilteredPlaces();
+    fitMapToFilteredPlaces(animate);
   }
 
   async function focusPlaceOnMap(p) {
@@ -1076,6 +1094,7 @@
   }
 
   async function copyTemplateText(place) {
+    markActionStarted(place.id, 'near_place_copy');
     try {
       const tpl = buildFirstContactTemplate(place);
       await navigator.clipboard.writeText(tpl.body);
@@ -1195,15 +1214,59 @@
       mapEl.addEventListener('touchstart', onMapTouchStart, { passive: true });
       mapEl.addEventListener('touchend', onMapTouchEnd, { passive: true });
 
+      // Resolve final initial view/bounds BEFORE adding the tileLayer so Leaflet never
+      // starts and immediately aborts zoom-13 tile requests on boot.
+      const activeInit =
+        (activePlaceId &&
+          (filteredPlaces.find((item) => item.id === activePlaceId) ||
+            places.find((item) => item.id === activePlaceId))) ||
+        null;
+      const isDesktopInit = typeof window !== 'undefined' && window.innerWidth > 980;
+      if (activeInit && typeof activeInit.lat === 'number' && typeof activeInit.lon === 'number') {
+        const targetZoom = 15;
+        if (!isDesktopInit) {
+          map.setView([activeInit.lat, activeInit.lon], targetZoom, { animate: false });
+        } else {
+          const markerPt = map.project([activeInit.lat, activeInit.lon], targetZoom);
+          const offsetCenter = map.unproject(leaflet.point(markerPt.x, markerPt.y - 98), targetZoom);
+          map.setView(offsetCenter, targetZoom, { animate: false });
+        }
+      } else {
+        const pts = [[centerLat, centerLon]];
+        const topForBounds = filteredPlaces.slice(0, Math.max(visibleCount, 3));
+        for (const p of topForBounds) {
+          if (typeof p.lat === 'number' && typeof p.lon === 'number') {
+            pts.push([p.lat, p.lon]);
+          }
+        }
+        let fitted = false;
+        if (pts.length >= 2 && mapEl.clientWidth > 0 && mapEl.clientHeight > 0) {
+          try {
+            userGestureActive = false;
+            const bounds = leaflet.latLngBounds(pts);
+            map.fitBounds(bounds, { padding: [34, 34], maxZoom: 14, animate: false });
+            fitted = true;
+          } catch {}
+        }
+        if (!fitted) {
+          map.setView([centerLat, centerLon], 13, { animate: false });
+        }
+      }
+
+      updateUserSearchOverlays(centerLat, centerLon);
       ensureOsmTileLayer();
-      moveMapCenter(centerLat, centerLon, 13);
       isLoadingMap = false;
 
+      const initW = mapEl.clientWidth;
+      const initH = mapEl.clientHeight;
       resizeTimer = setTimeout(() => {
         resizeTimer = null;
-        userGestureActive = false;
-        map?.invalidateSize();
-        syncMapToActiveOrFiltered();
+        if (!map || !mapEl) return;
+        if (mapEl.clientWidth !== initW || mapEl.clientHeight !== initH) {
+          userGestureActive = false;
+          map.invalidateSize();
+          syncMapToActiveOrFiltered(false);
+        }
       }, 120);
 
       map.on('moveend', () => {
@@ -1224,7 +1287,13 @@
       });
 
       renderMarkers();
-      syncMapToActiveOrFiltered();
+      if (activeInit && isDesktopInit) {
+        const m = markerById.get(activeInit.id);
+        if (m) {
+          userGestureActive = false;
+          m.openPopup();
+        }
+      }
     } catch {
       if (destroyed) return;
       isLoadingMap = false;
@@ -1239,9 +1308,6 @@
     destroyed = false;
     let nearReturnTimer = null;
     soundMuted = isSoundMuted();
-    if (typeof window !== 'undefined' && window.innerWidth > 680) {
-      filtersOpen = true;
-    }
 
     const checkNearReturn = () => {
       if (nearReturnPlace) return;
@@ -1250,10 +1316,13 @@
         nearReturnTimer = null;
       }
       const elapsedMem = awaitingNearPlace ? Date.now() - nearLeaveTimestamp : 0;
-      const persisted = consumePendingPartnerReturn(3000);
+      const persisted = consumePendingPartnerReturn(3000, {
+        surfacePrefix: 'near',
+        allowEmptySurface: true
+      });
       if (elapsedMem >= 3000 || persisted) {
         if (awaitingNearPlace && !persisted) {
-          consumePendingPartnerReturn(0);
+          consumePendingPartnerReturn(0, { surfacePrefix: 'near', allowEmptySurface: true });
         }
         const targetId = persisted?.id || awaitingNearPlace?.id;
         const foundPlace = places.find((pl) => pl.id === targetId);
@@ -1271,7 +1340,10 @@
           trackEvent('aa_partner_return_prompt', { surface: 'near', id: resolved.id });
         }
       } else {
-        const remPersisted = getPendingPartnerReturnRemainingMs(3000);
+        const remPersisted = getPendingPartnerReturnRemainingMs(3000, {
+          surfacePrefix: 'near',
+          allowEmptySurface: true
+        });
         const remMem = awaitingNearPlace && elapsedMem > 0 ? Math.max(0, 3000 - elapsedMem) : 0;
         const rem = Math.max(remPersisted, remMem);
         if (rem > 0) {
@@ -1417,7 +1489,7 @@
   <!-- UNIFIED SEARCH + FILTER BAR -->
   <div class="controls-card">
     <div class="controls-top search-capsule">
-      <button type="button" class="gps-btn" on:click={useGps} disabled={gpsStatus === 'requesting'}>
+      <button type="button" class="gps-btn" onclick={useGps} disabled={gpsStatus === 'requesting'}>
         <AppIcon name="navigation" size={15} />
         <span>{gpsStatus === 'requesting' ? 'Hledám…' : 'Moje poloha'}</span>
       </button>
@@ -1431,9 +1503,9 @@
           bind:value={locationQuery}
           placeholder="Obec nebo PSČ (např. Tábor)"
           aria-label="Hledat obec nebo PSČ"
-          on:keydown={(e) => e.key === 'Enter' && searchLocation()}
+          onkeydown={(e) => e.key === 'Enter' && searchLocation()}
         />
-        <button type="button" class="btn-find" on:click={searchLocation}>
+        <button type="button" class="btn-find" onclick={searchLocation}>
           <AppIcon name="search" size={14} />
           <span>{geoStatus === 'loading' ? 'Hledám…' : 'Najít'}</span>
         </button>
@@ -1449,7 +1521,7 @@
     {#if instantTownSuggestions.length > 0}
       <div class="geo-dropdown" role="listbox" aria-label="Rychlý výběr města">
         {#each instantTownSuggestions as t}
-          <button type="button" class="geo-opt" on:click={() => pickGeocodeResult(t)}>
+          <button type="button" class="geo-opt" onclick={() => pickGeocodeResult(t)}>
             <strong><AppIcon name="map-pin" size={14} /><span>{t.label.split(',')[0]}</span></strong>
             <span>{t.label} · okamžitý přesun</span>
           </button>
@@ -1459,7 +1531,7 @@
     {#if geoResults.length > 0}
       <div class="geo-dropdown">
         {#each geoResults as r}
-          <button type="button" class="geo-opt" on:click={() => pickGeocodeResult(r)}>
+          <button type="button" class="geo-opt" onclick={() => pickGeocodeResult(r)}>
             <strong>{r.label.split(',')[0]}</strong>
             <span>{r.label}</span>
           </button>
@@ -1474,7 +1546,8 @@
             type="button"
             class="preset-pill"
             class:active={activePresetId === preset.id}
-            on:click={() => applyPreset(preset)}
+            aria-pressed={activePresetId === preset.id}
+            onclick={() => applyPreset(preset)}
           >
             <AppIcon name={preset.icon} size={14} />
             <span>{preset.label}</span>
@@ -1487,7 +1560,10 @@
       <details class="near-filters-drawer" bind:open={filtersOpen}>
         <summary class="near-filters-summary">
           <AppIcon name="sliders-horizontal" size={15} />
-          <span>Filtry ({radiusKm} km)</span>
+          <span>Filtrovat</span>
+          {#if activeFilterCount > 0}
+            <span class="filter-count-badge" aria-label={`Aktivní filtry: ${activeFilterCount}`}>{activeFilterCount}</span>
+          {/if}
         </summary>
         <div class="near-filters-body">
           <select
@@ -1496,7 +1572,7 @@
             autocomplete="off"
             class="city-jump-select"
             aria-label="Rychlý skok do krajského města"
-            on:change={(e) => {
+            onchange={(e) => {
               const found = CZECH_CITIES.find((c) => c.id === e.currentTarget.value);
               if (found) selectQuickCity(found);
             }}
@@ -1520,7 +1596,8 @@
                   type="button"
                   class="radius-pill"
                   class:active={radiusKm === rKm}
-                  on:click={() => setRadiusKm(rKm)}
+                  aria-pressed={radiusKm === rKm}
+                  onclick={() => setRadiusKm(rKm)}
                 >
                   {rKm} km
                 </button>
@@ -1554,7 +1631,8 @@
                 type="button"
                 class="source-chip"
                 class:active={sourceFilter === sf.id}
-                on:click={() => setSourceFilter(sf.id)}
+                aria-pressed={sourceFilter === sf.id}
+                onclick={() => setSourceFilter(sf.id)}
               >
                 {#if sf.icon}
                   <AppIcon name={sf.icon} size={13} />
@@ -1567,9 +1645,19 @@
       </details>
 
       <div class="controls-links">
-        <button type="button" class="text-util-btn" on:click={copyShareLink}>
+        <button
+          type="button"
+          class="text-util-btn"
+          aria-label={shareMessage || 'Sdílet výřez mapy'}
+          onclick={copyShareLink}
+        >
           <AppIcon name={shareMessage ? 'check' : 'share-2'} size={14} />
-          <span>{shareMessage || 'Sdílet výřez'}</span>
+          {#if shareMessage}
+            <span>{shareMessage}</span>
+          {:else}
+            <span class="share-label-full">Sdílet výřez</span>
+            <span class="share-label-short">Sdílet</span>
+          {/if}
         </button>
         <a href="/submit" class="text-util-link">
           <AppIcon name="plus" size={14} />
@@ -1593,7 +1681,7 @@
       role="tab"
       aria-selected={mobileView === 'list'}
       class:active={mobileView === 'list'}
-      on:click={() => setMobileMode('list')}
+      onclick={() => setMobileMode('list')}
     >
       <AppIcon name="list" size={15} />
       <span>Seznam ({filteredPlaces.length})</span>
@@ -1603,7 +1691,7 @@
       role="tab"
       aria-selected={mobileView === 'map'}
       class:active={mobileView === 'map'}
-      on:click={() => setMobileMode('map')}
+      onclick={() => setMobileMode('map')}
     >
       <AppIcon name="map" size={15} />
       <span>Mapa ({filteredPlaces.length})</span>
@@ -1625,7 +1713,7 @@
             <button
               type="button"
               class="search-area-btn"
-              on:click={searchPannedArea}
+              onclick={searchPannedArea}
             >
               <AppIcon name="refresh-cw" size={14} />
               <span>Hledat v této oblasti mapy</span>
@@ -1639,7 +1727,7 @@
               class:active={tileStyle === 'calm'}
               aria-pressed={tileStyle === 'calm'}
               title={tileStyle === 'calm' ? 'Přepnout na kontrastní mapu' : 'Přepnout na jemný podklad'}
-              on:click={toggleTileStyle}
+              onclick={toggleTileStyle}
             >
               <AppIcon name={tileStyle === 'calm' ? 'leaf' : 'map'} size={14} />
               <span>{tileStyle === 'calm' ? 'Jemný podklad' : 'Kontrastní mapa'}</span>
@@ -1679,6 +1767,8 @@
 
       {#if mobileView === 'map' && activePlaceObj}
         {@const activeWeb = normalizeUrl(activePlaceObj.website)}
+        {@const activePhone = sanitizePhone(activePlaceObj.phone)}
+        {@const activeTpl = buildFirstContactTemplate(activePlaceObj)}
         <div class="map-active-sheet" role="region" aria-label="Vybrané místo na mapě">
           <div class="mas-top">
             <div>
@@ -1687,30 +1777,56 @@
               </span>
               <strong class="mas-title">{activePlaceObj.name}</strong>
             </div>
-            <button type="button" class="mas-close" aria-label="Zavřít náhled" on:click={() => (activePlaceId = null)}>
+            <button type="button" class="mas-close" aria-label="Zavřít náhled" onclick={() => (activePlaceId = null)}>
               <AppIcon name="x" size={16} />
             </button>
           </div>
-          <p class="mas-mission">{concreteActionHint(activePlaceObj)}</p>
+          <p class="mas-mission">{getPlaceActionHint(activePlaceObj)}</p>
           <div class="mas-actions">
             {#if activeWeb}
-              <a href={activeWeb} target="_blank" rel="noopener noreferrer" class="near-btn primary">
-                <span>Web</span>
-                <AppIcon name="arrow-up-right" size={14} />
-              </a>
-            {:else}
               <a
-                href={`https://mapy.cz/zakladni?x=${activePlaceObj.lon}&y=${activePlaceObj.lat}&z=17&q=${encodeURIComponent(activePlaceObj.name)}`}
+                href={activeWeb}
                 target="_blank"
                 rel="noopener noreferrer"
                 class="near-btn primary"
+                onclick={() => handleStartNearPlace(activePlaceObj)}
               >
-                <AppIcon name="compass" size={14} />
-                <span>Mapy.cz</span>
+                <span>Web</span>
                 <AppIcon name="arrow-up-right" size={14} />
               </a>
             {/if}
-            <button type="button" class="near-btn ghost" on:click={() => focusPlaceInList(activePlaceObj)}>
+            <a
+              href={`https://mapy.cz/zakladni?x=${activePlaceObj.lon}&y=${activePlaceObj.lat}&z=17&q=${encodeURIComponent(activePlaceObj.name)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              class={activeWeb ? 'near-btn ghost' : 'near-btn primary'}
+              onclick={() => handleStartNearPlace(activePlaceObj)}
+            >
+              <AppIcon name="compass" size={14} />
+              <span>Mapy.cz</span>
+              <AppIcon name="arrow-up-right" size={14} />
+            </a>
+            {#if activePhone}
+              <a
+                href={`tel:${activePhone.replace(/[^\d+]/g, '')}`}
+                class="near-btn ghost"
+                onclick={() => handleStartNearPlace(activePlaceObj)}
+              >
+                <AppIcon name="phone" size={14} />
+                <span>Zavolat</span>
+              </a>
+            {/if}
+            {#if activeTpl?.mailtoUrl}
+              <a
+                href={activeTpl.mailtoUrl}
+                class="near-btn ghost"
+                onclick={() => handleStartNearPlace(activePlaceObj)}
+              >
+                <AppIcon name="mail" size={14} />
+                <span>E-mail</span>
+              </a>
+            {/if}
+            <button type="button" class="near-btn ghost" onclick={() => focusPlaceInList(activePlaceObj)}>
               <AppIcon name="list" size={14} />
               <span>Detail v seznamu</span>
             </button>
@@ -1766,7 +1882,7 @@
             <button
               type="button"
               class="btn-return-complete"
-              on:click={() => {
+              onclick={() => {
                 const done = nearReturnPlace;
                 nearReturnPlace = null;
                 recordSmallWin({
@@ -1783,7 +1899,7 @@
             <button
               type="button"
               class="btn-return-dismiss"
-              on:click={() => (nearReturnPlace = null)}
+              onclick={() => (nearReturnPlace = null)}
             >
               Později
             </button>
@@ -1821,14 +1937,13 @@
             onFocusMap={focusPlaceOnMap}
             onShare={sharePlaceLink}
             onToggleTemplate={(place) => {
-              markActionStarted(place.id, 'near_place_msg');
               openTemplateId = openTemplateId === place.id ? null : place.id;
             }}
             onCopyTemplate={copyTemplateText}
           />
         {:else}
           <div class="near-empty-fallback">
-            <h3>V okruhu {radiusKm} km teď neodpovídá žádné místo zvolenému filtru</h3>
+            <h2>V okruhu {radiusKm} km teď neodpovídá žádné místo zvolenému filtru</h2>
             <p>
               {#if query.trim()}
                 Hledaný výraz <strong>„{query.trim()}“</strong> v aktuálním výřezu nenašel shodu.
@@ -1841,7 +1956,7 @@
               {/if}
             </p>
             <div class="near-empty-actions">
-              <button type="button" class="near-btn primary" on:click={resetAndExpandSearch}>
+              <button type="button" class="near-btn primary" onclick={resetAndExpandSearch}>
                 Rozšířit okruh na 15 km a zrušit filtry
               </button>
               <a href="/app/online" class="near-btn ghost">
@@ -1863,7 +1978,7 @@
                       <button
                         type="button"
                         class="nv-jump-btn"
-                        on:click={() => {
+                        onclick={() => {
                           query = '';
                           onlyWithWebsite = false;
                           sourceFilter = 'all';
@@ -1890,7 +2005,7 @@
           <button
             type="button"
             class="calm-more-btn"
-            on:click={async () => {
+            onclick={async () => {
               visibleCount += 6;
               await tick();
               fitMapToFilteredPlaces();
@@ -1906,7 +2021,7 @@
             <button
               type="button"
               class="near-show-all"
-              on:click={async () => {
+              onclick={async () => {
                 visibleCount = filteredPlaces.length;
                 await tick();
                 fitMapToFilteredPlaces();
@@ -2161,11 +2276,27 @@
     display: none;
   }
 
+  .filter-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 0.35rem;
+    border-radius: 999px;
+    background: var(--accent-primary, #1b5e42);
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
   .near-filters-body {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
+    margin-top: 0.5rem;
   }
 
   .city-jump-select {
@@ -2318,6 +2449,10 @@
     justify-content: center;
     gap: 0.32rem;
     box-sizing: border-box;
+  }
+
+  .share-label-short {
+    display: none;
   }
 
   .text-util-btn:hover {
@@ -2723,7 +2858,7 @@
     box-shadow: var(--shadow-sm);
   }
 
-  .near-empty-fallback h3 {
+  .near-empty-fallback h2 {
     margin: 0 0 0.45rem;
     font-size: 1.05rem;
     font-weight: 800;
@@ -2982,9 +3117,12 @@
     transform: scale(1.14);
   }
 
-  @media (min-width: 681px) {
-    .near-filters-summary {
-      display: none;
+  @media (max-width: 1024px) {
+    .search-box input,
+    .city-jump-select,
+    .filter-input,
+    .sort-select {
+      font-size: 1rem;
     }
   }
 
@@ -3011,12 +3149,16 @@
 
   @media (max-width: 680px) {
     .near-page {
-      padding: 0.2rem 0.75rem 2rem;
+      padding: 0.1rem 0.75rem 2rem;
     }
 
     :global(.near-page-header) {
-      padding: 0.55rem 0 0.45rem;
-      margin-bottom: 0.55rem;
+      padding: 0.2rem 0 0.22rem;
+      margin-bottom: 0.28rem;
+    }
+
+    :global(.near-page-header .page-header-kicker) {
+      margin-bottom: 0.1rem;
     }
 
     :global(.near-page-header .page-header-subtitle) {
@@ -3024,8 +3166,8 @@
     }
 
     .controls-card {
-      padding: 0.55rem 0.6rem;
-      margin-bottom: 0.55rem;
+      padding: 0.42rem 0.52rem;
+      margin-bottom: 0.34rem;
       border-radius: 14px;
     }
 
@@ -3050,8 +3192,8 @@
     }
 
     .controls-presets-row {
-      margin-top: 0.45rem;
-      padding-top: 0.45rem;
+      margin-top: 0.32rem;
+      padding-top: 0.32rem;
     }
 
     .presets-bar {
@@ -3080,14 +3222,21 @@
     }
 
     .controls-utility-row {
-      margin-top: 0.45rem;
-      padding-top: 0.45rem;
-      gap: 0.35rem;
+      margin-top: 0.32rem;
+      padding-top: 0.32rem;
+      gap: 0.28rem;
       align-items: center;
     }
 
     .near-filters-drawer {
       flex: 0 0 auto;
+    }
+
+    .near-filters-summary {
+      padding: 0.38rem 0.56rem;
+      font-size: 0.75rem;
+      gap: 0.26rem;
+      white-space: nowrap;
     }
 
     .near-filters-drawer[open] {
@@ -3156,13 +3305,15 @@
 
     .controls-links {
       margin-left: auto;
-      gap: 0.35rem;
+      gap: 0.28rem;
     }
 
     .text-util-btn,
     .text-util-link {
-      padding: 0.4rem 0.65rem;
-      font-size: 0.76rem;
+      padding: 0.38rem 0.56rem;
+      font-size: 0.75rem;
+      gap: 0.26rem;
+      white-space: nowrap;
     }
 
     .smart-nearest-banner {
@@ -3172,11 +3323,11 @@
     }
 
     .mobile-tabs {
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.34rem;
     }
 
     .split-layout {
-      gap: 0.5rem;
+      gap: 0.42rem;
     }
 
     .leaflet-canvas,
@@ -3196,7 +3347,7 @@
     }
 
     .list-toolbar {
-      margin-bottom: 0.4rem;
+      margin-bottom: 0.28rem;
     }
 
     .count-heading {
@@ -3205,6 +3356,38 @@
 
     .places-stack {
       gap: 0.75rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .controls-top {
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .search-box {
+      flex: 1 1 100%;
+      order: 1;
+    }
+
+    .gps-btn {
+      order: 2;
+    }
+
+    .share-label-full {
+      display: none;
+    }
+
+    .share-label-short {
+      display: inline;
+    }
+
+    .near-filters-summary,
+    .text-util-btn,
+    .text-util-link {
+      padding: 0.36rem 0.52rem;
+      font-size: 0.74rem;
+      gap: 0.24rem;
     }
   }
 </style>

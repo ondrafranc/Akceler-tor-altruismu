@@ -69,7 +69,7 @@ test.describe('Tier 1: Feature Coverage', () => {
       const title = page.locator('.hero-title');
       await expect(title).toBeVisible();
       await expect(title).toContainText('Pomáhat může být lehké');
-      await expect(page.locator('.hero-serif')).toContainText('Stačí jeden dobrý skutek dnes');
+      await expect(page.locator('.hero-serif')).toContainText('Stačí 2 minuty dnes.');
       await expect(page.locator('.hero-stage')).toBeVisible();
     });
 
@@ -148,7 +148,7 @@ test.describe('Tier 1: Feature Coverage', () => {
       await expect(cta).toHaveAttribute('rel', /noopener/);
     });
 
-    test('F2-5: Clicking Hotovo (.btn-studio-done) after starting action reveals celebration card with Molly treat note', async ({ page }) => {
+    test('F2-5: Clicking Mám hotovo (.btn-studio-done) after starting action reveals celebration card with Molly treat note', async ({ page }) => {
       await page.goto('/');
       await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
       await page.locator('.instant-card .btn-studio-done').click();
@@ -174,7 +174,7 @@ test.describe('Tier 1: Feature Coverage', () => {
       await page.locator('.highlight-card details.how-toggle summary').click();
       const badge = page.locator('.highlight-card .tier-A, .highlight-card .tier-B, .highlight-card .tier-C').first();
       await expect(badge).toBeVisible();
-      await expect(badge).toContainText('Ověřený dopad');
+      await expect(badge).toContainText(/Přímý měřitelný účinek|Doložený přínos|Komunitní smysl/);
     });
 
     test('F3-3: Advanced parameters are tucked inside collapsible drawer', async ({ page }) => {
@@ -225,9 +225,12 @@ test.describe('Tier 1: Feature Coverage', () => {
       expect(count).toBeLessThanOrEqual(10);
     });
 
-    test('F4-3: Map page (/near) renders search box, city jump select, and radius pills', async ({ page }) => {
+    test('F4-3: Map page (/near) renders search box, collapsed Filtrovat drawer, city jump select, and radius pills', async ({ page }) => {
       await page.goto('/near');
       await expect(page.locator('#near-location-query')).toBeVisible();
+      const filtersDrawer = page.locator('details.near-filters-drawer');
+      await expect(filtersDrawer).not.toHaveAttribute('open', '');
+      await filtersDrawer.locator('> summary.near-filters-summary').click();
       await expect(page.locator('#near-city-jump')).toBeVisible();
       await expect(page.locator('.radius-pill').first()).toBeVisible();
     });
@@ -269,7 +272,7 @@ test.describe('Tier 1: Feature Coverage', () => {
       await nightBtn.click();
       await expect(nightBtn).toHaveClass(/active/);
       const dawnLayer = page.locator('.art-layer.dawn');
-      await expect(dawnLayer).toHaveAttribute('style', /opacity:\s*0\.14/);
+      await expect(dawnLayer).toHaveAttribute('style', /opacity:\s*0(\.00)?/);
 
       await dawnBtn.click();
       await expect(dawnBtn).toHaveClass(/active/);
@@ -765,6 +768,7 @@ test.describe('Tier 2: Boundary & Corner Cases', () => {
 
     test('F4-B5: Selecting remote regional town on /near safely displays nearest places without 0-places bug', async ({ page }) => {
       await page.goto('/near');
+      await page.locator('details.near-filters-drawer > summary.near-filters-summary').click();
       await page.locator('#near-city-jump').selectOption({ label: 'Jihlava' });
       await page.waitForTimeout(500);
       const body = await page.locator('body').innerText();
@@ -1191,38 +1195,44 @@ test.describe('Tier 3: Cross-Feature Combinations', () => {
 
 test.describe('Tier 4: Real-World Application Scenarios', () => {
 
-  test('Scenario 1: Mobile user first load — immediate wow effect, zero overflow, tap quick action (F1, F2, F4) [375x667]', async ({ page }) => {
+  test('Scenario 1: Mobile user first load — compact atmospheric dawn hero, zero overflow, tap quick action (F1, F2, F4) [375x667]', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/');
 
-    // 1. Clean compact mobile hero stage (decorative desktop backdrop hidden) & mobile claim
+    // 1. Compact atmospheric mobile dawn hero stage & dynamic mobile claim
     await expect(page.locator('.hero-stage')).toBeVisible();
-    await expect(page.locator('.hero-painted-backdrop')).toBeHidden();
-    await expect(page.locator('.hero-aurora')).toBeHidden();
+    await expect(page.locator('.hero-painted-backdrop')).toBeVisible();
+    await expect(page.locator('.hero-aurora')).toBeVisible();
     await expect(page.locator('.fireflies-layer')).toBeHidden();
-    await expect(page.locator('.hero-wave')).toBeHidden();
+    await expect(page.locator('.hero-wave')).toBeVisible();
     await expect(page.locator('.hero-mobile-claim')).toBeVisible();
     await expect(page.locator('.hero-mobile-claim')).toContainText('Jeden ověřený dobrý skutek');
 
     // 2. Zero horizontal overflow
     await checkZeroHorizontalOverflow(page, 'scenario-1-first-load');
 
-    // 3. Instant action card is visible and accessible without scrolling
+    // 3. Instant action card and title are visible above fold
     const card = page.locator('.instant-card');
     await expect(card).toBeVisible();
-    await expect(card.locator('.action-title')).toBeVisible();
+    const titleLoc = card.locator('.action-title');
+    await expect(titleLoc).toBeVisible();
+    const titleBox = await titleLoc.boundingBox();
+    expect(titleBox).not.toBeNull();
+    expect(titleBox!.y + titleBox!.height).toBeLessThanOrEqual(667);
 
-    // 4. Tap another energy mode
+    // 4. Tap another energy mode — claim updates dynamically
     await card.locator('.energy-tab').nth(1).click();
     await expect(card.locator('.action-title')).toBeVisible();
+    await expect(page.locator('.hero-mobile-claim')).toContainText('15 minut');
 
-    // 5. Check primary CTA button above the 667px fold
+    // 5. Check primary CTA button is visible, >= 44px tall, and unclipped horizontally
     const cta = card.locator('.btn-studio-primary');
     await expect(cta).toBeVisible();
-    await expect(cta).toContainText(/Nakrmit útulek teď|Začít/);
+    await expect(cta).toContainText(/Nakrmit|Vybrat|Začít|Otevřít|Spustit|Zapojit/);
     const ctaBox = await cta.boundingBox();
     expect(ctaBox).not.toBeNull();
-    expect(ctaBox!.y + ctaBox!.height).toBeLessThanOrEqual(667);
+    expect(ctaBox!.height).toBeGreaterThanOrEqual(44);
+    expect(ctaBox!.x + ctaBox!.width).toBeLessThanOrEqual(375);
   });
 
   test('Scenario 2: Mobile user finds deed via Guided Help without 40-button overload (F3, F9) [390x844]', async ({ page }) => {

@@ -16,37 +16,50 @@ export interface FeedbackRequestBody {
 }
 
 export interface SubmissionRequestBody {
-  name: string;
-  kind: string;
-  address?: string;
-  lat?: number;
-  lon?: number;
-  website?: string;
-  phone?: string;
-  email?: string;
-  description?: string;
-  quickMission?: string;
-  helpWays?: string[];
-  visitMode?: string;
   hp?: string;
-  clientTimestamp?: number;
+  started_at?: number;
+  elapsed_ms?: number;
+  kind: 'org' | 'event' | string;
+  name: string;
+  category?: string | null;
+  website?: string | null;
+  url?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  contact?: string | null;
+  description?: string | null;
+  address_label?: string | null;
+  address?: string | null;
+  city?: string | null;
+  postcode?: string | null;
+  lat: number;
+  lon: number;
+  event_url?: string | null;
+  event_start?: string | null;
+  event_end?: string | null;
+}
+
+export interface SubmissionPatchBody {
+  id: string;
+  status: 'approved' | 'rejected' | 'pending';
 }
 
 export interface PulseEventItem {
-  id: string;
-  action_id: string;
+  message: string;
   city: string;
-  verb: string;
+  actionId: string;
   icon: string;
-  created_at: string;
-  relative_time: string;
+  ts: number;
+  isLive: boolean;
+  recentCount?: number;
+  source: string;
 }
 
 export interface GeocodePlaceItem {
-  lat: string | number;
-  lon: string | number;
-  display_name: string;
-  name?: string;
+  label: string;
+  lat: number;
+  lon: number;
   type?: string;
-  address?: Record<string, string>;
+  class?: string;
+  address?: Record<string, string> | null;
 }

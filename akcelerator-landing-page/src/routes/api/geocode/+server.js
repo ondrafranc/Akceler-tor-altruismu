@@ -14,8 +14,6 @@ const CACHE = new Map();
 /** @type {Map<string, Promise<unknown>>} */
 const INFLIGHT = new Map();
 
-let LAST_UPSTREAM_TS = 0;
-
 const LOCAL_CZECH_TOWNS = [
   ...CZECH_CITIES.map((c) => ({ label: `${c.name}, Česko`, lat: c.lat, lon: c.lon, type: 'city' })),
   { label: 'Kladno, Středočeský kraj, Česko', lat: 50.1473, lon: 14.1028, type: 'city' },
@@ -91,13 +89,32 @@ function searchLocalTowns(q, limit = 5) {
   return [...exactOrPrefix, ...substring].slice(0, limit);
 }
 
+const MAX_QUEUE_WAIT_MS = 2500;
 let lastScheduleTime = 0;
+
+/**
+ * Resets module-scoped geocode cache, inflight map, and scheduler state for unit tests.
+ */
+export function _resetGeocodeStateForTests() {
+  CACHE.clear();
+  INFLIGHT.clear();
+  lastScheduleTime = 0;
+}
 
 async function scheduleNominatimRequest(minIntervalMs = 1100) {
   const now = Date.now();
   const targetTime = Math.max(now, lastScheduleTime + minIntervalMs);
-  lastScheduleTime = targetTime;
   const delay = targetTime - now;
+  if (delay > MAX_QUEUE_WAIT_MS) {
+    const retryAfterSec = Math.max(1, Math.ceil((delay - MAX_QUEUE_WAIT_MS) / 1000));
+    const err = /** @type {Error & { code?: string, retryAfterSec?: number }} */ (
+      new Error('Geocode upstream queue saturated')
+    );
+    err.code = 'GEOCODE_QUEUE_OVERFLOW';
+    err.retryAfterSec = retryAfterSec;
+    throw err;
+  }
+  lastScheduleTime = targetTime;
   if (delay > 0) {
     await new Promise((resolve) => setTimeout(resolve, delay));
   }
@@ -217,12 +234,29 @@ export async function GET({ url, request, getClientAddress }) {
   }
 
   if (INFLIGHT.has(key)) {
-    const data = await INFLIGHT.get(key);
-    return json(data, {
-      headers: {
-        'cache-control': 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800'
+    try {
+      const data = await INFLIGHT.get(key);
+      return json(data, {
+        headers: {
+          'cache-control': 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800'
+        }
+      });
+    } catch (err) {
+      const geocodeErr = /** @type {{ code?: string, retryAfterSec?: number }} */ (err);
+      if (geocodeErr?.code === 'GEOCODE_QUEUE_OVERFLOW') {
+        return json(
+          { error: 'Geocoding service busy', results: [] },
+          {
+            status: 503,
+            headers: {
+              'cache-control': 'no-store',
+              'retry-after': String(geocodeErr.retryAfterSec || 1)
+            }
+          }
+        );
       }
-    });
+      throw err;
+    }
   }
 
   const p = fetchNominatim(q, limit)
@@ -230,7 +264,10 @@ export async function GET({ url, request, getClientAddress }) {
       setBoundedCache(CACHE, key, data, 24 * 60 * 60 * 1000, 300);
       return data;
     })
-    .catch(() => {
+    .catch((err) => {
+      if (err && typeof err === 'object' && /** @type {{ code?: string }} */ (err).code === 'GEOCODE_QUEUE_OVERFLOW') {
+        throw err;
+      }
       const fb = { results: searchLocalTowns(q, limit), fallback: true };
       setBoundedCache(CACHE, key, fb, 10 * 60 * 1000, 300);
       return fb;
@@ -243,10 +280,27 @@ export async function GET({ url, request, getClientAddress }) {
     INFLIGHT.set(key, p);
   }
 
-  const data = await p;
-  return json(data, {
-    headers: {
-      'cache-control': 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800'
+  try {
+    const data = await p;
+    return json(data, {
+      headers: {
+        'cache-control': 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800'
+      }
+    });
+  } catch (err) {
+    const geocodeErr = /** @type {{ code?: string, retryAfterSec?: number }} */ (err);
+    if (geocodeErr?.code === 'GEOCODE_QUEUE_OVERFLOW') {
+      return json(
+        { error: 'Geocoding service busy', results: [] },
+        {
+          status: 503,
+          headers: {
+            'cache-control': 'no-store',
+            'retry-after': String(geocodeErr.retryAfterSec || 1)
+          }
+        }
+      );
     }
-  });
+    throw err;
+  }
 }

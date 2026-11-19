@@ -210,8 +210,9 @@ test.describe('Tier 5 Adversarial Stress: Mobile UX, Viewport Rotations & Tone I
     await page.goto('/near');
     await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 20000 });
 
+    await page.locator('details.near-filters-drawer > summary.near-filters-summary').click();
     const listFilter = page.locator('#near-list-filter');
-    if (await listFilter.isVisible()) {
+    await expect(listFilter).toBeVisible();
       // Regex metacharacters that would crash RegExp without proper sanitization
       const adversarialRegex = '.*+?^${}()|[]\\\\'.repeat(10);
       await listFilter.fill(adversarialRegex);
@@ -228,7 +229,6 @@ test.describe('Tier 5 Adversarial Stress: Mobile UX, Viewport Rotations & Tone I
       await listFilter.fill('');
       await page.waitForTimeout(100);
       await expect(countHeading).not.toContainText('0');
-    }
 
     expect(pageErrors).toHaveLength(0);
   });
@@ -354,7 +354,7 @@ test.describe('Tier 5 Adversarial Stress: Mobile UX, Viewport Rotations & Tone I
     // Switch filters in landscape
     const filtersToTest = ['free', 'fast', 'evidenceA'];
     for (const filterId of filtersToTest) {
-      const chip = page.locator(`.filter-chip:has-text("${filterId === 'free' ? 'Zdarma' : filterId === 'fast' ? 'Do 5 min' : 'Ověřený dopad (A)'}")`);
+      const chip = page.locator(`.filter-chip:has-text("${filterId === 'free' ? 'Zdarma' : filterId === 'fast' ? 'Do 5 min' : 'Přímý měřitelný účinek'}")`);
       await expect(chip).toBeVisible();
       await chip.click();
       await page.waitForTimeout(80);

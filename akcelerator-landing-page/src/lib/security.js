@@ -110,38 +110,83 @@ export function checkRateLimit(bucket, clientId, maxRequests, windowMs) {
 }
 
 /**
- * Resolves a client IP string prioritizing SvelteKit's platform-verified getClientAddress()
- * over spoofable X-Forwarded-For headers (H8 / AUDIT #9).
+ * Checks whether an address string represents a loopback or empty interface address.
+ * @param {unknown} addr
+ * @returns {boolean}
+ */
+function isLoopbackAddress(addr) {
+  if (typeof addr !== 'string') return true;
+  const normalized = addr.trim().toLowerCase();
+  if (!normalized) return true;
+  return (
+    normalized === '127.0.0.1' ||
+    normalized === '::1' ||
+    normalized === '::ffff:127.0.0.1' ||
+    normalized === '0:0:0:0:0:0:0:1' ||
+    normalized === 'localhost'
+  );
+}
+
+/**
+ * Extracts the first non-empty trimmed IP entry from a comma-separated header value.
+ * @param {string | null} val
+ * @returns {string}
+ */
+function parseFirstHeaderIp(val) {
+  if (typeof val !== 'string' || !val) return '';
+  return val.split(',').map((s) => s.trim()).find(Boolean) || '';
+}
+
+/**
+ * Resolves a client IP string prioritizing platform-verified addresses over spoofable headers.
+ * On Vercel: `x-vercel-forwarded-for` -> non-loopback `getClientAddress()` -> loopback `getClientAddress()` -> `'local'`.
+ * Off Vercel: non-loopback `getClientAddress()` -> `x-vercel-forwarded-for` -> loopback `getClientAddress()`
+ * -> `cf-connecting-ip` / `x-forwarded-for` (only if `getClientAddress()` is unavailable/throws) -> `'local'`.
  * @param {Request} request
  * @param {() => string} [getClientAddress]
  * @returns {string}
  */
 export function resolveClientKey(request, getClientAddress) {
+  const isVercel =
+    typeof process !== 'undefined' &&
+    (process.env?.VERCEL === '1' || Boolean(process.env?.VERCEL_ENV));
+
+  let directAddr = '';
+  let hasDirectAddr = false;
   try {
     if (typeof getClientAddress === 'function') {
-      const addr = getClientAddress();
-      if (addr && addr !== '127.0.0.1' && addr !== '::1') {
-        return String(addr).slice(0, 64);
+      const raw = getClientAddress();
+      if (raw !== undefined && raw !== null) {
+        const trimmed = String(raw).trim();
+        if (trimmed) {
+          directAddr = trimmed;
+          hasDirectAddr = true;
+        }
       }
     }
   } catch {
     // Fallback when getClientAddress is unavailable in adapter context
   }
-  const cfIp = request.headers.get('cf-connecting-ip');
-  if (cfIp?.trim()) return cfIp.trim().slice(0, 64);
-  const vercelIp = request.headers.get('x-vercel-forwarded-for');
-  if (vercelIp) {
-    const first = vercelIp.split(',')[0]?.trim();
-    if (first) return first.slice(0, 64);
+
+  const vercelIp = parseFirstHeaderIp(request?.headers?.get('x-vercel-forwarded-for') ?? null);
+
+  if (isVercel) {
+    if (vercelIp) return vercelIp.slice(0, 64);
+    if (hasDirectAddr && !isLoopbackAddress(directAddr)) return directAddr.slice(0, 64);
+    if (hasDirectAddr) return directAddr.slice(0, 64);
+    return 'local';
   }
-  try {
-    if (typeof getClientAddress === 'function') {
-      const addr = getClientAddress();
-      if (addr) return String(addr).slice(0, 64);
-    }
-  } catch {
-    // Ignore
-  }
+
+  if (hasDirectAddr && !isLoopbackAddress(directAddr)) return directAddr.slice(0, 64);
+  if (vercelIp) return vercelIp.slice(0, 64);
+  if (hasDirectAddr) return directAddr.slice(0, 64);
+
+  const cfIp = parseFirstHeaderIp(request?.headers?.get('cf-connecting-ip') ?? null);
+  if (cfIp) return cfIp.slice(0, 64);
+
+  const xffIp = parseFirstHeaderIp(request?.headers?.get('x-forwarded-for') ?? null);
+  if (xffIp) return xffIp.slice(0, 64);
+
   return 'local';
 }
 
@@ -238,7 +283,7 @@ export function validateMutationOrigin(request, url) {
     }
   }
   const ct = (request.headers.get('content-type') || '').toLowerCase();
-  if (ct && !ct.includes('application/json')) {
+  if (!ct.includes('application/json')) {
     return false;
   }
   return true;
@@ -289,7 +334,7 @@ export function safeCompareTokens(a, b) {
  * @returns {boolean}
  */
 export function isAuthorizedTestBypass(request) {
-  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production' && process.env?.VERCEL_ENV === 'production') {
+  if (typeof process !== 'undefined' && process.env?.VERCEL_ENV === 'production') {
     return false;
   }
   const expected = typeof process !== 'undefined' ? process.env?.TEST_BYPASS_SECRET : undefined;

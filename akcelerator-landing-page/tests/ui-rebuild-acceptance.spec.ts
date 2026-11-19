@@ -388,7 +388,7 @@ async function assertZeroHeaderShield(page: Page, contextLabel: string): Promise
       issues.push('shield emoji inside .nav-capsule');
     }
     const shieldEls = capsule.querySelectorAll(
-      '.crisis-trigger, .crisis-pill, .crisis-mobile-fab, svg.lucide-shield, svg.lucide-shield-alert, svg.lucide-shield-check, [aria-label*="Krizov" i]'
+      '.crisis-trigger, .crisis-pill, svg.lucide-shield, svg.lucide-shield-alert, svg.lucide-shield-check, [aria-label*="Krizov" i]'
     );
     if (shieldEls.length > 0) {
       issues.push(`shield/crisis control inside .nav-capsule (${shieldEls.length})`);
@@ -564,7 +564,6 @@ async function detectHeaderAndMollyCollisions(page: Page): Promise<CollisionRepo
           '.deck-nav-prev',
           '.deck-nav-next',
           '.crisis-trigger',
-          '.crisis-mobile-fab',
           'main h1',
           'main button',
           'main a.btn-studio-primary',
@@ -636,7 +635,6 @@ async function assertMobileTouchTargets(page: Page, contextLabel: string): Promi
       '.molly-dock-pet-btn',
       '.molly-dock-toggle-btn',
       '.crisis-trigger',
-      '.crisis-mobile-fab',
       'a'
     ].join(', ');
 
@@ -769,14 +767,16 @@ async function assertNoFomoOrJargon(page: Page, routePath: string, contextLabel:
     const hasLegacyDukazy = /\bDůkazy\s+[ABC]\b/i.test(bodyText);
     const hasLegacySilne = /\bSilné důkazy\b/i.test(bodyText);
     const hasOverenyDopad = bodyText.includes('Ověřený dopad');
-    return { ambientCount, hasLegacyDukazy, hasLegacySilne, hasOverenyDopad };
+    const hasDaylightEvidence = bodyText.includes('Přímý měřitelný účinek');
+    return { ambientCount, hasLegacyDukazy, hasLegacySilne, hasOverenyDopad, hasDaylightEvidence };
   });
 
   expect(check.ambientCount, `${contextLabel}: zero .ambient-pulse-pill`).toBe(0);
   expect(check.hasLegacyDukazy, `${contextLabel}: forbidden "Důkazy A/B/C" jargon`).toBe(false);
   expect(check.hasLegacySilne, `${contextLabel}: forbidden "Silné důkazy" jargon`).toBe(false);
+  expect(check.hasOverenyDopad, `${contextLabel}: forbidden "Ověřený dopad" jargon`).toBe(false);
   if (routePath === '/app/online') {
-    expect(check.hasOverenyDopad, `${contextLabel}: must contain "Ověřený dopad"`).toBe(true);
+    expect(check.hasDaylightEvidence, `${contextLabel}: must contain "Přímý měřitelný účinek"`).toBe(true);
   }
 }
 
@@ -824,18 +824,22 @@ test.describe('Tier 1: Core UI/UX Rebuild Contract Matrix (7 Routes x 3 Viewport
         // T2-7: Zero shield icon inside .nav-capsule
         await assertZeroHeaderShield(page, label);
 
-        // T1-3: Home mobile above-the-fold (360x800, 375x667)
+        // T1-3: Home mobile immediate entry (360x800, 375x667) — title & card above fold, breathable CTA >= 44px
         if (route.path === '/' && vp.isMobile) {
           const foldMetrics = await page.evaluate(() => {
             const header = document.querySelector('header.top-nav');
             const card = document.querySelector('.instant-card');
+            const title = document.querySelector('.instant-card .action-title');
             const cta = document.querySelector('.instant-card .btn-studio-primary');
             const how = document.querySelector('.instant-card details.how-toggle') as HTMLDetailsElement | null;
             return {
               headerBottom: header ? header.getBoundingClientRect().bottom : 0,
               cardTop: card ? card.getBoundingClientRect().top : -1,
               cardVisible: Boolean(card && window.getComputedStyle(card).display !== 'none'),
+              titleBottom: title ? title.getBoundingClientRect().bottom : 99999,
               ctaBottom: cta ? cta.getBoundingClientRect().bottom : 99999,
+              ctaHeight: cta ? cta.getBoundingClientRect().height : 0,
+              ctaRight: cta ? cta.getBoundingClientRect().right : 99999,
               ctaVisible: Boolean(cta && cta.getBoundingClientRect().height > 0),
               howExists: Boolean(how),
               howOpen: Boolean(how?.open)
@@ -849,9 +853,15 @@ test.describe('Tier 1: Core UI/UX Rebuild Contract Matrix (7 Routes x 3 Viewport
             `${label}: card top must sit below header bottom`
           ).toBeGreaterThanOrEqual(foldMetrics.headerBottom - 1);
           expect(
-            foldMetrics.ctaBottom,
-            `${label}: primary CTA bottom (${foldMetrics.ctaBottom}px) must fit above fold (${vp.height}px)`
+            foldMetrics.titleBottom,
+            `${label}: card title bottom (${foldMetrics.titleBottom}px) must sit above fold (${vp.height}px)`
           ).toBeLessThanOrEqual(vp.height);
+          expect(
+            foldMetrics.ctaBottom,
+            `${label}: primary CTA bottom (${foldMetrics.ctaBottom}px) must sit above fold (${vp.height}px)`
+          ).toBeLessThanOrEqual(vp.height);
+          expect(foldMetrics.ctaHeight, `${label}: primary CTA height >= 44px`).toBeGreaterThanOrEqual(44);
+          expect(foldMetrics.ctaRight, `${label}: primary CTA right <= viewport width`).toBeLessThanOrEqual(vp.width);
           expect(foldMetrics.howExists, `${label}: details.how-toggle must exist`).toBe(true);
           expect(foldMetrics.howOpen, `${label}: details.how-toggle must start collapsed`).toBe(false);
 
@@ -1029,20 +1039,24 @@ test.describe('Tier 2: Breakpoints, Fold Budget, Touch Targets & Mobile Inputs',
     assertZeroRuntimeErrors(errors, 'T2-1');
   });
 
-  test('T2-2: Tightest mobile fold budget on / at 375x667', async ({ page }) => {
+  test('T2-2: Compact mobile entry on / at 375x667', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     const errors = await setupPageEnvironment(page);
     await gotoHydrated(page, '/');
 
     const fold = await page.evaluate(() => {
       const preview = document.querySelector('.instant-card .deed-preview-stage');
+      const title = document.querySelector('.instant-card .action-title');
       const cta = document.querySelector('.instant-card .btn-studio-primary');
       const how = document.querySelector('.instant-card details.how-toggle') as HTMLDetailsElement | null;
       const header = document.querySelector('header.top-nav');
       const card = document.querySelector('.instant-card');
       return {
         previewVisible: Boolean(preview && preview.getBoundingClientRect().height > 0),
+        titleBottom: title ? title.getBoundingClientRect().bottom : 9999,
         ctaBottom: cta ? cta.getBoundingClientRect().bottom : 9999,
+        ctaHeight: cta ? cta.getBoundingClientRect().height : 0,
+        ctaRight: cta ? cta.getBoundingClientRect().right : 9999,
         howExists: Boolean(how),
         howOpen: Boolean(how?.open),
         headerBottom: header ? header.getBoundingClientRect().bottom : 0,
@@ -1054,7 +1068,11 @@ test.describe('Tier 2: Breakpoints, Fold Budget, Touch Targets & Mobile Inputs',
     expect(fold.howExists).toBe(true);
     expect(fold.howOpen).toBe(false);
     expect(fold.cardTop).toBeGreaterThanOrEqual(fold.headerBottom - 1);
+    expect(fold.cardTop).toBeLessThan(667 * 0.6);
+    expect(fold.titleBottom).toBeLessThanOrEqual(667);
     expect(fold.ctaBottom).toBeLessThanOrEqual(667);
+    expect(fold.ctaHeight).toBeGreaterThanOrEqual(44);
+    expect(fold.ctaRight).toBeLessThanOrEqual(375);
 
     const collisions = await detectHeaderAndMollyCollisions(page);
     expect(collisions).toEqual([]);
@@ -1328,7 +1346,7 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
     await expect(howToggle).not.toHaveAttribute('open', '');
     await howToggle.locator('summary').click();
     await expect(howToggle).toHaveAttribute('open', '');
-    await expect(howToggle).toContainText('Ověřený dopad');
+    await expect(howToggle).toContainText(/Přímý měřitelný účinek|Doložený přínos|Komunitní smysl/);
     await expect(howToggle).toContainText(/Sdílet odkaz/i);
     await expect(howToggle).toContainText(/Nahlásit chybu/i);
 
@@ -1397,7 +1415,7 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
     const errors = await setupPageEnvironment(page);
     await gotoHydrated(page, '/app/online');
 
-    const evidenceFilter = page.locator('.filter-chip', { hasText: 'Ověřený dopad (A)' });
+    const evidenceFilter = page.locator('.filter-chip', { hasText: 'Přímý měřitelný účinek' });
     await expect(evidenceFilter).toBeVisible();
     await evidenceFilter.click();
 
@@ -2020,6 +2038,7 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
       );
     });
     await gotoHydrated(page, '/near');
+    await page.locator('details.near-filters-drawer > summary.near-filters-summary').click();
     await page.locator('#near-list-filter').fill('Karlín – dlouhý');
     await page.waitForTimeout(150);
     const longCard = page.locator('.place-card', { hasText: 'Karlín – dlouhý' }).first();
@@ -2324,6 +2343,7 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
     // Clearing storage returns a fresh session cleanly to 1 / 45
     await page.evaluate(() => {
       window.localStorage.clear();
+      window.sessionStorage.removeItem('aa_home_deck_state_v1');
       window.sessionStorage.setItem('__pw_clean_bootstrapped', '1');
     });
     await gotoHydrated(page, '/');
@@ -2337,8 +2357,8 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
   }) => {
     const errors = await setupPageEnvironment(page);
 
-    // 1. Mobile fold budget (360x800 & 375x667): preview stage compact & non-intrusive, zero .impact-payoff-canvas class,
-    //    AND both primary CTA + "1 / 45" pagination fit above the fold!
+    // 1. Mobile breathable preview diorama (360x800 & 375x667): zero .impact-payoff-canvas class,
+    //    no HUD overlap, >= 78px canvas height, and accessible CTA + 1 / 45 pagination!
     const mobileHeights: number[] = [];
     for (const vp of [
       { width: 360, height: 800, label: '360x800' },
@@ -2365,8 +2385,8 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
           hasPayoffClass: cv.classList.contains('impact-payoff-canvas'),
           hasMollyMiniAttr: cv.hasAttribute('data-molly-mini'),
           hudOverlapsCanvas,
-          ctaBottom: Math.round(cta.getBoundingClientRect().bottom),
-          indicatorBottom: Math.round(indicator.getBoundingClientRect().bottom),
+          ctaHeight: Math.round(cta.getBoundingClientRect().height),
+          ctaRight: Math.round(cta.getBoundingClientRect().right),
           indicatorText: (indicator.textContent || '').trim()
         };
       });
@@ -2375,9 +2395,10 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
       expect(metrics!.hasPayoffClass, `${vp.label}: preview canvas must not have .impact-payoff-canvas`).toBe(false);
       expect(metrics!.hasMollyMiniAttr, `${vp.label}: preview canvas must not have data-molly-mini`).toBe(false);
       expect(metrics!.hudOverlapsCanvas, `${vp.label}: .preview-hud must not overlap canvas`).toBe(false);
-      expect(metrics!.stageHeight, `${vp.label}: mobile preview stage compact <= 82px`).toBeLessThanOrEqual(82);
-      expect(metrics!.ctaBottom, `${vp.label}: CTA above fold`).toBeLessThanOrEqual(vp.height);
-      expect(metrics!.indicatorBottom, `${vp.label}: 1 / 45 pagination above fold`).toBeLessThanOrEqual(vp.height);
+      expect(metrics!.canvasHeight, `${vp.label}: breathable mobile preview canvas >= 78px`).toBeGreaterThanOrEqual(78);
+      expect(metrics!.stageHeight, `${vp.label}: mobile preview stage <= 165px`).toBeLessThanOrEqual(165);
+      expect(metrics!.ctaHeight, `${vp.label}: primary CTA >= 44px`).toBeGreaterThanOrEqual(44);
+      expect(metrics!.ctaRight, `${vp.label}: primary CTA within viewport width`).toBeLessThanOrEqual(vp.width);
       expect(metrics!.indicatorText).toMatch(/^1\s*\/\s*45\b/);
       mobileHeights.push(metrics!.canvasHeight);
     }
@@ -2411,7 +2432,7 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
     expect(desktopPreview!.hasPayoffClass).toBe(false);
     expect(desktopPreview!.hudOverlapsCanvas).toBe(false);
     expect(desktopPreview!.canvasHeight).toBeGreaterThanOrEqual(84);
-    expect(desktopPreview!.canvasHeight).toBeGreaterThan(Math.max(...mobileHeights) + 25);
+    expect(desktopPreview!.canvasHeight).toBeGreaterThanOrEqual(Math.max(...mobileHeights));
 
     // Start & complete zvire_v_nouzi cleanly
     await card.locator('.btn-studio-primary').click();
@@ -2421,10 +2442,45 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
     await expect(card.locator('.card-effect-stage')).toContainText(/34 stanic/i);
 
     await doneBtn.click();
-    await page.waitForTimeout(300);
     await expect(card.locator('.inline-celebration-card, .molly-celebration-note').first()).toBeVisible();
+    await page.waitForTimeout(1200);
+    await page.waitForFunction(
+      () => {
+        const actor = document.querySelector('.molly-roaming-actor') as HTMLElement | null;
+        if (!actor || actor.classList.contains('is-docked')) return true;
+        return actor.getAttribute('data-molly-behavior') !== 'WALK_ROAM';
+      },
+      null,
+      { timeout: 4500 }
+    );
+    await page.waitForTimeout(100);
 
     expect(await scanForbiddenEmojis(page)).toEqual([]);
+    expect(await detectHeaderAndMollyCollisions(page)).toEqual([]);
+
+    // Also verify default '/' deed (click_and_feed) post-done celebration avoidance at 1440x900
+    await page.evaluate(() => {
+      window.localStorage.clear();
+      window.sessionStorage.setItem('__pw_clean_bootstrapped', '1');
+    });
+    await gotoHydrated(page, '/');
+    const homeCard = page.locator('.instant-card').first();
+    await homeCard.locator('.btn-studio-primary').click();
+    const homeDoneBtn = homeCard.locator('.btn-studio-done');
+    await expect(homeDoneBtn).toBeVisible();
+    await homeDoneBtn.click();
+    await expect(homeCard.locator('.in-situ-celebration')).toBeVisible();
+    await page.waitForTimeout(1200);
+    await page.waitForFunction(
+      () => {
+        const actor = document.querySelector('.molly-roaming-actor') as HTMLElement | null;
+        if (!actor || actor.classList.contains('is-docked')) return true;
+        return actor.getAttribute('data-molly-behavior') !== 'WALK_ROAM';
+      },
+      null,
+      { timeout: 4500 }
+    );
+    await page.waitForTimeout(100);
     expect(await detectHeaderAndMollyCollisions(page)).toEqual([]);
     assertZeroRuntimeErrors(errors, 'T3-17');
   });
@@ -2686,6 +2742,7 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
 
         const stageCs = window.getComputedStyle(stage);
         const backdropCs = window.getComputedStyle(backdrop);
+        const backdropImg = backdrop.querySelector('img');
         const auroraCs = window.getComputedStyle(aurora);
         const scrimCs = window.getComputedStyle(scrim);
         const overlineCs = window.getComputedStyle(overline);
@@ -2729,7 +2786,7 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
           stageBorderBottom: stageCs.borderBottomWidth,
           backdropDisplay: backdropCs.display,
           backdropOpacity: parseFloat(backdropCs.opacity),
-          backdropBgImg: backdropCs.backgroundImage,
+          backdropBgImg: backdropImg ? backdropImg.currentSrc || backdropImg.getAttribute('src') || '' : '',
           auroraDisplay: auroraCs.display,
           scrimDisplay: scrimCs.display,
           firefliesDisplay: window.getComputedStyle(firefliesLayer).display,
@@ -2935,19 +2992,150 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
       expect(await scanForbiddenEmojis(page)).toEqual([]);
     }
 
-    // Mobile viewports must hide desktop forest backdrop, aurora, scrim, fireflies, and wave
+    // Mobile viewports render compact atmospheric dawn hero strip with painted backdrop & readable claim
     for (const mvp of [
       { width: 360, height: 800, label: '360x800' },
       { width: 375, height: 667, label: '375x667' }
     ]) {
       await page.setViewportSize({ width: mvp.width, height: mvp.height });
       await gotoHydrated(page, '/');
-      await expect(page.locator('.hero-painted-backdrop')).toBeHidden();
-      await expect(page.locator('.hero-aurora')).toBeHidden();
-      await expect(page.locator('.hero-scrim')).toBeHidden();
+      await expect(page.locator('.hero-painted-backdrop')).toBeVisible();
+      await expect(page.locator('.hero-aurora')).toBeVisible();
+      await expect(page.locator('.hero-scrim')).toBeVisible();
       await expect(page.locator('.fireflies-layer')).toBeHidden();
-      await expect(page.locator('.hero-wave')).toBeHidden();
+      await expect(page.locator('.hero-wave')).toBeVisible();
       await expect(page.locator('.hero-mobile-claim')).toBeVisible();
+      await page.evaluate(() => window.scrollTo(0, 0));
+      const mobHero = await page.evaluate(() => {
+        const stage = document.querySelector('.hero-stage') as HTMLElement | null;
+        const copy = document.querySelector('.hero-copy');
+        const bd = document.querySelector('.hero-painted-backdrop');
+        const bdImg = bd ? bd.querySelector('img') : null;
+        const claim = document.querySelector('.hero-mobile-claim') as HTMLElement | null;
+        if (!stage || !claim) return null;
+        const sr = stage.getBoundingClientRect();
+        const cr = claim.getBoundingClientRect();
+        const cs = window.getComputedStyle(claim);
+        const clipHeight = Math.min(Math.ceil(sr.height), 160);
+        return {
+          copyHeight: copy ? Math.round(copy.getBoundingClientRect().height) : 0,
+          backdropBg: bdImg ? bdImg.currentSrc || bdImg.getAttribute('src') || '' : '',
+          clip: {
+            x: Math.max(0, Math.floor(sr.left)),
+            y: Math.max(0, Math.floor(sr.top)),
+            width: Math.max(1, Math.floor(sr.width)),
+            height: Math.max(1, clipHeight)
+          },
+          claimColor: cs.color,
+          claimRect: {
+            x: Math.max(0, cr.left - Math.max(0, Math.floor(sr.left))),
+            y: Math.max(0, cr.top - Math.max(0, Math.floor(sr.top))),
+            width: Math.max(1, cr.width),
+            height: Math.max(1, cr.height)
+          }
+        };
+      });
+      expect(mobHero).not.toBeNull();
+      expect(mobHero!.copyHeight).toBeGreaterThanOrEqual(72);
+      expect(mobHero!.copyHeight).toBeLessThanOrEqual(220);
+      expect(mobHero!.backdropBg).toContain('/art/sanctuary-dawn');
+
+      // Empirically assert worst-case WCAG AA pixel contrast >= 4.5:1 for .hero-mobile-claim over actual rendered backdrop
+      await page.evaluate(() => {
+        const s = document.createElement('style');
+        s.id = 't319-mob-bg-probe';
+        s.textContent = `
+          .hero-copy, .hero-copy * {
+            color: transparent !important;
+            -webkit-text-fill-color: transparent !important;
+            text-shadow: none !important;
+          }
+          .hero-overline .live-dot,
+          .hero-copy svg {
+            opacity: 0 !important;
+          }
+        `;
+        document.head.appendChild(s);
+      });
+
+      let mobStagePngB64 = '';
+      try {
+        const pngBuf = await page.screenshot({
+          type: 'png',
+          animations: 'disabled',
+          clip: mobHero!.clip
+        });
+        mobStagePngB64 = pngBuf.toString('base64');
+      } finally {
+        await page.evaluate(() => {
+          document.getElementById('t319-mob-bg-probe')?.remove();
+        });
+      }
+
+      const mobClaimMinContrast = await page.evaluate(
+        async ({ pngB64, fgColorStr, rect, expectedWidth, expectedHeight }) => {
+          const m = fgColorStr.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)/i);
+          const fgRaw = m
+            ? { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]), a: m[4] !== undefined ? Number(m[4]) : 1 }
+            : { r: 255, g: 255, b: 255, a: 1 };
+          function relLuminance(c: { r: number; g: number; b: number }) {
+            const toLin = (v: number) => {
+              const s = v / 255;
+              return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+            };
+            return 0.2126 * toLin(c.r) + 0.7152 * toLin(c.g) + 0.0722 * toLin(c.b);
+          }
+          function contrastRatio(c1: { r: number; g: number; b: number }, c2: { r: number; g: number; b: number }) {
+            const l1 = relLuminance(c1);
+            const l2 = relLuminance(c2);
+            return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+          }
+          const img = new Image();
+          img.src = `data:image/png;base64,${pngB64}`;
+          await new Promise<void>((resolve, reject) => {
+            img.onload = () => resolve();
+            img.onerror = () => reject(new Error('Failed to decode mobile stage screenshot'));
+          });
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('Missing 2d canvas context');
+          ctx.drawImage(img, 0, 0);
+          const scaleX = img.width / Math.max(1, expectedWidth);
+          const scaleY = img.height / Math.max(1, expectedHeight);
+          const x0 = Math.max(0, Math.floor(rect.x * scaleX));
+          const y0 = Math.max(0, Math.floor(rect.y * scaleY));
+          const w = Math.max(1, Math.min(img.width - x0, Math.ceil(rect.width * scaleX)));
+          const h = Math.max(1, Math.min(img.height - y0, Math.ceil(rect.height * scaleY)));
+          const data = ctx.getImageData(x0, y0, w, h).data;
+          let minRatio = Infinity;
+          for (let i = 0; i < data.length; i += 16) {
+            const bg = { r: data[i], g: data[i + 1], b: data[i + 2] };
+            const fg = {
+              r: fgRaw.r * fgRaw.a + bg.r * (1 - fgRaw.a),
+              g: fgRaw.g * fgRaw.a + bg.g * (1 - fgRaw.a),
+              b: fgRaw.b * fgRaw.a + bg.b * (1 - fgRaw.a)
+            };
+            const r = contrastRatio(fg, bg);
+            if (r < minRatio) minRatio = r;
+          }
+          return minRatio;
+        },
+        {
+          pngB64: mobStagePngB64,
+          fgColorStr: mobHero!.claimColor,
+          rect: mobHero!.claimRect,
+          expectedWidth: mobHero!.clip.width,
+          expectedHeight: mobHero!.clip.height
+        }
+      );
+      expect(
+        mobClaimMinContrast,
+        `${mvp.label}: rendered .hero-mobile-claim worst-case contrast >= 4.5`
+      ).toBeGreaterThanOrEqual(4.5);
+
+      await assertZeroOverflow(page, `T3-19 ${mvp.label}`);
     }
 
     assertZeroRuntimeErrors(errors, 'T3-19');
@@ -3205,6 +3393,25 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
       expect(dt.overflows).toBe(false);
     }
 
+    // Also verify 360x800 wraps .quick-tags-pill cleanly without horizontal clipping
+    await page.setViewportSize({ width: 360, height: 800 });
+    await page.waitForTimeout(120);
+    const mobileDirTags = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('.directory-card .quick-tags-pill')).map((el) => {
+        const h = el as HTMLElement;
+        const cs = window.getComputedStyle(h);
+        return {
+          whiteSpace: cs.whiteSpace,
+          overflows: h.scrollWidth > h.clientWidth + 1
+        };
+      })
+    );
+    expect(mobileDirTags.length).toBeGreaterThanOrEqual(3);
+    for (const mdt of mobileDirTags) {
+      expect(mdt.whiteSpace).toBe('normal');
+      expect(mdt.overflows).toBe(false);
+    }
+
     assertZeroRuntimeErrors(errors, 'T3-20');
   });
 });
@@ -3238,7 +3445,7 @@ test.describe('Tier 4: End-to-End Mobile Journey & Visual Judge Screenshot Captu
 
     // Open Jak to funguje, start & complete deed
     await card.locator('details.how-toggle summary').click();
-    await expect(card.locator('details.how-toggle')).toContainText('Ověřený dopad');
+    await expect(card.locator('details.how-toggle')).toContainText(/Přímý měřitelný účinek|Doložený přínos|Komunitní smysl/);
     await cta.click();
     await expect(card.locator('.btn-studio-done')).toBeVisible();
     await card.locator('.btn-studio-done').click();

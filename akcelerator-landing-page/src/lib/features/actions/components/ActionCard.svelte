@@ -13,65 +13,89 @@
     trackEvent,
     openBrokenLinkReport,
   } from "../../../../lib/analytics.js";
-  import { notifyMollySpark } from "../../../../lib/mollyStore.js";
+  import { mollyState, feedMolly, notifyMollySpark } from "../../../../lib/mollyStore.js";
   import { cleanTitle, stripLeadingEmoji } from "../../../../lib/utils.js";
   import { VALUES } from "../../../data/values.js";
   import AppIcon from "$lib/components/AppIcon.svelte";
   import EvidenceBadge from "./EvidenceBadge.svelte";
 
-  /** @type {(import('$lib/types').MicroAction & Record<string, unknown>) | null} */
-  export let action = null;
-  export let isStarted = false;
-  export let isCompleted = false;
-  export let justCompleted = false;
-  export let partnerReturnPromptVisible = false;
-  export let soundMuted = false;
-  export let showEffectPreview = false;
-  export let copiedDirectLink = false;
-  /** @type {string[]} */
-  export let savedValues = [];
-  export let usePersonalValues = false;
-  export let variant = "instant"; // 'instant' | 'directory' | 'compact'
-  export let spotlight = false;
-  export let className = "";
+  /**
+   * @type {{
+   *   action?: (import('$lib/types').MicroAction & Record<string, unknown>) | null,
+   *   isStarted?: boolean,
+   *   isCompleted?: boolean,
+   *   justCompleted?: boolean,
+   *   partnerReturnPromptVisible?: boolean,
+   *   soundMuted?: boolean,
+   *   copiedDirectLink?: boolean,
+   *   savedValues?: string[],
+   *   usePersonalValues?: boolean,
+   *   variant?: 'instant' | 'directory' | 'compact',
+   *   spotlight?: boolean,
+   *   className?: string,
+   *   onStart?: ((action?: import('$lib/types').MicroAction) => void) | null,
+   *   onComplete?: ((action?: import('$lib/types').MicroAction) => void) | null,
+   *   onShare?: ((action?: import('$lib/types').MicroAction) => void) | null,
+   *   onReportBroken?: ((action?: import('$lib/types').MicroAction) => void) | null,
+   *   onToggleSound?: (() => void) | null,
+   *   onTogglePersonalValues?: (() => void) | null,
+   *   onNextIdea?: (() => void) | null,
+   *   onDismissReturn?: (() => void) | null,
+   *   onCloseSession?: (() => void) | null
+   * }}
+   */
+  let {
+    action = null,
+    isStarted = false,
+    isCompleted = false,
+    justCompleted = false,
+    partnerReturnPromptVisible = false,
+    soundMuted = false,
+    copiedDirectLink = false,
+    savedValues = [],
+    usePersonalValues = false,
+    variant = "instant",
+    spotlight = false,
+    className = "",
+    onStart = null,
+    onComplete = null,
+    onShare = null,
+    onReportBroken = null,
+    onToggleSound = null,
+    onTogglePersonalValues = null,
+    onNextIdea = null,
+    onDismissReturn = null,
+    onCloseSession = null,
+  } = $props();
 
-  /** @type {((action?: import('$lib/types').MicroAction) => void) | null} */
-  export let onStart = null;
-  /** @type {((action?: import('$lib/types').MicroAction) => void) | null} */
-  export let onComplete = null;
-  /** @type {((action?: import('$lib/types').MicroAction) => void) | null} */
-  export let onShare = null;
-  /** @type {((action?: import('$lib/types').MicroAction) => void) | null} */
-  export let onReportBroken = null;
-  /** @type {(() => void) | null} */
-  export let onToggleSound = null;
-  /** @type {(() => void) | null} */
-  export let onTogglePersonalValues = null;
-  /** @type {(() => void) | null} */
-  export let onNextIdea = null;
-  /** @type {(() => void) | null} */
-  export let onDismissReturn = null;
-  /** @type {(() => void) | null} */
-  export let onCloseSession = null;
+  let kibbleGrams = $state(0);
+  let sparkBoosted = $state(false);
+  let fedInCelebration = $state(false);
+  /** @type {HTMLDetailsElement | null} */
+  let detailsEl = $state(null);
+  /** @type {HTMLCanvasElement | null} */
+  let cardCanvasNode = $state(null);
+  /** @type {HTMLAnchorElement | null} */
+  let primaryBtnNode = $state(null);
 
-  let kibbleGrams = 0;
-  let sparkBoosted = false;
-  let cardCanvasNode = null;
-  let primaryBtnNode = null;
+  let prevJustCompleted = false;
+  /** @type {((rel?: boolean) => void) | null} */
   let stopHoldSpark = null;
+  /** @type {string | null} */
   let lastHoldActionId = null;
+  /** @type {string | null} */
   let lastCelebratedActionId = null;
 
   // Interactive anticipation diorama state (zero-reflow cached bounds)
   /** @type {DOMRect | null} */
   let previewBounds = null;
-  let previewHovered = false;
-  let ctaHovered = false;
-  let previewNudged = false;
+  let previewHovered = $state(false);
+  let ctaHovered = $state(false);
+  let previewNudged = $state(false);
   /** @type {ReturnType<typeof setTimeout> | null} */
   let previewNudgeTimer = null;
-  let spotX = 50;
-  let spotY = 34;
+  let spotX = $state(50);
+  let spotY = $state(34);
 
   function endHoldSpark(released = false) {
     if (stopHoldSpark) {
@@ -83,6 +107,7 @@
     }
   }
 
+  /** @param {PointerEvent & { currentTarget: HTMLAnchorElement }} e */
   function handlePrimaryPointerDown(e) {
     if (e.button && e.button !== 0) return;
     endHoldSpark(false);
@@ -95,11 +120,13 @@
     previewBounds = null;
   }
 
+  /** @param {PointerEvent & { currentTarget: HTMLDivElement }} e */
   function handlePreviewPointerEnter(e) {
     previewBounds = e.currentTarget.getBoundingClientRect();
     previewHovered = true;
   }
 
+  /** @param {PointerEvent & { currentTarget: HTMLDivElement }} e */
   function handlePreviewPointerMove(e) {
     if (e.pointerType !== "touch") {
       previewHovered = true;
@@ -144,34 +171,78 @@
     }, 1050);
   }
 
-  $: if (action?.id !== lastHoldActionId) {
-    lastHoldActionId = action?.id || null;
-    endHoldSpark(false);
-    previewHovered = false;
-    previewBounds = null;
-    spotX = 50;
-    spotY = 34;
-    previewNudged = false;
-    ctaHovered = false;
-  }
+  $effect(() => {
+    const currentId = action?.id || null;
+    if (currentId !== lastHoldActionId) {
+      const hadPreviousAction = lastHoldActionId !== null;
+      lastHoldActionId = currentId;
+      lastCelebratedActionId = null;
+      kibbleGrams = 0;
+      sparkBoosted = false;
+      fedInCelebration = false;
+      if (hadPreviousAction && detailsEl) {
+        detailsEl.open = false;
+      }
+      endHoldSpark(false);
+      previewHovered = false;
+      previewBounds = null;
+      spotX = 50;
+      spotY = 34;
+      previewNudged = false;
+      ctaHovered = false;
+    }
+  });
+
+  $effect(() => {
+    const completedNow = justCompleted;
+    if (completedNow !== prevJustCompleted) {
+      prevJustCompleted = completedNow;
+      if (completedNow) {
+        fedInCelebration = false;
+      } else {
+        lastCelebratedActionId = null;
+      }
+    }
+  });
+
+  $effect(() => {
+    if (justCompleted && action && action.id !== lastCelebratedActionId) {
+      lastCelebratedActionId = action.id;
+      try {
+        safeVibrate(40);
+        playCelebrationChord();
+      } catch {}
+    }
+  });
+
+  $effect(() => {
+    if (typeof window === "undefined") return;
+    window.addEventListener("scroll", invalidatePreviewBounds, { passive: true });
+    window.addEventListener("resize", invalidatePreviewBounds, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", invalidatePreviewBounds);
+      window.removeEventListener("resize", invalidatePreviewBounds);
+    };
+  });
 
   onDestroy(() => {
     endHoldSpark(false);
     if (previewNudgeTimer) clearTimeout(previewNudgeTimer);
   });
 
-  $: if (justCompleted && action && action.id !== lastCelebratedActionId) {
-    lastCelebratedActionId = action.id;
-    try {
-      safeVibrate(40);
-      playCelebrationChord();
-    } catch {}
-  }
-
+  /** @param {number} g */
   function handleWeightUpdate(g) {
     kibbleGrams = g;
   }
 
+  function handleFeedMollyInline() {
+    const res = feedMolly("celebration", { action, silent: false });
+    if (res?.success) {
+      fedInCelebration = true;
+    }
+  }
+
+  /** @param {string[]} ids */
   function getSavedValueLabels(ids) {
     if (!ids || !ids.length) return "";
     return VALUES.filter((v) => ids.includes(v.key || v.id))
@@ -182,7 +253,6 @@
 
   function triggerEffectSpark() {
     if (!action) return;
-    showEffectPreview = true;
     sparkBoosted = true;
     notifyMollySpark(action, { surface: variant });
     if (cardCanvasNode) {
@@ -333,8 +403,8 @@
       status: "Miska čeká prázdná",
     },
     donio_utulky: {
-      promise: "Plná miska a přímá péče v útulku",
-      status: "Miska čeká prázdná",
+      promise: "100 % daru přímo útulku či projektu",
+      status: "Bez poplatků · QR platba",
     },
     birdlife_ptaci_pasti: {
       promise: "Bezpečné sklo pro ptáky v tvém okolí",
@@ -558,84 +628,177 @@
     }
   }
 
-  $: effectMeta = action
-    ? getActionEffectMeta(action, kibbleGrams, {
-        isReturnStrip: partnerReturnPromptVisible,
-      })
-    : null;
-  $: categoryAura = getCategoryAura(action, effectMeta?.scene);
-  $: previewCue = buildPreviewCue(action, effectMeta);
-  $: showIdleDiorama =
-    variant === "instant" &&
-    !isStarted &&
-    !justCompleted &&
-    !partnerReturnPromptVisible;
-  $: actionTitle = action ? cleanTitle(action.title) : "";
+  const effectMeta = $derived(
+    action
+      ? getActionEffectMeta(action, kibbleGrams, {
+          isReturnStrip: partnerReturnPromptVisible,
+        })
+      : null,
+  );
+  const categoryAura = $derived(getCategoryAura(action, effectMeta?.scene));
+  const previewCue = $derived(buildPreviewCue(action, effectMeta));
+  const stageMode = $derived(
+    justCompleted || partnerReturnPromptVisible
+      ? "payoff"
+      : isStarted
+        ? "active"
+        : "preview",
+  );
+  const showStage = $derived(variant === "instant" || stageMode !== "preview");
+  const actionTitle = $derived(action ? cleanTitle(action.title) : "");
 </script>
-
-<svelte:window
-  on:scroll|passive={invalidatePreviewBounds}
-  on:resize|passive={invalidatePreviewBounds}
-/>
 
 {#if action}
   <article
     id={action ? `online-card-${action.id}` : undefined}
     class="action-card card instant-body {className}"
     class:directory-card={variant === "directory"}
-    class:has-preview-stage={showIdleDiorama}
+    class:has-preview-stage={showStage && stageMode === "preview"}
     class:spotlight
     class:done-card={isCompleted}
     class:is-done={isCompleted}
+    data-category-theme={categoryAura?.theme || "default"}
   >
-    <!-- 0. Živá scéna očekávání (unikátní Before p = 0 ilustrace každého skutku před spuštěním) -->
-    {#if showIdleDiorama}
-      <!-- svelte-ignore a11y-click-events-have-key-events -->
-      <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <!-- 0. Jednotná horní živá scéna (preview -> active -> payoff bez skoku layoutu) -->
+    {#if showStage}
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
-        class="deed-preview-stage"
-        class:is-primed={previewHovered || ctaHovered || previewNudged}
-        class:is-nudged={previewNudged}
+        class="deed-stage"
+        class:deed-preview-stage={stageMode === "preview"}
+        class:card-effect-stage={stageMode === "active"}
+        class:is-payoff={stageMode === "payoff"}
+        class:is-primed={stageMode === "preview" && (previewHovered || ctaHovered || previewNudged)}
+        class:is-nudged={stageMode === "preview" && previewNudged}
+        data-stage-mode={stageMode}
         data-scene={effectMeta?.scene || "default"}
-        style="--spot-x: {spotX}%; --spot-y: {spotY}%;"
-        on:pointerenter={handlePreviewPointerEnter}
-        on:pointermove={handlePreviewPointerMove}
-        on:pointerleave={handlePreviewPointerLeave}
-        on:pointercancel={handlePreviewPointerLeave}
-        on:click={handlePreviewNudge}
+        style={stageMode === "preview" ? `--spot-x: ${spotX}%; --spot-y: ${spotY}%;` : undefined}
+        onpointerenter={(e) => {
+          if (stageMode === "preview") handlePreviewPointerEnter(e);
+        }}
+        onpointermove={(e) => {
+          if (stageMode === "preview") handlePreviewPointerMove(e);
+        }}
+        onpointerleave={() => {
+          if (stageMode === "preview") handlePreviewPointerLeave();
+        }}
+        onpointercancel={() => {
+          if (stageMode === "preview") handlePreviewPointerLeave();
+        }}
+        onclick={() => {
+          if (stageMode === "preview") handlePreviewNudge();
+        }}
       >
-        <div class="preview-hud">
-          <span class="preview-promise-pill">
-            <AppIcon
-              name={effectMeta?.icon || "sparkles"}
-              size={13}
-              strokeWidth={2.1}
-              class="preview-promise-spark"
-            />
-            <span>{previewCue.promise}</span>
-          </span>
-          <span class="preview-status-pill" class:nudged={previewNudged}>
-            <span class="preview-status-dot" aria-hidden="true"></span>
-            {#if previewNudged}
-              <AppIcon name="arrow-down" size={12} strokeWidth={2.2} />
-              <span>Spusť tlačítkem níže</span>
-            {:else}
-              <span>{previewCue.status}</span>
+        {#if stageMode === "preview"}
+          <div class="preview-hud">
+            <span class="preview-promise-pill">
+              <AppIcon
+                name={effectMeta?.icon || "sparkles"}
+                size={13}
+                strokeWidth={2.1}
+                class="preview-promise-spark"
+              />
+              <span>{previewCue.promise}</span>
+            </span>
+            <span class="preview-status-pill" class:nudged={previewNudged}>
+              <span class="preview-status-dot" aria-hidden="true"></span>
+              {#if previewNudged}
+                <AppIcon name="arrow-down" size={12} strokeWidth={2.2} />
+                <span>Spusť tlačítkem níže</span>
+              {:else}
+                <span>{previewCue.status}</span>
+              {/if}
+            </span>
+          </div>
+        {:else if stageMode === "active"}
+          <div class="card-effect-head">
+            {#if effectMeta?.badge}
+              <span class="impact-payoff-badge">
+                <AppIcon
+                  name={effectMeta?.icon || "sparkles"}
+                  size={13}
+                  strokeWidth={2.1}
+                />
+                <span>{effectMeta.badge}</span>
+              </span>
             {/if}
-          </span>
-        </div>
+            <div class="card-effect-controls">
+              <button
+                type="button"
+                class="effect-spark-btn"
+                class:active={sparkBoosted}
+                onclick={triggerEffectSpark}
+                aria-pressed={sparkBoosted}
+                aria-label="Jemná vizualizace proměny dopadu"
+                title="Přehrát vizualizaci proměny"
+              >
+                <AppIcon name="sparkles" size={13} strokeWidth={2.1} />
+                <span>Přehrát</span>
+              </button>
+              {#if onToggleSound}
+                <button
+                  type="button"
+                  class="sound-mute-btn"
+                  onclick={onToggleSound}
+                  aria-pressed={soundMuted}
+                  aria-label={soundMuted
+                    ? "Zapnout jemné zvuky"
+                    : "Ztlumit zvuky"}
+                  title={soundMuted ? "Zapnout jemné zvuky" : "Ztlumit zvuky"}
+                >
+                  <AppIcon
+                    name={soundMuted ? "volume-x" : "volume-2"}
+                    size={15}
+                    strokeWidth={2.1}
+                  />
+                </button>
+              {/if}
+            </div>
+          </div>
+        {:else}
+          <div class="card-effect-head payoff-head">
+            <span class="payoff-kicker">
+              <AppIcon name="sparkles" size={13} strokeWidth={2.1} />
+              <span>
+                {justCompleted
+                  ? "Skvělá práce! Dobrý skutek je hotový"
+                  : "Vítej zpět! Povedlo se ti dokončit skutek u partnera?"}
+              </span>
+            </span>
+            {#if justCompleted ? effectMeta?.badge : effectMeta?.returnBadge || effectMeta?.badge}
+              <span class="impact-payoff-badge">
+                <AppIcon
+                  name={effectMeta?.icon || "sparkles"}
+                  size={13}
+                  strokeWidth={2.1}
+                />
+                <span>
+                  {justCompleted
+                    ? effectMeta?.badge
+                    : effectMeta?.returnBadge || effectMeta?.badge}
+                </span>
+              </span>
+            {/if}
+          </div>
+        {/if}
 
         <canvas
-          class="preview-diorama-canvas"
+          bind:this={cardCanvasNode}
+          class="stage-canvas"
+          class:preview-diorama-canvas={stageMode === "preview"}
+          class:impact-payoff-canvas={stageMode !== "preview"}
           width="380"
           height="92"
           use:impactCanvas={{
             action,
-            preview: true,
-            primed: previewHovered || ctaHovered || previewNudged,
-            silent: true,
+            preview: stageMode === "preview",
+            primed: stageMode === "preview" && (previewHovered || ctaHovered || previewNudged),
+            climax: stageMode === "payoff",
+            silent: stageMode === "preview",
+            onWeightUpdate: handleWeightUpdate,
           }}
-          aria-hidden="true"
+          aria-hidden={stageMode === "preview" ? "true" : undefined}
+          aria-label={stageMode !== "preview" ? "Fyzikální vizualizace dopadu dobrého skutku" : undefined}
         ></canvas>
       </div>
     {/if}
@@ -674,7 +837,7 @@
           type="button"
           class="personal-values-pill"
           class:active={usePersonalValues}
-          on:click={onTogglePersonalValues}
+          onclick={onTogglePersonalValues}
           title="Přizpůsobit podle témat vybraných v průvodci"
         >
           <AppIcon
@@ -701,14 +864,14 @@
     {#if variant === "directory"}
       <div class="action-impact-summary card-impact-box rec-impact-block">
         <div class="impact-benefit-line card-benefit-line rec-impact-line">
-          <strong>Přínos ({action.impactBasis || "doložený"}):</strong>
+          <strong>Co to přinese:</strong>
           <span>{action.concreteImpact || action.selfBenefit}</span>
         </div>
       </div>
     {/if}
 
     <!-- 5. Sekundární metadata výhradně v rozbalovacím detailu -->
-    <details class="how-toggle steps-inline">
+    <details class="how-toggle steps-inline" bind:this={detailsEl}>
       <summary>
         <AppIcon
           name="chevron-right"
@@ -742,7 +905,7 @@
         </div>
         {#if variant !== "directory"}
           <div class="impact-benefit-line detail-impact-line">
-            <strong>Přínos ({action.impactBasis || "doložený"}):</strong>
+            <strong>Co to přinese:</strong>
             <span>{action.concreteImpact || action.selfBenefit}</span>
           </div>
         {/if}
@@ -795,7 +958,7 @@
               <button
                 type="button"
                 class="direct-link-share-btn mde-share-btn card-broken-btn rec-broken-btn"
-                on:click={() => onShare(action)}
+                onclick={() => onShare(action)}
                 title="Zkopírovat přímý odkaz na tento skutek pro sdílení v diskuzi nebo zprávě"
               >
                 <AppIcon
@@ -813,7 +976,7 @@
             <button
               type="button"
               class="broken-link-btn mde-broken-btn card-broken-btn rec-broken-btn"
-              on:click={() => {
+              onclick={() => {
                 if (onReportBroken) onReportBroken(action);
                 else
                   openBrokenLinkReport({
@@ -831,7 +994,7 @@
       </div>
     </details>
 
-    <!-- 6. In-situ oslava a odměna po dokončení nebo návratu od partnera -->
+    <!-- 6. In-situ oslava a odměna po dokončení nebo návratu od partnera (bez duplicitního plátna a nadpisu) -->
     {#if justCompleted}
       <div
         class="celebration-card inline-celebration-card in-situ-celebration"
@@ -839,34 +1002,6 @@
         aria-live="polite"
         data-scene={effectMeta?.scene || "default"}
       >
-        <div class="inline-celebration-head">
-          <span class="kicker celebration-kicker">
-            <AppIcon name="sparkles" size={14} strokeWidth={2.1} />
-            <span>Skvělá práce! Dobrý skutek je hotový</span>
-          </span>
-          {#if effectMeta?.badge}
-            <span class="impact-payoff-badge">
-              <AppIcon
-                name={effectMeta?.icon || "sparkles"}
-                size={13}
-                strokeWidth={2.1}
-              />
-              <span>{effectMeta.badge}</span>
-            </span>
-          {/if}
-        </div>
-        <h3 class="win-title">{actionTitle}</h3>
-        <canvas
-          class="impact-payoff-canvas"
-          width="320"
-          height="118"
-          use:impactCanvas={{
-            action,
-            climax: true,
-            onWeightUpdate: handleWeightUpdate,
-          }}
-          aria-label="Fyzikální vizualizace dopadu dobrého skutku"
-        ></canvas>
         <div class="in-situ-affirmation">
           <AppIcon
             name="sparkles"
@@ -876,7 +1011,7 @@
           />
           <span>
             <strong>Dnes už tvůj dobrý skutek pomáhá.</strong> Můžeš pokračovat
-            dalším drobným skutkem, nebo dnešní seanci s klidem uzavřít.
+            dalším drobným skutkem, nebo si pro dnešek s klidem odpočinout.
           </span>
         </div>
         <div class="molly-celebration-note">
@@ -889,13 +1024,34 @@
           <a href="/svet" class="molly-svet-inline-link">Krajině dobra</a> na ni
           za tvůj skutek čeká zasloužený pamlsek.
         </div>
+        {#if $mollyState.availableTreats > 0 && !fedInCelebration}
+          <div class="molly-inline-feed-row">
+            <button
+              type="button"
+              class="btn-inline-feed-molly"
+              onclick={handleFeedMollyInline}
+            >
+              <AppIcon
+                name={effectMeta?.mollyTreat?.icon || "fish"}
+                size={15}
+                strokeWidth={2.1}
+              />
+              <span>Dát Molly pamlsek</span>
+            </button>
+          </div>
+        {:else if fedInCelebration}
+          <div class="molly-inline-fed-badge" role="status">
+            <AppIcon name="heart" size={14} strokeWidth={2.2} />
+            <span>Molly spokojeně chroupe pamlsek a přede radostí!</span>
+          </div>
+        {/if}
         <div class="return-dopamine-actions in-situ-actions">
           {#if onCloseSession}
             <button
               type="button"
               class="return-dopamine-btn btn-session-close"
-              on:click={onCloseSession}
-              aria-label="Uzavřít dnešní seanci"
+              onclick={onCloseSession}
+              aria-label="Pro dnešek hotovo — odpočinout si"
             >
               <AppIcon name="leaf" size={14} strokeWidth={2.1} />
               <span>Pro dnešek hotovo</span>
@@ -905,7 +1061,7 @@
             <button
               type="button"
               class="return-dopamine-btn btn-next-deed inline-celebration-next"
-              on:click={onNextIdea}
+              onclick={onNextIdea}
               aria-label="Ukázat další doporučený skutek"
             >
               <span>Další dobrý skutek</span>
@@ -921,40 +1077,6 @@
         aria-live="polite"
         data-scene={effectMeta?.scene || "default"}
       >
-        <div class="inline-celebration-head return-dopamine-head">
-          <div class="return-dopamine-text return-dopamine-title">
-            <AppIcon
-              name="sparkles"
-              size={14}
-              strokeWidth={2.1}
-              class="return-title-icon"
-            />
-            <span
-              ><strong>Vítej zpět!</strong> Povedlo se ti dokončit skutek u partnera?</span
-            >
-          </div>
-          {#if effectMeta?.returnBadge || effectMeta?.badge}
-            <span class="impact-payoff-badge">
-              <AppIcon
-                name={effectMeta?.icon || "sparkles"}
-                size={13}
-                strokeWidth={2.1}
-              />
-              <span>{effectMeta.returnBadge || effectMeta.badge}</span>
-            </span>
-          {/if}
-        </div>
-        <canvas
-          class="impact-payoff-canvas"
-          width="320"
-          height="118"
-          use:impactCanvas={{
-            action,
-            climax: true,
-            onWeightUpdate: handleWeightUpdate,
-          }}
-          aria-label="Fyzikální vizualizace dopadu dobrého skutku"
-        ></canvas>
         <div class="in-situ-affirmation">
           <AppIcon
             name="leaf"
@@ -968,7 +1090,7 @@
           <button
             type="button"
             class="return-dopamine-btn btn-return-complete"
-            on:click={() => onComplete && onComplete(action)}
+            onclick={() => onComplete && onComplete(action)}
           >
             <AppIcon name="check" size={14} strokeWidth={2.4} />
             <span>Ano, mám hotovo</span>
@@ -977,7 +1099,8 @@
             <button
               type="button"
               class="btn-session-close return-dopamine-svet-link"
-              on:click={onCloseSession}
+              onclick={onCloseSession}
+              aria-label="Pro dnešek hotovo — odpočinout si"
             >
               <AppIcon name="leaf" size={14} strokeWidth={2.1} />
               <span>Pro dnešek hotovo</span>
@@ -986,7 +1109,7 @@
             <button
               type="button"
               class="btn-return-dismiss return-dopamine-svet-link"
-              on:click={onDismissReturn}
+              onclick={onDismissReturn}
             >
               Později
             </button>
@@ -1012,18 +1135,18 @@
           class:cta-nudged={previewNudged}
           data-hold-spark="true"
           data-molly-guide="true"
-          on:pointerenter={() => (ctaHovered = true)}
-          on:pointerdown={handlePrimaryPointerDown}
-          on:pointerup={() => endHoldSpark(true)}
-          on:pointerleave={() => {
+          onpointerenter={() => (ctaHovered = true)}
+          onpointerdown={handlePrimaryPointerDown}
+          onpointerup={() => endHoldSpark(true)}
+          onpointerleave={() => {
             ctaHovered = false;
             endHoldSpark(false);
           }}
-          on:pointercancel={() => {
+          onpointercancel={() => {
             ctaHovered = false;
             endHoldSpark(false);
           }}
-          on:click={() => {
+          onclick={() => {
             endHoldSpark(true);
             if (onStart) onStart(action);
           }}
@@ -1052,77 +1175,13 @@
             type="button"
             class="btn-studio-done btn-done-action cta secondary done-btn"
             class:initiated={isStarted}
-            on:click={() => onComplete && onComplete(action)}
+            onclick={() => onComplete && onComplete(action)}
           >
             <AppIcon name="check" size={15} strokeWidth={2.5} />
-            <span>{action.doneCta || "Dokončeno"}</span>
+            <span>{action.doneCta || "Mám hotovo"}</span>
           </button>
         {/if}
       </div>
-
-      {#if isStarted && !partnerReturnPromptVisible}
-        <div
-          class="card-effect-stage"
-          data-scene={effectMeta?.scene || "default"}
-        >
-          <div class="card-effect-head">
-            {#if effectMeta?.badge}
-              <span class="impact-payoff-badge">
-                <AppIcon
-                  name={effectMeta?.icon || "sparkles"}
-                  size={13}
-                  strokeWidth={2.1}
-                />
-                <span>{effectMeta.badge}</span>
-              </span>
-            {/if}
-            <div class="card-effect-controls">
-              <button
-                type="button"
-                class="effect-spark-btn"
-                class:active={sparkBoosted}
-                on:click={triggerEffectSpark}
-                aria-pressed={sparkBoosted}
-                aria-label="Jemná vizualizace proměny dopadu"
-                title="Přehrát vizualizaci proměny"
-              >
-                <AppIcon name="sparkles" size={13} strokeWidth={2.1} />
-                <span>Impuls</span>
-              </button>
-              {#if onToggleSound}
-                <button
-                  type="button"
-                  class="sound-mute-btn"
-                  on:click={onToggleSound}
-                  aria-pressed={soundMuted}
-                  aria-label={soundMuted
-                    ? "Zapnout jemné zvuky"
-                    : "Ztlumit zvuky"}
-                  title={soundMuted ? "Zapnout jemné zvuky" : "Ztlumit zvuky"}
-                >
-                  <AppIcon
-                    name={soundMuted ? "volume-x" : "volume-2"}
-                    size={15}
-                    strokeWidth={2.1}
-                  />
-                </button>
-              {/if}
-            </div>
-          </div>
-          <canvas
-            bind:this={cardCanvasNode}
-            class="impact-payoff-canvas"
-            width="320"
-            height="118"
-            use:impactCanvas={{
-              action,
-              climax: false,
-              onWeightUpdate: handleWeightUpdate,
-            }}
-            aria-label="Fyzikální vizualizace dopadu dobrého skutku"
-          ></canvas>
-        </div>
-      {/if}
     {/if}
   </article>
 {/if}
@@ -1708,19 +1767,25 @@
     transition: background-color 0.18s ease, color 0.18s ease;
   }
 
-  .btn-studio-done:hover,
   .btn-studio-done.initiated {
-    background: var(--accent-primary, #1b5e42);
-    color: #ffffff;
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--accent-primary, #1b5e42);
+    border: 1.5px solid var(--accent-primary, #1b5e42);
+  }
+
+  .btn-studio-done:hover {
+    background: #dfeae3;
+    color: var(--ink-primary, #14281d);
     border-color: var(--accent-primary, #1b5e42);
   }
 
   /* =========================================================================
      FYZIKÁLNÍ SCÉNA DOPADU A IN-SITU OSLAVA (DAYLIGHT EDITORIAL)
      ========================================================================= */
-  .card-effect-stage {
+  .card-effect-stage,
+  .deed-stage.is-payoff {
     position: relative;
-    margin: 0.5rem 0 0.55rem;
+    margin: 0 0 0.65rem 0;
     padding: 0;
     border-radius: 16px;
     overflow: hidden;
@@ -1737,9 +1802,24 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.4rem;
-    padding: 0.36rem 0.58rem;
+    padding: 0.24rem 0.52rem;
     background: var(--bg-subtle, #edf2ee);
     border-bottom: 1px solid var(--border-subtle, #dce3dd);
+  }
+
+  .payoff-head {
+    flex-wrap: wrap;
+    padding: 0.34rem 0.56rem;
+  }
+
+  .payoff-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: var(--accent-primary, #1b5e42);
   }
 
   .card-effect-controls {
@@ -1748,7 +1828,7 @@
     gap: 0.32rem;
   }
 
-  .card-effect-stage .impact-payoff-badge {
+  .deed-stage .impact-payoff-badge {
     background: var(--accent-warm-tint, #fef6e8);
     color: #8f4b0e;
     border: 1px solid rgba(184, 101, 27, 0.28);
@@ -1764,7 +1844,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.26rem;
-    padding: 0.42rem 0.78rem;
+    padding: 0.34rem 0.72rem;
     min-height: 44px;
     min-width: 44px;
     box-sizing: border-box;
@@ -1789,106 +1869,59 @@
     border-color: var(--accent-primary, #1b5e42);
   }
 
-  .impact-payoff-canvas {
+  .deed-stage .stage-canvas {
     display: block;
     width: 100%;
     max-width: 100%;
-    height: 118px;
-    background: #14281d;
+    height: 92px;
     border: none;
     border-radius: 0;
+  }
+
+  .deed-stage .impact-payoff-canvas {
+    background: #14281d;
     cursor: pointer;
     touch-action: manipulation;
-  }
-
-  .card-effect-stage,
-  .celebration-card,
-  .return-dopamine-strip {
-    animation: payoffSlideDown 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  @keyframes payoffSlideDown {
-    from {
-      opacity: 0;
-      transform: translateY(-6px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .card-effect-stage,
-    .celebration-card,
-    .return-dopamine-strip {
-      animation: none;
-    }
   }
 
   .celebration-card,
   .return-dopamine-strip {
     display: flex;
     flex-direction: column;
-    gap: 0.45rem;
-    margin-bottom: 0.55rem;
-    padding: 0.85rem 0.95rem;
+    gap: 0.42rem;
+    margin-top: 0.35rem;
+    margin-bottom: 0.25rem;
+    padding: 0;
     min-width: 0;
     max-width: 100%;
     box-sizing: border-box;
-    border-radius: 16px;
-    background: var(--bg-surface, #ffffff);
-    border: 1px solid var(--border-strong, #c2cec5);
     color: var(--ink-primary, #14281d);
-    box-shadow: var(--shadow-md, 0 8px 20px -6px rgba(18, 42, 30, 0.08));
     font-size: 0.84rem;
     line-height: 1.4;
     scroll-margin-top: 75px;
     scroll-margin-bottom: 75px;
   }
 
-  .celebration-card .impact-payoff-canvas,
-  .return-dopamine-strip .impact-payoff-canvas {
-    border-radius: 12px;
-    border: 1px solid var(--border-subtle, #dce3dd);
+  .directory-card .celebration-card,
+  .directory-card .return-dopamine-strip {
+    padding-top: 0.35rem;
+    border-top: 1px solid var(--border-subtle, #dce3dd);
   }
 
-  .inline-celebration-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.45rem;
-    flex-wrap: wrap;
+  .directory-card > .instant-actions {
+    order: 4;
+    margin-top: auto;
+    padding-top: 0.45rem;
   }
 
-  .inline-celebration-card .kicker {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.32rem;
-    font-size: 0.72rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--accent-primary, #1b5e42);
+  .directory-card > .deed-stage {
+    order: 5;
+    margin: 0.35rem 0 0;
   }
 
-  .inline-celebration-card .win-title {
-    margin: 0;
-    font-size: 0.96rem;
-    font-weight: 800;
-    color: var(--ink-primary, #14281d);
-  }
-
-  .return-dopamine-title {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    color: var(--ink-primary, #14281d);
-  }
-
-  .return-dopamine-title :global(.return-title-icon) {
-    color: var(--accent-warm, #b8651b);
-    flex-shrink: 0;
+  .directory-card > .celebration-card,
+  .directory-card > .return-dopamine-strip {
+    order: 6;
   }
 
   .impact-payoff-badge {
@@ -1941,6 +1974,53 @@
     font-weight: 700;
     text-decoration: underline;
     text-underline-offset: 2px;
+  }
+
+  .molly-inline-feed-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.2rem 0 0.15rem;
+  }
+
+  .btn-inline-feed-molly {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.42rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.48rem 0.95rem;
+    border-radius: 999px;
+    border: 1px solid rgba(184, 101, 27, 0.45);
+    background: var(--accent-warm-tint, #fef6e8);
+    color: #8f4b0e;
+    font-family: inherit;
+    font-size: 0.84rem;
+    font-weight: 800;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: background-color 0.16s ease, border-color 0.16s ease, transform 0.14s ease;
+  }
+
+  .btn-inline-feed-molly:hover {
+    background: #fde68a;
+    border-color: #b8651b;
+    transform: translateY(-1px);
+  }
+
+  .molly-inline-fed-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.42rem 0.78rem;
+    border-radius: 12px;
+    background: var(--bohemian-sage, #eef5f0);
+    border: 1px solid var(--border-forest, #c5d9cd);
+    color: var(--accent-primary, #1b5e42);
+    font-size: 0.81rem;
+    font-weight: 700;
   }
 
   .return-dopamine-actions {
@@ -2033,7 +2113,7 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    gap: 0.25rem 0.5rem;
+    gap: 0.38rem 0.5rem;
     flex-wrap: wrap;
     font-size: 0.73rem;
     line-height: 1.4;
@@ -2062,7 +2142,12 @@
   .verify-source-link {
     display: inline-flex;
     align-items: center;
+    vertical-align: middle;
     gap: 0.18rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.2rem 0.25rem;
+    box-sizing: border-box;
     color: var(--accent-primary, #1b5e42);
     font-weight: 700;
     text-decoration: none;
@@ -2126,54 +2211,6 @@
     color: var(--accent-warm, #b8651b);
   }
 
-  @media (min-width: 681px) {
-    .instant-body > .instant-actions {
-      order: 4;
-      margin-bottom: 0.25rem;
-    }
-    .instant-body > .card-effect-stage,
-    .instant-body > :global(.card-effect-stage) {
-      order: 5;
-      margin: 0.2rem 0 0.45rem;
-    }
-  }
-
-  .card {
-    background: var(--bg-surface, #ffffff);
-    border: 1px solid var(--border-subtle, #dce3dd);
-    border-radius: 18px;
-    box-shadow: var(--shadow-sm, 0 2px 8px rgba(18, 42, 30, 0.05));
-    padding: 0.95rem 1.1rem;
-    display: flex;
-    flex-direction: column;
-    transition:
-      transform 0.22s var(--ease-gentle, ease),
-      box-shadow 0.22s var(--ease-gentle, ease),
-      border-color 0.22s ease;
-  }
-
-  /* Instant varianta žije uvnitř vnější skořápky (.instant-card na / nebo .highlight-card na /app/guided) — žádný vnořený dvojitý rámeček */
-  .instant-body:not(.directory-card) {
-    padding: 0;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-    background: transparent;
-  }
-
-  .directory-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md, 0 8px 20px -6px rgba(18, 42, 30, 0.08));
-    border-color: var(--accent-primary, #1b5e42);
-  }
-
-  .card.spotlight {
-    border: 1.5px solid var(--accent-warm, #b8651b);
-    box-shadow:
-      0 0 0 3px var(--accent-warm-tint, #fef6e8),
-      var(--shadow-md, 0 8px 20px -6px rgba(18, 42, 30, 0.08));
-  }
-
   @media (max-width: 680px) {
     .mde-share-btn,
     .mde-broken-btn {
@@ -2182,52 +2219,68 @@
       padding: 0.25rem 0.35rem;
     }
     .card.directory-card {
+      gap: 0.22rem;
       padding: 0.75rem 0.85rem;
       border-radius: 16px;
     }
 
-    .instant-body {
-      gap: 0.22rem;
+    .directory-card .action-impact-summary {
+      margin: 0 0 0.22rem 0;
+      padding: 0.36rem 0.55rem;
+      border-radius: 10px;
     }
 
-    .deed-preview-stage {
+    .instant-body {
+      gap: 0.14rem;
+    }
+
+    .deed-stage,
+    .deed-preview-stage,
+    .card-effect-stage {
       height: auto;
-      margin: 0 0 0.18rem 0;
-      border-radius: 13px;
-      box-shadow: none;
+      margin: 0 0 0.2rem 0;
+      border-radius: 14px;
+      box-shadow: var(--shadow-sm, 0 2px 8px rgba(18, 42, 30, 0.05));
     }
 
     .preview-hud {
-      padding: 0.2rem 0.34rem 0.04rem;
+      flex-wrap: nowrap;
+      min-height: 32px;
+      align-items: center;
+      padding: 0.2rem 0.36rem;
       gap: 0.25rem;
+      box-sizing: border-box;
     }
 
     .preview-promise-pill {
-      max-width: 100%;
-      padding: 0.14rem 0.46rem;
+      flex: 1 1 auto;
+      min-width: 0;
+      max-width: none;
+      padding: 0.14rem 0.44rem;
       font-size: 0.66rem;
     }
 
-    .preview-status-pill {
-      display: none;
-    }
-
+    .preview-status-pill,
     .preview-status-pill.nudged {
       display: inline-flex;
-      padding: 0.12rem 0.4rem;
-      font-size: 0.62rem;
+      flex-shrink: 0;
+      padding: 0.14rem 0.42rem;
+      font-size: 0.64rem;
     }
 
-    .preview-diorama-canvas {
-      height: 50px;
+    .deed-stage .stage-canvas,
+    .stage-canvas,
+    .preview-diorama-canvas,
+    .impact-payoff-canvas {
+      height: 84px;
     }
 
     .action-meta-line {
-      font-size: 0.69rem;
-      gap: 0.28rem;
-      margin-bottom: 0.08rem;
-      flex-wrap: nowrap;
-      overflow: hidden;
+      font-size: 0.74rem;
+      gap: 0.28rem 0.34rem;
+      margin-bottom: 0.1rem;
+      flex-wrap: wrap;
+      overflow: visible;
     }
 
     .card-personal-row {
@@ -2235,14 +2288,18 @@
     }
 
     .category-aura-chip {
-      padding: 0.13rem 0.44rem;
-      font-size: 0.67rem;
+      padding: 0.15rem 0.48rem;
+      font-size: 0.69rem;
       gap: 0.2rem;
     }
 
     .quick-tags-pill {
-      padding: 0.12rem 0.44rem;
-      font-size: 0.66rem;
+      padding: 0.16rem 0.5rem;
+      font-size: 0.72rem;
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
+      line-height: 1.3;
     }
 
     .personal-values-pill {
@@ -2254,16 +2311,16 @@
     }
 
     .action-title {
-      font-size: 1.03rem;
-      line-height: 1.2;
-      margin: 0.04rem 0 0.1rem 0;
+      font-size: 1.12rem;
+      line-height: 1.22;
+      margin: 0.06rem 0 0.18rem 0;
       overflow-wrap: break-word;
     }
 
     .action-desc {
-      font-size: 0.81rem;
-      line-height: 1.35;
-      margin: 0 0 0.08rem 0;
+      font-size: 0.9rem;
+      line-height: 1.42;
+      margin: 0 0 0.22rem 0;
       overflow-wrap: break-word;
     }
 
@@ -2288,31 +2345,26 @@
     .how-toggle summary {
       font-size: 0.78rem;
       min-height: 44px;
-      padding: 0.3rem 0.2rem;
+      padding: 0.24rem 0.2rem;
       box-sizing: border-box;
-    }
-
-    .card-effect-stage {
-      margin: 0.28rem 0 0.32rem;
-      border-radius: 14px;
     }
 
     .celebration-card,
     .return-dopamine-strip {
-      padding: 0.65rem 0.78rem;
+      padding: 0;
       gap: 0.35rem;
     }
 
     .in-situ-affirmation,
     .molly-celebration-note {
       padding: 0.4rem 0.6rem;
-      margin: 0.22rem 0;
+      margin: 0.18rem 0;
       font-size: 0.77rem;
       line-height: 1.34;
     }
 
     .return-dopamine-actions {
-      margin-top: 0.35rem;
+      margin-top: 0.3rem;
       gap: 0.45rem;
     }
 
@@ -2321,16 +2373,17 @@
       padding: 0.45rem 0.85rem;
     }
 
-    .card-effect-stage .impact-payoff-canvas,
-    .impact-payoff-canvas {
-      height: 82px;
-    }
-
     .card-effect-head {
-      padding: 0.28rem 0.45rem;
+      min-height: 44px;
+      padding: 0.06rem 0.42rem;
+      box-sizing: border-box;
     }
 
-    .card-effect-stage .impact-payoff-badge {
+    .payoff-head {
+      padding: 0.14rem 0.42rem;
+    }
+
+    .deed-stage .impact-payoff-badge {
       font-size: 0.66rem;
       padding: 0.16rem 0.45rem;
     }
@@ -2346,16 +2399,16 @@
     .instant-actions {
       flex-direction: column;
       align-items: stretch;
-      padding-top: 0.06rem;
-      gap: 0.35rem;
+      padding-top: 0.04rem;
+      gap: 0.3rem;
     }
 
     .btn-studio-primary {
       width: 100%;
       box-sizing: border-box;
-      min-height: 48px;
-      padding: 0.68rem 0.95rem;
-      font-size: 0.93rem;
+      min-height: 46px;
+      padding: 0.62rem 1rem;
+      font-size: 0.94rem;
       border-radius: 14px;
     }
 
@@ -2373,21 +2426,27 @@
   }
 
   @media (max-width: 680px) and (max-height: 700px) {
-    .deed-preview-stage {
-      margin-bottom: 0.14rem;
+    .deed-stage,
+    .deed-preview-stage,
+    .card-effect-stage {
+      margin-bottom: 0.16rem;
     }
 
     .preview-hud {
-      padding: 0.16rem 0.32rem 0.02rem;
+      min-height: 32px;
+      padding: 0.18rem 0.34rem;
     }
 
     .preview-promise-pill {
-      padding: 0.12rem 0.42rem;
-      font-size: 0.63rem;
+      padding: 0.12rem 0.4rem;
+      font-size: 0.64rem;
     }
 
-    .preview-diorama-canvas {
-      height: 46px;
+    .deed-stage .stage-canvas,
+    .stage-canvas,
+    .preview-diorama-canvas,
+    .impact-payoff-canvas {
+      height: 80px;
     }
   }
 </style>

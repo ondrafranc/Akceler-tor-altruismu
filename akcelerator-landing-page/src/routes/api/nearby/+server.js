@@ -14,7 +14,6 @@ export async function GET({ url, request, getClientAddress }) {
   const radiusRaw = toFiniteNumber(url.searchParams.get('radius_m'));
   const radius = radiusRaw !== null ? Math.trunc(radiusRaw) : 5000;
   const kindsRaw = (url.searchParams.get('kinds') || '').split(',').map((s) => s.trim()).filter(Boolean);
-  const includeAssociations = url.searchParams.get('include_associations') === '1';
 
   if (!isValidLatLon(lat, lon)) {
     return json({ error: 'Invalid or missing lat/lon' }, { status: 400, headers: { 'cache-control': 'no-store' } });
@@ -33,8 +32,7 @@ export async function GET({ url, request, getClientAddress }) {
     lat,
     lon,
     radiusM: radius,
-    kinds: kindsRaw,
-    includeAssociations
+    kinds: kindsRaw
   });
 
   return json(payload, {

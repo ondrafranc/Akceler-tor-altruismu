@@ -16,6 +16,7 @@
    *   atHome: boolean,
    *   isParked: boolean,
    *   forceDockWhisper?: boolean,
+   *   compactInflowWhisper?: boolean,
    *   onPet: () => void
    * }>}
    */
@@ -26,6 +27,7 @@
     atHome: false,
     isParked: false,
     forceDockWhisper: false,
+    compactInflowWhisper: false,
     onPet: () => {}
   });
 
@@ -97,6 +99,12 @@
   const treatIconKey = $derived(normalizeMollyIcon($mollyState.lastTreat?.icon, 'fish'));
   const giftIconKey = $derived(normalizeMollyIcon(giftProgress.icon, 'star'));
   const whisperIconKey = $derived(normalizeMollyIcon($mollyDockBridge.activeWhisper?.icon, 'paw'));
+  const pendingTreatCount = $derived(Math.max(0, Number($mollyState.availableTreats) || 0));
+  const pendingTreatHint = $derived(
+    pendingTreatCount > 0
+      ? `Čeká ${pendingTreatCount} pamlsek pro Molly — kliknutím ji hned nakrmíš. `
+      : ''
+  );
 </script>
 
 <div
@@ -120,13 +128,14 @@
     type="button"
     class="molly-dock-pet-btn"
     class:has-tip={Boolean($mollyDockBridge.pendingTip)}
+    class:has-pending-treat={pendingTreatCount > 0}
     onpointerdown={(e) => e.stopPropagation()}
     onclick={(e) => {
       e.stopPropagation();
       $mollyDockBridge.onPet?.();
     }}
-    title={`${$mollyDockBridge.pendingTip ? 'Molly má pro tebe laskavý tip. ' : ''}Pohladit kočičku Molly. ${nextGiftText}`}
-    aria-label={`${$mollyDockBridge.pendingTip ? 'Molly má pro tebe laskavý tip. ' : ''}Pohladit Molly. Darované pamlsky: ${$mollyState.treatsFedTotal}. ${nextGiftText}`}
+    title={`${pendingTreatHint}${$mollyDockBridge.pendingTip ? 'Molly má pro tebe laskavý tip. ' : ''}Pohladit kočičku Molly. ${nextGiftText}`}
+    aria-label={`${pendingTreatHint}${$mollyDockBridge.pendingTip ? 'Molly má pro tebe laskavý tip. ' : ''}Pohladit Molly. Darované pamlsky: ${$mollyState.treatsFedTotal}. ${nextGiftText}`}
   >
     {#if $mollyDockBridge.pendingTip}
       <span class="molly-tip-dot" aria-hidden="true" data-testid="molly-tip-dot">
@@ -143,24 +152,33 @@
     </span>
     <span class="molly-dock-label">
       <span class="molly-dock-name">Molly</span>
-      <strong class="molly-treat-counter" data-testid="molly-treat-count">
-        <span>{$mollyState.treatsFedTotal}</span>
-        <AppIcon name={treatIconKey} size={12} strokeWidth={2} />
-      </strong>
+      {#if !$mollyDockBridge.atHome}
+        <strong class="molly-treat-counter" data-testid="molly-treat-count">
+          <span>{$mollyState.treatsFedTotal}</span>
+          <AppIcon name={treatIconKey} size={12} strokeWidth={2} />
+        </strong>
+        {#if pendingTreatCount > 0}
+          <span class="molly-pending-treat-pill" data-testid="molly-pending-treat-count">
+            +{pendingTreatCount}
+          </span>
+        {/if}
+      {/if}
     </span>
-    <span
-      class="molly-gift-meter"
-      class:is-complete={giftProgress.complete}
-      aria-hidden="true"
-      data-testid="molly-gift-meter"
-    >
-      <span class="molly-gift-icon">
-        <AppIcon name={giftIconKey} size={12} strokeWidth={2} />
+    {#if !$mollyDockBridge.atHome}
+      <span
+        class="molly-gift-meter"
+        class:is-complete={giftProgress.complete}
+        aria-hidden="true"
+        data-testid="molly-gift-meter"
+      >
+        <span class="molly-gift-icon">
+          <AppIcon name={giftIconKey} size={12} strokeWidth={2} />
+        </span>
+        <span class="molly-gift-track">
+          <span class="molly-gift-fill" style="width: {giftProgress.pct}%"></span>
+        </span>
       </span>
-      <span class="molly-gift-track">
-        <span class="molly-gift-fill" style="width: {giftProgress.pct}%"></span>
-      </span>
-    </span>
+    {/if}
   </button>
 
   {#if !$mollyDockBridge.atHome}
@@ -416,6 +434,26 @@
     line-height: 1.25;
   }
 
+  .molly-dock-pet-btn.has-pending-treat .molly-treat-counter {
+    background: #fde68a;
+    border-color: #b8651b;
+    color: #78350f;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.24);
+  }
+
+  .molly-pending-treat-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1px 5px;
+    border-radius: 999px;
+    background: #1b5e42;
+    color: #ffffff;
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+
   .molly-gift-meter {
     display: inline-flex;
     align-items: center;
@@ -520,6 +558,10 @@
   }
 
   @media (max-width: 480px) {
+    .molly-pending-treat-pill {
+      display: none !important;
+    }
+
     .molly-pelisek-dock.is-header-dock {
       padding: 1px;
       gap: 2px;

@@ -1,10 +1,11 @@
 <script>
   import { onMount, onDestroy, tick as svelteTick } from 'svelte';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import {
     mollyState,
     mollyEvents,
     petMolly,
+    feedMolly,
     mollyWhisper
   } from '$lib/mollyStore.js';
   import {
@@ -20,10 +21,14 @@
   import AppIcon from '$lib/components/AppIcon.svelte';
   import MollyDock, { isCompactDock, mollyDockBridge, normalizeMollyIcon } from './MollyDock.svelte';
 
-  let catCanvas = null;
+  /** @type {HTMLCanvasElement | null} */
+  let catCanvas = $state(null);
+  /** @type {CanvasRenderingContext2D | null} */
   let catCtx = null;
-  let actorEl = null;
-  let treatEl = null;
+  /** @type {HTMLDivElement | null} */
+  let actorEl = $state(null);
+  /** @type {HTMLDivElement | null} */
+  let treatEl = $state(null);
   let rafId = 0;
   let mounted = false;
   const LOGICAL_W = 94;
@@ -37,7 +42,8 @@
   let activeDesktopScale = 0;
   let targetDesktopScale = 0;
   // Bublina se šeptandou je MIMO herce (nezmenšuje se s kočkou na mobilu) a umisťuje se mimo rAF
-  let bubbleEl = null;
+  /** @type {HTMLDivElement | null} */
+  let bubbleEl = $state(null);
   let bubbleW = 0;
   let bubbleH = 0;
   let lastBubbleTransform = '';
@@ -50,14 +56,16 @@
   // Nevyžádaný tip (průvodce), pro který teď není volné místo: zkusíme to znovu, a když ani pak
   // ne, uloží se do pelíšku jako nevtíravý indikátor — ukáže se až na klepnutí (nic nezakryje sám od sebe).
   /** @type {{ icon?: string, text: string } | null} */
-  let pendingTip = null;
+  let pendingTip = $state(null);
   let deferTimer = null;
   let deferTries = 0;
   let lastSeenWhisperTs = 0;
   // Na /svet bydlí Molly u jezera přímo v krajině — toulavá Molly se tam schová (žádné dvě Molly naráz)
-  let atHome = false;
+  const atHome = $derived(
+    (page.url.pathname || '') === '/svet' || (page.url.pathname || '').startsWith('/svet/')
+  );
   // Na přeplněné obrazovce Molly tiše zaparkuje v pelíšku, aniž by měnila uživatelské nastavení režimu
-  let crowdedPark = false;
+  let crowdedPark = $state(false);
   let lastRenderTs = 0;
   // Krok snímku vůči 60 fps — částice (srdíčka, světluška) běží stejně rychle na 60/120 Hz i při poklesu FPS
   let frameK = 1;
@@ -89,23 +97,26 @@
   let lastFollowCalcTs = 0;
   let blinkTimer = 3.6;
   let blinkProgress = 0;
-  let hasFinePointer = false;
+  let hasFinePointer = $state(false);
   let lastPointerMoveTs = 0;
 
   // Ambient firefly & heart particles around Molly
   let firefly = null; // { x, y, vx, vy, phase, alpha }
   let hearts = []; // { x, y, vy, scale, alpha, color }
   let flyingTreat = null; // { x0, y0, cx, cy, x1, y1, p, icon, color, name }
-  let flyingTreatView = null; // { icon, color } — jediná reaktivní část letící dobroty
+  /** @type {{ icon: string, color: string, x0: number, y0: number } | null} */
+  let flyingTreatView = $state(null); // { icon, color } — jediná reaktivní část letící dobroty
   let lastTreatTransform = '';
 
   // Whisper bubble visibility
-  let activeWhisper = null;
+  /** @type {{ icon?: string, text: string, ts?: number, guide?: boolean, fromDock?: boolean, routePath?: string } | null} */
+  let activeWhisper = $state(null);
   let whisperHideTimer = null;
   let walkArriveSafetyTimer = null;
   let dockAnchoredBubble = false;
-  let bubbleTravelling = false;
-  let forceDockWhisper = false;
+  let bubbleTravelling = $state(false);
+  let forceDockWhisper = $state(false);
+  let compactInflowWhisper = $state(false);
 
   let unsubEvents = null;
   let unsubState = null;
@@ -114,6 +125,7 @@
     mood: 'curious',
     treatsFedTotal: 0,
     treatsFedToday: 0,
+    availableTreats: 0,
     lastTreat: null,
     petCount: 0,
     whisper: null
@@ -128,6 +140,7 @@
     pendingWhisperMs = durationMs;
     dockAnchoredBubble = false;
     forceDockWhisper = false;
+    compactInflowWhisper = false;
     whisperHideTimer = setTimeout(hideWhisperBubble, durationMs);
     placeWhisperBubble();
   }
@@ -143,6 +156,7 @@
     dockAnchoredBubble = false;
     bubbleTravelling = false;
     forceDockWhisper = false;
+    compactInflowWhisper = false;
     lastBubbleTransform = '';
     cachedWhisperRectKey = '';
     cachedWhisperRect = null;
@@ -286,6 +300,23 @@
       }
       updateBubbleAnchorMode(posX, posY);
       evaluateDockWhisperFallback(posX, posY);
+      if (
+        $isCompactDock &&
+        vw <= MOBILE_MAX_W &&
+        (activeWhisper.fromDock || currentState.mode === 'docked' || crowdedPark)
+      ) {
+        const { obsCost } = findBestWhisperRectWithCost(posX, posY, actorScale(vw), vw, vh);
+        if (obsCost > 0) {
+          compactInflowWhisper = true;
+          await svelteTick();
+          if (mounted && !atHome) {
+            measureLayoutAndObstacles(vw, vh);
+            if (currentState.mode === 'roaming') {
+              relocateToFreeSpot(false);
+            }
+          }
+        }
+      }
       applyActorTransform();
       return;
     }
@@ -382,8 +413,8 @@
     flyingTreatView = {
       icon: flyingTreat.icon,
       color: flyingTreat.color,
-      x0: startX.toFixed(1),
-      y0: startY.toFixed(1)
+      x0: Number(startX.toFixed(1)),
+      y0: Number(startY.toFixed(1))
     };
     lastTreatTransform = '';
 
@@ -397,7 +428,7 @@
   // Molly i její bublina jsou pevně umístěné nad stránkou. Vybírá si místo podle toho,
   // co je zrovna pod ní: tlačítka, odkazy, pole formuláře, nadpisy, odstavce ani mapu nikdy nepřekrývá.
   const OBSTACLE_SELECTOR =
-    'a[href], button, input, select, textarea, label, summary, [role="button"], [data-molly-guide], h1, h2, h3, h4, p, .hero-overline, .page-header-kicker, .section-overline, .smart-nearest-banner, .count-heading, .deed-preview-stage, .card-effect-stage, .bento-cta, .card-cta, .card-title, .card-overline, .chip, .pill, .cat-pill, .city-chip, .q-pill, .preset-pill, .topic-pill, .filter-chip, .source-chip, .radius-pill, .energy-tab, .mobile-guided-preview-bar, .feedback-pill, .deck-header-bar, .deck-indicator, .deck-nav-btn, .instant-card, .action-card, .place-card, .bento-card, .portal-card, .portal-mini, .nav-capsule, .top-nav, .card, .compass-shell, .highlight-card, .alt-card, .local-card, .side-note, .empty-box, .calm-drawer, .footer-col, .footer-brand, .footer-desc, .footer-heading, .footer-trust, .map-frame, .leaflet-container';
+    'a[href], button, input, select, textarea, label, summary, [role="button"], [data-molly-guide], h1, h2, h3, h4, p, .hero-overline, .page-header-kicker, .section-overline, .smart-nearest-banner, .count-heading, .deed-preview-stage, .card-effect-stage, .bento-cta, .card-cta, .card-title, .card-overline, .chip, .pill, .cat-pill, .city-chip, .q-pill, .preset-pill, .topic-pill, .filter-chip, .source-chip, .radius-pill, .energy-tab, .mobile-guided-preview-bar, .feedback-pill, .deck-header-bar, .deck-indicator, .deck-nav-btn, .instant-card, .action-card, .place-card, .bento-card, .portal-card, .portal-mini, .nav-capsule, .top-nav, .card, .compass-shell, .highlight-card, .alt-card, .local-card, .side-note, .empty-box, .calm-drawer, .footer-col, .footer-brand, .footer-desc, .footer-heading, .footer-trust, .map-frame, .leaflet-container, .quick-tags-pill, .category-aura-chip, .molly-celebration-note, .legend-chip, .qd-chip';
   const MOBILE_MAX_W = 680;
 
   function viewportSize() {
@@ -517,10 +548,10 @@
 
     /** @type {DOMRect | null} */
     let crisis = null;
-    const cEls = document.querySelectorAll('.crisis-widget > button, .crisis-mobile-fab');
+    const cEls = document.querySelectorAll('.crisis-widget > button');
     for (const el of cEls) {
       const r = el.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0) {
+      if (r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < vh) {
         crisis = r;
         break;
       }
@@ -894,11 +925,20 @@
       if (el.matches('.top-nav, .nav-capsule')) continue;
       const closedDetails = el.closest('details:not([open])');
       if (closedDetails && !el.closest('summary')) continue;
+      const inAnimatedPayoff = Boolean(
+        el.closest('.in-situ-celebration, .celebration-card, .return-dopamine-strip, .card-effect-stage')
+      );
       if (typeof el.checkVisibility === 'function') {
-        if (!el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
+        if (!el.checkVisibility({ checkOpacity: !inAnimatedPayoff, checkVisibilityCSS: true })) continue;
       } else {
         const cs = getComputedStyle(el);
-        if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) < 0.05) continue;
+        if (
+          cs.display === 'none' ||
+          cs.visibility === 'hidden' ||
+          (!inAnimatedPayoff && Number(cs.opacity) < 0.05)
+        ) {
+          continue;
+        }
       }
       const r = el.getBoundingClientRect();
       if (r.width < 2 || r.height < 2) continue;
@@ -914,7 +954,7 @@
       if (
         textRange &&
         (el.matches(
-          'h2, h3, h4, p, label, .hero-overline, .section-overline, .page-header-kicker, .count-heading, .bento-cta, .card-cta, .card-title, .card-overline'
+          'h4, p, label, .hero-overline, .section-overline, .page-header-kicker, .count-heading, .bento-cta, .card-cta, .card-title, .card-overline'
         ) ||
           (el.tagName === 'SUMMARY' && !el.closest('.instant-card'))) &&
         !el.closest('.instant-card, .site-footer, button') &&
@@ -949,11 +989,13 @@
         el.tagName === 'SELECT' ||
         el.tagName === 'TEXTAREA' ||
         el.tagName === 'H1' ||
+        el.tagName === 'H2' ||
+        el.tagName === 'H3' ||
         el.matches('[role="button"]') ||
-        (el.matches('a[href]') && !isBlockCardLink) ||
+        el.matches('a[href]') ||
         (inInstantCard && el.matches('h1, h2, p, summary')) ||
         el.matches(
-          '.deck-header-bar, .deck-indicator, .deck-nav-btn, .energy-tab, .filter-chip, .source-chip, .radius-pill, .preset-pill, .topic-pill, .chip, .pill, .cat-pill, .city-chip, .q-pill, .mobile-guided-preview-bar, .map-frame, .leaflet-container, .deed-preview-stage, .card-effect-stage, .footer-brand, .footer-desc, .footer-heading'
+          '.deck-header-bar, .deck-indicator, .deck-nav-btn, .energy-tab, .filter-chip, .source-chip, .radius-pill, .preset-pill, .topic-pill, .chip, .pill, .cat-pill, .city-chip, .q-pill, .mobile-guided-preview-bar, .map-frame, .leaflet-container, .deed-preview-stage, .card-effect-stage, .footer-brand, .footer-desc, .footer-heading, .quick-tags-pill, .category-aura-chip, .molly-celebration-note, .legend-chip, .qd-chip'
         );
       const catHard = isMobile ? true : isHardDesktopCatTarget;
       const isProminentHeading =
@@ -974,7 +1016,7 @@
         el.tagName === 'H1' ||
         el.tagName === 'BUTTON' ||
         el.matches(
-          'a.btn-studio-primary, .deck-header-bar, .deck-indicator, .deck-nav-btn, .map-frame, .leaflet-container, .crisis-trigger, .crisis-mobile-fab, .footer-brand, .footer-desc, .footer-heading'
+          'a.btn-studio-primary, .deck-header-bar, .deck-indicator, .deck-nav-btn, .map-frame, .leaflet-container, .crisis-trigger, .footer-brand, .footer-desc, .footer-heading'
         ) ||
         inInstantCard;
       const isSoftCardSurface =
@@ -1432,26 +1474,31 @@
     const curOnFloor = Math.abs(baseY - gY) <= 18;
     const hereBd =
       curOnFloor && !crowdedPark
-        ? scoreSpotBreakdown(baseX, baseY, s, vw, obstacles, withBubble)
+        ? scoreSpotBreakdown(baseX, baseY, s, vw, obstacles, false)
         : { hard: Infinity, headingArea: Infinity, softTextRatio: 1, softCardRatio: 1, softCost: Infinity };
 
-    const spot = findBestSpot({
+    const catSpot = findBestSpot({
       preferX: baseX,
       preferY: gY,
-      withBubble,
+      withBubble: false,
       obstacles,
       nearbyBias: true
     });
-    const catSpot = withBubble
-      ? findBestSpot({ preferX: baseX, preferY: gY, withBubble: false, obstacles, nearbyBias: true })
-      : spot;
+    const bubbleSpot = withBubble
+      ? findBestSpot({ preferX: baseX, preferY: gY, withBubble: true, obstacles, nearbyBias: true })
+      : catSpot;
 
-    const canAutoPark = vw <= 1024;
+    const canAutoPark = true;
     if (catSpot.raw > 0 && (canAutoPark || crowdedPark)) {
       crowdedPark = true;
       applyActorTransform();
       return false;
     }
+
+    const spot =
+      withBubble && scoreSpot(bubbleSpot.x, bubbleSpot.y, bubbleSpot.scale || s, vw, obstacles, false) <= 0
+        ? bubbleSpot
+        : catSpot;
 
     const wasParked = crowdedPark;
     crowdedPark = false;
@@ -1519,6 +1566,7 @@
     urgentStepAside = hereBd.hard > 0 || hereBd.headingArea > 0;
     behavior = 'WALK_ROAM';
     behaviorTimer = Math.max(4.5, Math.abs(targetX - posX) / 55 + 2.0);
+    applyActorTransform();
     ensureLoopRunning();
     return true;
   }
@@ -1828,7 +1876,7 @@
           obstacles,
           nearbyBias: true
         });
-        if (floorSpot.raw <= 0 || (vw > 1024 && !crowdedPark)) {
+        if (floorSpot.raw <= 0) {
           crowdedPark = false;
           followTargetX = floorSpot.x;
           followTargetY = floorSpot.y;
@@ -1890,16 +1938,22 @@
 
   /** @param {boolean} [fromDock] - z pelíšku ukážeme zprávu okamžitě na volném místě */
   function triggerPetInteraction(fromDock = false) {
-    petBlissTimer = 2.6;
-    behavior = 'PET_BLISS';
-    behaviorTimer = 2.8;
-    spawnHeartBurst(8);
     // Uložený tip z pelíšku: člověk si o něj sám řekl, takže ho Molly teď ukáže okamžitě
     if (fromDock && pendingTip) {
+      petBlissTimer = 2.6;
+      behavior = 'PET_BLISS';
+      behaviorTimer = 2.8;
+      spawnHeartBurst(8);
       const tip = pendingTip;
       pendingTip = null;
       petMolly(tip.text, { fromDock: true, icon: normalizeMollyIcon(tip.icon, 'paw') });
+    } else if ((currentState.availableTreats || 0) > 0) {
+      feedMolly(fromDock ? 'dock' : 'companion', { fromDock });
     } else {
+      petBlissTimer = 2.6;
+      behavior = 'PET_BLISS';
+      behaviorTimer = 2.8;
+      spawnHeartBurst(8);
       const isCompact = typeof window !== 'undefined' && window.innerWidth <= MOBILE_MAX_W;
       petMolly(
         undefined,
@@ -1917,7 +1971,30 @@
   let settleTimer1 = null;
   let settleTimer2 = null;
   let layoutChangeTimer = null;
+  let postAnimationTimer = null;
   let mainResizeObserver = null;
+
+  function schedulePostAnimationRemeasure(delayMs = 320) {
+    if (postAnimationTimer) clearTimeout(postAnimationTimer);
+    postAnimationTimer = setTimeout(() => {
+      postAnimationTimer = null;
+      if (!mounted || atHome) return;
+      measureLayoutAndObstacles();
+      if (bubbleEl) {
+        bubbleW = bubbleEl.offsetWidth;
+        bubbleH = bubbleEl.offsetHeight;
+      }
+      if (currentState.mode === 'roaming') {
+        relocateToFreeSpot(Boolean(activeWhisper && bubbleW));
+      }
+      if (activeWhisper && bubbleW) {
+        updateBubbleAnchorMode(targetX, targetY);
+        evaluateDockWhisperFallback(targetX, targetY);
+        lastBubbleTransform = '';
+        applyActorTransform();
+      }
+    }, delayMs);
+  }
 
   // ===================== Molly jako průvodkyně (směrování) =====================
   // 1) Při prvním příchodu na stránku (1× za session) pošeptá, co se tu dá udělat.
@@ -2051,7 +2128,7 @@
     // Molly dojde po spodní „chodníkové“ linii co nejblíž pod tlačítko, ale jen na místo,
     // kde nic nezakrývá. Tlačítko jemně rozzáří.
     const spot = findBestSpot({ preferX: ctaCx, withBubble: false });
-    if (spot.raw > 0 && vw <= 1024) {
+    if (spot.raw > 0) {
       crowdedPark = true;
       behavior = 'IDLE_SIT';
       applyActorTransform();
@@ -2139,8 +2216,8 @@
     // Tip patřil předchozí stránce
     clearDeferredGuide();
     pendingTip = null;
-    atHome = path === '/svet' || path.startsWith('/svet/');
-    if (!atHome && typeof window !== 'undefined') {
+    const pathAtHome = path === '/svet' || path.startsWith('/svet/');
+    if (!pathAtHome && typeof window !== 'undefined') {
       setTimeout(() => {
         measureLayoutAndObstacles();
         snapMollyToFreeSpot();
@@ -2425,9 +2502,15 @@
       }
     };
 
+    /** @type {number | null} */
+    let prevAvailableTreats = null;
     unsubState = mollyState.subscribe((val) => {
       currentState = val;
       accessories = getMollyAccessories(val.giftDeeds);
+      const nextTreats = Number(val.availableTreats) || 0;
+      const treatsIncreased =
+        prevAvailableTreats !== null && nextTreats > prevAvailableTreats;
+      prevAvailableTreats = nextTreats;
       // Porovnáváme s naposledy ukázanou zprávou (ne s aktivní bublinou) — jinak by každá
       // jiná změna stavu (např. nálada při dýchání) znovu vytáhla už skrytou starou zprávu.
       if (val.whisper && val.whisper.ts !== lastSeenWhisperTs) {
@@ -2438,6 +2521,20 @@
         // Nový dárek si zaslouží delší chvilku na přečtení
         showWhisperBubble(val.whisper, val.whisper.milestone ? 6000 : 4200);
         if (val.whisper.milestone) spawnHeartBurst(10);
+      }
+      if (treatsIncreased && mounted && !atHome && val.mode === 'roaming') {
+        svelteTick().then(() => {
+          if (!mounted || atHome || currentState.mode !== 'roaming') return;
+          measureLayoutAndObstacles();
+          relocateToFreeSpot(Boolean(activeWhisper && bubbleW));
+          if (activeWhisper && bubbleW) {
+            updateBubbleAnchorMode(targetX, targetY);
+            evaluateDockWhisperFallback(targetX, targetY);
+            lastBubbleTransform = '';
+            applyActorTransform();
+          }
+        });
+        schedulePostAnimationRemeasure(320);
       }
       if (val.mode === 'docked') clearGuideGlow();
       ensureLoopRunning();
@@ -2458,7 +2555,7 @@
         const d = dockRect();
         const wakePreferX = d && d.left < curVw * 0.35 ? d.right + 64 : posX;
         const spot = findBestSpot({ preferX: wakePreferX, withBubble: false, nearbyBias: true });
-        if (spot.raw > 0 && curVw <= 1024) {
+        if (spot.raw > 0) {
           crowdedPark = true;
           behavior = 'IDLE_SIT';
           applyActorTransform();
@@ -2534,9 +2631,7 @@
       }
     }
 
-    unsubPage = page.subscribe(($p) => {
-      handleRouteChange($p?.url?.pathname || '/');
-    });
+    handleRouteChange(page.url.pathname || '/');
 
     window.addEventListener('pointermove', handleWindowPointerMove, {
       passive: true
@@ -2578,7 +2673,8 @@
                 lastBubbleTransform = '';
                 applyActorTransform();
               }
-            }, 90);
+            }, 25);
+            schedulePostAnimationRemeasure(320);
           }
         });
         mainResizeObserver.observe(mainEl);
@@ -2603,6 +2699,7 @@
   });
 
   onDestroy(() => {
+    mounted = false;
     if (rafId && typeof cancelAnimationFrame !== 'undefined') {
       cancelAnimationFrame(rafId);
     }
@@ -2615,13 +2712,14 @@
     if (settleTimer1) clearTimeout(settleTimer1);
     if (settleTimer2) clearTimeout(settleTimer2);
     if (layoutChangeTimer) clearTimeout(layoutChangeTimer);
+    if (postAnimationTimer) clearTimeout(postAnimationTimer);
+    postAnimationTimer = null;
     if (resizeTimer) clearTimeout(resizeTimer);
     mainResizeObserver?.disconnect();
     mainResizeObserver = null;
     if (typeof document !== 'undefined') clearGuideGlow();
     unsubEvents?.();
     unsubState?.();
-    unsubPage?.();
     if (typeof window !== 'undefined') {
       window.removeEventListener('pointermove', handleWindowPointerMove);
       window.removeEventListener('pointerdown', handleWindowPointerDown);
@@ -2649,19 +2747,32 @@
     }
   });
 
-  $: nextGiftText = describeNextMollyGift($mollyState.giftDeeds);
-  $: roamingWhisper =
+  $effect(() => {
+    const p = page.url.pathname || '/';
+    if (mounted) {
+      handleRouteChange(p);
+    }
+  });
+
+  const nextGiftText = $derived(describeNextMollyGift($mollyState.giftDeeds));
+  const roamingWhisper = $derived(
     activeWhisper &&
-    !forceDockWhisper &&
-    ($isCompactDock || ($mollyState.mode === 'roaming' && !atHome && !crowdedPark));
-  $: mollyDockBridge.set({
-    pendingTip,
-    activeWhisper,
-    hasFinePointer,
-    atHome,
-    isParked: crowdedPark,
-    forceDockWhisper,
-    onPet: () => triggerPetInteraction(true)
+      !forceDockWhisper &&
+      !compactInflowWhisper &&
+      ($isCompactDock || ($mollyState.mode === 'roaming' && !atHome && !crowdedPark))
+  );
+
+  $effect(() => {
+    mollyDockBridge.set({
+      pendingTip,
+      activeWhisper,
+      hasFinePointer,
+      atHome,
+      isParked: crowdedPark,
+      forceDockWhisper,
+      compactInflowWhisper,
+      onPet: () => triggerPetInteraction(true)
+    });
   });
 </script>
 

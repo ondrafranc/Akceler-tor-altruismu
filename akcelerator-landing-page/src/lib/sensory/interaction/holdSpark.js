@@ -7,22 +7,17 @@ import { tone } from '../../audio/synthesizer.js';
 import { getAudioContext } from '../../audio/audioContext.js';
 import { triggerCanvasBurst } from '../canvas/controllerRegistry.js';
 
-export let globalSparkCharge = 0;
-
 export function startHoldSpark(el, cb) {
   const t0 = performance.now();
   const red = prefersReducedMotion();
   const sp = (v) => el?.style?.setProperty('--spark-charge', v);
   let id = 0;
   let d = 0;
-  /** @type {ReturnType<typeof setTimeout> | number | undefined} */
-  let decayTimer;
   vib([10, 20, 40]);
   const g1 = tone(294, 0.68, 'sine', 0, 0.04, 440);
   const g2 = tone(587, 0.68, 'triangle', 0, 0.024, 880);
   const step = (now) => {
     const p = red ? 1 : Math.min(1, (now - t0) / 600);
-    globalSparkCharge = p;
     sp(p.toFixed(2));
     if (p >= 1 && !d) {
       d = 1;
@@ -33,9 +28,6 @@ export function startHoldSpark(el, cb) {
       tone(1174.66, 0.42, 'sine', 0.08, 0.03);
       triggerCanvasBurst(null, true);
       cb?.();
-      decayTimer = setTimeout(() => {
-        globalSparkCharge = 0;
-      }, 450);
       return;
     }
     if (p < 1) id = requestAnimationFrame(step);
@@ -43,8 +35,6 @@ export function startHoldSpark(el, cb) {
   id = requestAnimationFrame(step);
   return (rel = false) => {
     cancelAnimationFrame(id);
-    if (decayTimer) clearTimeout(decayTimer);
-    globalSparkCharge = 0;
     sp('0');
     el?.classList?.remove('spark-ready');
     try {

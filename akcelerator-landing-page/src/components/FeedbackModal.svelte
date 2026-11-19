@@ -1,113 +1,222 @@
-<script context="module">
-  import { openBrokenLinkReport as _openBrokenLinkReport } from '../lib/analytics.js';
+<script module>
+  import { openBrokenLinkReport as _openBrokenLinkReport } from "../lib/analytics.js";
   export const openBrokenLinkReport = _openBrokenLinkReport;
 </script>
 
 <script>
-  import { onMount, onDestroy } from 'svelte';
-  import { feedbackReportRequest } from '../lib/analytics.js';
-  import AppIcon from '$lib/components/AppIcon.svelte';
+  import { onMount, onDestroy, tick } from "svelte";
+  import { feedbackReportRequest } from "../lib/analytics.js";
+  import AppIcon from "$lib/components/AppIcon.svelte";
   import {
     cleanTitle,
     isFeedbackOpen,
     feedbackPrefill,
     openFeedbackModal,
-    closeFeedbackModal
-  } from '../lib/utils.js';
+    closeFeedbackModal,
+  } from "../lib/utils.js";
 
-  let modalTitle = 'Zpětná vazba';
-  let feedback = '';
-  let rating = 0;
-  let isSubmitting = false;
-  let statusMessage = '';
-  let statusType = '';
+  /** @type {{ showFloatingPill?: boolean }} */
+  let { showFloatingPill = false } = $props();
+
+  let modalTitle = $state("Zpětná vazba");
+  let feedback = $state("");
+  let rating = $state(0);
+  let isSubmitting = $state(false);
+  let statusMessage = $state("");
+  let statusType = $state("");
+  /** @type {ReturnType<typeof setTimeout> | null} */
   let closeTimer = null;
 
-  $: isOpen = $isFeedbackOpen;
+  /** @type {HTMLDivElement | null} */
+  let dialogEl = $state(null);
+  /** @type {HTMLTextAreaElement | null} */
+  let textareaEl = $state(null);
+  /** @type {HTMLElement | null} */
+  let previousFocusedEl = null;
+  let wasOpen = false;
 
-  $: if ($feedbackPrefill) {
+  const isOpen = $derived(Boolean($isFeedbackOpen));
+  const isFormValid = $derived(feedback.trim().length > 0);
+
+  $effect(() => {
     const prefillVal = $feedbackPrefill;
-    if (typeof prefillVal === 'string') {
-      modalTitle = 'Nahlásit nefunkční údaj';
-      feedback = prefillVal;
-    } else if (typeof prefillVal === 'object' && prefillVal !== null) {
-      modalTitle = cleanTitle(prefillVal.title || '') || 'Zpětná vazba';
-      if (prefillVal.prefill) {
-        feedback = prefillVal.prefill;
+    if (prefillVal) {
+      if (typeof prefillVal === "string") {
+        modalTitle = "Nahlásit nefunkční údaj";
+        feedback = prefillVal;
+      } else if (typeof prefillVal === "object" && prefillVal !== null) {
+        modalTitle = cleanTitle(prefillVal.title || "") || "Zpětná vazba";
+        if (prefillVal.prefill) {
+          feedback = prefillVal.prefill;
+        }
       }
+      statusMessage = "";
+      statusType = "";
+      feedbackPrefill.set("");
     }
-    statusMessage = '';
-    statusType = '';
-    feedbackPrefill.set('');
-  }
+  });
 
-  $: if ($feedbackReportRequest?.open) {
-    openFeedbackModal({
-      title: cleanTitle($feedbackReportRequest.title || '') || 'Nahlásit nefunkční údaj',
-      prefill: $feedbackReportRequest.prefill || ''
-    });
-    feedbackReportRequest.set(null);
-  }
+  $effect(() => {
+    if ($feedbackReportRequest?.open) {
+      openFeedbackModal({
+        title:
+          cleanTitle($feedbackReportRequest.title || "") ||
+          "Nahlásit nefunkční údaj",
+        prefill: $feedbackReportRequest.prefill || "",
+      });
+      feedbackReportRequest.set(null);
+    }
+  });
 
-  $: isFormValid = feedback.trim().length > 0;
+  $effect(() => {
+    const open = isOpen;
+    if (open && !wasOpen) {
+      const active = typeof document !== "undefined" ? document.activeElement : null;
+      previousFocusedEl =
+        active instanceof HTMLElement &&
+        active !== document.body &&
+        active !== document.documentElement
+          ? active
+          : null;
+      tick().then(() => {
+        if ($isFeedbackOpen) {
+          textareaEl?.focus();
+        }
+      });
+    } else if (!open && wasOpen) {
+      const targetToRestore = previousFocusedEl;
+      previousFocusedEl = null;
+      tick().then(() => {
+        if (
+          targetToRestore &&
+          targetToRestore !== document.body &&
+          targetToRestore !== document.documentElement &&
+          targetToRestore.isConnected
+        ) {
+          targetToRestore.focus();
+        } else if (typeof document !== "undefined") {
+          for (const el of document.querySelectorAll(".mobile-nav-toggle, .fc-feedback")) {
+            if (!(el instanceof HTMLElement)) continue;
+            const cs = getComputedStyle(el);
+            if (
+              cs.display !== "none" &&
+              cs.visibility !== "hidden" &&
+              el.getClientRects().length > 0
+            ) {
+              el.focus();
+              break;
+            }
+          }
+        }
+      });
+    }
+    wasOpen = open;
+  });
 
+  /** @type {Record<number, string>} */
   const ratingLabels = {
-    1: 'Nepomohlo',
-    2: 'Trochu pomohlo',
-    3: 'Pomohlo',
-    4: 'Hodně pomohlo',
-    5: 'Skvělé, přesně tohle se mi hodilo'
+    1: "Nepomohlo",
+    2: "Trochu pomohlo",
+    3: "Pomohlo",
+    4: "Hodně pomohlo",
+    5: "Skvělé, přesně tohle se mi hodilo",
   };
 
   function openModal() {
-    openFeedbackModal({ title: 'Zpětná vazba' });
+    openFeedbackModal({ title: "Zpětná vazba" });
   }
 
   function closeModal() {
     closeFeedbackModal();
-    statusMessage = '';
-    statusType = '';
+    statusMessage = "";
+    statusType = "";
   }
 
+  /** @returns {HTMLElement[]} */
+  function getFocusableModalElements() {
+    if (!dialogEl) return [];
+    const selector = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    /** @type {HTMLElement[]} */
+    const results = [];
+    for (const el of dialogEl.querySelectorAll(selector)) {
+      if (el instanceof HTMLElement && el.offsetParent !== null) {
+        results.push(el);
+      }
+    }
+    return results;
+  }
+
+  /** @param {KeyboardEvent} e */
   function handleKeydown(e) {
-    if (e.key === 'Escape' && isOpen) {
+    if (!isOpen) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
       closeModal();
+      return;
+    }
+    if (e.key === "Tab" && dialogEl) {
+      const focusables = getFocusableModalElements();
+      if (focusables.length === 0) {
+        e.preventDefault();
+        dialogEl.focus();
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey) {
+        if (!dialogEl.contains(active) || active === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (!dialogEl.contains(active) || active === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     }
   }
 
-  async function handleSubmit() {
+  /** @param {SubmitEvent} e */
+  async function handleSubmit(e) {
+    e.preventDefault();
     if (!isFormValid || isSubmitting) return;
     isSubmitting = true;
-    statusMessage = '';
+    statusMessage = "";
 
     try {
-      const resp = await fetch('/api/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const resp = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           feedback_text: feedback.trim(),
           rating: rating || undefined,
-          page_url: typeof window !== 'undefined' ? window.location.pathname : '/'
-        })
+          page_url:
+            typeof window !== "undefined" ? window.location.pathname : "/",
+        }),
       });
       const data = await resp.json().catch(() => ({}));
 
       if (resp.ok && data?.success) {
-        statusType = 'success';
-        statusMessage = 'Děkujeme! Tvoje zpětná vazba nám pomůže web dál zlepšovat.';
+        statusType = "success";
+        statusMessage =
+          "Děkujeme! Tvoje zpětná vazba nám pomůže web dál zlepšovat.";
         if (closeTimer) clearTimeout(closeTimer);
         closeTimer = setTimeout(() => {
-          feedback = '';
+          feedback = "";
           rating = 0;
           closeModal();
         }, 1600);
       } else {
-        statusType = 'error';
-        statusMessage = data?.error || 'Nepodařilo se odeslat zpětnou vazbu. Zkus to prosím později.';
+        statusType = "error";
+        statusMessage =
+          data?.error ||
+          "Nepodařilo se odeslat zpětnou vazbu. Zkus to prosím později.";
       }
     } catch {
-      statusType = 'error';
-      statusMessage = 'Nepodařilo se odeslat zpětnou vazbu.';
+      statusType = "error";
+      statusMessage = "Nepodařilo se odeslat zpětnou vazbu.";
     } finally {
       isSubmitting = false;
     }
@@ -117,9 +226,9 @@
     const handleOpen = () => {
       openModal();
     };
-    window.addEventListener('akcelerator:open-feedback', handleOpen);
+    window.addEventListener("akcelerator:open-feedback", handleOpen);
     return () => {
-      window.removeEventListener('akcelerator:open-feedback', handleOpen);
+      window.removeEventListener("akcelerator:open-feedback", handleOpen);
     };
   });
 
@@ -128,28 +237,33 @@
   });
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} />
 
-<button
-  type="button"
-  class="feedback-pill"
-  on:click={openModal}
-  aria-label="Otevřít formulář zpětné vazby"
->
-  <AppIcon name="message-circle" size={15} strokeWidth={2} />
-  <span class="fb-label">Zpětná vazba</span>
-</button>
+{#if showFloatingPill}
+  <button
+    type="button"
+    class="feedback-pill"
+    onclick={openModal}
+    aria-label="Otevřít formulář zpětné vazby"
+  >
+    <AppIcon name="message-circle" size={15} strokeWidth={2} />
+    <span class="fb-label">Zpětná vazba</span>
+  </button>
+{/if}
 
 {#if isOpen}
-  <!-- svelte-ignore a11y-click-events-have-key-events -->
-  <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <div
+    bind:this={dialogEl}
     class="modal-backdrop"
     role="dialog"
     aria-modal="true"
     aria-labelledby="fb-title"
     tabindex="-1"
-    on:click|self={closeModal}
+    onclick={(e) => {
+      if (e.target === e.currentTarget) closeModal();
+    }}
   >
     <div class="modal-card">
       <div class="modal-head">
@@ -157,38 +271,46 @@
           <AppIcon name="message-circle" size={20} strokeWidth={2} />
           <span>{modalTitle}</span>
         </h2>
-        <button type="button" class="close-btn" on:click={closeModal} aria-label="Zavřít">
+        <button
+          type="button"
+          class="close-btn"
+          onclick={closeModal}
+          aria-label="Zavřít"
+        >
           <AppIcon name="x" size={18} strokeWidth={2} />
         </button>
       </div>
 
       <p class="modal-sub">
-        Chybí ti tu nějaká organizace, něco nefunguje nebo máš nápad na zlepšení? Napiš nám anonymně pár slov.
+        Chybí ti tu nějaká organizace, něco nefunguje nebo máš nápad na
+        zlepšení? Napiš nám anonymně pár slov.
       </p>
 
-      <form on:submit|preventDefault={handleSubmit} class="fb-form">
+      <form onsubmit={handleSubmit} class="fb-form">
         <label class="field-label" for="fb-textarea">Tvůj vzkaz</label>
         <textarea
+          bind:this={textareaEl}
           id="fb-textarea"
           name="feedback_message"
           autocomplete="off"
           bind:value={feedback}
           rows="4"
-          maxlength="1000"
+          maxlength="1500"
           placeholder="Co ti pomohlo, nebo co bychom měli upravit..."
           disabled={isSubmitting}
-          required
-        ></textarea>
+          required></textarea>
 
         <div class="rating-block">
-          <span class="field-label">Jak užitečný pro tebe web je? (volitelné)</span>
+          <span class="field-label"
+            >Jak užitečný pro tebe web je? (volitelné)</span
+          >
           <div class="stars">
             {#each [1, 2, 3, 4, 5] as s}
               <button
                 type="button"
                 class="star-btn"
                 class:active={rating >= s}
-                on:click={() => (rating = s)}
+                onclick={() => (rating = s)}
                 aria-label={`${s} z 5 hvězd`}
               >
                 <AppIcon name="star" size={22} strokeWidth={1.85} />
@@ -205,8 +327,12 @@
         {/if}
 
         <div class="actions">
-          <button type="submit" class="submit-btn" disabled={!isFormValid || isSubmitting}>
-            {isSubmitting ? 'Odesílám…' : 'Odeslat zpětnou vazbu'}
+          <button
+            type="submit"
+            class="submit-btn"
+            disabled={!isFormValid || isSubmitting}
+          >
+            {isSubmitting ? "Odesílám…" : "Odeslat zpětnou vazbu"}
           </button>
         </div>
       </form>
@@ -237,7 +363,10 @@
     font-size: 0.78rem;
     cursor: pointer;
     box-shadow: var(--shadow-md, 0 8px 20px -6px rgba(18, 42, 30, 0.08));
-    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+    transition:
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      color 0.18s ease;
   }
 
   .feedback-pill:hover {
@@ -301,7 +430,9 @@
     cursor: pointer;
     color: var(--ink-secondary, #3f574a);
     flex-shrink: 0;
-    transition: background-color 0.15s ease, color 0.15s ease;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
   }
 
   .close-btn:hover {
@@ -367,7 +498,9 @@
     justify-content: center;
     padding: 0.25rem;
     border-radius: 10px;
-    transition: color 0.15s ease, background-color 0.15s ease;
+    transition:
+      color 0.15s ease,
+      background-color 0.15s ease;
   }
 
   .star-btn:hover {
@@ -452,7 +585,8 @@
       overflow-y: auto;
       border-bottom-left-radius: 0;
       border-bottom-right-radius: 0;
-      padding: 1.15rem 1.15rem max(1.25rem, env(safe-area-inset-bottom, 0px)) 1.15rem;
+      padding: 1.15rem 1.15rem max(1.25rem, env(safe-area-inset-bottom, 0px))
+        1.15rem;
     }
   }
 </style>

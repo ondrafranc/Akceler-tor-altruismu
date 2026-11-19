@@ -1,6 +1,7 @@
 <script>
   import { onMount } from "svelte";
-  import { page } from "$app/stores";
+  import { goto } from "$app/navigation";
+  import { page } from "$app/state";
   import {
     MICRO_ACTIONS,
     HOPE_FACTS,
@@ -15,10 +16,10 @@
     openBrokenLinkReport,
   } from "../lib/analytics.js";
   import { isSoundMuted, toggleSoundMuted } from "../lib/audio/audioContext.js";
-  import { playCelebrationChord } from "../lib/audio/presets.js";
   import {
     savePendingPartnerReturn,
     consumePendingPartnerReturn,
+    readPendingPartnerRecord,
   } from "../lib/features/actions/services/partnerReturnService.js";
   import { cleanTitle } from "../lib/utils.js";
   import {
@@ -37,12 +38,14 @@
   import PortalsDrawer from "../lib/features/home/PortalsDrawer.svelte";
   import SwipeDeck from "../lib/features/actions/components/SwipeDeck.svelte";
 
-  /** @type {Record<import('$lib/types').HomeEnergyMode, { icon: string, label: string, hint: string, timeBucket: string, mode: string, social: string, cost: string, commitment: string }>} */
+  /** @type {Record<import('$lib/types').HomeEnergyMode, { icon: string, label: string, hint: string, desktopClaim: string, mobileClaim: string, timeBucket: string, mode: string, social: string, cost: string, commitment: string }>} */
   const HOME_MODES = {
     couch: {
       icon: "armchair",
       label: "Mám 2 min",
       hint: "Okamžitý mikro-skutek online · 0 Kč · bez registrace",
+      desktopClaim: "Stačí 2 minuty dnes.",
+      mobileClaim: "Jeden ověřený dobrý skutek na 2 minuty zdarma.",
       timeBucket: "5",
       mode: "online",
       social: "solo",
@@ -53,6 +56,8 @@
       icon: "telescope",
       label: "Mám 15 min",
       hint: "Občanská věda, fotopasti nebo humanitární mapování z domova",
+      desktopClaim: "Stačí 15 minut dnes.",
+      mobileClaim: "Smysluplný skutek na 15 minut z domova zdarma.",
       timeBucket: "15",
       mode: "online",
       social: "solo",
@@ -63,6 +68,8 @@
       icon: "map-pin",
       label: "Osobně",
       hint: "Konkrétní pomoc venku v tvém okolí bez obrazovek",
+      desktopClaim: "Stačí krátká procházka dnes.",
+      mobileClaim: "Konkrétní dobrý skutek v tvém okolí bez obrazovek.",
       timeBucket: "15",
       mode: "local",
       social: "solo",
@@ -73,6 +80,8 @@
       icon: "sprout",
       label: "Dlouhodobě",
       hint: "Smysluplné dobrovolnictví, dárcovství nebo pravidelná pomoc s lidmi",
+      desktopClaim: "Stačí jeden krok s ostatními.",
+      mobileClaim: "Dobrovolnictví a pomoc s lidmi ve tvém okolí.",
       timeBucket: "45",
       mode: "local",
       social: "group",
@@ -89,27 +98,27 @@
   };
 
   /** @type {import('$lib/types').HomeEnergyMode} */
-  let energyMode = "couch";
-  let suggestionIndex = 0;
+  let energyMode = $state("couch");
+  let suggestionIndex = $state(0);
   let lastQuickActionId = "";
-  let excludeQuickId = "";
-  let pinnedActionId = "";
-  let hopeIdx = 0;
+  let excludeQuickId = $state("");
+  let pinnedActionId = $state("");
+  let hopeIdx = $state(0);
   /** @type {string[]} */
-  let savedValues = [];
-  let usePersonalValues = false;
+  let savedValues = $state([]);
+  let usePersonalValues = $state(false);
   let hasMountedHome = false;
   let lastAppliedUrlKey = "";
+  let isDeepLinkedSession = $state(false);
 
   let awaitingPartnerReturn = false;
   let partnerLeaveTimestamp = 0;
-  let partnerReturnPromptVisible = false;
-  let justCompleted = false;
-  let copiedDirectLink = false;
+  let partnerReturnPromptVisible = $state(false);
+  let justCompleted = $state(false);
+  let copiedDirectLink = $state(false);
   /** @type {ReturnType<typeof setTimeout> | null} */
   let copyLinkTimer = null;
-  let soundMuted = false;
-  let showEffectPreview = false;
+  let soundMuted = $state(false);
 
   /**
    * @param {unknown} val
@@ -133,6 +142,27 @@
   }
 
   /**
+   * Filters the full scored list for each Home energy tab so counts reflect true subsets
+   * (`couch`: 45 with 2-min online deeds ranked first; `focus`: 8; `walk`: 16; `people`: 9).
+   * @param {import('$lib/types').MicroAction[]} ranked
+   * @param {import('$lib/types').HomeEnergyMode} mode
+   * @returns {import('$lib/types').MicroAction[]}
+   */
+  function filterHomeDeckPool(ranked, mode) {
+    if (!Array.isArray(ranked) || ranked.length === 0) return [];
+    if (mode === "focus") {
+      return ranked.filter((a) => a.mode !== "local" && a.timeBucket === "15");
+    }
+    if (mode === "walk") {
+      return ranked.filter((a) => a.mode === "local" && a.commitment === "one_off");
+    }
+    if (mode === "people") {
+      return ranked.filter((a) => a.commitment === "long_term" || a.social === "group");
+    }
+    return ranked;
+  }
+
+  /**
    * @param {import('$lib/types').HomeEnergyMode} mode
    * @param {boolean} personalFilter
    * @param {string[]} values
@@ -148,7 +178,7 @@
     excludedId,
   ) {
     const cfg = HOME_MODES[mode] || HOME_MODES.couch;
-    return recommendActions({
+    const ranked = recommendActions({
       values: personalFilter ? values : [],
       timeBucket: cfg.timeBucket,
       cost: cfg.cost,
@@ -159,6 +189,21 @@
       excludeIds: excludedId ? [excludedId] : [],
       seed: `home:${mode}:0`,
     });
+    const filtered = filterHomeDeckPool(ranked, mode);
+    if (filtered.length > 0) return filtered;
+
+    const fallbackRanked = recommendActions({
+      values: [],
+      timeBucket: cfg.timeBucket,
+      cost: cfg.cost,
+      mode: cfg.mode,
+      social: cfg.social,
+      commitment: cfg.commitment,
+      completedIds: (completedList || []).map((s) => s.id),
+      excludeIds: excludedId ? [excludedId] : [],
+      seed: `home:${mode}:0`,
+    });
+    return filterHomeDeckPool(fallbackRanked, mode);
   }
 
   /**
@@ -166,7 +211,7 @@
    */
   function saveHomeDeckState(state) {
     try {
-      safeSetItem(AA_HOME_DECK_STATE_KEY, JSON.stringify(state), "local");
+      safeSetItem(AA_HOME_DECK_STATE_KEY, JSON.stringify(state), "session");
     } catch {}
   }
 
@@ -196,13 +241,13 @@
   }
 
   /**
-   * Restores persisted home deck tab & deed position when no URL deep link overrides it.
-   * Validates stored JSON defensively and clamps/falls back to index 0 if action ID is absent.
+   * Restores persisted home deck tab & deed position within the current browser session
+   * when no URL deep link overrides it. Fresh browser sessions always enter on "couch".
    * @returns {boolean}
    */
   function restoreHomeDeckState() {
     try {
-      const raw = safeGetItem(AA_HOME_DECK_STATE_KEY, "local");
+      const raw = safeGetItem(AA_HOME_DECK_STATE_KEY, "session");
       if (!raw || typeof raw !== "string") return false;
       /** @type {unknown} */
       const parsed = JSON.parse(raw);
@@ -284,7 +329,10 @@
       .trim()
       .replace(/^[#?]+/, "");
     if (!cleaned) return null;
-    const aliased = ACTION_ALIASES[cleaned.toLowerCase()] || cleaned;
+    const normalizedKey = cleaned.toLowerCase();
+    const aliased = Object.hasOwn(ACTION_ALIASES, normalizedKey)
+      ? ACTION_ALIASES[normalizedKey]
+      : cleaned;
     const normalizedUnderscore = aliased.replace(/-/g, "_").toLowerCase();
     const normalizedHyphen = aliased.replace(/_/g, "-").toLowerCase();
     return (
@@ -353,6 +401,7 @@
         : queryAction || hashAction;
       if (actionParam) {
         const matched = resolveActionFromParam(actionParam);
+        isDeepLinkedSession = Boolean(matched);
         if (matched) {
           energyMode = inferEnergyModeForAction(matched);
           excludeQuickId = "";
@@ -362,7 +411,10 @@
           awaitingPartnerReturn = false;
           partnerReturnPromptVisible = false;
           justCompleted = false;
-          consumePendingPartnerReturn(0);
+          const pending = readPendingPartnerRecord();
+          if (pending && pending.id !== matched.id) {
+            consumePendingPartnerReturn(0, { surfacePrefix: "home", allowEmptySurface: true });
+          }
           return true;
         }
         pinnedActionId = "";
@@ -370,6 +422,7 @@
         return true;
       }
 
+      isDeepLinkedSession = false;
       pinnedActionId = "";
       return hasValidIntent;
     } catch {
@@ -377,13 +430,16 @@
     }
   }
 
-  $: {
-    const urlKey = $page?.url
-      ? `${$page.url.pathname}${$page.url.search}${$page.url.hash}`
+  /**
+   * @param {URL | undefined} pageUrl
+   */
+  function syncPageUrlChange(pageUrl) {
+    const urlKey = pageUrl
+      ? `${pageUrl.pathname}${pageUrl.search}${pageUrl.hash}`
       : "";
-    if ($page?.url && urlKey !== lastAppliedUrlKey) {
+    if (pageUrl && urlKey !== lastAppliedUrlKey) {
       lastAppliedUrlKey = urlKey;
-      const hadDeepLink = applyUrlDeepLink($page.url);
+      const hadDeepLink = applyUrlDeepLink(pageUrl);
       if (!hadDeepLink && hasMountedHome) {
         if (!restoreHomeDeckState()) {
           energyMode = "couch";
@@ -393,6 +449,10 @@
       }
     }
   }
+
+  $effect(() => {
+    syncPageUrlChange(page.url);
+  });
 
   onMount(() => {
     try {
@@ -441,10 +501,16 @@
       const elapsedMem = awaitingPartnerReturn
         ? Date.now() - partnerLeaveTimestamp
         : 0;
-      const persisted = consumePendingPartnerReturn(3000);
+      const persisted = consumePendingPartnerReturn(3000, {
+        surfacePrefix: "home",
+        allowEmptySurface: true,
+      });
       if (elapsedMem >= 3000 || persisted) {
         if (awaitingPartnerReturn && !persisted) {
-          consumePendingPartnerReturn(0);
+          consumePendingPartnerReturn(0, {
+            surfacePrefix: "home",
+            allowEmptySurface: true,
+          });
         }
         let matched = null;
         if (persisted?.id) {
@@ -494,39 +560,66 @@
     };
   });
 
-  $: quickPool = buildQuickPool(
-    energyMode,
-    usePersonalValues,
-    savedValues,
-    $completedSteps || [],
-    excludeQuickId,
+  const quickPool = $derived(
+    buildQuickPool(
+      energyMode,
+      usePersonalValues,
+      savedValues,
+      $completedSteps || [],
+      excludeQuickId,
+    ),
   );
 
-  $: pinnedAction = pinnedActionId
-    ? MICRO_ACTIONS.find((a) => a.id === pinnedActionId) || null
-    : null;
-  $: quickDeckActions = pinnedAction
-    ? [pinnedAction, ...quickPool.filter((a) => a.id !== pinnedAction.id)]
-    : quickPool.length > 0
-      ? quickPool
-      : (MICRO_ACTIONS || []).slice(0, 5);
-  $: currentQuickAction =
-    pinnedAction ||
-    (quickDeckActions && quickDeckActions.length > 0
-      ? quickDeckActions[
-          ((suggestionIndex % quickDeckActions.length) +
-            quickDeckActions.length) %
-            quickDeckActions.length
-        ]
-      : null);
-  $: if (currentQuickAction?.id) {
-    lastQuickActionId = currentQuickAction.id;
-  }
-  $: isCurrentStarted = Boolean(
-    currentQuickAction?.id &&
-      Array.isArray($startedActionIds) &&
-      $startedActionIds.includes(currentQuickAction.id),
+  const pinnedAction = $derived(
+    pinnedActionId
+      ? MICRO_ACTIONS.find((a) => a.id === pinnedActionId) || null
+      : null,
   );
+  const quickDeckActions = $derived(
+    pinnedAction
+      ? [pinnedAction, ...quickPool.filter((a) => a.id !== pinnedAction.id)]
+      : quickPool.length > 0
+        ? quickPool
+        : (MICRO_ACTIONS || []).slice(0, 5),
+  );
+  const currentQuickAction = $derived(
+    pinnedAction ||
+      (quickDeckActions && quickDeckActions.length > 0
+        ? quickDeckActions[
+            ((suggestionIndex % quickDeckActions.length) +
+              quickDeckActions.length) %
+              quickDeckActions.length
+          ]
+        : null),
+  );
+  $effect(() => {
+    if (currentQuickAction?.id) {
+      lastQuickActionId = currentQuickAction.id;
+    }
+  });
+  const isCurrentStarted = $derived(
+    Boolean(
+      currentQuickAction?.id &&
+        Array.isArray($startedActionIds) &&
+        $startedActionIds.includes(currentQuickAction.id),
+    ),
+  );
+
+  function clearDeepLinkUrlParam() {
+    isDeepLinkedSession = false;
+    if (typeof window === "undefined") return;
+    try {
+      const url = new URL(window.location.href);
+      const hasQueryAction = url.searchParams.has("action");
+      const hasHashAction = url.hash.includes("action=");
+      if (!hasQueryAction && !hasHashAction) return;
+      if (hasQueryAction) url.searchParams.delete("action");
+      if (hasHashAction) url.hash = "";
+      const nextKey = `${url.pathname}${url.search}${url.hash}`;
+      lastAppliedUrlKey = nextKey;
+      goto(nextKey, { replaceState: true, noScroll: true, keepFocus: true });
+    } catch {}
+  }
 
   /**
    * @param {import('$lib/types').HomeEnergyMode} mode
@@ -536,6 +629,7 @@
       nextQuickIdea();
       return;
     }
+    clearDeepLinkUrlParam();
     pinnedActionId = "";
     awaitingPartnerReturn = false;
     partnerReturnPromptVisible = false;
@@ -554,6 +648,7 @@
   }
 
   function nextQuickIdea() {
+    clearDeepLinkUrlParam();
     const prevId = currentQuickAction?.id || lastQuickActionId;
     const wasPinned = Boolean(pinnedActionId);
     pinnedActionId = "";
@@ -589,6 +684,7 @@
   }
 
   function prevQuickIdea() {
+    clearDeepLinkUrlParam();
     const wasPinned = Boolean(pinnedActionId);
     pinnedActionId = "";
     awaitingPartnerReturn = false;
@@ -609,13 +705,13 @@
   }
 
   function reopenQuickSession() {
+    clearDeepLinkUrlParam();
     const prevId = currentQuickAction?.id || lastQuickActionId;
     const wasPinned = Boolean(pinnedActionId);
     pinnedActionId = "";
     awaitingPartnerReturn = false;
     partnerReturnPromptVisible = false;
     justCompleted = false;
-    showEffectPreview = false;
 
     const targetPool = wasPinned
       ? quickPool.length > 0
@@ -659,13 +755,17 @@
   }
 
   function handleTogglePersonalValues() {
+    const wasDeepLinked = isDeepLinkedSession;
+    clearDeepLinkUrlParam();
     pinnedActionId = "";
     awaitingPartnerReturn = false;
     partnerReturnPromptVisible = false;
     justCompleted = false;
     usePersonalValues = !usePersonalValues;
     suggestionIndex = 0;
-    syncDeckPersistence();
+    if (!wasDeepLinked) {
+      syncDeckPersistence();
+    }
     trackEvent("aa_home_personal_filter", {
       enabled: usePersonalValues,
     });
@@ -685,7 +785,7 @@
     partnerLeaveTimestamp = Date.now();
     partnerReturnPromptVisible = false;
     justCompleted = false;
-    if (!pinnedActionId) {
+    if (!pinnedActionId && !isDeepLinkedSession) {
       syncDeckPersistence();
     }
     savePendingPartnerReturn(action);
@@ -703,20 +803,19 @@
     justCompleted = true;
     awaitingPartnerReturn = false;
     partnerReturnPromptVisible = false;
-    consumePendingPartnerReturn(0);
-    saveHomeDeckState({
-      energyMode,
-      actionId: "",
-      index: 0,
-      excludeQuickId: "",
-      usePersonalValues,
+    consumePendingPartnerReturn(0, {
+      surfacePrefix: "home",
+      allowEmptySurface: true,
     });
-    try {
-      if (typeof navigator !== "undefined" && navigator.vibrate) {
-        navigator.vibrate(40);
-      }
-    } catch {}
-    playCelebrationChord();
+    if (!isDeepLinkedSession) {
+      saveHomeDeckState({
+        energyMode,
+        actionId: "",
+        index: 0,
+        excludeQuickId: "",
+        usePersonalValues,
+      });
+    }
     recordSmallWin({
       id: action.id,
       title: action.title,
@@ -765,7 +864,11 @@
   <!-- =====================================================================
        1. EDITORIAL DAYLIGHT HERO + MINIMALIST INSTANT ACTION CARD
        ===================================================================== -->
-  <HeroSection microActionsCount={MICRO_ACTIONS.length}>
+  <HeroSection
+    microActionsCount={MICRO_ACTIONS.length}
+    desktopClaimSerif={HOME_MODES[energyMode].desktopClaim}
+    mobileClaim={HOME_MODES[energyMode].mobileClaim}
+  >
     <QuickStartSection id="quick-start-area">
       <div class="instant-card" id="dnesni-skutek">
         <div class="studio-head">
@@ -776,7 +879,7 @@
           <button
             type="button"
             class="cycle-link cycle-btn"
-            on:click={nextQuickIdea}
+            onclick={nextQuickIdea}
             title="Ukázat další ověřenou příležitost"
           >
             <AppIcon name="refresh-cw" size={14} strokeWidth={2.2} />
@@ -791,9 +894,11 @@
         >
           <button
             type="button"
+            role="tab"
+            aria-selected={energyMode === "couch"}
             class="energy-tab"
             class:active={energyMode === "couch"}
-            on:click={() => setEnergyMode("couch")}
+            onclick={() => setEnergyMode("couch")}
           >
             <span class="tab-icon tab-icon-couch" aria-hidden="true">
               <AppIcon name={HOME_MODES.couch.icon} size={14} strokeWidth={2.1} />
@@ -802,9 +907,11 @@
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={energyMode === "focus"}
             class="energy-tab"
             class:active={energyMode === "focus"}
-            on:click={() => setEnergyMode("focus")}
+            onclick={() => setEnergyMode("focus")}
           >
             <span class="tab-icon tab-icon-focus" aria-hidden="true">
               <AppIcon name={HOME_MODES.focus.icon} size={14} strokeWidth={2.1} />
@@ -813,9 +920,11 @@
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={energyMode === "walk"}
             class="energy-tab"
             class:active={energyMode === "walk"}
-            on:click={() => setEnergyMode("walk")}
+            onclick={() => setEnergyMode("walk")}
           >
             <span class="tab-icon tab-icon-walk" aria-hidden="true">
               <AppIcon name={HOME_MODES.walk.icon} size={14} strokeWidth={2.1} />
@@ -824,9 +933,11 @@
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={energyMode === "people"}
             class="energy-tab"
             class:active={energyMode === "people"}
-            on:click={() => setEnergyMode("people")}
+            onclick={() => setEnergyMode("people")}
           >
             <span class="tab-icon tab-icon-people" aria-hidden="true">
               <AppIcon name={HOME_MODES.people.icon} size={14} strokeWidth={2.1} />
@@ -843,10 +954,10 @@
             {justCompleted}
             {partnerReturnPromptVisible}
             {soundMuted}
-            {showEffectPreview}
             {copiedDirectLink}
             {savedValues}
             {usePersonalValues}
+            ignoreClosedSession={Boolean(pinnedAction)}
             onStart={handleStartQuickAction}
             onComplete={completeQuickAction}
             onShare={shareDirectActionLink}
@@ -862,7 +973,17 @@
             onNextIdea={nextQuickIdea}
             onPrevIdea={prevQuickIdea}
             onCloseSession={() => {
+              clearDeepLinkUrlParam();
+              pinnedActionId = "";
+              justCompleted = false;
               trackEvent("aa_home_session_closed", {});
+            }}
+            onExitDeepLink={() => {
+              clearDeepLinkUrlParam();
+              pinnedActionId = "";
+              awaitingPartnerReturn = false;
+              partnerReturnPromptVisible = false;
+              justCompleted = false;
             }}
             onReopenSession={reopenQuickSession}
           />
@@ -978,8 +1099,10 @@
     font-size: 0.8rem;
     font-weight: 700;
     cursor: pointer;
-    min-height: 34px;
-    padding: 0.24rem 0.68rem;
+    min-height: 44px;
+    min-width: 44px;
+    margin: -5px 0;
+    padding: 0.36rem 0.72rem;
     box-sizing: border-box;
     border-radius: 999px;
     transition:
@@ -1101,7 +1224,7 @@
       min-width: 0;
       max-width: 100%;
       box-sizing: border-box;
-      padding: 0.55rem 0.75rem 0.65rem;
+      padding: 0.44rem 0.68rem 0.52rem;
       border-radius: 18px;
       margin-top: 0;
       scroll-margin-top: 0.5rem;
@@ -1109,7 +1232,7 @@
     }
 
     .studio-head {
-      margin-bottom: 0.55rem;
+      margin-bottom: 0.24rem;
       padding-bottom: 0;
     }
 
@@ -1134,8 +1257,8 @@
       max-width: 100%;
       box-sizing: border-box;
       gap: 0.14rem;
-      padding: 0.18rem;
-      margin-bottom: 0.3rem;
+      padding: 0.16rem;
+      margin-bottom: 0.22rem;
       border-radius: 999px;
       background: var(--bg-subtle, #edf2ee);
       width: 100%;
@@ -1144,9 +1267,9 @@
     .energy-tab {
       min-height: 44px;
       min-width: 0;
-      padding: 0.28rem 0.2rem;
-      gap: 0.2rem;
-      font-size: 0.72rem;
+      padding: 0.24rem 0.18rem;
+      gap: 0.18rem;
+      font-size: 0.71rem;
       font-weight: 700;
       white-space: nowrap;
       border-radius: 999px;
@@ -1155,12 +1278,39 @@
   }
 
   @media (max-width: 440px) {
+    .energy-tabs {
+      display: flex;
+      align-items: stretch;
+      justify-content: space-between;
+      border-radius: 999px;
+      gap: 0.1rem;
+      padding: 0.14rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .energy-tab {
+      flex: 1 1 auto;
+      padding: 0.22rem 0.24rem;
+      gap: 0.14rem;
+      font-size: 0.67rem;
+      min-height: 44px;
+    }
+
+    .energy-tab .tab-icon :global(svg) {
+      width: 12px;
+      height: 12px;
+    }
+  }
+
+  @media (max-width: 359px) {
+    .energy-tab {
+      padding: 0.22rem 0.18rem;
+      font-size: 0.63rem;
+      gap: 0;
+    }
+
     .energy-tab .tab-icon {
       display: none;
-    }
-    .energy-tab {
-      padding: 0.28rem 0.18rem;
-      font-size: 0.71rem;
     }
   }
 </style>

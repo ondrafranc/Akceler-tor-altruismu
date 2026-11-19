@@ -42,6 +42,8 @@ const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
  *   email?: string | null,
  *   phone?: string | null,
  *   status?: string,
+ *   event_start?: string | null,
+ *   event_end?: string | null,
  *   distanceKm: number,
  *   distance_m?: number,
  *   [key: string]: unknown
@@ -84,6 +86,8 @@ function sanitizeCommunityRecord(r, dKm) {
     email,
     phone,
     status: r.status || 'approved',
+    ...(r.event_start ? { event_start: String(r.event_start) } : {}),
+    ...(r.event_end ? { event_end: String(r.event_end) } : {}),
     distanceKm: Math.round(dKm * 10) / 10
   };
 }
@@ -134,9 +138,9 @@ export async function getNearbyCommunityItems({ lat, lon, radiusM = 5000 }) {
       const minLon = lon - deltaLon;
       const maxLon = lon + deltaLon;
 
-      const queryPromise = supabase
+      const primaryQuery = supabase
         .from('community_submissions')
-        .select('id, created_at, name, category, description, city, address, lat, lon, url, contact, status')
+        .select('id, kind, created_at, name, category, description, city, address, lat, lon, url, contact, status, event_start, event_end')
         .eq('status', 'approved')
         .gte('lat', minLat)
         .lte('lat', maxLat)
@@ -144,12 +148,35 @@ export async function getNearbyCommunityItems({ lat, lon, radiusM = 5000 }) {
         .lte('lon', maxLon)
         .limit(150);
 
-      const { data, error } = await withTimeout(queryPromise, 2200, 'Supabase community query timeout');
+      const primaryRes = await withTimeout(primaryQuery, 2200, 'Supabase community query timeout');
+      let data = /** @type {Array<Record<string, unknown>> | null} */ (primaryRes.data);
+      let error = primaryRes.error;
+
+      if (
+        error &&
+        (error.code === 'PGRST204' ||
+          error.code === '42703' ||
+          /event_(start|end)/i.test(error.message || ''))
+      ) {
+        const fallbackQuery = supabase
+          .from('community_submissions')
+          .select('id, kind, created_at, name, category, description, city, address, lat, lon, url, contact, status')
+          .eq('status', 'approved')
+          .gte('lat', minLat)
+          .lte('lat', maxLat)
+          .gte('lon', minLon)
+          .lte('lon', maxLon)
+          .limit(150);
+
+        const fallbackRes = await withTimeout(fallbackQuery, 2200, 'Supabase community fallback query timeout');
+        data = /** @type {Array<Record<string, unknown>> | null} */ (fallbackRes.data);
+        error = fallbackRes.error;
+      }
 
       if (!error && Array.isArray(data)) {
         const items = [];
         for (const r of data) {
-          if (!isValidLatLon(r?.lat, r?.lon)) continue;
+          if (!isValidLatLon(r?.lat, r?.lon) || typeof r.lon !== 'number') continue;
           const dKm = haversineKm(lat, lon, r.lat, r.lon);
           if (dKm * 1000 > radius) continue;
           items.push(sanitizeCommunityRecord(r, dKm));
@@ -185,8 +212,7 @@ export async function getNearbyCommunityItems({ lat, lon, radiusM = 5000 }) {
  *   lat: number,
  *   lon: number,
  *   radiusM?: number,
- *   kinds?: string[],
- *   includeAssociations?: boolean
+ *   kinds?: string[]
  * }} params
  * @returns {Promise<{
  *   places: Array<NearbyPlace>,
@@ -202,15 +228,14 @@ export async function getNearbyPlaces({
   lat,
   lon,
   radiusM = 5000,
-  kinds = [],
-  includeAssociations = false
+  kinds = []
 }) {
   const radius = clamp(radiusM, 250, 25_000);
   const activeKinds = kinds.length
     ? [...new Set(kinds.filter((k) => ['ngo', 'community', 'food', 'animals'].includes(k)))].sort()
     : ['ngo', 'community', 'food', 'animals'];
 
-  const cacheKey = `near:v30:${lat.toFixed(4)}:${lon.toFixed(4)}:${radius}:${includeAssociations ? '1' : '0'}:${activeKinds.join(',')}`;
+  const cacheKey = `near:v30:${lat.toFixed(4)}:${lon.toFixed(4)}:${radius}:${activeKinds.join(',')}`;
   const cached = PLACES_CACHE.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.data;

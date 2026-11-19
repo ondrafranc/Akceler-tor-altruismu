@@ -1,7 +1,15 @@
 <script>
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { isCrisisOpen, toggleCrisisModal } from "../lib/utils.js";
   import AppIcon from "$lib/components/AppIcon.svelte";
+
+  /** @type {HTMLDivElement | null} */
+  let panelEl = $state(null);
+  /** @type {HTMLButtonElement | null} */
+  let closeBtnEl = $state(null);
+  /** @type {HTMLElement | null} */
+  let previousFocusedEl = null;
+  let wasOpen = false;
 
   onMount(() => {
     const handleToggle = () => {
@@ -11,6 +19,51 @@
     return () => {
       window.removeEventListener("akcelerator:toggle-crisis", handleToggle);
     };
+  });
+
+  $effect(() => {
+    const open = Boolean($isCrisisOpen);
+    if (open && !wasOpen) {
+      const active = typeof document !== "undefined" ? document.activeElement : null;
+      previousFocusedEl =
+        active instanceof HTMLElement &&
+        active !== document.body &&
+        active !== document.documentElement
+          ? active
+          : null;
+      tick().then(() => {
+        if ($isCrisisOpen) {
+          closeBtnEl?.focus();
+        }
+      });
+    } else if (!open && wasOpen) {
+      const targetToRestore = previousFocusedEl;
+      previousFocusedEl = null;
+      tick().then(() => {
+        if (
+          targetToRestore &&
+          targetToRestore !== document.body &&
+          targetToRestore !== document.documentElement &&
+          targetToRestore.isConnected
+        ) {
+          targetToRestore.focus();
+        } else if (typeof document !== "undefined") {
+          for (const el of document.querySelectorAll(".mobile-nav-toggle, .crisis-trigger")) {
+            if (!(el instanceof HTMLElement)) continue;
+            const cs = getComputedStyle(el);
+            if (
+              cs.display !== "none" &&
+              cs.visibility !== "hidden" &&
+              el.getClientRects().length > 0
+            ) {
+              el.focus();
+              break;
+            }
+          }
+        }
+      });
+    }
+    wasOpen = open;
   });
 
   const resources = [
@@ -48,10 +101,49 @@
     toggleCrisisModal();
   }
 
+  /** @returns {HTMLElement[]} */
+  function getFocusablePanelElements() {
+    if (!panelEl) return [];
+    const selector = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    /** @type {HTMLElement[]} */
+    const results = [];
+    for (const el of panelEl.querySelectorAll(selector)) {
+      if (el instanceof HTMLElement && el.offsetParent !== null) {
+        results.push(el);
+      }
+    }
+    return results;
+  }
+
   /** @param {KeyboardEvent} e */
   function handleKeydown(e) {
-    if (e.key === "Escape" && $isCrisisOpen) {
+    if (!$isCrisisOpen) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
       toggleHelp();
+      return;
+    }
+    if (e.key === "Tab" && panelEl) {
+      const focusables = getFocusablePanelElements();
+      if (focusables.length === 0) {
+        e.preventDefault();
+        panelEl.focus();
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey) {
+        if (!panelEl.contains(active) || active === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (!panelEl.contains(active) || active === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     }
   }
 </script>
@@ -61,9 +153,12 @@
 <div class="crisis-widget" class:expanded={$isCrisisOpen}>
   {#if $isCrisisOpen}
     <div
+      bind:this={panelEl}
       class="crisis-panel"
       role="dialog"
+      aria-modal="true"
       aria-label="Krizová podpora a linky důvěry"
+      tabindex="-1"
     >
       <div class="panel-head">
         <div>
@@ -77,6 +172,7 @@
           </div>
         </div>
         <button
+          bind:this={closeBtnEl}
           type="button"
           class="close-btn"
           onclick={toggleHelp}
@@ -117,13 +213,22 @@
       </div>
 
       <div class="emergency-foot">
-        <span class="foot-alert-icon" aria-hidden="true">
-          <AppIcon name="alert-triangle" size={16} strokeWidth={2} />
-        </span>
-        <span>
-          V akutním ohrožení života volej <strong>155</strong> (záchranka) nebo
-          <strong>112</strong>.
-        </span>
+        <div class="emergency-foot-text">
+          <span class="foot-alert-icon" aria-hidden="true">
+            <AppIcon name="alert-triangle" size={16} strokeWidth={2} />
+          </span>
+          <span>V akutním ohrožení života volej:</span>
+        </div>
+        <div class="emergency-links">
+          <a href="tel:155" class="emergency-tel-link">
+            <AppIcon name="phone" size={14} strokeWidth={2} />
+            <span>155 (záchranka)</span>
+          </a>
+          <a href="tel:112" class="emergency-tel-link">
+            <AppIcon name="phone" size={14} strokeWidth={2} />
+            <span>112 (tísňová linka)</span>
+          </a>
+        </div>
       </div>
     </div>
   {/if}
@@ -137,30 +242,16 @@
     <span class="pill-dot" aria-hidden="true"></span>
     <span class="pill-label">Potřebuješ oporu? (116 111 / 116 123)</span>
   </button>
-
-  <button
-    type="button"
-    class="crisis-mobile-fab"
-    onclick={toggleHelp}
-    aria-expanded={$isCrisisOpen}
-    aria-label="Krizová opora 24/7 (116 111 / 116 123)"
-    title="Potřebuješ oporu? Linky důvěry 116 111 / 116 123"
-  >
-    <span class="pill-dot" aria-hidden="true"></span>
-    <span>Opora 24/7</span>
-  </button>
 </div>
 
 <style>
   .crisis-widget {
-    position: fixed;
-    bottom: 14px;
-    right: 14px;
-    z-index: 95;
+    position: static;
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
+    align-items: flex-start;
     gap: 0.55rem;
+    margin-top: 0.85rem;
   }
 
   .crisis-widget.expanded {
@@ -183,7 +274,9 @@
     font-size: 0.8rem;
     cursor: pointer;
     box-shadow: var(--shadow-md, 0 8px 20px -6px rgba(18, 42, 30, 0.08));
-    transition: background-color 0.18s ease, border-color 0.18s ease;
+    transition:
+      background-color 0.18s ease,
+      border-color 0.18s ease;
   }
 
   .pill-dot {
@@ -200,7 +293,13 @@
   }
 
   .crisis-panel {
+    position: fixed;
+    bottom: 18px;
+    right: 18px;
+    z-index: 1020;
     width: min(390px, calc(100vw - 28px));
+    max-height: calc(100dvh - 36px);
+    overflow-y: auto;
     background: var(--bg-surface, #ffffff);
     border: 1px solid var(--border-strong, #c2cec5);
     border-radius: 18px;
@@ -307,7 +406,9 @@
     border: 1px solid var(--border-subtle, #dce3dd);
     text-decoration: none;
     box-sizing: border-box;
-    transition: border-color 0.15s ease, background-color 0.15s ease;
+    transition:
+      border-color 0.15s ease,
+      background-color 0.15s ease;
   }
 
   .res-phone {
@@ -339,9 +440,47 @@
     font-size: 0.8rem;
     color: var(--ink-secondary, #3f574a);
     display: flex;
-    align-items: flex-start;
-    gap: 0.4rem;
+    flex-direction: column;
+    gap: 0.45rem;
     line-height: 1.4;
+  }
+
+  .emergency-foot-text {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 600;
+  }
+
+  .emergency-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .emergency-tel-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.45rem 0.75rem;
+    border-radius: 10px;
+    background: var(--accent-warm-tint, #fef6e8);
+    border: 1px solid rgba(143, 75, 14, 0.3);
+    color: #8f4b0e;
+    font-weight: 800;
+    font-size: 0.82rem;
+    text-decoration: none;
+    box-sizing: border-box;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .emergency-tel-link:hover {
+    background: #fde68a;
+    border-color: #8f4b0e;
+    text-decoration: underline;
   }
 
   .foot-alert-icon {
@@ -352,10 +491,6 @@
     flex-shrink: 0;
   }
 
-  .crisis-mobile-fab {
-    display: none !important;
-  }
-
   @media (max-width: 680px) {
     .crisis-pill,
     .crisis-trigger {
@@ -363,15 +498,18 @@
     }
 
     .crisis-widget {
+      position: fixed;
       left: 12px;
       right: 12px;
       bottom: max(12px, env(safe-area-inset-bottom, 0px));
+      margin-top: 0;
       align-items: flex-start;
       z-index: 942;
+      pointer-events: none;
     }
 
-    .crisis-mobile-fab {
-      display: none !important;
+    .crisis-widget.expanded {
+      pointer-events: auto;
     }
 
     .crisis-panel {

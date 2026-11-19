@@ -7,7 +7,20 @@
   import AppIcon from "$lib/components/AppIcon.svelte";
   import { resolveIconKey } from "$lib/icons/iconRegistry.js";
 
-  export let onBreathWave = null; // (isInhale: boolean) => void
+  /**
+   * @type {{
+   *   onBreathWave?: ((isInhale: boolean) => void) | null,
+   *   selectedBreathId?: string,
+   *   breathingDurationSec?: number,
+   *   breathingActive?: boolean
+   * }}
+   */
+  let {
+    onBreathWave = null,
+    selectedBreathId = $bindable("calm46"),
+    breathingDurationSec = $bindable(60),
+    breathingActive = $bindable(false),
+  } = $props();
 
   export const BREATH_PATTERNS = [
     {
@@ -42,17 +55,14 @@
     },
   ];
 
-  export let selectedBreathId = "calm46";
-  $: activePattern =
+  const activePattern = $derived(
     BREATH_PATTERNS.find((p) => p.id === selectedBreathId) ||
-    BREATH_PATTERNS[0];
+      BREATH_PATTERNS[0],
+  );
 
-  export let breathingDurationSec = 60;
-  export let breathingActive = false;
-
-  let breathPhase = "idle"; // 'idle' | 'inhale' | 'hold' | 'exhale' | 'done'
-  let breathPhaseSecLeft = 0;
-  let breathSecondsLeft = 60;
+  let breathPhase = $state("idle"); // 'idle' | 'inhale' | 'hold' | 'exhale' | 'done'
+  let breathPhaseSecLeft = $state(0);
+  let breathSecondsLeft = $state(60);
   let breathInterval = null;
 
   function playChime(type) {
@@ -181,9 +191,11 @@
       {#each BREATH_PATTERNS as pat}
         <button
           type="button"
+          role="radio"
+          aria-checked={selectedBreathId === pat.id}
           class="pattern-card"
           class:active={selectedBreathId === pat.id}
-          on:click={() => {
+          onclick={() => {
             selectedBreathId = pat.id;
             if (breathingActive) startBreathing();
           }}
@@ -196,13 +208,14 @@
 
     <p class="pattern-active-desc">{activePattern.desc}</p>
 
-    <div class="duration-row">
+    <div class="duration-row" role="group" aria-label="Délka dechového cvičení">
       <span class="dur-lbl">Délka:</span>
       <button
         type="button"
         class="dur-chip"
         class:active={breathingDurationSec === 60}
-        on:click={() => (breathingDurationSec = 60)}
+        aria-pressed={breathingDurationSec === 60}
+        onclick={() => (breathingDurationSec = 60)}
       >
         1 min
       </button>
@@ -210,7 +223,8 @@
         type="button"
         class="dur-chip"
         class:active={breathingDurationSec === 120}
-        on:click={() => (breathingDurationSec = 120)}
+        aria-pressed={breathingDurationSec === 120}
+        onclick={() => (breathingDurationSec = 120)}
       >
         2 min
       </button>
@@ -387,7 +401,7 @@
       <button
         type="button"
         class="breath-cta stop"
-        on:click={() => stopBreathing(false)}
+        onclick={() => stopBreathing(false)}
       >
         Zastavit cvičení
       </button>
@@ -396,7 +410,7 @@
         type="button"
         class="breath-cta start"
         data-molly-guide="true"
-        on:click={startBreathing}
+        onclick={startBreathing}
       >
         <AppIcon name="wind" size={16} strokeWidth={2} />
         <span>

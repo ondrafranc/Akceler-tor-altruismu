@@ -9,7 +9,6 @@
   } from "../../../lib/analytics.js";
   import {
     MICRO_ACTIONS,
-    VALUES,
     EVIDENCE_TIERS,
     EVIDENCE_METHODOLOGY,
   } from "../../../lib/data/czech-actions.js";
@@ -26,9 +25,7 @@
   } from "../../../lib/features/actions/services/partnerReturnService.js";
   import { getActionEffectMeta } from "../../../lib/sensory/catalog/catalogResolver.js";
   import { impactCanvas } from "../../../lib/sensory/canvas/impactCanvasAction.js";
-  import { triggerCanvasBurst } from "../../../lib/sensory/canvas/controllerRegistry.js";
-  import { notifyMollySpark } from "../../../lib/mollyStore.js";
-  import { cleanTitle, cleanMeta } from "../../../lib/utils.js";
+  import { cleanTitle } from "../../../lib/utils.js";
   import {
     safeGetItem,
     AA_USER_TOPICS_KEY,
@@ -38,19 +35,16 @@
   import AppIcon from "$lib/components/AppIcon.svelte";
   import PageHeader from "$lib/components/PageHeader.svelte";
 
-  let activeFilter = "all";
-  let searchQuery = "";
+  let activeFilter = $state("all");
+  let searchQuery = $state("");
   /** @type {string[]} */
-  let savedValues = [];
-  let copiedId = "";
-  let spotlightId = "";
-  let visibleLimit = 3;
-  let soundMuted = false;
-  let activeEffectCardId = "";
-  /** @type {Record<string, number>} */
-  let cardMetrics = {};
-  let returnPromptAction = null;
-  let returnMetric = 0;
+  let savedValues = $state([]);
+  let copiedId = $state("");
+  let spotlightId = $state("");
+  let visibleLimit = $state(3);
+  let soundMuted = $state(false);
+  let returnPromptAction = $state(null);
+  let returnMetric = $state(0);
   let awaitingReturnAction = null;
   let leaveTimestamp = 0;
 
@@ -63,7 +57,7 @@
     { id: "outdoor", label: "Venku", icon: "trees" },
     { id: "tutoring", label: "U počítače", icon: "laptop" },
     { id: "donation", label: "Drobný dar", icon: "gift" },
-    { id: "evidenceA", label: "Ověřený dopad (A)", icon: "shield-check" },
+    { id: "evidenceA", label: "Přímý měřitelný účinek", icon: "shield-check" },
   ];
 
   onMount(() => {
@@ -103,14 +97,21 @@
         onlineReturnTimer = null;
       }
       const elapsedMem = awaitingReturnAction ? Date.now() - leaveTimestamp : 0;
-      const persisted = consumePendingPartnerReturn(3000);
+      const persisted = consumePendingPartnerReturn(3000, {
+        surfacePrefix: "online",
+        allowEmptySurface: true,
+      });
       if (elapsedMem >= 3000 || persisted) {
         if (awaitingReturnAction && !persisted) {
-          consumePendingPartnerReturn(0);
+          consumePendingPartnerReturn(0, {
+            surfacePrefix: "online",
+            allowEmptySurface: true,
+          });
         }
         const targetId = persisted?.id || awaitingReturnAction?.id;
         const matched =
-          MICRO_ACTIONS.find((a) => a.id === targetId) || awaitingReturnAction;
+          (targetId ? MICRO_ACTIONS.find((a) => a.id === targetId) : null) ||
+          awaitingReturnAction;
         if (matched) {
           returnPromptAction = matched;
           returnMetric = 0;
@@ -122,7 +123,10 @@
           });
         }
       } else {
-        const remPersisted = getPendingPartnerReturnRemainingMs(3000);
+        const remPersisted = getPendingPartnerReturnRemainingMs(3000, {
+          surfacePrefix: "online",
+          allowEmptySurface: true,
+        });
         const remMem =
           awaitingReturnAction && elapsedMem > 0
             ? Math.max(0, 3000 - elapsedMem)
@@ -154,22 +158,6 @@
   function handleToggleSound() {
     soundMuted = toggleSoundMuted();
     trackEvent("aa_sound_toggle", { surface: "online", muted: soundMuted });
-  }
-
-  function toggleCardEffect(action, event) {
-    activeEffectCardId = action.id;
-    notifyMollySpark(action, { surface: "online" });
-    const stage = event?.currentTarget?.closest?.(".card-effect-stage");
-    const canvas = stage?.querySelector?.("canvas.impact-payoff-canvas");
-    if (canvas) {
-      triggerCanvasBurst(canvas, true);
-    } else {
-      playPayoffAsmr(action);
-    }
-    trackEvent("aa_effect_preview_toggle", {
-      surface: "online",
-      id: action.id,
-    });
   }
 
   function handleStartOnlineAction(action) {
@@ -214,13 +202,6 @@
     return ($completedSteps || []).some((s) => s.id === id);
   }
 
-  function primaryTopicFor(action) {
-    const first = action.values
-      .map((k) => VALUES.find((v) => v.key === k)?.shortLabel)
-      .filter(Boolean)[0];
-    return first || "Dobrý skutek";
-  }
-
   function pickRandomSpark() {
     const pool = filteredActions.length ? filteredActions : MICRO_ACTIONS;
     const chosenIdx = Math.floor(Math.random() * pool.length);
@@ -240,44 +221,53 @@
     }, 3200);
   }
 
-  $: filteredActions = MICRO_ACTIONS.filter((a) => {
-    if (activeFilter === "free" && a.cost !== "free") return false;
-    if (activeFilter === "fast" && a.timeBucket !== "5") return false;
-    if (
-      activeFilter === "writing" &&
-      !(a.categoryTag === "writing" || a.mode === "home")
-    )
-      return false;
-    if (activeFilter === "outdoor" && a.mode !== "local") return false;
-    if (
-      activeFilter === "tutoring" &&
-      !(a.categoryTag === "tutoring" || a.categoryTag === "tech")
-    )
-      return false;
-    if (activeFilter === "donation" && a.cost !== "donation") return false;
-    if (activeFilter === "evidenceA" && a.impactEvidence !== "A") return false;
+  const filteredActions = $derived.by(() =>
+    MICRO_ACTIONS.filter((a) => {
+      if (activeFilter === "free" && a.cost !== "free") return false;
+      if (activeFilter === "fast" && a.timeBucket !== "5") return false;
+      if (
+        activeFilter === "writing" &&
+        !(a.categoryTag === "writing" || a.mode === "home")
+      )
+        return false;
+      if (activeFilter === "outdoor" && a.mode !== "local") return false;
+      if (
+        activeFilter === "tutoring" &&
+        !(a.categoryTag === "tutoring" || a.categoryTag === "tech")
+      )
+        return false;
+      if (activeFilter === "donation" && a.cost !== "donation") return false;
+      if (activeFilter === "evidenceA" && a.impactEvidence !== "A")
+        return false;
 
-    const q = searchQuery.trim().toLowerCase();
-    if (q) {
-      const hay =
-        `${a.title} ${a.org} ${a.desc} ${a.reassurance || ""} ${a.metaLabel}`.toLowerCase();
-      if (!hay.includes(q)) return false;
-    }
-    return true;
-  }).sort((a, b) => {
-    const aMatch = matchesSavedValues(a) ? 1 : 0;
-    const bMatch = matchesSavedValues(b) ? 1 : 0;
-    if (aMatch !== bMatch) return bMatch - aMatch;
-    return a.timeMinutes - b.timeMinutes;
-  });
+      const q = searchQuery.trim().toLowerCase();
+      if (q) {
+        const hay =
+          `${a.title} ${a.org} ${a.desc} ${a.reassurance || ""} ${a.metaLabel}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    }).sort((a, b) => {
+      if (activeFilter !== "outdoor") {
+        const aRemote = a.mode !== "local" ? 1 : 0;
+        const bRemote = b.mode !== "local" ? 1 : 0;
+        if (aRemote !== bRemote) return bRemote - aRemote;
+      }
+      if (!searchQuery.trim()) {
+        const aMatch = matchesSavedValues(a) ? 1 : 0;
+        const bMatch = matchesSavedValues(b) ? 1 : 0;
+        if (aMatch !== bMatch) return bMatch - aMatch;
+      }
+      return a.timeMinutes - b.timeMinutes;
+    }),
+  );
 
-  $: effectiveLimit = searchQuery.trim()
-    ? Math.max(visibleLimit, 9)
-    : visibleLimit;
-  $: visibleActions = filteredActions.slice(0, effectiveLimit);
-  $: remainingCount = Math.max(
-    0,
-    filteredActions.length - visibleActions.length,
+  const effectiveLimit = $derived(
+    searchQuery.trim() ? Math.max(visibleLimit, 9) : visibleLimit,
+  );
+  const visibleActions = $derived(filteredActions.slice(0, effectiveLimit));
+  const remainingCount = $derived(
+    Math.max(0, filteredActions.length - visibleActions.length),
   );
 </script>
 
@@ -308,7 +298,7 @@
           aria-label="Hledat v drobných skutcích (např. útulek, mapování, ptáci, senioři, studánky)"
         />
       </div>
-      <button type="button" class="btn-random-spark" on:click={pickRandomSpark}>
+      <button type="button" class="btn-random-spark" onclick={pickRandomSpark}>
         <AppIcon name="sparkles" size={15} strokeWidth={2} />
         <span>Náhodný tip</span>
       </button>
@@ -352,7 +342,7 @@
         <button
           type="button"
           class="btn-return-complete"
-          on:click={() => {
+          onclick={() => {
             const doneAction = returnPromptAction;
             returnPromptAction = null;
             recordSmallWin({
@@ -368,7 +358,7 @@
         <button
           type="button"
           class="btn-return-dismiss"
-          on:click={() => (returnPromptAction = null)}
+          onclick={() => (returnPromptAction = null)}
         >
           Později
         </button>
@@ -386,7 +376,8 @@
         type="button"
         class="filter-chip"
         class:active={activeFilter === f.id}
-        on:click={() => {
+        aria-pressed={activeFilter === f.id}
+        onclick={() => {
           activeFilter = f.id;
           visibleLimit = 3;
           trackEvent("aa_online_filter", { filter: f.id });
@@ -405,7 +396,7 @@
       <button
         type="button"
         class="cta primary"
-        on:click={() => {
+        onclick={() => {
           searchQuery = "";
           activeFilter = "all";
           visibleLimit = 3;
@@ -416,7 +407,7 @@
     </div>
   {:else}
     <div class="grid">
-      {#each visibleActions as o, oi (o.id)}
+      {#each visibleActions as o (o.id)}
         <ActionCard
           action={o}
           variant="directory"
@@ -424,7 +415,6 @@
           isStarted={Array.isArray($startedActionIds) &&
             $startedActionIds.includes(o.id)}
           isCompleted={isCompleted(o.id)}
-          showEffectPreview={oi === 0}
           {soundMuted}
           copiedDirectLink={copiedId === o.id}
           onStart={(action) => handleStartOnlineAction(action)}
@@ -452,7 +442,7 @@
         <button
           type="button"
           class="calm-more-btn"
-          on:click={() => (visibleLimit += 6)}
+          onclick={() => (visibleLimit += 6)}
         >
           <span>Ukázat dalších {Math.min(6, remainingCount)} tipů</span>
         </button>
@@ -463,7 +453,7 @@
             <button
               type="button"
               class="link-show-all"
-              on:click={() => (visibleLimit = filteredActions.length)}
+              onclick={() => (visibleLimit = filteredActions.length)}
             >
               Zobrazit všechny ({filteredActions.length})
             </button>
@@ -477,7 +467,7 @@
     <summary>
       <span class="summary-label">
         <AppIcon name="scale" size={16} strokeWidth={1.9} />
-        <span>Jak hodnotíme účinnost a dopad (A / B / C)?</span>
+        <span>Jak poznáme, že skutek skutečně pomohl?</span>
       </span>
     </summary>
     <div class="om-body">
@@ -485,11 +475,7 @@
       <div class="om-tiers">
         {#each Object.values(EVIDENCE_TIERS) as t}
           <div>
-            <strong>
-              Ověřený dopad ({t.tier}){t.tier === "A"
-                ? ""
-                : ` (${t.shortLabel})`}:
-            </strong>
+            <strong>{t.label}:</strong>
             {t.desc}
           </div>
         {/each}
@@ -551,7 +537,7 @@
     background: var(--bg-surface, #ffffff);
     color: var(--ink-primary, #14281d);
     font-family: var(--font-sans);
-    font-size: 0.92rem;
+    font-size: 1rem;
   }
 
   .search-wrap input::placeholder {
@@ -788,22 +774,26 @@
     }
 
     :global(.online-page-header.page-header) {
-      padding: 0.55rem 0 0.65rem;
-      margin-bottom: 0.55rem;
+      padding: 0.25rem 0 0.35rem;
+      margin-bottom: 0.38rem;
+    }
+
+    :global(.online-page-header .page-header-subtitle) {
+      display: none;
     }
 
     :global(.online-page-header .page-header-tools) {
-      margin-top: 0.65rem;
+      margin-top: 0.4rem;
     }
 
     .hero-tools-row {
       margin-top: 0;
-      gap: 0.4rem;
-      flex-wrap: nowrap;
+      gap: 0.38rem;
+      flex-wrap: wrap;
     }
 
     .search-wrap {
-      flex: 1;
+      flex: 1 1 200px;
       min-width: 0;
     }
 

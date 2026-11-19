@@ -10,6 +10,7 @@ import {
 } from './mollyStore.js';
 import {
   stripLeadingEmoji as canonicalStripLeadingEmoji,
+  cleanMeta,
   exportProgressPasscode,
   importProgressPasscode
 } from './utils.js';
@@ -23,6 +24,11 @@ import {
 
 const STORAGE_KEY = AA_COMPLETED_STEPS_KEY;
 const WISHES_STORAGE_KEY = AA_SANCTUARY_WISHES_KEY;
+
+/** @typedef {import('./types').CompletedStep} CompletedStep */
+/** @typedef {import('./types').SanctuaryWish} SanctuaryWish */
+/** @typedef {import('./types').ActiveCelebration} ActiveCelebration */
+/** @typedef {import('./types').LightType} LightType */
 
 /**
  * Tři sémantické typy světel v Krajině dobra (/svet):
@@ -182,9 +188,6 @@ export const HOPE_PROOFS = [
   }
 ];
 
-// Zpětná kompatibilita pro případné importy
-export const WORLD_MILESTONES = HOPE_PROOFS;
-
 /**
  * Type guard verifying that a value is a non-null, non-array object record.
  * @param {unknown} val
@@ -313,7 +316,9 @@ function saveWishes(list) {
   } catch {}
 }
 
+/** @type {import('svelte/store').Writable<CompletedStep[]>} */
 export const completedSteps = writable([]);
+/** @type {import('svelte/store').Writable<SanctuaryWish[]>} */
 export const sanctuaryWishes = writable([]);
 
 if (typeof window !== 'undefined') {
@@ -357,16 +362,11 @@ export const elementCounts = derived(completedSteps, ($steps) => {
   return counts;
 });
 
-/**
- * Útočiště je vždy na 100 % své plné krásy — žádné úrovně ani tlak na výkon!
- */
-export const worldHealPercent = derived(totalCompletedCount, () => 100);
-
 export const ripplePeopleCount = derived(totalCompletedCount, ($count) => $count * 3);
 
 /**
  * Stav pro klidný „After done“ modál bez nátlakových ukazatelů
- * @type {import('svelte/store').Writable<{ open: boolean, id?: string, category?: string, title: string, message: string, surface: string, element: string, concreteImpact?: string } | null>}
+ * @type {import('svelte/store').Writable<ActiveCelebration | null>}
  */
 export const activeCelebration = writable(null);
 
@@ -468,6 +468,7 @@ export function recordSmallWin(step, options = {}) {
 export function plantStepLight(uid, pos) {
   const clampedX = Math.max(0.06, Math.min(0.94, Number(pos?.x) || 0.5));
   const clampedY = Math.max(0.07, Math.min(0.88, Number(pos?.y) || 0.28));
+  /** @type {'sky' | 'water'} */
   const zone = clampedY < 0.53 ? 'sky' : 'water';
   const lightType = pos?.lightType || (zone === 'sky' ? 'star' : 'lantern');
 
@@ -497,6 +498,7 @@ export function addSanctuaryWish(item) {
   const clampedX = Math.max(0.06, Math.min(0.94, Number(item?.x) || 0.5));
   const clampedY = Math.max(0.07, Math.min(0.88, Number(item?.y) || 0.68));
   const explicitType = item?.lightType || (item?.kind === 'wave' ? 'wave' : item?.kind === 'star' ? 'star' : undefined);
+  /** @type {'sky' | 'water'} */
   const zone = explicitType === 'star' ? 'sky' : explicitType === 'wave' || explicitType === 'lantern' ? 'water' : clampedY < 0.53 ? 'sky' : 'water';
   const lightType = explicitType || (zone === 'sky' ? 'star' : 'lantern');
   const rawTitle = stripLeadingEmoji(item?.title || '');
@@ -541,9 +543,6 @@ export function addSanctuaryWish(item) {
 
   return entry;
 }
-
-/** Zpětně kompatibilní alias pro addSanctuaryWish */
-export const recordSanctuaryWish = addSanctuaryWish;
 
 export function clearSanctuaryWishes() {
   sanctuaryWishes.set([]);
@@ -590,6 +589,133 @@ export function createProgressBackupCode() {
 }
 
 /**
+ * @param {unknown} val
+ * @returns {val is LightType}
+ */
+function isValidLightType(val) {
+  return val === 'lantern' || val === 'star' || val === 'wave';
+}
+
+/**
+ * @param {unknown} rawIso
+ * @returns {string}
+ */
+function sanitizeIsoTimestamp(rawIso) {
+  if (typeof rawIso === 'string' && rawIso.length <= 40) {
+    const ms = Date.parse(rawIso);
+    if (Number.isFinite(ms)) return new Date(ms).toISOString();
+  }
+  return new Date().toISOString();
+}
+
+/**
+ * Sanitizes a single restored CompletedStep item from a backup passcode.
+ * @param {unknown} raw
+ * @param {number} idx
+ * @returns {CompletedStep | null}
+ */
+function sanitizeRestoredStep(raw, idx) {
+  if (!isRecord(raw)) return null;
+  const rawTitle = typeof raw.title === 'string' ? raw.title : '';
+  const cleanedTitle = cleanMeta(rawTitle).slice(0, 180);
+  const id = typeof raw.id === 'string' && raw.id.trim() ? raw.id.trim().slice(0, 80) : '';
+  if (!cleanedTitle && !id) return null;
+
+  const title = cleanedTitle || 'Malý dobrý krok';
+  const safeId = id || 'step';
+  const surface = typeof raw.surface === 'string' && raw.surface.trim() ? raw.surface.trim().slice(0, 40) : 'app';
+  const category = typeof raw.category === 'string' ? raw.category.trim().slice(0, 60) : '';
+  const element = isSanctuaryElementKey(raw.element)
+    ? raw.element
+    : inferStepElement({ id: safeId, title, category });
+  const lightType = isValidLightType(raw.lightType) ? raw.lightType : 'lantern';
+
+  /** @type {import('./types').PlantedPosition | null} */
+  let plantedPos = null;
+  if (isRecord(raw.plantedPos)) {
+    const px = Number(raw.plantedPos.x);
+    const py = Number(raw.plantedPos.y);
+    if (Number.isFinite(px) && Number.isFinite(py)) {
+      const clampedX = Math.max(0.06, Math.min(0.94, px));
+      const clampedY = Math.max(0.07, Math.min(0.88, py));
+      const zone = clampedY < 0.53 ? 'sky' : 'water';
+      plantedPos = {
+        x: clampedX,
+        y: clampedY,
+        zone,
+        lightType: isValidLightType(raw.plantedPos.lightType) ? raw.plantedPos.lightType : lightType
+      };
+    }
+  }
+
+  return {
+    uid:
+      typeof raw.uid === 'string' && raw.uid.trim()
+        ? raw.uid.trim().slice(0, 80)
+        : `restored-${Date.now()}-${idx}`,
+    id: safeId,
+    title,
+    surface,
+    category,
+    element,
+    concreteImpact: typeof raw.concreteImpact === 'string' ? cleanMeta(raw.concreteImpact).slice(0, 240) : '',
+    lightType,
+    verifiedInitiation: Boolean(raw.verifiedInitiation),
+    awaitingPlant: plantedPos ? false : Boolean(raw.awaitingPlant),
+    plantedPos,
+    note: typeof raw.note === 'string' ? cleanMeta(raw.note).slice(0, 240) : '',
+    timestamp: sanitizeIsoTimestamp(raw.timestamp)
+  };
+}
+
+/**
+ * Sanitizes a single restored SanctuaryWish item from a backup passcode.
+ * @param {unknown} raw
+ * @param {number} idx
+ * @returns {SanctuaryWish | null}
+ */
+function sanitizeRestoredWish(raw, idx) {
+  if (!isRecord(raw)) return null;
+  const rawTitle = typeof raw.title === 'string' ? raw.title : '';
+  const cleanedTitle = cleanMeta(rawTitle).slice(0, 180);
+  if (!cleanedTitle && !isValidLightType(raw.lightType)) return null;
+
+  const lightType = isValidLightType(raw.lightType) ? raw.lightType : 'lantern';
+  const rawX = Number(raw.x);
+  const rawY = Number(raw.y);
+  const x = Number.isFinite(rawX) ? Math.max(0.06, Math.min(0.94, rawX)) : 0.5;
+  const y = Number.isFinite(rawY) ? Math.max(0.07, Math.min(0.88, rawY)) : lightType === 'star' ? 0.28 : 0.68;
+  const zone =
+    lightType === 'star' ? 'sky' : lightType === 'wave' || lightType === 'lantern' ? 'water' : y < 0.53 ? 'sky' : 'water';
+  const title =
+    cleanedTitle ||
+    (lightType === 'wave'
+      ? 'Vlna pomoci pro druhého člověka'
+      : lightType === 'star'
+        ? 'Hvězda tiché inspirace'
+        : 'Drobný osobní skutek v běžném dni');
+  const element = isSanctuaryElementKey(raw.element) ? raw.element : inferStepElement({ title });
+  const allowedKinds = new Set(['deed', 'gratitude', 'release', 'wave', 'lantern', 'star']);
+  const kind = typeof raw.kind === 'string' && allowedKinds.has(raw.kind) ? raw.kind : lightType;
+
+  return {
+    uid:
+      typeof raw.uid === 'string' && raw.uid.trim()
+        ? raw.uid.trim().slice(0, 80)
+        : `deed-restored-${Date.now()}-${idx}`,
+    kind,
+    lightType,
+    title,
+    concreteImpact: typeof raw.concreteImpact === 'string' ? cleanMeta(raw.concreteImpact).slice(0, 240) : '',
+    element,
+    x,
+    y,
+    zone,
+    timestamp: sanitizeIsoTimestamp(raw.timestamp)
+  };
+}
+
+/**
  * Obnoví postup z anonymního záložního kódu (M18 / AUDIT #26).
  * @param {string} code
  * @returns {boolean}
@@ -597,27 +723,54 @@ export function createProgressBackupCode() {
 export function restoreProgressFromBackupCode(code) {
   const decoded = importProgressPasscode(code);
   if (!decoded) return false;
+  if (
+    decoded.v !== 1 &&
+    !Array.isArray(decoded.s) &&
+    !Array.isArray(decoded.w) &&
+    !isRecord(decoded.m)
+  ) {
+    return false;
+  }
+
+  /** @type {CompletedStep[]} */
+  let sanitizedSteps = [];
   if (Array.isArray(decoded.s)) {
-    completedSteps.set(decoded.s);
-    saveSteps(decoded.s);
+    sanitizedSteps = decoded.s
+      .slice(-150)
+      .map((item, idx) => sanitizeRestoredStep(item, idx))
+      .filter((item) => item !== null);
+    completedSteps.set(sanitizedSteps);
+    saveSteps(sanitizedSteps);
   }
+
+  /** @type {SanctuaryWish[]} */
+  let sanitizedWishes = [];
   if (Array.isArray(decoded.w)) {
-    sanctuaryWishes.set(decoded.w);
-    saveWishes(decoded.w);
+    sanitizedWishes = decoded.w
+      .slice(-80)
+      .map((item, idx) => sanitizeRestoredWish(item, idx))
+      .filter((item) => item !== null);
+    sanctuaryWishes.set(sanitizedWishes);
+    saveWishes(sanitizedWishes);
   }
+
   if (isRecord(decoded.m)) {
     const m = decoded.m;
+    const clampCounter = (/** @type {unknown} */ v) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? Math.max(0, Math.min(100_000, Math.trunc(n))) : 0;
+    };
     mollyState.update((prev) => {
       const next = {
         ...prev,
-        treatsFedTotal: Math.max(prev.treatsFedTotal || 0, Number(m.treatsFedTotal) || 0),
-        petCount: Math.max(prev.petCount || 0, Number(m.petCount) || 0),
-        availableTreats: Math.max(prev.availableTreats || 0, Number(m.availableTreats) || 0),
+        treatsFedTotal: Math.max(prev.treatsFedTotal || 0, clampCounter(m.treatsFedTotal)),
+        petCount: Math.max(prev.petCount || 0, clampCounter(m.petCount)),
+        availableTreats: Math.max(prev.availableTreats || 0, clampCounter(m.availableTreats)),
         giftDeeds: Math.max(
           prev.giftDeeds || 0,
-          Number(m.giftDeeds) || 0,
+          clampCounter(m.giftDeeds),
           // Starší kódy dárky neznaly → aspoň počet obnovených skutků
-          (Array.isArray(decoded.s) ? decoded.s.length : 0) + (Array.isArray(decoded.w) ? decoded.w.length : 0)
+          sanitizedSteps.length + sanitizedWishes.length
         )
       };
       safeSetItem(AA_MOLLY_COMPANION_KEY, JSON.stringify(next), 'local');

@@ -25,17 +25,12 @@ export async function handle({ event, resolve }) {
 
   if (
     event.request.method === 'GET' &&
-    response.status === 200 &&
     !event.url.pathname.startsWith('/api/') &&
     !headers.has('cache-control') &&
     (headers.get('content-type') || '').includes('text/html')
   ) {
-    const isAuthed = event.request.headers.has('authorization') || event.request.headers.has('cookie');
-    if (isAuthed) {
-      headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
-    } else {
-      headers.set('Cache-Control', 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400');
-    }
+    headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+    headers.set('Pragma', 'no-cache');
   }
 
   return new Response(response.body, {

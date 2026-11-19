@@ -1,154 +1,113 @@
-# Přispívání do projektu / Contributing to Akcelerátor altruismu 🌱
+# Přispívání do projektu / Contributing to Akcelerátor altruismu
 
-Děkujeme, že pomáháte rozvíjet Akcelerátor altruismu! Tento průvodce slouží k hladkému zapojení nových i stávajících vývojářů a udržení vysokých standardů kvality kódu, přístupnosti a architektonické integrity.
-
-Thank you for your interest in contributing! This guide provides a smooth onboarding path and maintains our bleeding-edge engineering standards, accessibility, and product philosophy.
+Děkujeme, že pomáháte rozvíjet Akcelerátor altruismu. Tento průvodce shrnuje produktovou filozofii, standardy kódu a ověřovací postup před otevřením Pull Requestu.
 
 ---
 
-## 🧭 Filozofie produktu / Product Philosophy
+## Filozofie produktu a hlavní severka
 
-Každý kód, komponenta a text v aplikaci musí ctít naše základní principy (viz také [CONCEPT_V2.md](CONCEPT_V2.md)):
+Hlavní severka produktu zní: **„Pomáhat pomáhat – a udělat pomáhání tak snadné jako masturbovat.“**
+Detailní pravidla jsou rozdělena v [AGENTS.md](AGENTS.md) a v adresáři `.agents/rules/`. Každá změna musí ctít:
 
-1. **Agency first (Podpora vlastní akceschopnosti)**: „Můžeš udělat jeden malý krok“ místo moralizujícího „měl bys pomáhat“.
-2. **Ultra-nízké tření (Zero friction)**: Žádné povinné registrace, žádné zdlouhavé dotazníky. Jeden primární krok za méně než 60 sekund.
-3. **Ochrana energie (Energy protection)**: Respektujeme únavu a zahlcení. Vždy dáváme uživateli svolení skončit (*„🌿 Pro dnešek stačí“*).
-4. **Odolnost a lokální zálohy**: Aplikace nikdy nesmí selhat na bílé obrazovce. Při výpadku externích služeb (Overpass OSM, Supabase) se automaticky přepne na lokální kurátorovaná data (`src/lib/data/`).
+1. **Okamžitost a krása (*Daylight Editorial*)**: Žádné stěny filtrů, uvítací plakáty ani morální kázání nad hlavní kartou na `/`.
+2. **Ultra-nízké tření**: Žádné registrace ani hold-to-confirm smyčky — jeden konkrétní krok jedním kliknutím.
+3. **Nulový manipulativní šum**: Žádná FOMO oznámení sociálního nátlaku ani nativní Unicode emoji (veškeré ikony běží přes `@lucide/svelte` v `src/lib/icons/`).
+4. **Odolnost při výpadku**: Při nedostupnosti Supabase nebo geokódování Nominatim (OpenStreetMap) aplikace plynule přechází na lokální česká data (`src/lib/data/`).
 
 ---
 
-## ⚡ Rychlý start pro vývojáře (< 2 min)
+## Rychlý start pro vývojáře (< 2 min)
 
 ### Požadavky
-- **Node.js**: `>=22.12.0` (doporučujeme Node 24 LTS, repo obsahuje `.nvmrc`)
-- **npm** (součást Node.js)
+- **Node.js**: `24` LTS (viz `akcelerator-landing-page/.nvmrc` a `runtime: 'nodejs24.x'` v `akcelerator-landing-page/svelte.config.js`)
+- **npm** (součást Node.js 24)
 - **Git**
 
-### Krok za krokem
+### Postup
 ```bash
-# 1. Naklonujte repozitář
-git clone https://github.com/ondras/akcelerator-altruismu.git
-cd "Akcelerátor altruismu"
+git clone https://github.com/ondrafranc/Akceler-tor-altruismu.git
+cd Akceler-tor-altruismu
 
-# 2. Nainstalujte závislosti (automaticky nainstaluje i aplikaci)
+# Nainstaluje závislosti v rootu i v akcelerator-landing-page/
 npm install
 
-# 3. Spusťte vývojový server
+# Spustí vývojový server na http://localhost:5173
 npm run dev
 ```
 
-Aplikace se spustí na adrese **[http://localhost:5173](http://localhost:5173)**. Aplikace běží v plnohodnotném offline režimu s in-memory českými daty bez potřeby Supabase přihlašovacích údajů.
-
-Pokud chcete lokálně pracovat s databází Supabase, zkopírujte šablonu proměnných prostředí:
+Pro volitelné napojení na Supabase zkopírujte šablonu:
 ```bash
 cp akcelerator-landing-page/.env.example akcelerator-landing-page/.env
 ```
-Podrobnosti o databázovém schématu naleznete v [DEPLOYMENT_INSTRUCTIONS.md](DEPLOYMENT_INSTRUCTIONS.md).
+Databázové migrace a bezpečnostní nastavení jsou popsány v [DEPLOYMENT_INSTRUCTIONS.md](DEPLOYMENT_INSTRUCTIONS.md).
 
 ---
 
-## 💻 Standardy kódu (Svelte 5 Runes)
+## Standardy kódu (SvelteKit 2 + Svelte 5)
 
-Projekt používá **Svelte 5**. Veškerý nový kód a refaktorované komponenty musí striktně dodržovat moderní syntaxi **Svelte Runes**:
+### Politika Svelte 5 Runes
+- Veškeré **nové a refaktorované** `.svelte` komponenty musí používat **Svelte 5 Runes** (`$state`, `$derived`, `$props()`, `$effect`).
+- Aktuální pokrytí v `src/`: `20/31` `.svelte` souborů používá Runes, `1` bezstavový Svelte 5 soubor (`src/routes/+error.svelte` s `onclick=`) a `10` zbývajících komponent se starší syntaxí Svelte 4 (`SmallWinCelebration.svelte`, `CityJumpStrip.svelte`, `HopeCarousel.svelte`, `PathwaysBento.svelte`, `PortalsDrawer.svelte`, `QuickStartSection.svelte`, `SanctuaryTeaser.svelte`, `DeedInspectorModal.svelte`, `ProgressDashboard.svelte`, `src/routes/app/+page.svelte`) se migruje postupně při své úpravě — do nově psaných nebo refaktorovaných souborů staré vzory nepřidávejte.
 
-### 1. Reaktivní stav (`$state`)
-Používejte `$state()` namísto zastaralých `let` proměnných:
-```svelte
-<script>
-  let isExpanded = $state(false);
-  let selectedFilter = $state('all');
-</script>
-```
-
-### 2. Vypočítané hodnoty (`$derived`)
-Namísto zastaralé syntaxe `$: foo = bar * 2` používejte `$derived()`:
-```svelte
-<script>
-  let count = $state(0);
-  let double = $derived(count * 2);
-  let isPositive = $derived(count > 0);
-</script>
-```
-
-### 3. Vlastnosti komponent (`$props()`)
-Namísto zastaralého `export let title` používejte destrukturované typované `$props()`:
+### Příklad typované Runes komponenty (`"checkJs": true`)
 ```svelte
 <script>
   /**
    * @type {{
-   *   action: import('$lib/data/micro-actions.js').MicroAction,
+   *   action: import('$lib/types/deed').MicroAction,
    *   onComplete?: () => void,
    *   variant?: 'compact' | 'full'
    * }}
    */
   let { action, onComplete, variant = 'full' } = $props();
+
+  let isExpanded = $state(false);
+  let hasDetails = $derived(Boolean(action.steps?.length));
 </script>
 ```
 
-### 4. Vedlejší efekty (`$effect`)
-`$effect()` používejte s rozvahou pouze pro synchronizaci s vnějším světem (DOM, Web Audio, LocalStorage). Nikdy nepoužívejte `$effect` pro výpočet stavu, který lze odvodit pomocí `$derived`.
-
-### 🚫 Zakázané zastaralé vzory
-- ❌ Žádné `export let propName;` (nahrazeno `$props()`)
-- ❌ Žádné `$: statement;` (nahrazeno `$derived` nebo explicitními handlery)
-- ❌ Žádné `writable()` / `readable()` Svelte stores v nových komponentách (nahrazeno `$state`)
+### Další technická pravidla
+- Kanonické TypeScript typy žijí v `akcelerator-landing-page/src/lib/types/` (`deed.ts`, `sensory.ts`, `molly.ts`, `progress.ts`, `api.ts`, `storage.ts`). V `src/` nepoužívejte `any` ani `@ts-ignore`.
+- Veškeré čtení/zápis do `localStorage` / `sessionStorage` musí používat konstanty z `src/lib/storage/keys.ts` a adaptér `src/lib/storage/index.ts`.
+- Nové ikony přidejte do `src/lib/icons/lucideIcons.js` a `src/lib/icons/iconRegistry.js` — `vite.config.js` si je do `optimizeDeps.include` načítá automaticky.
+- Nevytvářejte duplicitní katalogy karet ani přechodové forwarder moduly.
 
 ---
 
-## 🌿 Konvence commitů (Conventional Commits)
-
-Commit zprávy musí následovat standard [Conventional Commits](https://www.conventionalcommits.org/):
+## Konvence commitů (Conventional Commits)
 
 ```text
 <typ>(<volitelný rozsah>): <popis v přítomném čase>
 ```
 
-### Povolené typy:
-- `feat:` — nová uživatelská funkce nebo schopnost (např. `feat(map): add category filter for animal shelters`)
-- `fix:` — oprava chyby (např. `fix(audio): handle iOS autoplay policy gracefully`)
-- `docs:` — změna dokumentace (např. `docs: update onboarding guide with devcontainer instructions`)
-- `test:` — přidání nebo oprava testů (např. `test(actions): add unit tests for recommendation engine`)
-- `refactor:` — úprava kódu bez změny chování či API (např. `refactor(data): split czech-actions into atomic modules`)
-- `chore:` — úpravy build nástrojů, závislostí a konfigurace (např. `chore: upgrade svelte-check to 4.7.8`)
+Povolené typy: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`.
 
 ---
 
-## 🔍 Lokální kontrola před odesláním PR (Verification)
+## Lokální kontrola před odesláním PR (Verification)
 
-Před otevřením Pull Requestu ověřte, že všechny automatizované kontroly procházejí:
+Z kořene repozitáře nebo z `akcelerator-landing-page/` ověřte:
 
 ```bash
 # 1. Typová kontrola (musí projít s 0 chybami a 0 varováními)
 npm run check
 
-# 2. Bleskové jednotkové testy (Vitest)
+# 2. Jednotkové testy (Vitest — 17 souborů: 16 *.test.js + 1 toolchain.test.ts, 216 testů)
 npm run test:unit
 
 # 3. Produkční sestavení aplikace
 npm run build
 
-# 4. Volitelně: integrační testy API endpointů (Playwright)
-npm run test:api
+# 4. E2E testy Playwright (16 *.spec.ts souborů / 315 testů; uvnitř akcelerator-landing-page/ vždy přes npm test -- <spec>)
+cd akcelerator-landing-page
+npm test -- tests/api.spec.ts
 ```
 
-### Checklist kvality pro autory změn:
-- [ ] Všechny testy a typové kontroly procházejí (`npm run check` && `npm run test:unit` && `npm run build`).
-- [ ] Žádné tajné klíče ani lokální `.env` soubory nejsou zahrnuty v commitu.
-- [ ] Responzivita a mobilní zobrazení: ověřeno na malých displejích (touch targets minimálně 44×44 px, kontrast textu minimálně 4.5:1).
-- [ ] Aktualizace relevantní dokumentace a záznam v [CHANGELOG.md](CHANGELOG.md).
-
----
-
-## 🚀 Životní cyklus Pull Requestu
-
-1. Vytvořte si větev z větve `main`:
-   ```bash
-   git checkout -b feat/nazev-vasi-funkce
-   ```
-2. Proveďte změny v souladu s pravidly.
-3. Zkontrolujte kód pomocí výše uvedených příkazů.
-4. Zapište změny pomocí Conventional Commits a pushněte do svého forku.
-5. Otevřete Pull Request. Naše šablona PR vás automaticky provede finálním kontrolním seznamem.
-6. Automatizované CI na GitHub Actions ověří typovou správnost, testy i produkční build.
-
-Máte-li otázky nebo nápad k diskuzi, neváhejte otevřít GitHub Issue! Těšíme se na vaše příspěvky.
+### Checklist kvality pro autory změn
+- [ ] `npm run check`, `npm run test:unit` a `npm run build` procházejí bez chyb a varování.
+- [ ] Relevantní Playwright E2E specifikace spuštěné přes `npm test -- <spec>` procházejí.
+- [ ] Nové či upravené komponenty používají Svelte 5 Runes a neobsahují `any` ani `@ts-ignore`.
+- [ ] V UI, datech ani dokumentaci nejsou žádné nativní Unicode emoji.
+- [ ] Ověřeno na desktopu i úzkém mobilu (`360×800` / `375×667`, dotykové plochy `>= 44×44 px`, formulářová pole `>= 16 px`).
+- [ ] Žádné tajné klíče ani `.env` soubory nejsou zahrnuty v commitu.
+- [ ] Relevantní dokumentace a [CHANGELOG.md](CHANGELOG.md) jsou aktualizované.

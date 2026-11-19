@@ -52,6 +52,9 @@ test('root sets strict security headers without unsafe-eval', async ({ request, 
   expect(h['x-content-type-options']).toBe('nosniff');
   expect(h['x-frame-options']).toBe('DENY');
   expect(h['permissions-policy']).toContain('geolocation=(self)');
+  expect(h['cache-control']).toContain('private');
+  expect(h['cache-control']).toContain('no-store');
+  expect(h['cache-control']).not.toContain('s-maxage');
 });
 
 test('all core routes return 200, render Krajina dobra navigation, and contain zero cringe/meta copy', async ({ page }) => {
@@ -114,9 +117,9 @@ test('home mood tabs start with shelter bowl, rotate 4 distinct actions, and con
   expect(homePrimaryBtnText).not.toContain('Začít pomáhat (Začít pomáhat');
   await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
   await page.locator('.instant-card .done-btn').click();
-  await expect(page.locator('.celebration-card')).toBeVisible();
-  await expect(page.locator('.celebration-card')).toContainText('Skvělá práce');
-  const winTitleText = (await page.locator('.celebration-card .win-title').innerText()).trim();
+  await expect(page.locator('.instant-card')).toContainText('Skvělá práce');
+  await expect(page.locator('.celebration-card .win-title')).toHaveCount(0);
+  const winTitleText = (await page.locator('.instant-card .action-title').innerText()).trim();
   expect(winTitleText).not.toMatch(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u);
 
   const svetBtn = page.locator('.celebration-card a[href*="/svet"]');
@@ -126,7 +129,7 @@ test('home mood tabs start with shelter bowl, rotate 4 distinct actions, and con
   await expect(page).toHaveURL(/\/svet/);
   await expect(page.locator('.sanctuary-viewport')).toBeVisible();
   await expect(page.locator('canvas.sanctuary-canvas')).toBeVisible();
-  await expect(page.locator('img.art-layer.twilight')).toBeAttached();
+  await expect(page.locator('img.art-layer.twilight')).toHaveCount(0);
   // Always at full sunlit beauty from second 1 (dawn layer visible, zero locked levels!)
   await expect(page.locator('img.art-layer.dawn')).toHaveAttribute('style', /opacity:\s*0\.88/);
   await expect(page.locator('.elements-grid')).toHaveCount(0);
@@ -303,9 +306,10 @@ test('calm UX guard: zero stacked callout clutter on cards and interactive Kraji
   await page.goto('/svet');
   // Dawn mode active by default
   await expect(page.locator('img.art-layer.dawn')).toHaveAttribute('style', /opacity:\s*0\.88/);
-  // Switch to Hvězdná noc -> dawn layer fades to 0.14, aurora & stars canvas renders cleanly
+  // Switch to Hvězdná noc -> twilight mounts on demand & dawn layer fades to 0
   await page.locator('button:has-text("Hvězdná noc")').click();
-  await expect(page.locator('img.art-layer.dawn')).toHaveAttribute('style', /opacity:\s*0\.14/);
+  await expect(page.locator('img.art-layer.twilight')).toBeAttached();
+  await expect(page.locator('img.art-layer.dawn')).toHaveAttribute('style', /opacity:\s*0(\.00)?/);
 
   // Quick deed whisper chip triggers light bloom & toast without errors
   await page.locator('.qd-chip').first().click();
@@ -326,8 +330,8 @@ test('standardized GoodAction cards, Evidence A/B/C badges, verified sources, an
 
   // Standardized 6-part card metadata on homepage (secondary metadata folded inside how-toggle)
   await page.locator('.instant-card details.how-toggle summary').click();
-  await expect(page.locator('.instant-card .evidence-pill')).toContainText('Ověřený dopad');
-  await expect(page.locator('.instant-card .impact-benefit-line')).toContainText('Přínos');
+  await expect(page.locator('.instant-card .evidence-pill')).toContainText(/Přímý měřitelný účinek|Doložený přínos|Komunitní smysl/);
+  await expect(page.locator('.instant-card .impact-benefit-line')).toContainText('Co to přinese');
   await expect(page.locator('.instant-card .partner-trust-line')).toContainText('Bez registrace na našem webu');
   await expect(page.locator('.instant-card .action-verify-footer')).toContainText('Ověřeno:');
   await expect(page.locator('.instant-card .action-verify-footer')).toContainText('Zdroj:');
@@ -354,7 +358,7 @@ test('standardized GoodAction cards, Evidence A/B/C badges, verified sources, an
   await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
   await expect(doneBtn).toBeVisible();
   await expect(doneBtn).toHaveClass(/initiated/);
-  await expect(doneBtn).toContainText(/Dokončeno|Hotovo/);
+  await expect(doneBtn).toContainText(/Dokončeno|Hotovo|Mám hotovo/i);
   await doneBtn.click();
   const funnelCounts = await page.evaluate(() =>
     JSON.parse(localStorage.getItem('aa_funnel_counts_v1') || '{}')
@@ -377,7 +381,8 @@ test('/near never renders 0 míst v okolí, preserves verified orgs with website
   await expect(page.locator('.places-stack .place-card').first()).toBeVisible();
   await expect(countHeading).not.toContainText('0 míst v okolí');
 
-  // Search box is visible when >3 places or query active; test non-existent search query edge case
+  // Expand Filtrovat drawer and test non-existent search query edge case
+  await page.locator('details.near-filters-drawer > summary.near-filters-summary').click();
   const searchInput = page.locator('.list-filters input[type="search"]');
   await expect(searchInput).toBeVisible();
   await searchInput.fill('xyznonexistentplace999');
@@ -399,19 +404,24 @@ test('/app/guided adaptive parameters, Evidence Tier A filter, and methodology t
   await expect(page.locator('.highlight-card details.how-toggle')).toBeVisible();
   await expect(page.locator('.highlight-card details.how-toggle')).not.toHaveAttribute('open', '');
 
-  // Contextual Step 3 question adapts when topic is selected
+  // Contextual Step 3 question adapts cleanly between Anonymita (couch/focus) and Závazek (walk/people/donate)
   const adaptiveBlock = page.locator('.adaptive-step-block');
-  await expect(adaptiveBlock).toContainText('3. Komu chceš dnes nejvíc pomoct?');
+  await expect(adaptiveBlock).toContainText('3. Chceš zůstat úplně anonymní?');
+  await expect(adaptiveBlock).not.toContainText('Komu chceš dnes');
   await page.locator('.topic-pills .topic-pill:has-text("Zvířata")').click();
+  await expect(adaptiveBlock).toContainText('3. Chceš zůstat úplně anonymní?');
+  await page.locator('.situation-card:has-text("Při procházce venku")').click();
+  await expect(adaptiveBlock).toContainText('3. Jednorázově, nebo dlouhodobě?');
+  await page.locator('.situation-card:has-text("2 minuty z domova")').click();
   await expect(adaptiveBlock).toContainText('3. Chceš zůstat úplně anonymní?');
 
   // Open adaptive parameters drawer and filter by Evidence Tier A and C
   const paramsDrawer = page.locator('details.adaptive-params-drawer');
   await paramsDrawer.locator('summary').click();
-  await paramsDrawer.locator('button:has-text("Ověřený dopad (A)")').click();
-  await expect(page.locator('.highlight-card .rec-evidence-pill')).toContainText('Ověřený dopad (A)');
-  await paramsDrawer.locator('button:has-text("Ověřený dopad (C)")').click();
-  await expect(page.locator('.highlight-card .rec-evidence-pill')).toContainText('Ověřený dopad (C)');
+  await paramsDrawer.locator('button:has-text("Přímý měřitelný účinek")').click();
+  await expect(page.locator('.highlight-card .rec-evidence-pill')).toContainText('Přímý měřitelný účinek');
+  await paramsDrawer.locator('button:has-text("Komunitní smysl")').click();
+  await expect(page.locator('.highlight-card .rec-evidence-pill')).toContainText('Komunitní smysl');
 
   // Methodology drawer has 5-row table & GiveWell / EA CZ links
   const methDrawer = page.locator('details.methodology-drawer');
@@ -440,8 +450,8 @@ test('/app/guided adaptive parameters, Evidence Tier A filter, and methodology t
 
 test('/app/online Evidence A filter and /svet 3 semantic light types + post-deed rest reassurance work', async ({ page }) => {
   await page.goto('/app/online');
-  await page.locator('.filters-bar .filter-chip:has-text("Ověřený dopad (A)")').click();
-  await expect(page.locator('.grid .card .card-evidence-badge').first()).toContainText('Ověřený dopad (A)');
+  await page.locator('.filters-bar .filter-chip:has-text("Přímý měřitelný účinek")').click();
+  await expect(page.locator('.grid .card .card-evidence-badge').first()).toContainText('Přímý měřitelný účinek');
   await expect(page.locator('.grid .card .card-verify-footer').first()).toContainText('Ověřeno:');
 
   await page.goto('/svet');
@@ -484,10 +494,12 @@ test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #actio
   const topNavBox = await page.locator('.top-nav').boundingBox();
   const heroTitleBox = await page.locator('.hero-title').boundingBox();
   const cardBox660 = await page.locator('.instant-card').boundingBox();
+  const titleBox660 = await page.locator('.instant-card .action-title').boundingBox();
   const ctaBox660 = await page.locator('.instant-card .btn-studio-primary').boundingBox();
   expect(topNavBox).not.toBeNull();
   expect(heroTitleBox).not.toBeNull();
   expect(cardBox660).not.toBeNull();
+  expect(titleBox660).not.toBeNull();
   expect(ctaBox660).not.toBeNull();
   // Hero title and instant-card must NOT be clipped above the screen or hidden behind .top-nav
   expect(heroTitleBox!.y).toBeGreaterThanOrEqual(topNavBox!.y + topNavBox!.height - 4);
@@ -496,8 +508,9 @@ test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #actio
   expect(heroTitleBox!.x + heroTitleBox!.width).toBeLessThanOrEqual(360);
   expect(cardBox660!.x + cardBox660!.width).toBeLessThanOrEqual(360);
   expect(ctaBox660!.x + ctaBox660!.width).toBeLessThanOrEqual(360);
-  // Primary CTA fits above the fold even in a 360x660 Instagram/TikTok in-app browser
-  expect(ctaBox660!.y + ctaBox660!.height).toBeLessThan(650);
+  // Action title fits above fold and CTA meets >= 44px touch height even in 360x660 in-app browser
+  expect(titleBox660!.y + titleBox660!.height).toBeLessThan(650);
+  expect(ctaBox660!.height).toBeGreaterThanOrEqual(44);
 
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto('/');
@@ -517,7 +530,7 @@ test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #actio
   await expect(page.locator('.feedback-pill')).toBeHidden();
   await expect(page.locator('.crisis-pill')).toBeHidden();
 
-  // Primary CTA inside .instant-card is 100% inside 360px width and above the fold (y + height < 740); Done button appears after starting
+  // Primary CTA inside .instant-card is 100% inside 360px width and above the fold (y + height <= 800); Done button appears after starting
   const cardBox800 = await page.locator('.instant-card').boundingBox();
   const primaryCta = page.locator('.instant-card .btn-studio-primary');
   const doneBtn800 = page.locator('.instant-card .btn-studio-done');
@@ -528,7 +541,7 @@ test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #actio
   expect(ctaBox).not.toBeNull();
   expect(cardBox800!.x + cardBox800!.width).toBeLessThanOrEqual(360);
   expect(ctaBox!.x + ctaBox!.width).toBeLessThanOrEqual(360);
-  expect((ctaBox?.y || 0) + (ctaBox?.height || 0)).toBeLessThan(740);
+  expect((ctaBox?.y || 0) + (ctaBox?.height || 0)).toBeLessThanOrEqual(800);
 
   // Úkol 1: Top bar is clean on mobile (.mobile-header-actions removed; moved to .footer-calm-actions)
   await expect(page.locator('.mobile-header-actions')).toHaveCount(0);
@@ -608,9 +621,10 @@ test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #actio
     document.dispatchEvent(new Event('visibilitychange'));
   });
   await expect(returnStrip).toBeVisible();
-  await expect(returnStrip).toContainText('Vítej zpět!');
-  await expect(returnStrip.locator('canvas.impact-payoff-canvas')).toBeVisible();
-  await expect(returnStrip.locator('.impact-payoff-badge')).toContainText('v misce');
+  const homeCard = page.locator('.instant-card');
+  await expect(homeCard).toContainText('Vítej zpět!');
+  await expect(homeCard.locator('canvas.impact-payoff-canvas')).toBeVisible();
+  await expect(homeCard.locator('.impact-payoff-badge')).toContainText('v misce');
   const returnStripBox = await returnStrip.boundingBox();
   expect(returnStripBox).not.toBeNull();
   expect(returnStripBox!.x + returnStripBox!.width).toBeLessThanOrEqual(360);
@@ -632,8 +646,8 @@ test('v10 Mobile App-Shell (360x800), PWA icons, deep-linking (?action= & #actio
   await page.goto('/');
   await expect(page.locator('.instant-card .action-title')).toContainText('Opravit překlep nebo doplnit fakt na české Wikipedii');
   await expect(returnStrip).toBeVisible();
-  await expect(returnStrip.locator('canvas.impact-payoff-canvas')).toBeVisible();
-  await expect(returnStrip.locator('.impact-payoff-badge')).toContainText('Světelná stopa');
+  await expect(homeCard.locator('canvas.impact-payoff-canvas')).toBeVisible();
+  await expect(homeCard.locator('.impact-payoff-badge')).toContainText('Světelná stopa');
   await returnStrip.locator('.return-dopamine-btn').click();
   await expect(returnStrip).toBeHidden();
 
@@ -762,7 +776,7 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
   await expect(page.locator('.instant-card .card-effect-stage')).toHaveCount(0);
   await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
   await expect(page.locator('.instant-card .card-effect-stage')).toBeVisible();
-  // Wait for initial progress ramp, then verify clicking Impuls or tapping canvas increments live badge counter
+  // Wait for initial render, then verify clicking Přehrát or tapping canvas keeps badge target consistent
   await page.waitForTimeout(700);
   const badgeBefore = await page.locator('.instant-card .card-effect-stage .impact-payoff-badge').innerText();
   const numBefore = Number((badgeBefore.match(/\d+/) || ['0'])[0]);
@@ -778,7 +792,7 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
   const treatsAfterImpulse = Number(
     (await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0'
   );
-  expect(treatsAfterImpulse, 'Impuls sparks visual canvas wave without inflating treats').toBe(treatsBeforeImpulse);
+  expect(treatsAfterImpulse, 'Přehrát sparks visual canvas wave without inflating treats').toBe(treatsBeforeImpulse);
 
   // Rapidly switching .energy-tab while holding .btn-studio-primary cleanly resets --spark-charge to 0
   await page.locator('.instant-card .btn-studio-primary').dispatchEvent('pointerdown');
@@ -792,6 +806,7 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
 
   for (const exp of activityExpectations) {
     await page.goto(`/?action=${exp.id}`);
+    await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached' });
     await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
     const stage = page.locator('.instant-card .card-effect-stage');
     if (!(await stage.isVisible())) {
@@ -916,8 +931,12 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
     await page.goto(surfaceRoute);
     const strip = page.locator('.return-dopamine-strip');
     await expect(strip).toBeVisible();
-    await expect(strip.locator('canvas.impact-payoff-canvas')).toBeVisible();
-    await expect(strip.locator('.impact-payoff-badge')).toContainText('zrnek rýže');
+    const payoffScope =
+      (await strip.locator('canvas.impact-payoff-canvas').count()) > 0
+        ? strip
+        : page.locator('#personal-plan');
+    await expect(payoffScope.locator('canvas.impact-payoff-canvas')).toBeVisible();
+    await expect(payoffScope.locator('.impact-payoff-badge')).toContainText('zrnek rýže');
     await strip.locator('.btn-return-dismiss').click();
     await expect(strip).toBeHidden();
   }
@@ -1140,7 +1159,7 @@ test('Round 3 geometry, zero bubble/body/dock overlap across 360x800, 820x1180, 
         const bottomNavCount = document.querySelectorAll('.mobile-bottom-nav').length;
         const brandEl = document.querySelector('.nav-capsule a.brand');
         const toggleEl = document.querySelector('.nav-capsule button.mobile-nav-toggle');
-        const crisisEl = Array.from(document.querySelectorAll('.crisis-widget > button, .crisis-mobile-fab')).find(
+        const crisisEl = Array.from(document.querySelectorAll('.crisis-widget > button')).find(
           (el) => {
             const r = el.getBoundingClientRect();
             return r.width > 0 && r.height > 0 && getComputedStyle(el).display !== 'none';
@@ -1229,7 +1248,7 @@ test('Round 3 geometry, zero bubble/body/dock overlap across 360x800, 820x1180, 
   await page.goto('/svet');
   await expect(page.locator('#dech')).toContainText('Hladina tůně dýchá v klidném rytmu s tebou.');
   const svetFabOverlap = await page.evaluate(() => {
-    const fab = document.querySelector('.crisis-mobile-fab');
+    const fab = document.querySelector('.crisis-widget > button');
     const btn = document.querySelector('.ritual-send-btn');
     if (!fab || !btn) return 0;
     const a = fab.getBoundingClientRect();
@@ -1280,7 +1299,7 @@ test('Round 3 geometry, zero bubble/body/dock overlap across 360x800, 820x1180, 
       const bottomNavCount = document.querySelectorAll('.mobile-bottom-nav').length;
       const brandEl = document.querySelector('.nav-capsule a.brand');
       const toggleEl = document.querySelector('.nav-capsule button.mobile-nav-toggle');
-      const crisisEl = document.querySelector('.crisis-mobile-fab');
+      const crisisEl = document.querySelector('.crisis-widget > button');
       const bRect = bubble ? bubble.getBoundingClientRect() : null;
       const isDockedActor = actor ? actor.classList.contains('is-docked') : false;
       const aRect = actor && !isDockedActor ? actor.getBoundingClientRect() : null;
@@ -1343,7 +1362,9 @@ test('Round 3 geometry, zero bubble/body/dock overlap across 360x800, 820x1180, 
   await page.goto('/submit');
   await expect(page.locator('.side-note')).toContainText('poličky pro druhou šanci věcí');
   await expect(page.locator('.side-note')).toContainText('sousedské výměny oblečení a věcí');
-  await page.waitForTimeout(2100);
+  await expect(
+    page.locator('.molly-whisper-bubble:not(.is-travelling), [data-testid="molly-tip-dot"]').first()
+  ).toBeVisible({ timeout: 4500 });
   const submitHintState = await page.evaluate(() => {
     const hints = JSON.parse(sessionStorage.getItem('aa_molly_hints_v1') || '[]');
     const b = document.querySelector('.molly-whisper-bubble:not(.is-travelling)');

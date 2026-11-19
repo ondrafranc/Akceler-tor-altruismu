@@ -28,9 +28,9 @@
     consumePendingPartnerReturn,
     getPendingPartnerReturnRemainingMs
   } from "../../../lib/features/actions/services/partnerReturnService.js";
-  import { triggerCanvasBurst } from "../../../lib/sensory/canvas/controllerRegistry.js";
+  import { getActionEffectMeta } from "../../../lib/sensory/catalog/catalogResolver.js";
+  import { impactCanvas } from "../../../lib/sensory/canvas/impactCanvasAction.js";
   import { holdSpark } from "../../../lib/sensory/interaction/holdSpark.js";
-  import { notifyMollySpark } from "../../../lib/mollyStore.js";
   import { haversineKm } from "../../../lib/validation.js";
   import {
     cleanTitle,
@@ -100,86 +100,102 @@
     },
   ];
 
-  let activeSituationId = "couch";
+  let activeSituationId = $state("couch");
   /** @type {string[]} */
-  let selectedTopics = [];
-  let cityId = "praha";
-  let rotationSeed = 0;
+  let selectedTopics = $state([]);
+  let cityId = $state("praha");
+  let rotationSeed = $state(0);
   let lastShownActionId = "";
-  let excludePrevId = "";
-  let openTemplateId = null;
-  let copiedTemplateId = null;
-  let planFlash = false;
-  let localDrawerOpen = false;
-  let soundMuted = false;
-  let showGuidedEffect = true;
-  let guidedSparkBoosted = false;
-  let guidedCanvasNode = null;
-  let guidedEffectMetric = 0;
-  let guidedReturnAction = null;
-  let guidedReturnMetric = 0;
+  let excludePrevId = $state("");
+  let openTemplateId = $state(null);
+  let copiedTemplateId = $state(null);
+  let planFlash = $state(false);
+  let localDrawerOpen = $state(false);
+  let soundMuted = $state(false);
+  let guidedReturnAction = $state(null);
+  let guidedReturnMetric = $state(0);
   let awaitingGuidedAction = null;
   let guidedLeaveTimestamp = 0;
-  let copiedDirectLink = false;
+  let copiedDirectLink = $state(false);
 
   // Adaptivní parametry průvodce (sekce 4.2 + 5.2)
   /** @type {'any' | 'one_off' | 'long_term'} */
-  let commitment = "any";
+  let commitment = $state("any");
   /** @type {'any' | 'anonymous' | 'contact_ok'} */
-  let contactLevel = "any";
+  let contactLevel = $state("any");
   /** @type {'any' | 'people' | 'animals' | 'nature'} */
-  let recipientMacro = "any";
+  let recipientMacro = $state("any");
   /** @type {'any' | 'solo' | 'group'} */
-  let socialOverride = "any";
+  let socialOverride = $state("any");
   /** @type {'any' | 'online' | 'local'} */
-  let modeOverride = "any";
+  let modeOverride = $state("any");
   /** @type {'any' | 'free' | 'donation'} */
-  let costOverride = "any";
+  let costOverride = $state("any");
   /** @type {'any' | 'A' | 'B' | 'C'} */
-  let evidenceTier = "any";
+  let evidenceTier = $state("any");
 
-  $: activeSituation =
-    SITUATIONS.find((s) => s.id === activeSituationId) || SITUATIONS[0];
-  $: localDrawerOpen =
-    activeSituationId === "walk" || activeSituationId === "people";
-  $: completedIds = ($completedSteps || []).map((s) => s.id);
-
-  $: effectiveCost =
-    costOverride !== "any" ? costOverride : activeSituation.cost;
-  $: effectiveMode =
-    modeOverride !== "any" ? modeOverride : activeSituation.mode;
-  $: effectiveSocial =
-    socialOverride !== "any" ? socialOverride : activeSituation.social;
-
-  $: recommendations = recommendActions({
-    values: selectedTopics,
-    timeBucket: activeSituation.timeBucket,
-    cost: effectiveCost,
-    mode: effectiveMode,
-    social: effectiveSocial,
-    commitment,
-    contactLevel,
-    recipientMacro,
-    evidenceTier,
-    completedIds,
-    excludeIds: excludePrevId ? [excludePrevId] : [],
-    seed: `${activeSituationId}:${selectedTopics.join(",")}:${commitment}:${contactLevel}:${recipientMacro}:${evidenceTier}:${rotationSeed}`,
-  });
-
-  $: bestAction = recommendations[0] || null;
-  $: if (bestAction?.id) {
-    lastShownActionId = bestAction.id;
+  function evidenceTierLabel(tier) {
+    if (tier === "A") return "Přímý měřitelný účinek";
+    if (tier === "C") return "Komunitní smysl";
+    return "Doložený přínos";
   }
-  $: isBestStarted = Boolean(
-    bestAction?.id &&
-      Array.isArray($startedActionIds) &&
-      $startedActionIds.includes(bestAction.id),
+
+  const activeSituation = $derived(
+    SITUATIONS.find((s) => s.id === activeSituationId) || SITUATIONS[0],
+  );
+  $effect(() => {
+    localDrawerOpen =
+      activeSituationId === "walk" || activeSituationId === "people";
+  });
+  const completedIds = $derived(($completedSteps || []).map((s) => s.id));
+
+  const effectiveCost = $derived(
+    costOverride !== "any" ? costOverride : activeSituation.cost,
+  );
+  const effectiveMode = $derived(
+    modeOverride !== "any" ? modeOverride : activeSituation.mode,
+  );
+  const effectiveSocial = $derived(
+    socialOverride !== "any" ? socialOverride : activeSituation.social,
   );
 
-  $: sideAlternatives = recommendations.slice(1, 4);
-  $: activeCity = CZECH_CITIES.find((c) => c.id === cityId) || CZECH_CITIES[0];
+  const recommendations = $derived(
+    recommendActions({
+      values: selectedTopics,
+      timeBucket: activeSituation.timeBucket,
+      cost: effectiveCost,
+      mode: effectiveMode,
+      social: effectiveSocial,
+      commitment,
+      contactLevel,
+      recipientMacro,
+      evidenceTier,
+      completedIds,
+      excludeIds: excludePrevId ? [excludePrevId] : [],
+      seed: `${activeSituationId}:${selectedTopics.join(",")}:${commitment}:${contactLevel}:${recipientMacro}:${evidenceTier}:${rotationSeed}`,
+    }),
+  );
 
-  $: targetMapKinds = (() => {
+  const bestAction = $derived(recommendations[0] || null);
+  $effect(() => {
+    if (bestAction?.id) {
+      lastShownActionId = bestAction.id;
+    }
+  });
+  const isBestStarted = $derived(
+    Boolean(
+      bestAction?.id &&
+        Array.isArray($startedActionIds) &&
+        $startedActionIds.includes(bestAction.id),
+    ),
+  );
+
+  const sideAlternatives = $derived(recommendations.slice(1, 4));
+  const activeCity = $derived(
+    CZECH_CITIES.find((c) => c.id === cityId) || CZECH_CITIES[0],
+  );
+
+  const targetMapKinds = $derived.by(() => {
     const s = new Set();
     for (const vKey of selectedTopics) {
       const found = VALUES.find((v) => v.key === vKey);
@@ -188,9 +204,9 @@
       }
     }
     return s.size ? Array.from(s) : ["animals", "food", "community", "ngo"];
-  })();
+  });
 
-  $: localMatches = (() => {
+  const localMatches = $derived.by(() => {
     const withDist = CURATED_FALLBACK_PLACES.map((p) => ({
       ...p,
       distKm:
@@ -209,9 +225,11 @@
         return a.distKm - b.distKm;
       })
       .slice(0, 3);
-  })();
+  });
 
-  $: nearUrl = `/near?lat=${activeCity.lat}&lon=${activeCity.lon}&r=10&kinds=${encodeURIComponent(targetMapKinds.join(","))}`;
+  const nearUrl = $derived(
+    `/near?lat=${activeCity.lat}&lon=${activeCity.lon}&r=10&kinds=${encodeURIComponent(targetMapKinds.join(","))}`,
+  );
 
   function selectSituation(id) {
     if (activeSituationId === id) {
@@ -366,16 +384,32 @@
       const elapsedMem = awaitingGuidedAction
         ? Date.now() - guidedLeaveTimestamp
         : 0;
-      const persisted = consumePendingPartnerReturn(3000);
+      const persisted = consumePendingPartnerReturn(3000, {
+        surfacePrefix: "guided",
+        allowEmptySurface: true,
+      });
       if (elapsedMem >= 3000 || persisted) {
         if (awaitingGuidedAction && !persisted) {
-          consumePendingPartnerReturn(0);
+          consumePendingPartnerReturn(0, {
+            surfacePrefix: "guided",
+            allowEmptySurface: true,
+          });
         }
         const targetId = persisted?.id || awaitingGuidedAction?.id;
         const matched =
-          MICRO_ACTIONS.find((a) => a.id === targetId) ||
+          (targetId ? MICRO_ACTIONS.find((a) => a.id === targetId) : null) ||
+          (targetId
+            ? CURATED_FALLBACK_PLACES.find((p) => p.id === targetId)
+            : null) ||
           awaitingGuidedAction ||
-          bestAction;
+          (persisted?.id && persisted?.title
+            ? {
+                id: persisted.id,
+                title: persisted.title,
+                category: persisted.category,
+                values: persisted.values,
+              }
+            : null);
         if (matched) {
           guidedReturnAction = matched;
           guidedReturnMetric = 0;
@@ -387,7 +421,10 @@
           });
         }
       } else {
-        const remPersisted = getPendingPartnerReturnRemainingMs(3000);
+        const remPersisted = getPendingPartnerReturnRemainingMs(3000, {
+          surfacePrefix: "guided",
+          allowEmptySurface: true,
+        });
         const remMem =
           awaitingGuidedAction && elapsedMem > 0
             ? Math.max(0, 3000 - elapsedMem)
@@ -419,23 +456,6 @@
   function handleToggleSound() {
     soundMuted = toggleSoundMuted();
     trackEvent("aa_sound_toggle", { surface: "guided", muted: soundMuted });
-  }
-
-  function triggerGuidedEffectSpark() {
-    if (!bestAction) return;
-    showGuidedEffect = true;
-    guidedSparkBoosted = true;
-    notifyMollySpark(bestAction, { surface: "guided" });
-    if (guidedCanvasNode) {
-      triggerCanvasBurst(guidedCanvasNode, true);
-    } else {
-      playPayoffAsmr(bestAction);
-    }
-    trackEvent("aa_effect_preview_toggle", {
-      surface: "guided",
-      id: bestAction.id,
-      open: true,
-    });
   }
 
   function handleStartGuidedAction(action, surfaceLabel = "guided_best") {
@@ -484,460 +504,99 @@
   />
 
   <div class="guided-workspace">
-    <!-- LEFT: UNIFIED COMPASS CARD (STEPS 1 + 2 + 3 & ADAPTIVE PARAMS) -->
-    <section class="compass-shell compass-foundations" aria-label="Nastavení průvodce">
-      <div class="step-block">
-        <div class="block-label">1. Kolik máš zrovna času?</div>
-
-        <div
-          class="situation-grid"
-          role="radiogroup"
-          aria-label="Dnešní situace a kapacita"
-        >
-          {#each SITUATIONS as s}
-            <button
-              type="button"
-              class="situation-card"
-              class:active={activeSituationId === s.id}
-              aria-pressed={activeSituationId === s.id}
-              on:click={() => selectSituation(s.id)}
-            >
-              <span class="sit-icon" aria-hidden="true">
-                <AppIcon name={s.icon} size={18} strokeWidth={1.9} />
-              </span>
-              <div class="sit-copy">
-                <span class="sit-title">{s.title}</span>
-                <span class="sit-sub">{s.sub}</span>
-              </div>
-            </button>
-          {/each}
-        </div>
-      </div>
-
-      <div class="divider"></div>
-
-      <div class="step-block">
-        <div class="block-label">
-          2. Blízké téma <span class="opt-tag">(volitelné)</span>
-        </div>
-
-        <div class="topic-pills" role="group" aria-label="Výběr tématu pomoci">
-          <button
-            type="button"
-            class="topic-pill"
-            class:selected={selectedTopics.length === 0}
-            on:click={() => toggleTopic("all")}
-          >
-            <AppIcon name="sparkles" size={14} strokeWidth={1.9} />
-            <span>Cokoliv</span>
-          </button>
-          {#each VALUES as v}
-            <button
-              type="button"
-              class="topic-pill"
-              class:selected={selectedTopics.includes(v.key)}
-              on:click={() => toggleTopic(v.key)}
-            >
-              <AppIcon name={v.icon} size={14} strokeWidth={1.9} />
-              <span>{v.shortLabel || v.label}</span>
-            </button>
-          {/each}
-        </div>
-      </div>
-
-      <div class="divider"></div>
-
-      <!-- STEP 3 & CONSOLIDATED PARAMETERS DRAWER -->
-      <div class="step-block adaptive-step-block" aria-label="Upřesňující volby">
-        {#if selectedTopics.length === 0 && recipientMacro === "any"}
-          <div class="block-label">
-            3. Komu chceš dnes nejvíc pomoct? <span class="opt-tag"
-              >(nepovinné)</span
-            >
-          </div>
-          <div class="topic-pills">
-            <button
-              type="button"
-              class="topic-pill"
-              class:selected={String(recipientMacro) === "people"}
-              on:click={() =>
-                applyAdaptiveFilter(() => (recipientMacro = "people"), "recipient")}
-            >
-              <AppIcon name="users" size={14} strokeWidth={1.9} />
-              <span>Lidem</span>
-            </button>
-            <button
-              type="button"
-              class="topic-pill"
-              class:selected={String(recipientMacro) === "animals"}
-              on:click={() =>
-                applyAdaptiveFilter(
-                  () => (recipientMacro = "animals"),
-                  "recipient",
-                )}
-            >
-              <AppIcon name="paw" size={14} />
-              <span>Zvířatům</span>
-            </button>
-            <button
-              type="button"
-              class="topic-pill"
-              class:selected={String(recipientMacro) === "nature"}
-              on:click={() =>
-                applyAdaptiveFilter(() => (recipientMacro = "nature"), "recipient")}
-            >
-              <AppIcon name="leaf" size={14} strokeWidth={1.9} />
-              <span>Přírodě</span>
-            </button>
-          </div>
-        {:else if activeSituationId === "couch" || activeSituationId === "focus"}
-          <div class="block-label">
-            3. Chceš zůstat úplně anonymní? <span class="opt-tag"
-              >(nepovinné)</span
-            >
-          </div>
-          <div class="topic-pills">
-            <button
-              type="button"
-              class="topic-pill"
-              class:selected={contactLevel === "any"}
-              on:click={() =>
-                applyAdaptiveFilter(() => (contactLevel = "any"), "contact")}
-            >
-              Nezáleží
-            </button>
-            <button
-              type="button"
-              class="topic-pill"
-              class:selected={contactLevel === "anonymous"}
-              on:click={() =>
-                applyAdaptiveFilter(
-                  () => (contactLevel = "anonymous"),
-                  "contact",
-                )}
-            >
-              <AppIcon name="lock" size={14} strokeWidth={1.9} />
-              <span>Zcela anonymně</span>
-            </button>
-            <button
-              type="button"
-              class="topic-pill"
-              class:selected={contactLevel === "contact_ok"}
-              on:click={() =>
-                applyAdaptiveFilter(
-                  () => (contactLevel = "contact_ok"),
-                  "contact",
-                )}
-            >
-              <AppIcon name="message-circle" size={14} strokeWidth={1.9} />
-              <span>Nevadí mi kontakt</span>
-            </button>
-          </div>
-        {:else}
-          <div class="block-label">
-            3. Jednorázově, nebo dlouhodobě? <span class="opt-tag"
-              >(nepovinné)</span
-            >
-          </div>
-          <div class="topic-pills">
-            <button
-              type="button"
-              class="topic-pill"
-              class:selected={commitment === "any"}
-              on:click={() =>
-                applyAdaptiveFilter(() => (commitment = "any"), "commitment")}
-            >
-              Nezáleží
-            </button>
-            <button
-              type="button"
-              class="topic-pill"
-              class:selected={commitment === "one_off"}
-              on:click={() =>
-                applyAdaptiveFilter(
-                  () => (commitment = "one_off"),
-                  "commitment",
-                )}
-            >
-              <AppIcon name="zap" size={14} strokeWidth={1.9} />
-              <span>Jednorázově</span>
-            </button>
-            <button
-              type="button"
-              class="topic-pill"
-              class:selected={commitment === "long_term"}
-              on:click={() =>
-                applyAdaptiveFilter(
-                  () => (commitment = "long_term"),
-                  "commitment",
-                )}
-            >
-              <AppIcon name="sprout" size={14} strokeWidth={1.9} />
-              <span>Dlouhodobě</span>
-            </button>
-          </div>
-        {/if}
-
-        <details class="adaptive-params-drawer">
-          <summary>
-            <span class="summary-label">
-              <AppIcon name="sliders-horizontal" size={15} strokeWidth={2} />
-              <span>Upřesnit další volby (anonymita, závazek, ověřený dopad)</span>
-            </span>
-            <span class="drawer-chevron-wrap" aria-hidden="true">
-              <AppIcon name="chevron-down" size={16} />
-            </span>
-          </summary>
-          <div class="adaptive-params-grid">
-            <div class="ap-group">
-              <span class="ap-label">Závazek:</span>
-              <div class="ap-pills">
-                <button
-                  type="button"
-                  class:active={commitment === "any"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (commitment = "any"), "commitment")}
-                  >Vše</button
-                >
-                <button
-                  type="button"
-                  class:active={commitment === "one_off"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (commitment = "one_off"),
-                      "commitment",
-                    )}>Jednorázově</button
-                >
-                <button
-                  type="button"
-                  class:active={commitment === "long_term"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (commitment = "long_term"),
-                      "commitment",
-                    )}>Dlouhodobě</button
-                >
-              </div>
-            </div>
-
-            <div class="ap-group">
-              <span class="ap-label">Anonymita:</span>
-              <div class="ap-pills">
-                <button
-                  type="button"
-                  class:active={contactLevel === "any"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (contactLevel = "any"), "contact")}
-                  >Vše</button
-                >
-                <button
-                  type="button"
-                  class:active={contactLevel === "anonymous"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (contactLevel = "anonymous"),
-                      "contact",
-                    )}>Anonymně</button
-                >
-                <button
-                  type="button"
-                  class:active={contactLevel === "contact_ok"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (contactLevel = "contact_ok"),
-                      "contact",
-                    )}
-                  >Nevadí kontakt</button
-                >
-              </div>
-            </div>
-
-            <div class="ap-group">
-              <span class="ap-label">Komu pomoci:</span>
-              <div class="ap-pills">
-                <button
-                  type="button"
-                  class:active={recipientMacro === "any"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (recipientMacro = "any"),
-                      "recipient",
-                    )}>Všem</button
-                >
-                <button
-                  type="button"
-                  class:active={recipientMacro === "people"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (recipientMacro = "people"),
-                      "recipient",
-                    )}>Lidem</button
-                >
-                <button
-                  type="button"
-                  class:active={recipientMacro === "animals"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (recipientMacro = "animals"),
-                      "recipient",
-                    )}>Zvířatům</button
-                >
-                <button
-                  type="button"
-                  class:active={recipientMacro === "nature"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (recipientMacro = "nature"),
-                      "recipient",
-                    )}>Přírodě</button
-                >
-              </div>
-            </div>
-
-            <div class="ap-group">
-              <span class="ap-label">Sám / s lidmi:</span>
-              <div class="ap-pills">
-                <button
-                  type="button"
-                  class:active={socialOverride === "any"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (socialOverride = "any"), "social")}
-                  >Podle situace</button
-                >
-                <button
-                  type="button"
-                  class:active={socialOverride === "solo"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (socialOverride = "solo"), "social")}
-                  >Sám</button
-                >
-                <button
-                  type="button"
-                  class:active={socialOverride === "group"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (socialOverride = "group"),
-                      "social",
-                    )}
-                  >S ostatními</button
-                >
-              </div>
-            </div>
-
-            <div class="ap-group">
-              <span class="ap-label">Prostředí:</span>
-              <div class="ap-pills">
-                <button
-                  type="button"
-                  class:active={modeOverride === "any"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (modeOverride = "any"), "mode")}
-                  >Podle situace</button
-                >
-                <button
-                  type="button"
-                  class:active={modeOverride === "online"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (modeOverride = "online"), "mode")}
-                  >Z domova</button
-                >
-                <button
-                  type="button"
-                  class:active={modeOverride === "local"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (modeOverride = "local"), "mode")}
-                  >Venku</button
-                >
-              </div>
-            </div>
-
-            <div class="ap-group">
-              <span class="ap-label">Finanční náročnost:</span>
-              <div class="ap-pills">
-                <button
-                  type="button"
-                  class:active={costOverride === "any"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (costOverride = "any"), "cost")}
-                  >Podle situace</button
-                >
-                <button
-                  type="button"
-                  class:active={costOverride === "free"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (costOverride = "free"), "cost")}
-                  >Bez peněz (0 Kč)</button
-                >
-                <button
-                  type="button"
-                  class:active={costOverride === "donation"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (costOverride = "donation"),
-                      "cost",
-                    )}
-                  >Mohu darovat</button
-                >
-              </div>
-            </div>
-
-            <div class="ap-group">
-              <span class="ap-label">Míra ověření dopadu:</span>
-              <div class="ap-pills">
-                <button
-                  type="button"
-                  class:active={evidenceTier === "any"}
-                  on:click={() =>
-                    applyAdaptiveFilter(
-                      () => (evidenceTier = "any"),
-                      "evidence",
-                    )}>Vše (A–C)</button
-                >
-                <button
-                  type="button"
-                  class:active={evidenceTier === "A"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (evidenceTier = "A"), "evidence")}
-                  >Ověřený dopad (A)</button
-                >
-                <button
-                  type="button"
-                  class:active={evidenceTier === "B"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (evidenceTier = "B"), "evidence")}
-                  >Ověřený dopad (B)</button
-                >
-                <button
-                  type="button"
-                  class:active={evidenceTier === "C"}
-                  on:click={() =>
-                    applyAdaptiveFilter(() => (evidenceTier = "C"), "evidence")}
-                  >Ověřený dopad (C)</button
-                >
-              </div>
-            </div>
-          </div>
-        </details>
-      </div>
-    </section>
-
-    <!-- RIGHT: CLEAN FOCUSED RECOMMENDATION (STANDARDIZED 6-PART GOODACTION CARD) -->
+    <!-- PERSONAL RECOMMENDATION FIRST IN DOM (WCAG 2.4.3, RIGHT COLUMN ON DESKTOP, TOP ON MOBILE) -->
     <section
       id="personal-plan"
       class="plan-section recommendation-section"
       class:flash={planFlash}
-      aria-live="polite"
     >
+      <div class="sr-only" aria-live="polite">
+        {#if bestAction}
+          Doporučený skutek: {cleanTitle(bestAction.title)}
+        {/if}
+      </div>
+
+      {#if guidedReturnAction && (!bestAction || guidedReturnAction.id !== bestAction.id)}
+        {@const returnTitle = cleanTitle(guidedReturnAction.title || guidedReturnAction.name)}
+        {@const returnMeta = getActionEffectMeta(guidedReturnAction, guidedReturnMetric, { isReturnStrip: true })}
+        <div
+          class="return-dopamine-strip"
+          role="status"
+          aria-live="polite"
+          data-scene={returnMeta?.scene || "default"}
+        >
+          <div class="return-dopamine-head">
+            <span class="return-dopamine-title">
+              Vítej zpět! Povedlo se ti dokončit: {returnTitle}?
+            </span>
+            {#if returnMeta?.badge}
+              <span class="impact-payoff-badge">{returnMeta.badge}</span>
+            {/if}
+          </div>
+          <canvas
+            class="impact-payoff-canvas"
+            width="320"
+            height="118"
+            aria-label="Fyzikální vizualizace dopadu dobrého skutku"
+            use:impactCanvas={{
+              action: guidedReturnAction,
+              climax: true,
+              onWeightUpdate: (v) => (guidedReturnMetric = v),
+            }}
+          ></canvas>
+          <div class="return-dopamine-actions">
+            <button
+              type="button"
+              class="btn-return-complete"
+              onclick={() => {
+                const done = guidedReturnAction;
+                const doneTitle = done
+                  ? cleanTitle(done.title || done.name || "")
+                  : "";
+                guidedReturnAction = null;
+                if (done) {
+                  recordSmallWin({
+                    id: done.id,
+                    title: doneTitle,
+                    surface: "guided",
+                  });
+                }
+              }}
+            >
+              Ano, mám hotovo
+            </button>
+            <button
+              type="button"
+              class="btn-return-dismiss"
+              onclick={() => (guidedReturnAction = null)}
+            >
+              Později
+            </button>
+          </div>
+        </div>
+      {/if}
+
       {#if bestAction}
         <div class="card highlight-card">
           <div class="rec-top-actions">
             <button
               type="button"
               class="btn-cycle-inline"
-              on:click={cycleRecommendation}
+              onclick={cycleRecommendation}
             >
               <AppIcon name="refresh-cw" size={14} strokeWidth={2} />
               <span>Jiný nápad</span>
+            </button>
+            <button
+              type="button"
+              class="btn-edit-filters-jump"
+              onclick={() => {
+                const el = document.querySelector(".compass-foundations");
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+            >
+              <AppIcon name="sliders-horizontal" size={14} strokeWidth={2} />
+              <span>Upravit výběr</span>
             </button>
           </div>
 
@@ -946,14 +605,19 @@
             variant="instant"
             isStarted={isBestStarted}
             isCompleted={isDone(bestAction.id)}
-            partnerReturnPromptVisible={!!guidedReturnAction}
-            showEffectPreview={showGuidedEffect}
+            partnerReturnPromptVisible={Boolean(
+              guidedReturnAction &&
+                bestAction &&
+                guidedReturnAction.id === bestAction.id,
+            )}
             soundMuted={soundMuted}
             copiedDirectLink={copiedDirectLink}
             onStart={() => handleStartGuidedAction(bestAction, "guided_best")}
             onComplete={(action) => {
-              const done = guidedReturnAction || action;
-              guidedReturnAction = null;
+              const done = action || bestAction;
+              if (guidedReturnAction?.id === done?.id) {
+                guidedReturnAction = null;
+              }
               recordSmallWin({
                 id: done.id,
                 title: done.title,
@@ -985,13 +649,12 @@
             {#each sideAlternatives as alt (alt.id)}
               <article class="alt-card">
                 <div class="alt-meta">
-                  {alt.quickTagsLabel || cleanMeta(alt.metaLabel)} · Ověřený dopad ({alt.impactEvidence ||
-                    "B"}) · Ověřeno: {alt.verifiedLabel}
+                  {alt.quickTagsLabel || cleanMeta(alt.metaLabel)} · {evidenceTierLabel(alt.impactEvidence)} · Ověřeno: {alt.verifiedLabel}
                 </div>
-                <h4>{cleanTitle(alt.title)}</h4>
+                <h3>{cleanTitle(alt.title)}</h3>
                 <p>{alt.desc}</p>
                 <div class="alt-impact-note">
-                  <strong>Přínos ({alt.impactBasis || "doložený"}):</strong>
+                  <strong>Co to přinese:</strong>
                   {alt.concreteImpact}
                 </div>
                 <div class="alt-actions">
@@ -1001,7 +664,7 @@
                     rel="noopener noreferrer"
                     class="alt-open"
                     use:holdSpark={{ id: alt.id, surface: "guided_alt" }}
-                    on:click={() => handleStartGuidedAction(alt, "guided_alt")}
+                    onclick={() => handleStartGuidedAction(alt, "guided_alt")}
                   >
                     <span>Začít pomáhat</span>
                     <AppIcon name="arrow-up-right" size={14} strokeWidth={2} />
@@ -1009,7 +672,7 @@
                   <button
                     type="button"
                     class="alt-detail"
-                    on:click={() => promoteAlternative(alt)}
+                    onclick={() => promoteAlternative(alt)}
                   >
                     <span>Detail</span>
                     <AppIcon name="arrow-up" size={14} strokeWidth={2} />
@@ -1021,12 +684,12 @@
         </details>
       {/if}
 
-      <!-- 5.1 & 5.2 OVĚŘENÁ ÚČINNOST A METODIKA DOPADU -->
+      <!-- 5.1 & 5.2 ÚČINNOST A METODIKA DOPADU -->
       <details class="calm-drawer methodology-drawer">
         <summary>
           <span class="summary-label">
             <AppIcon name="scale" size={16} strokeWidth={1.9} />
-            <span>Jak poznáme, že pomoc skutečně pomohla? (Ověřený dopad A / B / C)</span>
+            <span>Jak poznáme, že pomoc skutečně pomohla?</span>
           </span>
         </summary>
         <div class="methodology-body">
@@ -1035,11 +698,7 @@
           <div class="meth-tiers">
             {#each Object.values(EVIDENCE_TIERS) as tier}
               <div class="meth-tier-item">
-                <strong>
-                  Ověřený dopad ({tier.tier}){tier.tier === "A"
-                    ? ""
-                    : ` — ${tier.label}`}:
-                </strong>
+                <strong>{tier.label}:</strong>
                 <span>{tier.desc}</span>
               </div>
             {/each}
@@ -1078,6 +737,435 @@
         </div>
       </details>
     </section>
+
+    <!-- UNIFIED COMPASS CARD (LEFT COLUMN ON DESKTOP, SECOND ON MOBILE) -->
+    <section class="compass-shell compass-foundations" aria-label="Nastavení průvodce">
+      <div class="step-block">
+        <div class="block-label">1. Kolik máš zrovna času?</div>
+
+        <div
+          class="situation-grid"
+          role="group"
+          aria-label="Dnešní situace a kapacita"
+        >
+          {#each SITUATIONS as s}
+            <button
+              type="button"
+              class="situation-card"
+              class:active={activeSituationId === s.id}
+              aria-pressed={activeSituationId === s.id}
+              onclick={() => selectSituation(s.id)}
+            >
+              <span class="sit-icon" aria-hidden="true">
+                <AppIcon name={s.icon} size={18} strokeWidth={1.9} />
+              </span>
+              <div class="sit-copy">
+                <span class="sit-title">{s.title}</span>
+                <span class="sit-sub">{s.sub}</span>
+              </div>
+            </button>
+          {/each}
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="step-block">
+        <div class="block-label">
+          2. Blízké téma <span class="opt-tag">(volitelné)</span>
+        </div>
+
+        <div class="topic-pills" role="group" aria-label="Výběr tématu pomoci">
+          <button
+            type="button"
+            class="topic-pill"
+            class:selected={selectedTopics.length === 0}
+            aria-pressed={selectedTopics.length === 0}
+            onclick={() => toggleTopic("all")}
+          >
+            <AppIcon name="sparkles" size={14} strokeWidth={1.9} />
+            <span>Cokoliv</span>
+          </button>
+          {#each VALUES as v}
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={selectedTopics.includes(v.key)}
+              aria-pressed={selectedTopics.includes(v.key)}
+              onclick={() => toggleTopic(v.key)}
+            >
+              <AppIcon name={v.icon} size={14} strokeWidth={1.9} />
+              <span>{v.shortLabel || v.label}</span>
+            </button>
+          {/each}
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- STEP 3 & CONSOLIDATED PARAMETERS DRAWER -->
+      <div class="step-block adaptive-step-block" aria-label="Upřesňující volby">
+        {#if activeSituationId === "couch" || activeSituationId === "focus"}
+          <div class="block-label">
+            3. Chceš zůstat úplně anonymní? <span class="opt-tag"
+              >(volitelné)</span
+            >
+          </div>
+          <div class="topic-pills" role="group" aria-label="Anonymita pomoci">
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={contactLevel === "any"}
+              aria-pressed={contactLevel === "any"}
+              onclick={() =>
+                applyAdaptiveFilter(() => (contactLevel = "any"), "contact")}
+            >
+              Nezáleží
+            </button>
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={contactLevel === "anonymous"}
+              aria-pressed={contactLevel === "anonymous"}
+              onclick={() =>
+                applyAdaptiveFilter(
+                  () => (contactLevel = "anonymous"),
+                  "contact",
+                )}
+            >
+              <AppIcon name="lock" size={14} strokeWidth={1.9} />
+              <span>Zcela anonymně</span>
+            </button>
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={contactLevel === "contact_ok"}
+              aria-pressed={contactLevel === "contact_ok"}
+              onclick={() =>
+                applyAdaptiveFilter(
+                  () => (contactLevel = "contact_ok"),
+                  "contact",
+                )}
+            >
+              <AppIcon name="message-circle" size={14} strokeWidth={1.9} />
+              <span>Nevadí mi kontakt</span>
+            </button>
+          </div>
+        {:else}
+          <div class="block-label">
+            3. Jednorázově, nebo dlouhodobě? <span class="opt-tag"
+              >(volitelné)</span
+            >
+          </div>
+          <div class="topic-pills" role="group" aria-label="Závazek pomoci">
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={commitment === "any"}
+              aria-pressed={commitment === "any"}
+              onclick={() =>
+                applyAdaptiveFilter(() => (commitment = "any"), "commitment")}
+            >
+              Nezáleží
+            </button>
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={commitment === "one_off"}
+              aria-pressed={commitment === "one_off"}
+              onclick={() =>
+                applyAdaptiveFilter(
+                  () => (commitment = "one_off"),
+                  "commitment",
+                )}
+            >
+              <AppIcon name="zap" size={14} strokeWidth={1.9} />
+              <span>Jednorázově</span>
+            </button>
+            <button
+              type="button"
+              class="topic-pill"
+              class:selected={commitment === "long_term"}
+              aria-pressed={commitment === "long_term"}
+              onclick={() =>
+                applyAdaptiveFilter(
+                  () => (commitment = "long_term"),
+                  "commitment",
+                )}
+            >
+              <AppIcon name="sprout" size={14} strokeWidth={1.9} />
+              <span>Dlouhodobě</span>
+            </button>
+          </div>
+        {/if}
+
+        <details class="adaptive-params-drawer">
+          <summary>
+            <span class="summary-label">
+              <AppIcon name="sliders-horizontal" size={15} strokeWidth={2} />
+              <span>Upřesnit další volby (prostředí, rozpočet, míra účinku)</span>
+            </span>
+            <span class="drawer-chevron-wrap" aria-hidden="true">
+              <AppIcon name="chevron-down" size={16} />
+            </span>
+          </summary>
+          <div class="adaptive-params-grid">
+            {#if activeSituationId === "couch" || activeSituationId === "focus"}
+              <div class="ap-group">
+                <span class="ap-label">Závazek:</span>
+                <div class="ap-pills">
+                  <button
+                    type="button"
+                    class:active={commitment === "any"}
+                    aria-pressed={commitment === "any"}
+                    onclick={() =>
+                      applyAdaptiveFilter(() => (commitment = "any"), "commitment")}
+                    >Vše</button
+                  >
+                  <button
+                    type="button"
+                    class:active={commitment === "one_off"}
+                    aria-pressed={commitment === "one_off"}
+                    onclick={() =>
+                      applyAdaptiveFilter(
+                        () => (commitment = "one_off"),
+                        "commitment",
+                      )}>Jednorázově</button
+                  >
+                  <button
+                    type="button"
+                    class:active={commitment === "long_term"}
+                    aria-pressed={commitment === "long_term"}
+                    onclick={() =>
+                      applyAdaptiveFilter(
+                        () => (commitment = "long_term"),
+                        "commitment",
+                      )}>Dlouhodobě</button
+                  >
+                </div>
+              </div>
+            {:else}
+              <div class="ap-group">
+                <span class="ap-label">Anonymita:</span>
+                <div class="ap-pills">
+                  <button
+                    type="button"
+                    class:active={contactLevel === "any"}
+                    aria-pressed={contactLevel === "any"}
+                    onclick={() =>
+                      applyAdaptiveFilter(() => (contactLevel = "any"), "contact")}
+                    >Vše</button
+                  >
+                  <button
+                    type="button"
+                    class:active={contactLevel === "anonymous"}
+                    aria-pressed={contactLevel === "anonymous"}
+                    onclick={() =>
+                      applyAdaptiveFilter(
+                        () => (contactLevel = "anonymous"),
+                        "contact",
+                      )}>Anonymně</button
+                  >
+                  <button
+                    type="button"
+                    class:active={contactLevel === "contact_ok"}
+                    aria-pressed={contactLevel === "contact_ok"}
+                    onclick={() =>
+                      applyAdaptiveFilter(
+                        () => (contactLevel = "contact_ok"),
+                        "contact",
+                      )}
+                    >Nevadí kontakt</button
+                  >
+                </div>
+              </div>
+            {/if}
+
+            <div class="ap-group">
+              <span class="ap-label">Komu pomoci:</span>
+              <div class="ap-pills">
+                <button
+                  type="button"
+                  class:active={recipientMacro === "any"}
+                  aria-pressed={recipientMacro === "any"}
+                  onclick={() =>
+                    applyAdaptiveFilter(
+                      () => (recipientMacro = "any"),
+                      "recipient",
+                    )}>Všem</button
+                >
+                <button
+                  type="button"
+                  class:active={recipientMacro === "people"}
+                  aria-pressed={recipientMacro === "people"}
+                  onclick={() =>
+                    applyAdaptiveFilter(
+                      () => (recipientMacro = "people"),
+                      "recipient",
+                    )}>Lidem</button
+                >
+                <button
+                  type="button"
+                  class:active={recipientMacro === "animals"}
+                  aria-pressed={recipientMacro === "animals"}
+                  onclick={() =>
+                    applyAdaptiveFilter(
+                      () => (recipientMacro = "animals"),
+                      "recipient",
+                    )}>Zvířatům</button
+                >
+                <button
+                  type="button"
+                  class:active={recipientMacro === "nature"}
+                  aria-pressed={recipientMacro === "nature"}
+                  onclick={() =>
+                    applyAdaptiveFilter(
+                      () => (recipientMacro = "nature"),
+                      "recipient",
+                    )}>Přírodě</button
+                >
+              </div>
+            </div>
+
+            <div class="ap-group">
+              <span class="ap-label">Sám / s lidmi:</span>
+              <div class="ap-pills">
+                <button
+                  type="button"
+                  class:active={socialOverride === "any"}
+                  aria-pressed={socialOverride === "any"}
+                  onclick={() =>
+                    applyAdaptiveFilter(() => (socialOverride = "any"), "social")}
+                  >Podle situace</button
+                >
+                <button
+                  type="button"
+                  class:active={socialOverride === "solo"}
+                  aria-pressed={socialOverride === "solo"}
+                  onclick={() =>
+                    applyAdaptiveFilter(() => (socialOverride = "solo"), "social")}
+                  >Sám</button
+                >
+                <button
+                  type="button"
+                  class:active={socialOverride === "group"}
+                  aria-pressed={socialOverride === "group"}
+                  onclick={() =>
+                    applyAdaptiveFilter(
+                      () => (socialOverride = "group"),
+                      "social",
+                    )}
+                  >S ostatními</button
+                >
+              </div>
+            </div>
+
+            <div class="ap-group">
+              <span class="ap-label">Prostředí:</span>
+              <div class="ap-pills">
+                <button
+                  type="button"
+                  class:active={modeOverride === "any"}
+                  aria-pressed={modeOverride === "any"}
+                  onclick={() =>
+                    applyAdaptiveFilter(() => (modeOverride = "any"), "mode")}
+                  >Podle situace</button
+                >
+                <button
+                  type="button"
+                  class:active={modeOverride === "online"}
+                  aria-pressed={modeOverride === "online"}
+                  onclick={() =>
+                    applyAdaptiveFilter(() => (modeOverride = "online"), "mode")}
+                  >Z domova</button
+                >
+                <button
+                  type="button"
+                  class:active={modeOverride === "local"}
+                  aria-pressed={modeOverride === "local"}
+                  onclick={() =>
+                    applyAdaptiveFilter(() => (modeOverride = "local"), "mode")}
+                  >Venku</button
+                >
+              </div>
+            </div>
+
+            <div class="ap-group">
+              <span class="ap-label">Finanční náročnost:</span>
+              <div class="ap-pills">
+                <button
+                  type="button"
+                  class:active={costOverride === "any"}
+                  aria-pressed={costOverride === "any"}
+                  onclick={() =>
+                    applyAdaptiveFilter(() => (costOverride = "any"), "cost")}
+                  >Podle situace</button
+                >
+                <button
+                  type="button"
+                  class:active={costOverride === "free"}
+                  aria-pressed={costOverride === "free"}
+                  onclick={() =>
+                    applyAdaptiveFilter(() => (costOverride = "free"), "cost")}
+                  >Bez peněz (0 Kč)</button
+                >
+                <button
+                  type="button"
+                  class:active={costOverride === "donation"}
+                  aria-pressed={costOverride === "donation"}
+                  onclick={() =>
+                    applyAdaptiveFilter(
+                      () => (costOverride = "donation"),
+                      "cost",
+                    )}
+                  >Mohu darovat</button
+                >
+              </div>
+            </div>
+
+            <div class="ap-group">
+              <span class="ap-label">Míra doložení účinku:</span>
+              <div class="ap-pills">
+                <button
+                  type="button"
+                  class:active={evidenceTier === "any"}
+                  aria-pressed={evidenceTier === "any"}
+                  onclick={() =>
+                    applyAdaptiveFilter(
+                      () => (evidenceTier = "any"),
+                      "evidence",
+                    )}>Vše</button
+                >
+                <button
+                  type="button"
+                  class:active={evidenceTier === "A"}
+                  aria-pressed={evidenceTier === "A"}
+                  onclick={() =>
+                    applyAdaptiveFilter(() => (evidenceTier = "A"), "evidence")}
+                  >Přímý měřitelný účinek</button
+                >
+                <button
+                  type="button"
+                  class:active={evidenceTier === "B"}
+                  aria-pressed={evidenceTier === "B"}
+                  onclick={() =>
+                    applyAdaptiveFilter(() => (evidenceTier = "B"), "evidence")}
+                  >Doložený přínos</button
+                >
+                <button
+                  type="button"
+                  class:active={evidenceTier === "C"}
+                  aria-pressed={evidenceTier === "C"}
+                  onclick={() =>
+                    applyAdaptiveFilter(() => (evidenceTier = "C"), "evidence")}
+                  >Komunitní smysl</button
+                >
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
   </div>
 
   <!-- LOCAL PLACES IN YOUR CITY — AUTO-OPENED ONLY FOR WALK / PEOPLE -->
@@ -1100,7 +1188,7 @@
             name="city"
             autocomplete="off"
             bind:value={cityId}
-            on:change={persistPrefs}
+            onchange={persistPrefs}
             class="city-select"
           >
             {#each CZECH_CITIES as c}
@@ -1140,7 +1228,7 @@
                   rel="noopener noreferrer"
                   class="lc-btn primary"
                   use:holdSpark={{ id: place.id, surface: "guided_local" }}
-                  on:click={() =>
+                  onclick={() =>
                     handleStartGuidedAction(
                       {
                         id: place.id,
@@ -1158,7 +1246,7 @@
               <button
                 type="button"
                 class="lc-btn ghost"
-                on:click={() =>
+                onclick={() =>
                   (openTemplateId =
                     openTemplateId === place.id ? null : place.id)}
               >
@@ -1171,7 +1259,7 @@
               <div class="tpl-drawer">
                 <pre>{tpl.body}</pre>
                 <div class="tpl-btns">
-                  <button type="button" on:click={() => copyTemplate(place)}>
+                  <button type="button" onclick={() => copyTemplate(place)}>
                     {#if copiedTemplateId === place.id}
                       <AppIcon name="check" size={14} strokeWidth={2.2} />
                       <span>Zkopírováno</span>
@@ -1223,6 +1311,19 @@
 
   .compass-shell.compass-foundations {
     grid-column: 1;
+    grid-row: 1;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
   }
 
   .block-label {
@@ -1468,9 +1569,29 @@
   .rec-top-actions {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 0.4rem;
     flex-wrap: wrap;
     margin-bottom: 0.55rem;
+  }
+
+  .btn-edit-filters-jump {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.4rem 0.78rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--ink-primary, #14281d);
+    font-family: var(--font-sans);
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-sizing: border-box;
   }
 
   .alt-impact-note {
@@ -1566,6 +1687,7 @@
   /* CLEAN PERSONAL RECOMMENDATION CARD */
   .plan-section {
     grid-column: 2;
+    grid-row: 1;
     position: sticky;
     top: 5.5rem;
     display: flex;
@@ -1645,7 +1767,7 @@
     margin-bottom: 0.28rem;
   }
 
-  .alt-card h4 {
+  .alt-card h3 {
     margin: 0 0 0.35rem;
     font-size: 0.92rem;
     font-weight: 800;
@@ -1763,7 +1885,7 @@
     background: var(--bg-surface, #ffffff);
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 0.88rem;
+    font-size: 1rem;
     color: var(--ink-primary, #14281d);
     cursor: pointer;
   }
@@ -1938,16 +2060,17 @@
       flex-direction: column;
       gap: 0.75rem;
     }
-    .compass-shell.compass-foundations {
-      order: 1;
-      width: 100%;
-      box-sizing: border-box;
-    }
     .plan-section {
-      order: 2;
       position: static;
       width: 100%;
       box-sizing: border-box;
+    }
+    .compass-shell.compass-foundations {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .btn-edit-filters-jump {
+      display: inline-flex;
     }
     .alts-drawer .alts-grid,
     .local-grid {
@@ -2016,29 +2139,12 @@
     .compass-foundations .topic-pills,
     .adaptive-step-block .topic-pills {
       display: flex;
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      scrollbar-width: none;
-      -webkit-overflow-scrolling: touch;
+      flex-wrap: wrap;
+      overflow-x: visible;
       gap: 0.32rem;
-      padding: 0.05rem 1.1rem 0.15rem 0.02rem;
-      mask-image: linear-gradient(
-        to right,
-        black 0%,
-        black calc(100% - 24px),
-        transparent 100%
-      );
-      -webkit-mask-image: linear-gradient(
-        to right,
-        black 0%,
-        black calc(100% - 24px),
-        transparent 100%
-      );
-    }
-
-    .compass-foundations .topic-pills::-webkit-scrollbar,
-    .adaptive-step-block .topic-pills::-webkit-scrollbar {
-      display: none;
+      padding: 0;
+      mask-image: none;
+      -webkit-mask-image: none;
     }
 
     .topic-pills {
@@ -2052,8 +2158,8 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 0.38rem 0.72rem;
-      font-size: 0.78rem;
+      padding: 0.38rem 0.68rem;
+      font-size: 0.77rem;
       box-sizing: border-box;
     }
 

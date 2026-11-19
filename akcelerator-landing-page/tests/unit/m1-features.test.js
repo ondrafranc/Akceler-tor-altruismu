@@ -15,14 +15,15 @@ function readSource(relativeSubpath) {
 
 describe('Milestone 1: Core Implementation F1-F11 Verification', () => {
   describe('F1: Reward Exclusively AFTER Action (AGENTS.md #1.3)', () => {
-    it('ActionCard.svelte defaults showEffectPreview to false and gates done button/canvas behind isStarted', () => {
+    it('ActionCard.svelte uses unified stageMode without showEffectPreview logic and gates done button/stage behind isStarted', () => {
       const source = readSource('lib/features/actions/components/ActionCard.svelte');
       const compiled = compile(source, { generate: 'server' });
       expect(compiled.js.code).toBeDefined();
 
-      expect(source).toMatch(/export\s+let\s+showEffectPreview\s*=\s*false;/);
+      expect(source).toContain('stageMode');
+      expect(source).not.toContain('showEffectPreview = true');
       expect(source).toMatch(/\{#if\s+isStarted[\s\S]*?btn-studio-done/);
-      expect(source).toMatch(/\{#if\s+isStarted[\s\S]*?card-effect-stage/);
+      expect(source).toContain('class:card-effect-stage={stageMode === "active"}');
     });
 
     it('PlaceCard.svelte gates done button and canvas behind isStarted', () => {
@@ -41,10 +42,14 @@ describe('Milestone 1: Core Implementation F1-F11 Verification', () => {
     });
   });
 
-  describe('F2: Zero-Scroll 100dvh & Mobile Claim', () => {
-    it('HeroSection.svelte displays compact 1-line mobile claim and eliminates dead anchor button', () => {
+  describe('F2: Breathable Mobile Hero & Clean Card Hierarchy', () => {
+    it('HeroSection.svelte displays dynamic mobile claim with WebP picture dawn backdrop and eliminates dead anchor button', () => {
       const source = readSource('lib/features/home/HeroSection.svelte');
-      expect(source).toContain('Jeden ověřený dobrý skutek na 2 minuty zdarma.');
+      expect(source).toContain('desktopClaimSerif');
+      expect(source).toContain('mobileClaim');
+      expect(source).toContain('<picture');
+      expect(source).toContain('/art/sanctuary-dawn-800.webp');
+      expect(source).toContain('/art/sanctuary-dawn.jpg');
       expect(source).not.toContain('handleActionAnchorClick');
       expect(source).not.toContain('⚡ Dnešní skutek (2 min) ↓');
     });
@@ -159,28 +164,6 @@ describe('Milestone 1: Core Implementation F1-F11 Verification', () => {
   });
 
   describe('F11: Network Caching & Typings', () => {
-    it('pulseService.js caches fetchAmbientPulse calls within 45s TTL', async () => {
-      const { fetchAmbientPulse } = await import('../../src/lib/features/pulse/services/pulseService.js');
-      
-      let fetchCount = 0;
-      global.fetch = vi.fn().mockImplementation(() => {
-        fetchCount++;
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ message: 'Darováno 10 miskek', isLive: true })
-        });
-      });
-
-      const res1 = await fetchAmbientPulse();
-      expect(res1).toEqual({ message: 'Darováno 10 miskek', isLive: true });
-      expect(fetchCount).toBe(1);
-
-      // Immediate second call should be served from in-memory cache
-      const res2 = await fetchAmbientPulse();
-      expect(res2).toEqual({ message: 'Darováno 10 miskek', isLive: true });
-      expect(fetchCount).toBe(1);
-    });
-
     it('SanctuaryTeaser.svelte provides WebP responsive backdrop', () => {
       const source = readSource('lib/features/home/SanctuaryTeaser.svelte');
       expect(source).toContain('/art/sanctuary-dawn-800.webp');

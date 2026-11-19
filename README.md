@@ -1,35 +1,36 @@
-# 🌱 Akcelerátor altruismu
+# Akcelerátor altruismu
 
-[![Node.js](https://img.shields.io/badge/node-%3E%3D22.12.0-brightgreen.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/node-24_LTS-brightgreen.svg)](https://nodejs.org/)
 [![SvelteKit](https://img.shields.io/badge/SvelteKit-2.x-orange.svg)](https://kit.svelte.dev/)
-[![Svelte 5](https://img.shields.io/badge/Svelte-5_Runes-FF3E00.svg)](https://svelte.dev/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](#licence)
+[![Svelte 5](https://img.shields.io/badge/Svelte-5-FF3E00.svg)](https://svelte.dev/)
+[![License: MIT (intended)](https://img.shields.io/badge/License-MIT_(intended)-blue.svg)](#licence)
 [![Zero Config](https://img.shields.io/badge/quickstart-%3C2_min-purple.svg)](#rychlý-start--quickstart--2-min)
 
 ---
 
-### 🇨🇿 O projektu (Czech)
-**Česká otevřená platforma pro okamžitou pomoc bez přetížení a výčitek („agency-first“).**
+### O projektu (Czech)
+**Česká otevřená platforma pro okamžitou pomoc bez přetížení a výčitek.**
 
-Navrženo pro lidi prožívající klimatický žal, zahlcení zprávami, apatii nebo bezmoc. Naším cílem je nabídnout **jeden konkrétní, zvládnutelný krok za méně než 60 sekund** — bez nutnosti registrace, bez moralizování a s respektem k lidské energii (*„🌿 Pro dnešek stačí“*).
+Hlavní severka produktu zní: **„Pomáhat pomáhat – a udělat pomáhání tak snadné jako masturbovat.“**
+Aplikace je navržená pro chvíle únavy, zahlcení zprávami nebo nejistoty, kde začít. Nabízí okamžitý vstup ke **45 ověřeným českým i světovým dobrým skutkům**, lokální mapě pomoci v ČR i zklidňujícímu prostoru *Krajina dobra* — bez registrace, bez moralizování a bez manipulativního nátlaku.
 
-### 🇬🇧 Overview (English)
-**An open-source Czech civic platform delivering immediate, friction-free agency for people experiencing news overwhelm, climate anxiety, or civic helplessness.**
+### Overview (English)
+**An open-source Czech civic platform delivering immediate, friction-free agency.**
 
-Designed for high-overwhelm, low-energy moments. The core mission is to provide **one tangible, real-world micro-step in under 60 seconds** — zero required registration, zero guilt-tripping, and built-in energy protection.
+Built for moments of low energy or news overwhelm, the app turns impulse into real-world good deeds in seconds — featuring a 45-deed interactive deck, a live Czech help map (`/near`), a tailored 60-second guide (`/app/guided`), and the interactive *Krajina dobra* sanctuary (`/svet`) with zero required sign-up and zero guilt-tripping.
 
 ---
 
-## ⚡ Rychlý start / Quickstart (< 2 min)
+## Rychlý start / Quickstart (< 2 min)
 
-Aplikace funguje **okamžitě bez jakýchkoliv externích API klíčů či databází** díky vestavěným in-memory českým datovým sadám a inteligentním fallbackům.
+Aplikace funguje **okamžitě bez jakýchkoliv externích API klíčů či databází** díky vestavěným lokálním českým datovým sadám a záložním mechanismům.
 
 ### 1. Klonování a instalace / Clone & Install
 ```bash
-git clone https://github.com/ondras/akcelerator-altruismu.git
-cd "Akcelerátor altruismu"
+git clone https://github.com/ondrafranc/Akceler-tor-altruismu.git
+cd Akceler-tor-altruismu
 
-# Nainstaluje závislosti v rootu i v aplikaci
+# Nainstaluje závislosti v rootu i v aplikaci (vyžaduje Node 24)
 npm install
 ```
 
@@ -38,85 +39,102 @@ npm install
 npm run dev
 ```
 
-Otevřete v prohlížeči **[http://localhost:5173](http://localhost:5173)**. Aplikace je plně funkční!
+Otevřete v prohlížeči **[http://localhost:5173](http://localhost:5173)**.
 
-> **Tip:** Všechny příkazy lze spouštět přímo z kořenového adresáře repozitáře díky root proxy skriptům, případně s přepínačem `npm --prefix akcelerator-landing-page run <skript>`.
+> **Tip:** Root `package.json` obsahuje proxy skripty pro `akcelerator-landing-page/`. Stejně dobře lze příkazy spouštět pomocí `npm --prefix akcelerator-landing-page run <skript>` (výjimkou je kořenová zkratka `npm run test:api`, viz tabulka níže).
 
 ---
 
-## 🏛️ Architektura a mentální model / Architecture & Mental Model
-
-Projekt přechází na čistou **doménově řízenou architekturu (Feature-Driven / Domain-Driven Modularization)** se striktním oddělením vrstev:
+## Architektura a struktura repozitáře / Architecture & Layout
 
 ```text
 Akcelerátor altruismu/
-├── package.json                         # Kořenová orchestrace a proxy skripty pro vývojáře
-├── CONTRIBUTING.md                      # Průvodce pro přispěvatele (Svelte 5 runes, PR workflow)
-├── README.md                            # Přehled architektury, quickstart a reference
-├── DEPLOYMENT_INSTRUCTIONS.md           # Návod na produkční nasazení (Vercel & Supabase SQL)
-├── CONCEPT_V2.md                        # Filozofie produktu a principy uživatelského zážitku
-├── .devcontainer/                       # Kontejnerizované prostředí (Node.js 22 Bookworm)
-├── .github/                             # CI workflow (GitHub Actions) a šablony pro PR / Issues
-└── akcelerator-landing-page/            # SvelteKit aplikace
+├── package.json                               # Kořenové proxy skripty pro vývojáře
+├── AGENTS.md                                  # Hlavní severka, UX zásady a index pravidel
+├── README.md                                  # Přehled projektu, quickstart a reference
+├── CONTRIBUTING.md                            # Průvodce přispěvatele (Svelte 5 Runes, testy)
+├── DEPLOYMENT_INSTRUCTIONS.md                 # Produkční nasazení (Vercel + Supabase 0001/0002)
+├── CONCEPT_V2.md                              # Produktový koncept a principy zážitku
+├── user_journeys.md                           # Klíčové uživatelské cesty
+├── CHANGELOG.md                               # Přehled milníků a změn
+├── vercel.json                                # Kořenová Vercel konfigurace + cache hlavičky
+├── .agents/rules/                             # Modulární pravidla architektury, bezpečnosti a UI
+├── .devcontainer/                             # Devcontainer prostředí (Node.js 24 Bookworm)
+├── .github/                                   # CI workflow (Node 24) a šablony PR / Issues
+├── supabase/migrations/
+│   ├── 0001_initial_schema.sql                # Základní schéma (feedback, community_submissions, pulse_events)
+│   └── 0002_rls_hardening.sql                 # RLS zpřísnění, sloupcový SELECT, CHECK limity
+└── akcelerator-landing-page/                  # Hlavní SvelteKit 2 + Svelte 5 aplikace
+    ├── .nvmrc                                 # Verze Node.js (24)
+    ├── svelte.config.js                       # Vercel adaptér (nodejs24.x) a CSP noncy
+    ├── vite.config.js                         # Vite konfigurace a auto-registrace ikon
+    ├── vercel.json                            # Vercel konfigurace pro root directory aplikace
     ├── src/
+    │   ├── hooks.server.js                    # Bezpečnostní hlavičky + Cache-Control pro CSP noncy
+    │   ├── service-worker.js                  # Offline podpora statických assetů
+    │   ├── components/                        # Globální UI a patronka Molly (MollyCompanion, MollyDock, ImmediateHelp, FeedbackModal, SmallWinCelebration)
     │   ├── lib/
-    │   │   ├── core/                    # Bezpečnost, sanitizace vstupů, detekce zařízení
-    │   │   ├── audio/                   # Čistý Web Audio API syntezátor (zvukové kotvy, ASMR)
-    │   │   ├── data/                    # Atomické české datové sady (hodnoty, města, akce)
-    │   │   │   └── czech-actions.js     # Zpětně kompatibilní exportní barrel
-    │   │   ├── features/                # Doménové moduly a komponenty
-    │   │   │   ├── actions/             # ActionCard, EvidenceBadge, HoldSparkButton
-    │   │   │   ├── map/                 # LeafletMap, PlaceCard, FirstContactModal
-    │   │   │   ├── sanctuary/           # Plátno Krajiny Dobra, dechový pacer, rituální lišta
-    │   │   │   ├── companion/           # Kočka Molly (procedurální animace, pohlazení)
-    │   │   │   ├── guided/              # 60s průvodce výběrem situace a doporučení
-    │   │   │   └── pulse/               # Klient tepu komunitní aktivity (ambient pulse)
-    │   │   └── components/              # Globální komponenty (Navigace, Footer, Modály)
-    │   └── routes/                      # Štíhlé SvelteKit routy
-    │       ├── +page.svelte             # Úvodní rozcestník s přepínačem kapacity
-    │       ├── near/+page.svelte        # Interaktivní mapa pomoci v ČR
-    │       ├── svet/+page.svelte        # Krajina Dobra a mezinárodní pomoc
-    │       ├── submit/+page.svelte      # Komunitní formulář pro přidání organizace/akce
-    │       ├── app/guided/+page.svelte  # 60s průvodce doporučením kroku
-    │       ├── app/online/+page.svelte  # Katalog online mikro-akcí
-    │       └── api/                     # Backendové endpointy (/nearby, /geocode, /pulse)
-    └── tests/                           # Vitest jednotkové testy a Playwright E2E testy
+    │   │   ├── audio/                         # Líný Web Audio syntezátor a presety (audioContext, synthesizer, presets)
+    │   │   ├── components/                    # Sdílené Runes komponenty (AppIcon, PageHeader)
+    │   │   ├── core/                          # Zařízení, frameStep a bezpečné vibrace (device.js)
+    │   │   ├── data/                          # Atomické české datové sady (45 skutků v micro-actions.js) + barrel czech-actions.js
+    │   │   ├── features/
+    │   │   │   ├── actions/                   # SwipeDeck, ActionCard, EvidenceBadge, partnerReturnService, recommendationEngine
+    │   │   │   ├── home/                      # HeroSection, QuickStartSection, PathwaysBento, CityJumpStrip, SanctuaryTeaser, HopeCarousel, PortalsDrawer
+    │   │   │   ├── map/                       # PlaceCard, contactTemplates
+    │   │   │   └── sanctuary/                 # BreathingPacer, DeedInspectorModal, ProgressDashboard, RitualBar, sanctuaryLakeRenderer
+    │   │   ├── icons/                         # Kanonický SVG registr (@lucide/svelte): iconRegistry.js, lucideIcons.js
+    │   │   ├── molly/                         # Čistý 2D Canvas renderer kočky Molly (mollyCatRenderer.js)
+    │   │   ├── sensory/                       # Procedurální 2D dioramy a dopadové scény (catalog, graphics, scenes, canvas, interaction)
+    │   │   ├── server/                        # Serverové služby (supabase.js, nearbyService.js)
+    │   │   ├── storage/                       # Centrální registr klíčů (keys.ts) a SSR-safe adaptér (index.ts)
+    │   │   └── types/                         # Kanonické TypeScript definice (deed, sensory, molly, progress, api, storage)
+│   │   ├── routes/
+│   │   │   ├── +page.svelte                   # Hlavní vstup: <picture> WebP svítání + jednotná .deed-stage + 45 skutků
+│   │   │   ├── +error.svelte                  # Bezstavová 404 stránka se zpětnou navigací
+│   │   │   ├── near/+page.svelte              # Mapa pomoci v ČR (Leaflet + OSM + 81 kurátorovaných míst + komunita)
+│   │   │   ├── svet/+page.svelte              # Krajina dobra (líná noční vrstva, dechový pacer, sdílené skutky)
+│   │   │   ├── submit/+page.svelte            # Komunitní formulář pro přidání místa nebo akce s nativní validací
+│   │   │   ├── app/+page.svelte               # Přehledový rozcestník 4 cest pomoci
+│   │   │   ├── app/guided/+page.svelte        # Průvodce výběrem na míru během 60 sekund (WCAG 2.4.3 pořadí)
+│   │   │   ├── app/online/+page.svelte        # Filtrovatelný katalog online i lokálních mikro-akcí
+│   │   │   └── api/                           # Backend endpointy (/community-nearby, /feedback, /geocode, /nearby, /pulse, /submissions, /test-supabase)
+│   └── tests/                                 # Vitest jednotkové testy (17 souborů / 216 testů) a Playwright E2E (16 *.spec.ts / 315 testů)
 ```
 
 ### Hlavní trasy aplikace (Routes)
-1. **`/` (Úvodní rozcestník)** — Okamžitá volba kapacity (*2–5 min z gauče* / *15 min* / *jít ven*), ověřené české organizace a rychlé portály.
-2. **`/near` (Mapa pomoci v okolí)** — Reálná místa pomoci (OpenStreetMap / Overpass API) se záložními českými daty a asistentem prvního kontaktu (*„Co jim napsat?“*).
-3. **`/app/guided` (Chytrý průvodce na 60 s)** — Rychlý výběr situace, času a rozpočtu s okamžitým doporučením a vysvětlením *„Proč právě tohle“*.
-4. **`/app/online` (Online mikro-kroky)** — Katalog konkrétních akcí z domova či mobilu filtrovatelných podle času a náročnosti.
-5. **`/svet` (Krajina Dobra)** — Zklidňující prostor pro reflexi dobrých skutků, dechové cvičení a mezinárodní pomoc.
-6. **`/submit` (Přidat organizaci)** — Komunitní formulář s automatickým geokódováním a ochranou proti spamu.
+1. **`/` (Hlavní stránka)** — Prosvětlený vstup s `<picture>` WebP svítáním, jednotná morphing scéna `.deed-stage` (`preview -> active -> payoff`), 4 skutečně filtrující záložky energie (`45` *Mám 2 min* / `8` *Mám 15 min* / `16` *Osobně* / `9` *Dlouhodobě*), `sessionStorage` stav balíčku (`AA_HOME_DECK_STATE_KEY`), podpora deep-linků `/?action=<id>`, rychlé portály, skok do českých měst a upoutávka na *Krajinu dobra*.
+2. **`/near` (Mapa pomoci v okolí)** — Reálná místa pomoci po celé ČR (Leaflet + dlaždice OpenStreetMap, geokódování Nominatim přes `/api/geocode`, `81` kurátorovaných míst v `fallback-places.js` a schválené komunitní tipy ze Supabase `community_submissions` se zálohou `18` položek v `community-items.js`), šuplík sekundárních filtrů *„Filtrovat“*, sjednocená nápověda mise `getPlaceActionHint`, 1-tap `tel:`/`mailto:`/`Mapy.cz` a připravené šablony zpráv (včetně rozlišení kočičích útulků).
+3. **`/svet` (Krajina dobra)** — Interaktivní plátno dobrých skutků s jezerem, dechovým cvičením, líně načítanou noční vrstvou, jediným počítadlem pamlsků pro Molly a výchozím ztlumeným zvukem.
+4. **`/app` (Rozcestník)** — Čtyřkartový přehled cest (*Krajina dobra*, *Průvodce*, *Mapa v okolí*, *Drobné skutky*).
+5. **`/app/guided` (Průvodce na míru)** — Výběr témat, času a nákladů s plánem `#personal-plan` před filtry přímo v DOM (`WCAG 2.4.3`), zdůvodněním a přechodem na `/near`.
+6. **`/app/online` (Katalog mikro-skutků)** — Filtrovatelný přehled skutků podle času, nákladů a místa s prioritou online/telefonních kroků ve výchozím pohledu *„Doporučené“*.
+7. **`/submit` (Přidat místo nebo akci)** — Komunitní formulář s dynamickým podtitulkem, přístupnými záložkami typu tipu, automatickým geokódováním, nativní validací i automatickým rozbalením volitelných polí a moderačním schvalováním.
 
 ---
 
-## 🛠️ Vývoj a testování / Development & Testing
-
-Díky kořenovým skriptům můžete provádět veškeré úkony přímo z kořene repozitáře:
+## Vývoj a testování / Development & Testing
 
 | Příkaz (Command) | Popis (Czech) | Description (English) |
 |---|---|---|
 | `npm run dev` | Spustí vývojový server na `localhost:5173` | Starts Vite local development server on port 5173 |
-| `npm run build` | Sestaví produkční verzi přes SvelteKit adaptér | Builds production bundle using `@sveltejs/adapter-vercel` |
-| `npm run check` | Provede striktní kontrolu typů (`svelte-check`) | Runs strict TypeScript/JSDoc typechecking |
-| `npm run test:unit` | Spustí bleskové jednotkové testy (Vitest, <500 ms) | Runs ultra-fast Vitest unit test suite (<500 ms) |
-| `npm run test:api` | Spustí integrační Playwright testy API endpointů | Runs fast Playwright integration tests for API routes |
-| `npm test` | Spustí kompletní Playwright E2E testy | Runs full Playwright end-to-end test suite |
+| `npm run build` | Sestaví produkční verzi přes Vercel adaptér | Builds production bundle using `@sveltejs/adapter-vercel` |
+| `npm run check` | Provede striktní typovou kontrolu (`svelte-check`) | Runs strict TypeScript/JSDoc typechecking |
+| `npm run test:unit` | Spustí jednotkové testy (Vitest: `17` souborů, `216` testů) | Runs fast Vitest unit test suite (`17` files, `216` tests) |
+| `npm run test:api` | Spustí API integrační testy (`tests/api.spec.ts`) — zkratka z root `package.json` | Runs Playwright API tests (`tests/api.spec.ts`) via root `package.json` shorthand |
+| `npm test` | Spustí kompletní Playwright E2E sadu (`16` `*.spec.ts` / `315` testů) | Runs full Playwright end-to-end test suite (`16` specs / `315` tests) |
+
+Aktuální stav migrace na Svelte 5: `20/31` `.svelte` souborů využívá Runes (`$state`, `$derived`, `$props()`, `$effect`), `1` soubor je bezstavový Svelte 5 (`src/routes/+error.svelte`) a `10` komponent zatím drží starší syntaxi Svelte 4. Pro spuštění konkrétní E2E specifikace (včetně API testů) z `akcelerator-landing-page/` používejte vždy `npm test -- <spec>` (např. `npm test -- tests/api.spec.ts` nebo z kořene `npm --prefix akcelerator-landing-page test -- tests/api.spec.ts`), nikoli holé `npx playwright test`.
 
 ---
 
-## 🔐 Proměnné prostředí / Environment Variables
-
-Aplikace podporuje dva režimy:
+## Proměnné prostředí / Environment Variables
 
 ### 1. Lokální fallback režim (Výchozí, Zero-Config)
-Nemusíte nastavovat žádné `.env` proměnné. Všechny funkce (mapa, doporučovací algoritmus, online kroky, komunitní tep) běží na lokálních kurátorovaných českých datech v paměti (`src/lib/data/`).
+Bez nastavení `.env` poběží aplikace plně na lokálních kurátorovaných českých datech v paměti (`akcelerator-landing-page/src/lib/data/`).
 
 ### 2. Produkční režim se Supabase (Volitelný)
-Pokud chcete trvale ukládat anonymní zpětnou vazbu a schvalovat komunitní tipy na organizace, zkopírujte šablonu:
+Zkopírujte šablonu a doplňte klíče z vašeho Supabase projektu:
 
 ```bash
 cp akcelerator-landing-page/.env.example akcelerator-landing-page/.env
@@ -125,27 +143,23 @@ cp akcelerator-landing-page/.env.example akcelerator-landing-page/.env
 | Proměnná | Typ | Popis |
 |---|---|---|
 | `PUBLIC_SUPABASE_URL` | Veřejná (klientská) | URL adresa vašeho projektu v Supabase |
-| `PUBLIC_SUPABASE_ANON_KEY` | Veřejná (klientská) | Anonymní veřejný klíč Supabase s nastaveným RLS |
-| `SUPABASE_SERVICE_ROLE_KEY` | Privátní (serverová) | *Volitelné:* Service role klíč pro administrátorské zásahy |
-| `SUPABASE_URL` | Privátní (serverová) | *Volitelné:* Serverová URL adresa Supabase |
+| `PUBLIC_SUPABASE_ANON_KEY` | Veřejná (klientská) | Veřejný `anon` klíč s aktivním RLS pro veřejné endpointy |
+| `SUPABASE_SERVICE_ROLE_KEY` | Privátní (serverová) | Service role klíč vyhrazený pro administrátorskou moderaci (`PATCH /api/submissions`) |
+| `MODERATOR_SECRET` | Privátní (serverová) | Tajný klíč hlavičky `x-moderator-secret` pro schvalování a zamítání tipů |
+| `IP_HASH_SALT` | Privátní (serverová) | Sůl pro jednosměrné anonymní hashování klientských IP adres (`hashClientKey`) |
+| `TEST_BYPASS_SECRET` | Pouze neprodukční testy | Tajemství pro bypass rate-limitu v E2E/CI — **v produkci musí zůstat nenastavené** |
+| `PULSE_ALLOW_DEV_WRITES` | Pouze lokální dev testy | Povolí zápisy do `pulse_events` z `localhost` (`1`) — **v produkci nenastavovat** |
 
-Podrobnosti k nastavení databázových tabulek a bezpečnostních pravidel (Row Level Security) naleznete v [DEPLOYMENT_INSTRUCTIONS.md](DEPLOYMENT_INSTRUCTIONS.md).
-
----
-
-## 🤝 Jak se zapojit / Contributing
-
-Uvítáme jakékoliv návrhy, opravy chyb či rozšíření ověřených českých organizací! Před odesláním Pull Requestu si prosím přečtěte našeho průvodce přispíváním:
-
-👉 **[Pravidla pro přispěvatele (CONTRIBUTING.md)](CONTRIBUTING.md)**
-
-Pravidla shrnují:
-- Standardy psaní kódu v **Svelte 5 Runes** (`$state`, `$derived`, `$props()`).
-- Formátování commitů podle **Conventional Commits** (`feat:`, `fix:`, `docs:`, `test:`).
-- Lokální kontrolu před odesláním PR (`npm run check` && `npm run test:unit` && `npm run build`).
+Podrobnosti k migracím `0001_initial_schema.sql` a `0002_rls_hardening.sql` i nasazení na Vercel najdete v [DEPLOYMENT_INSTRUCTIONS.md](DEPLOYMENT_INSTRUCTIONS.md).
 
 ---
 
-## 📄 Licence
+## Jak se zapojit / Contributing
 
-Tento projekt je šířen pod licencí MIT. Otevřená občanská technologie pro každého.
+Před odesláním Pull Requestu si prosím přečtěte [CONTRIBUTING.md](CONTRIBUTING.md) a pravidla v [AGENTS.md](AGENTS.md) a `.agents/rules/`.
+
+---
+
+## Licence
+
+Otevřená občanská technologie pro každého (záměr šíření pod licencí MIT; samostatný soubor `LICENSE` ani pole `"license"` v `package.json` zatím nejsou v repozitáři přidány).

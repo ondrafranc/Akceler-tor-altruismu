@@ -9,35 +9,63 @@
   const DONE_FOR_TODAY_PREFIX = AA_DONE_FOR_TODAY_PREFIX;
   import { safeVibrate } from '../../../../lib/core/device.js';
   import { playCelebrationChord } from '../../../../lib/audio/presets.js';
-  import { completedSteps } from '../../../../lib/progress.js';
+  import { todayCompletedCount } from '../../../../lib/progress.js';
 
-  export let actions = [];
-  export let currentIndex = 0;
-  export let isStarted = false;
-  export let justCompleted = false;
-  export let partnerReturnPromptVisible = false;
-  export let soundMuted = false;
-  export let showEffectPreview = false;
-  export let copiedDirectLink = false;
-  export let savedValues = [];
-  export let usePersonalValues = false;
-  export let variant = 'instant';
+  /**
+   * @type {{
+   *   actions?: Array<import('$lib/types').MicroAction & Record<string, unknown>>,
+   *   currentIndex?: number,
+   *   isStarted?: boolean,
+   *   justCompleted?: boolean,
+   *   partnerReturnPromptVisible?: boolean,
+   *   soundMuted?: boolean,
+   *   copiedDirectLink?: boolean,
+   *   savedValues?: string[],
+   *   usePersonalValues?: boolean,
+   *   variant?: 'instant' | 'directory' | 'compact',
+   *   ignoreClosedSession?: boolean,
+   *   onStart?: ((action?: import('$lib/types').MicroAction) => void) | null,
+   *   onComplete?: ((action?: import('$lib/types').MicroAction) => void) | null,
+   *   onShare?: ((action?: import('$lib/types').MicroAction) => void) | null,
+   *   onReportBroken?: ((action?: import('$lib/types').MicroAction) => void) | null,
+   *   onToggleSound?: (() => void) | null,
+   *   onTogglePersonalValues?: (() => void) | null,
+   *   onNextIdea?: (() => void) | null,
+   *   onPrevIdea?: (() => void) | null,
+   *   onCloseSession?: (() => void) | null,
+   *   onReopenSession?: (() => void) | null,
+   *   onExitDeepLink?: (() => void) | null
+   * }}
+   */
+  let {
+    actions = [],
+    currentIndex = $bindable(0),
+    isStarted = false,
+    justCompleted = false,
+    partnerReturnPromptVisible = false,
+    soundMuted = false,
+    copiedDirectLink = false,
+    savedValues = [],
+    usePersonalValues = false,
+    variant = 'instant',
+    ignoreClosedSession = false,
+    onStart = null,
+    onComplete = null,
+    onShare = null,
+    onReportBroken = null,
+    onToggleSound = null,
+    onTogglePersonalValues = null,
+    onNextIdea = null,
+    onPrevIdea = null,
+    onCloseSession = null,
+    onReopenSession = null,
+    onExitDeepLink = null
+  } = $props();
 
-  export let onStart = null;
-  export let onComplete = null;
-  export let onShare = null;
-  export let onReportBroken = null;
-  export let onToggleSound = null;
-  export let onTogglePersonalValues = null;
-  export let onNextIdea = null;
-  export let onPrevIdea = null;
-  export let onCloseSession = null;
-  export let onReopenSession = null;
-
-  let isSessionClosed = false;
-  let dragX = 0;
-  let isDragging = false;
-  let isHorizontalGesture = false;
+  let isSessionClosed = $state(false);
+  let dragX = $state(0);
+  let isDragging = $state(false);
+  let isHorizontalGesture = $state(false);
   let suppressNextClick = false;
   /** @type {ReturnType<typeof setTimeout> | null} */
   let suppressClickTimer = null;
@@ -45,20 +73,24 @@
   let startY = 0;
   let startTime = 0;
 
-  const getTodayKey = () => new Date().toISOString().slice(0, 10);
+  function getTodayKey() {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  }
 
-  $: todayCount = $completedSteps
-    ? Object.keys($completedSteps).length
-    : 0;
+  const showClosedSummary = $derived(isSessionClosed && !ignoreClosedSession);
+  const todayCount = $derived($todayCompletedCount ?? 0);
 
-  $: currentAction = actions && actions.length > 0
-    ? actions[((currentIndex % actions.length) + actions.length) % actions.length]
-    : null;
+  const currentAction = $derived(
+    actions && actions.length > 0
+      ? actions[((currentIndex % actions.length) + actions.length) % actions.length]
+      : null
+  );
 
-  $: totalCards = actions ? actions.length : 0;
-  $: displayIndex = totalCards > 0
-    ? ((currentIndex % totalCards) + totalCards) % totalCards
-    : 0;
+  const totalCards = $derived(actions ? actions.length : 0);
+  const displayIndex = $derived(
+    totalCards > 0 ? ((currentIndex % totalCards) + totalCards) % totalCards : 0
+  );
 
   onMount(() => {
     try {
@@ -115,8 +147,9 @@
     }
   }
 
+  /** @param {PointerEvent} e */
   function handlePointerDown(e) {
-    if (isSessionClosed || !currentAction) return;
+    if (showClosedSummary || !currentAction) return;
     if (e.button && e.button !== 0) return;
     startX = e.clientX;
     startY = e.clientY;
@@ -126,6 +159,7 @@
     dragX = 0;
   }
 
+  /** @param {PointerEvent} e */
   function handlePointerMove(e) {
     if (!isDragging) return;
     if (e.pointerType === 'mouse' && e.buttons === 0) {
@@ -180,6 +214,7 @@
     isHorizontalGesture = false;
   }
 
+  /** @param {MouseEvent} e */
   function handleWrapperClickCapture(e) {
     if (suppressNextClick) {
       suppressNextClick = false;
@@ -194,10 +229,10 @@
   });
 </script>
 
-<svelte:window on:pointerup={handlePointerUp} on:pointercancel={handlePointerCancel} />
+<svelte:window onpointerup={handlePointerUp} onpointercancel={handlePointerCancel} />
 
-<div class="swipe-deck-stage" class:session-closed={isSessionClosed}>
-  {#if isSessionClosed}
+<div class="swipe-deck-stage" class:session-closed={showClosedSummary}>
+  {#if showClosedSummary}
     <!-- =====================================================================
          PSYCHOLOGICAL SESSION CLOSURE ("PRO DNEŠEK HOTOVO")
          ===================================================================== -->
@@ -211,7 +246,7 @@
       </div>
       <h2 class="closed-title">Pro dnešek máš hotovo.</h2>
       <p class="closed-desc">
-        Udělal/a jsi svět o kousek lepším místem. Můžeš s čistým svědomím odložit telefon a věnovat se svému dni bez pocitu dluhu.
+        Svět je díky tobě o kousek lepším místem. Můžeš s čistým svědomím odložit telefon a věnovat se svému dni bez pocitu dluhu.
       </p>
 
       <div class="closed-stats-pill">
@@ -223,7 +258,7 @@
         <button
           type="button"
           class="closed-btn closed-btn-reopen"
-          on:click={handleReopenSession}
+          onclick={handleReopenSession}
           aria-label="Chci udělat ještě jeden dobrý skutek"
         >
           <AppIcon name="sparkles" size={15} strokeWidth={2} />
@@ -236,40 +271,54 @@
          MICRO-DEED SWIPE DECK WITH ACCESSIBLE 44x44 NAVIGATION
          ===================================================================== -->
     <div class="deck-container">
+      {#if ignoreClosedSession && isSessionClosed}
+        <div class="deeplink-exit-row">
+          <button
+            type="button"
+            class="deeplink-exit-btn"
+            onclick={() => onExitDeepLink?.()}
+          >
+            <AppIcon name="arrow-left" size={14} strokeWidth={2.1} />
+            <span>Zpět k dnešnímu shrnutí</span>
+          </button>
+        </div>
+      {/if}
+
       <!-- Gesture Card Shell -->
-      <!-- svelte-ignore a11y-click-events-have-key-events -->
-      <!-- svelte-ignore a11y-no-static-element-interactions -->
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="swipe-card-wrapper"
         style="touch-action: pan-y; transform: translate3d({dragX}px, 0, 0) rotate({dragX * 0.045}deg); transition: {isHorizontalGesture ? 'none' : 'transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1)'};"
-        on:pointerdown={handlePointerDown}
-        on:pointermove={handlePointerMove}
-        on:pointerup={handlePointerUp}
-        on:pointercancel={handlePointerCancel}
-        on:dragstart|preventDefault
-        on:click|capture={handleWrapperClickCapture}
+        onpointerdown={handlePointerDown}
+        onpointermove={handlePointerMove}
+        onpointerup={handlePointerUp}
+        onpointercancel={handlePointerCancel}
+        ondragstart={(e) => e.preventDefault()}
+        onclickcapture={handleWrapperClickCapture}
       >
         {#if currentAction}
-          <ActionCard
-            action={currentAction}
-            {isStarted}
-            {justCompleted}
-            {partnerReturnPromptVisible}
-            {soundMuted}
-            {showEffectPreview}
-            {copiedDirectLink}
-            {savedValues}
-            {usePersonalValues}
-            {variant}
-            {onStart}
-            {onComplete}
-            {onShare}
-            {onReportBroken}
-            {onToggleSound}
-            {onTogglePersonalValues}
-            onNextIdea={nextCard}
-            onCloseSession={handleCloseSession}
-          />
+          {#key currentAction.id}
+            <ActionCard
+              action={currentAction}
+              {isStarted}
+              {justCompleted}
+              {partnerReturnPromptVisible}
+              {soundMuted}
+              {copiedDirectLink}
+              {savedValues}
+              {usePersonalValues}
+              {variant}
+              {onStart}
+              {onComplete}
+              {onShare}
+              {onReportBroken}
+              {onToggleSound}
+              {onTogglePersonalValues}
+              onNextIdea={nextCard}
+              onCloseSession={handleCloseSession}
+            />
+          {/key}
         {/if}
       </div>
 
@@ -277,7 +326,7 @@
         <button
           type="button"
           class="deck-nav-btn deck-nav-prev"
-          on:click={prevCard}
+          onclick={prevCard}
           disabled={totalCards <= 1}
           aria-label="Předchozí doporučený skutek"
           title="Předchozí tip (vlevo)"
@@ -298,7 +347,7 @@
         <button
           type="button"
           class="deck-nav-btn deck-nav-next"
-          on:click={nextCard}
+          onclick={nextCard}
           disabled={totalCards <= 1}
           aria-label="Další doporučený skutek"
           title="Další tip (vpravo)"
@@ -322,6 +371,36 @@
     display: flex;
     flex-direction: column;
     gap: 0.45rem;
+  }
+
+  .deeplink-exit-row {
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  .deeplink-exit-btn {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-strong, #c2cec5);
+    background: var(--bg-subtle, #edf2ee);
+    color: var(--ink-primary, #14281d);
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: background-color 0.16s ease, border-color 0.16s ease;
+  }
+
+  .deeplink-exit-btn:hover {
+    background: var(--bg-surface, #ffffff);
+    border-color: var(--accent-primary, #1b5e42);
   }
 
   .deck-header-bar {

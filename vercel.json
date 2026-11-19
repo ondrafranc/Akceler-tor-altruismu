@@ -1,5 +1,52 @@
 {
   "framework": null,
   "buildCommand": "cd akcelerator-landing-page && npm ci && npm run build && cd .. && mkdir -p .vercel && cp -a akcelerator-landing-page/.vercel/output .vercel/",
-  "installCommand": "echo 'Install step skipped - handled in build'"
+  "installCommand": "echo 'Install step skipped - handled in build'",
+  "headers": [
+    {
+      "source": "/_app/immutable/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/art/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/fonts/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/icon-(.*).png",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/og-image-czech.(jpg|webp)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800, stale-while-revalidate=86400"
+        }
+      ]
+    }
+  ]
 }

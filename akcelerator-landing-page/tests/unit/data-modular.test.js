@@ -11,7 +11,10 @@ import { REAL_STORIES } from '$lib/data/stories.js';
 import { ENCOURAGEMENT_MESSAGES, getRandomEncouragement } from '$lib/data/encouragements.js';
 import { CURATED_FALLBACK_PLACES } from '$lib/data/fallback-places.js';
 import { LOCAL_COMMUNITY_ITEMS } from '$lib/data/community-items.js';
-import { buildFirstContactTemplate } from '$lib/features/map/services/contactTemplates.js';
+import {
+  buildFirstContactTemplate,
+  getPlaceActionHint
+} from '$lib/features/map/services/contactTemplates.js';
 import {
   recommendActions,
   calculateMatchScore
@@ -48,10 +51,6 @@ import {
   getPendingPartnerReturnRemainingMs,
   consumePendingPartnerReturn
 } from '$lib/features/actions/services/partnerReturnService.js';
-import {
-  fetchAmbientPulse,
-  describeAmbientPulse
-} from '$lib/features/pulse/services/pulseService.js';
 
 describe('data modularization: barrel re-export identity equivalence', () => {
   it('re-exports atomic datasets identically from czech-actions.js', () => {
@@ -99,8 +98,6 @@ describe('data modularization: barrel re-export identity equivalence', () => {
     expect(typeof savePendingPartnerReturn).toBe('function');
     expect(typeof getPendingPartnerReturnRemainingMs).toBe('function');
     expect(typeof consumePendingPartnerReturn).toBe('function');
-    expect(typeof fetchAmbientPulse).toBe('function');
-    expect(typeof describeAmbientPulse).toBe('function');
   });
 });
 
@@ -128,22 +125,159 @@ describe('contactTemplates: buildFirstContactTemplate', () => {
     const template = buildFirstContactTemplate(place, 'Jan Novák', 'jan@novak.cz');
     expect(template.body).toContain('S pozdravem,\nJan Novák (jan@novak.cz)');
   });
-});
 
-describe('pulseService: describeAmbientPulse', () => {
-  it('handles in-card and global views with live indicators', () => {
-    const livePulse = { message: 'Sdílený skutek v Brně: naplnit misku v útulku', isLive: true, actionId: 'act-1' };
+  it('uses natural gender-neutral Czech without /a slashes across all kinds', () => {
+    const kinds = ['animals', 'food', 'community', 'ngo'];
+    for (const kind of kinds) {
+      const tpl = buildFirstContactTemplate({ name: 'Spolek Test', kind, email: 'test@example.cz' });
+      expect(tpl.body).not.toMatch(/\p{L}\/a\b/u);
+      expect(tpl.body).not.toMatch(/\b(narazil|podpořil|zeptal|mohl)\b/i);
+    }
+  });
 
-    const inCardMatching = describeAmbientPulse(livePulse, { inCard: true, actionId: 'act-1' });
-    expect(inCardMatching).toBe('Sdílený skutek v Brně: naplnit misku v útulku');
+  it('falls back to "vaše organizace" when place.name is whitespace-only', () => {
+    const tpl = buildFirstContactTemplate({ name: '   ', kind: 'ngo' });
+    expect(tpl.subject).toContain('vaše organizace');
+    expect(tpl.body).toContain('(vaše organizace)');
+    expect(tpl.body).not.toContain('()');
+  });
 
-    const inCardOther = describeAmbientPulse(livePulse, { inCard: true, actionId: 'act-2' });
-    expect(inCardOther).toContain('Mezitím v komunitě:');
+  it('getPlaceActionHint and buildFirstContactTemplate avoid dog-walking advice for cat-only shelters while keeping it for dog/mixed shelters', () => {
+    const catPlace = {
+      name: 'Kočičí depozitum Mňau',
+      kind: 'animals',
+      subcategory: 'Útulek pro kočky'
+    };
+    const catHint = getPlaceActionHint(catPlace);
+    expect(catHint).toContain('konzervy');
+    expect(catHint).not.toMatch(/venčen/i);
 
-    const globalLive = describeAmbientPulse(livePulse);
-    expect(globalLive).toContain('V komunitě:');
+    const catTemplate = buildFirstContactTemplate(catPlace);
+    expect(catTemplate.body).toContain('konzervy');
+    expect(catTemplate.body).not.toMatch(/venčen/i);
 
-    expect(describeAmbientPulse(null)).toContain('Až skutek dokončíš');
+    const mixedTemplate = buildFirstContactTemplate({
+      name: 'Útulek pro psy a kočky Azyl',
+      kind: 'animals',
+      subcategory: 'Útulek'
+    });
+    expect(mixedTemplate.body).toContain('venčení');
+
+    const ngoHint = getPlaceActionHint({ name: 'Spolek Pomoc', kind: 'ngo' });
+    expect(ngoHint).not.toContain('tlačítko „Co napsat“');
+  });
+
+  it('handles Czech cat/dog word boundaries accurately without substring false positives or negatives', () => {
+    const catOnlyCases = [
+      {
+        name: 'Kočičí depozitum Smíchov',
+        kind: 'animals',
+        subcategory: 'Útulek pro kočky',
+        description: 'Sbírka na kočičí kapsičky a stelivo.'
+      },
+      {
+        name: 'Kočičí depozitum Podolí',
+        kind: 'animals',
+        subcategory: 'Útulek pro kočky',
+        description: 'Před návštěvou prosíme psát e-mail nebo SMS a domluvit si psaní zprávy předem.'
+      },
+      {
+        name: 'Kočičí útulek Pustá Polom',
+        kind: 'animals',
+        subcategory: 'Útulek'
+      },
+      {
+        name: 'Kočičí azyl Pestrý svět',
+        kind: 'animals',
+        subcategory: 'Depozitum'
+      },
+      {
+        name: 'Kocouří spolek',
+        kind: 'animals',
+        subcategory: 'Depozitum pro kotě i kocoury'
+      }
+    ];
+
+    for (const place of catOnlyCases) {
+      const hint = getPlaceActionHint(place);
+      const tpl = buildFirstContactTemplate(place);
+      expect(hint, `${place.name} hint`).toContain('konzervy');
+      expect(hint, `${place.name} hint`).not.toMatch(/venčen/i);
+      expect(tpl.body, `${place.name} body`).toContain('konzervy');
+      expect(tpl.body, `${place.name} body`).not.toMatch(/venčen/i);
+    }
+
+    const dogOrGeneralCases = [
+      {
+        name: 'Útulek pro zvířata — oprava kotců',
+        kind: 'animals',
+        subcategory: 'Útulek'
+      },
+      {
+        name: 'Zvířecí azyl Kotlina',
+        kind: 'animals',
+        subcategory: 'Útulek'
+      },
+      {
+        name: 'Útulek Maskot',
+        kind: 'animals',
+        subcategory: 'Útulek'
+      },
+      {
+        name: 'Azyl pro opuštěná zvířata — nové kotce',
+        kind: 'animals',
+        subcategory: 'Útulek',
+        description: 'Výměna kotců pro psy a další zvířata v kotci.'
+      },
+      {
+        name: 'Útulek pro koťata a štěňata',
+        kind: 'animals',
+        subcategory: 'Útulek'
+      },
+      {
+        name: 'Kočky a pejsci v nouzi',
+        kind: 'animals',
+        subcategory: 'Útulek'
+      },
+      {
+        name: 'Azyl pro kočky a fenky',
+        kind: 'animals',
+        subcategory: 'Útulek'
+      }
+    ];
+
+    for (const place of dogOrGeneralCases) {
+      const hint = getPlaceActionHint(place);
+      const tpl = buildFirstContactTemplate(place);
+      expect(hint, `${place.name} hint`).toContain('venčení');
+      expect(tpl.body, `${place.name} body`).toContain('venčení');
+    }
+
+    // Verify all CURATED_FALLBACK_PLACES animal shelters keep expected classification
+    const catOnlyCuratedIds = new Set(['curated:praha-utulek-mecholupy', 'curated:praha-psoz-kocky']);
+    for (const place of CURATED_FALLBACK_PLACES.filter((p) => p.kind === 'animals')) {
+      const tpl = buildFirstContactTemplate(place);
+      if (catOnlyCuratedIds.has(place.id)) {
+        expect(tpl.body, place.id).not.toMatch(/venčen/i);
+      } else {
+        expect(tpl.body, place.id).toContain('venčení');
+      }
+    }
+  });
+
+  it('trims userName and userContact and omits signature when both are whitespace-only', () => {
+    const place = { name: 'Spolek', kind: 'ngo' };
+    const blankTpl = buildFirstContactTemplate(place, '   ', ' \t ');
+    expect(blankTpl.body).not.toContain('S pozdravem');
+
+    const paddedBoth = buildFirstContactTemplate(place, '  Jana  ', ' jana@spolek.cz ');
+    expect(paddedBoth.body).toMatch(/\n\nS pozdravem,\nJana \(jana@spolek\.cz\)$/);
+
+    const paddedNameOnly = buildFirstContactTemplate(place, '  Jana  ', '   ');
+    expect(paddedNameOnly.body).toMatch(/\n\nS pozdravem,\nJana$/);
+
+    const paddedContactOnly = buildFirstContactTemplate(place, '   ', ' jana@spolek.cz ');
+    expect(paddedContactOnly.body).toMatch(/\n\nS pozdravem,\n\(jana@spolek\.cz\)$/);
   });
 });
 

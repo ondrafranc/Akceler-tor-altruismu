@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,17 +14,6 @@ import {
   consumePendingPartnerReturn,
   checkImmediatePartnerReturn
 } from '../../src/lib/features/actions/services/partnerReturnService.js';
-import {
-  openOfflineDb,
-  enqueueOfflineRequest,
-  getPendingRequests,
-  removePendingRequest,
-  clearOutbox,
-  flushOfflineQueue,
-  cacheDeedsOffline,
-  getCachedDeedsOffline,
-  offlineFetch
-} from '../../src/lib/offlineSync.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const srcLib = path.resolve(__dirname, '../../src/lib');
@@ -34,11 +23,7 @@ function loadSource(subpath) {
   return readFileSync(fullPath, 'utf8');
 }
 
-describe('Milestone 3: In-Situ Reward, Swipe Deck, Session Closure & Offline PWA', () => {
-  beforeEach(async () => {
-    await clearOutbox();
-  });
-
+describe('Milestone 3: In-Situ Reward, Swipe Deck & Session Closure', () => {
   describe('1. In-Situ Audio Synthesis & Celebration Engine', () => {
     it('playCelebrationChord is exported directly from presets', () => {
       expect(typeof playCelebrationChord).toBe('function');
@@ -78,10 +63,12 @@ describe('Milestone 3: In-Situ Reward, Swipe Deck, Session Closure & Offline PWA
     it('SwipeDeck.svelte supports horizontal touch gestures with touch-action: pan-y', () => {
       const source = loadSource('features/actions/components/SwipeDeck.svelte');
       expect(source).toContain('touch-action: pan-y');
-      expect(source).toContain('on:pointerdown');
-      expect(source).toContain('on:pointermove');
-      expect(source).toContain('on:pointerup');
+      expect(source).toContain('onpointerdown');
+      expect(source).toContain('onpointermove');
+      expect(source).toContain('onpointerup');
       expect(source).toContain('rotate');
+      expect(source).toContain('Svět je díky tobě');
+      expect(source).not.toContain('Udělal/a');
     });
 
     it('SwipeDeck.svelte includes 44x44px accessible previous and next buttons', () => {
@@ -159,85 +146,7 @@ describe('Milestone 3: In-Situ Reward, Swipe Deck, Session Closure & Offline PWA
     });
   });
 
-  describe('5. Offline Storage & Outbox Sync (offlineSync.js)', () => {
-    it('enqueues offline requests and retrieves them from the outbox', async () => {
-      const id1 = await enqueueOfflineRequest({
-        url: '/api/feedback',
-        method: 'POST',
-        body: { score: 5, note: 'Super zážitek' }
-      });
-      expect(id1).toBeDefined();
-
-      const pending = await getPendingRequests();
-      expect(pending.length).toBeGreaterThanOrEqual(1);
-      const found = pending.find((p) => p.url === '/api/feedback');
-      expect(found).toBeDefined();
-      expect(found.method).toBe('POST');
-
-      // Removing the request
-      await removePendingRequest(found.id);
-      const remaining = await getPendingRequests();
-      expect(remaining.find((p) => p.id === found.id)).toBeUndefined();
-    });
-
-    it('clearOutbox empties all pending items', async () => {
-      await enqueueOfflineRequest({ url: '/api/pulse', method: 'POST', body: {} });
-      await clearOutbox();
-      const pending = await getPendingRequests();
-      expect(pending.length).toBe(0);
-    });
-
-    it('offlineFetch enqueues when offline and returns a 202 queued synthetic response', async () => {
-      // Mock network failure / offline via failed fetch or offline state
-      const originalFetch = global.fetch;
-      global.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
-
-      try {
-        const res = await offlineFetch('/api/submissions', {
-          method: 'POST',
-          body: JSON.stringify({ title: 'Nový skutek' })
-        });
-
-        expect(res.status).toBe(202);
-        const data = await res.json();
-        expect(data.offline).toBe(true);
-        expect(data.queued).toBe(true);
-
-        const pending = await getPendingRequests();
-        expect(pending.some((p) => p.url === '/api/submissions')).toBe(true);
-      } finally {
-        global.fetch = originalFetch;
-      }
-    });
-
-    it('flushOfflineQueue synchronizes queued requests using fetch', async () => {
-      await enqueueOfflineRequest({
-        url: '/api/telemetry',
-        method: 'POST',
-        body: { event: 'small_win' }
-      });
-
-      const originalFetch = global.fetch;
-      // Mock fetch resolving 200 OK
-      global.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-
-      try {
-        const synced = await flushOfflineQueue();
-        expect(synced).toBeGreaterThanOrEqual(1);
-        expect(global.fetch).toHaveBeenCalledWith(
-          '/api/telemetry',
-          expect.objectContaining({ method: 'POST' })
-        );
-
-        const remaining = await getPendingRequests();
-        expect(remaining.find((p) => p.url === '/api/telemetry')).toBeUndefined();
-      } finally {
-        global.fetch = originalFetch;
-      }
-    });
-  });
-
-  describe('6. Heavy Canvas Modularization & Invariant Guards', () => {
+  describe('5. Heavy Canvas Modularization & Invariant Guards', () => {
     it('mollyCatRenderer exports drawMollyCat with robust null guards', async () => {
       const { drawMollyCat } = await import('../../src/lib/molly/mollyCatRenderer.js');
       expect(typeof drawMollyCat).toBe('function');
@@ -333,6 +242,23 @@ describe('Milestone 3: In-Situ Reward, Swipe Deck, Session Closure & Offline PWA
       const { existsSync } = await import('node:fs');
       const barrelPath = path.resolve(__dirname, '../../src/lib/sensory/index.js');
       expect(existsSync(barrelPath)).toBe(false);
+    });
+
+    it('M3 dead exports and unused CSS are removed and SwipeDeck uses local calendar date', () => {
+      const progressSrc = readFileSync(path.resolve(__dirname, '../../src/lib/progress.js'), 'utf8');
+      expect(progressSrc).not.toContain('WORLD_MILESTONES');
+      expect(progressSrc).not.toContain('worldHealPercent');
+      expect(progressSrc).not.toContain('recordSanctuaryWish');
+
+      const holdSparkSrc = readFileSync(path.resolve(__dirname, '../../src/lib/sensory/interaction/holdSpark.js'), 'utf8');
+      expect(holdSparkSrc).not.toContain('globalSparkCharge');
+
+      const themeCss = readFileSync(path.resolve(__dirname, '../../src/styles/czech-theme.css'), 'utf8');
+      expect(themeCss).not.toContain('.subpage-hero');
+
+      const swipeDeckSrc = loadSource('features/actions/components/SwipeDeck.svelte');
+      expect(swipeDeckSrc).not.toContain('toISOString().slice(0, 10)');
+      expect(swipeDeckSrc).toContain('todayCompletedCount');
     });
   });
 });

@@ -1,36 +1,70 @@
 <script>
-  import { onMount } from 'svelte';
-  import AppIcon from '$lib/components/AppIcon.svelte';
-  import { resolveIconKey } from '$lib/icons/iconRegistry.js';
+  import { onMount } from "svelte";
+  import AppIcon from "$lib/components/AppIcon.svelte";
+  import { resolveIconKey } from "$lib/icons/iconRegistry.js";
 
-  export let ritualMode = 'water'; // 'water' | 'sky' | 'wave'
-  export let ritualInput = '';
-  export let nextSeedToPlant = null;
-  export let wishesCount = 0;
+  /**
+   * @type {{
+   *   ritualMode?: string,
+   *   ritualInput?: string,
+   *   nextSeedToPlant?: unknown,
+   *   wishesCount?: number,
+   *   onSubmit?: ((payload: { ritualMode: string, ritualInput: string }) => void) | null,
+   *   onSelectMode?: ((mode: string) => void) | null,
+   *   onQuickDeed?: ((deed: { icon?: string, label: string, title: string, element: string, lightType: string }) => void) | null,
+   *   onClearWishes?: (() => void) | null
+   * }}
+   */
+  let {
+    ritualMode = $bindable("water"),
+    ritualInput = $bindable(""),
+    nextSeedToPlant = null,
+    wishesCount = 0,
+    onSubmit = null,
+    onSelectMode = null,
+    onQuickDeed = null,
+    onClearWishes = null,
+  } = $props();
 
-  /** @type {((payload: { ritualMode: string, ritualInput: string }) => void) | null} */
-  export let onSubmit = null;
-  /** @type {((mode: string) => void) | null} */
-  export let onSelectMode = null;
-  /** @type {((deed: { icon?: string, label: string, title: string, element: string, lightType: string }) => void) | null} */
-  export let onQuickDeed = null;
-  /** @type {(() => void) | null} */
-  export let onClearWishes = null;
-
-  let quickIdeasOpen = false;
+  let quickIdeasOpen = $state(true);
 
   onMount(() => {
-    quickIdeasOpen = window.innerWidth > 680;
+    quickIdeasOpen = true;
   });
 
   export const QUICK_OFFLINE_DEEDS = [
-    { icon: 'paw', label: 'Miska útulku', title: 'Naplněná miska pro zvířata v útulku', element: 'animals', lightType: 'lantern' },
-    { icon: 'handshake', label: 'Pomoc druhému', title: 'Drobná pomoc člověku v mém okolí', element: 'community', lightType: 'wave' },
-    { icon: 'leaf', label: 'Sebraný odpadek', title: 'Sebraný odpadek cestou v přírodě či ulici', element: 'nature', lightType: 'lantern' },
-    { icon: 'sparkles', label: 'Tichá inspirace', title: 'Zpráva nebo vlídná myšlenka pro druhého', element: 'care', lightType: 'star' }
+    {
+      icon: "paw",
+      label: "Miska útulku",
+      title: "Naplněná miska pro zvířata v útulku",
+      element: "animals",
+      lightType: "lantern",
+    },
+    {
+      icon: "handshake",
+      label: "Pomoc druhému",
+      title: "Drobná pomoc člověku v mém okolí",
+      element: "community",
+      lightType: "wave",
+    },
+    {
+      icon: "leaf",
+      label: "Sebraný odpadek",
+      title: "Sebraný odpadek cestou v přírodě či ulici",
+      element: "nature",
+      lightType: "lantern",
+    },
+    {
+      icon: "sparkles",
+      label: "Tichá inspirace",
+      title: "Zpráva nebo vlídná myšlenka pro druhého",
+      element: "care",
+      lightType: "star",
+    },
   ];
 
-  function handleSubmit() {
+  function handleSubmit(event) {
+    event?.preventDefault?.();
     if (onSubmit) onSubmit({ ritualMode, ritualInput });
   }
 
@@ -40,14 +74,20 @@
   }
 </script>
 
-<form class="ritual-bar" on:submit|preventDefault={handleSubmit}>
+<form class="ritual-bar" onsubmit={handleSubmit}>
   <div class="ritual-dock-main">
-    <div class="ritual-modes" role="tablist" aria-label="Kam rozsvítit dobrý skutek">
+    <div
+      class="ritual-modes"
+      role="tablist"
+      aria-label="Kam rozsvítit dobrý skutek"
+    >
       <button
         type="button"
+        role="tab"
+        aria-selected={ritualMode === "water"}
         class="ritual-pill"
-        class:active={ritualMode === 'water'}
-        on:click={() => handleModeChange('water')}
+        class:active={ritualMode === "water"}
+        onclick={() => handleModeChange("water")}
       >
         <AppIcon name="flame" size={14} strokeWidth={2} />
         <span>Lucerna</span>
@@ -55,9 +95,11 @@
       </button>
       <button
         type="button"
+        role="tab"
+        aria-selected={ritualMode === "sky"}
         class="ritual-pill"
-        class:active={ritualMode === 'sky'}
-        on:click={() => handleModeChange('sky')}
+        class:active={ritualMode === "sky"}
+        onclick={() => handleModeChange("sky")}
       >
         <AppIcon name="star" size={14} strokeWidth={2} />
         <span>Hvězda</span>
@@ -65,9 +107,11 @@
       </button>
       <button
         type="button"
+        role="tab"
+        aria-selected={ritualMode === "wave"}
         class="ritual-pill"
-        class:active={ritualMode === 'wave'}
-        on:click={() => handleModeChange('wave')}
+        class:active={ritualMode === "wave"}
+        onclick={() => handleModeChange("wave")}
       >
         <AppIcon name="waves" size={14} strokeWidth={2} />
         <span>Vlna</span>
@@ -88,16 +132,20 @@
 
     <button type="submit" class="ritual-send-btn">
       <AppIcon
-        name={ritualMode === 'wave' ? 'waves' : ritualMode === 'water' ? 'flame' : 'star'}
+        name={ritualMode === "wave"
+          ? "waves"
+          : ritualMode === "water"
+            ? "flame"
+            : "star"}
         size={15}
         strokeWidth={2}
       />
       <span>
-        {ritualMode === 'wave'
-          ? 'Vyslat vlnu'
-          : ritualMode === 'water'
-          ? 'Rozsvítit lucernu'
-          : 'Rozsvítit hvězdu'}
+        {ritualMode === "wave"
+          ? "Vyslat vlnu"
+          : ritualMode === "water"
+            ? "Rozsvítit lucernu"
+            : "Rozsvítit hvězdu"}
       </span>
     </button>
   </div>
@@ -108,9 +156,16 @@
         <AppIcon name="lightbulb" size={14} strokeWidth={2} />
         <span>Rychlé nápady</span>
       </summary>
-      <div class="ritual-whisper-row" aria-label="Rychlé příklady dnešních dobrých skutků">
+      <div
+        class="ritual-whisper-row"
+        aria-label="Rychlé příklady dnešních dobrých skutků"
+      >
         {#each QUICK_OFFLINE_DEEDS as qd}
-          <button type="button" class="qd-chip" on:click={() => onQuickDeed && onQuickDeed(qd)}>
+          <button
+            type="button"
+            class="qd-chip"
+            onclick={() => onQuickDeed && onQuickDeed(qd)}
+          >
             <AppIcon name={resolveIconKey(qd.icon)} size={13} strokeWidth={2} />
             <span>{qd.label}</span>
           </button>
@@ -119,7 +174,7 @@
           <button
             type="button"
             class="ritual-clear-btn"
-            on:click={() => onClearWishes && onClearWishes()}
+            onclick={() => onClearWishes && onClearWishes()}
           >
             Vyčistit přidaná
           </button>
@@ -142,7 +197,7 @@
     grid-template-columns: auto 1fr auto;
     align-items: center;
     gap: 0.45rem;
-    padding: 0.36rem;
+    padding: 0.25rem;
     border-radius: 16px;
     background: var(--bg-subtle);
     border: 1px solid var(--border-subtle);
@@ -152,7 +207,7 @@
   .ritual-modes {
     display: inline-flex;
     gap: 0.2rem;
-    padding: 0.18rem;
+    padding: 0.125rem;
     border-radius: 12px;
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
@@ -161,7 +216,11 @@
   .ritual-pill {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.28rem;
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
     border: none;
     border-radius: 9px;
     padding: 0.38rem 0.68rem;
@@ -171,7 +230,9 @@
     font-size: 0.78rem;
     font-weight: 700;
     cursor: pointer;
-    transition: background-color 0.16s ease, color 0.16s ease;
+    transition:
+      background-color 0.16s ease,
+      color 0.16s ease;
     white-space: nowrap;
   }
 
@@ -187,16 +248,24 @@
   .ritual-dock-main input {
     min-width: 0;
     width: 100%;
-    padding: 0.48rem 0.72rem;
-    border: none;
-    background: transparent;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding: 0.45rem 0.78rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 11px;
+    background: var(--bg-surface);
     color: var(--ink-primary);
     font-family: inherit;
     font-size: 0.9rem;
+    transition:
+      border-color 0.16s ease,
+      box-shadow 0.16s ease;
   }
 
   .ritual-dock-main input:focus {
     outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(27, 94, 66, 0.16);
   }
 
   .ritual-dock-main input::placeholder {
@@ -208,6 +277,9 @@
     align-items: center;
     justify-content: center;
     gap: 0.35rem;
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
     border: none;
     border-radius: 11px;
     padding: 0.5rem 0.95rem;
@@ -236,18 +308,25 @@
   .quick-ideas-summary {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.35rem;
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
     font-size: 0.78rem;
     font-weight: 700;
     color: var(--ink-secondary);
     background: var(--bg-subtle);
     border: 1px solid var(--border-subtle);
     border-radius: 999px;
-    padding: 0.28rem 0.75rem;
+    padding: 0.4rem 0.85rem;
     cursor: pointer;
     user-select: none;
     list-style: none;
-    transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+    transition:
+      background-color 0.16s ease,
+      border-color 0.16s ease,
+      color 0.16s ease;
   }
 
   .quick-ideas-summary::-webkit-details-marker {
@@ -275,17 +354,23 @@
   .qd-chip {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.32rem;
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
     border: 1px solid var(--border-subtle);
     border-radius: 999px;
-    padding: 0.32rem 0.72rem;
+    padding: 0.4rem 0.82rem;
     background: var(--bg-surface);
     color: var(--ink-primary);
     font-family: inherit;
     font-size: 0.76rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.16s ease, border-color 0.16s ease;
+    transition:
+      background-color 0.16s ease,
+      border-color 0.16s ease;
   }
 
   .qd-chip:hover {
@@ -295,6 +380,12 @@
 
   .ritual-clear-btn {
     margin-left: auto;
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: none;
     background: transparent;
     color: var(--ink-secondary, #3f574a);
@@ -303,11 +394,17 @@
     font-weight: 600;
     cursor: pointer;
     text-decoration: underline;
-    padding: 0.25rem 0.4rem;
+    padding: 0 0.55rem;
   }
 
   .ritual-clear-btn:hover {
     color: var(--ink-primary);
+  }
+
+  @media (max-width: 1024px) {
+    .ritual-dock-main input {
+      font-size: 1rem;
+    }
   }
 
   @media (max-width: 900px) {
@@ -392,15 +489,9 @@
     }
 
     .ritual-whisper-row {
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      scrollbar-width: none;
-      -webkit-overflow-scrolling: touch;
+      flex-wrap: wrap;
+      overflow: visible;
       padding-bottom: 2px;
-    }
-
-    .ritual-whisper-row::-webkit-scrollbar {
-      display: none;
     }
 
     .qd-chip {
@@ -411,6 +502,16 @@
     .ritual-clear-btn {
       white-space: nowrap;
       flex-shrink: 0;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .ritual-dock-main {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ritual-send-btn {
+      width: 100%;
     }
   }
 </style>

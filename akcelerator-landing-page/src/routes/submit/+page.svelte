@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { CZECH_CITIES } from "../../lib/data/czech-actions.js";
   import { recordSmallWin } from "../../lib/progress.js";
   import { trackEvent } from "../../lib/analytics.js";
@@ -30,39 +30,49 @@
 
   const TOP_CITIES = CZECH_CITIES.slice(0, 6);
 
-  let kind = "org"; // org | event
+  let kind = $state("org"); // org | event
 
-  let name = "";
-  let category = "";
-  let website = "";
-  let email = "";
-  let phone = "";
-  let description = "";
+  let name = $state("");
+  let category = $state("");
+  let website = $state("");
+  let email = $state("");
+  let phone = $state("");
+  let description = $state("");
 
-  let eventUrl = "";
-  let eventStartLocal = "";
-  let eventEndLocal = "";
+  let eventUrl = $state("");
+  let eventStartLocal = $state("");
+  let eventEndLocal = $state("");
 
-  let locationQuery = "";
-  let geoStatus = "idle";
-  let geoMessage = "";
+  let locationQuery = $state("");
+  let geoStatus = $state("idle");
+  let geoMessage = $state("");
   /** @type {Array<{label: string, lat: number, lon: number}>} */
-  let geoResults = [];
-  let lat = null;
-  let lon = null;
-  let addressLabel = "";
+  let geoResults = $state([]);
+  let lat = $state(null);
+  let lon = $state(null);
+  let addressLabel = $state("");
 
   // Spam protection (honeypot + monotonic elapsed time)
-  let hp = "";
+  let hp = $state("");
   const startedAt = Date.now();
   const mountPerfNow =
     typeof performance !== "undefined" ? performance.now() : 0;
-  let draftReady = false;
+  let draftReady = $state(false);
 
-  let isSubmitting = false;
-  let submitStatus = null; // null | success | error
-  let submitMessage = "";
-  let submittedMapUrl = "/near";
+  let isSubmitting = $state(false);
+  let submitStatus = $state(null); // null | success | error
+  let submitMessage = $state("");
+  let submittedMapUrl = $state("/near");
+  let optionalFieldsOpen = $state(false);
+  let validatingOptionalOpen = false;
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  let validatingOptionalTimer = null;
+
+  const headerSubtitle = $derived(
+    kind === "event"
+      ? "Pořádáš nebo víš o sousedské brigádě, sbírce či výsadbě? Stačí název, obec a odkaz na událost."
+      : "Víš o útulku, komunitním šatníku, knihobudce nebo sousedské brigádě? Stačí název a obec.",
+  );
 
   onMount(() => {
     try {
@@ -88,25 +98,27 @@
     draftReady = true;
   });
 
-  $: if (draftReady && submitStatus !== "success") {
-    safeSetItem(
-      DRAFT_KEY,
-      JSON.stringify({
-        kind,
-        name,
-        category,
-        website,
-        email,
-        description,
-        locationQuery,
-        lat,
-        lon,
-        addressLabel,
-        eventUrl,
-      }),
-      "session",
-    );
-  }
+  $effect(() => {
+    if (draftReady && submitStatus !== "success") {
+      safeSetItem(
+        DRAFT_KEY,
+        JSON.stringify({
+          kind,
+          name,
+          category,
+          website,
+          email,
+          description,
+          locationQuery,
+          lat,
+          lon,
+          addressLabel,
+          eventUrl,
+        }),
+        "session",
+      );
+    }
+  });
 
   function pickQuickCity(city) {
     lat = city.lat;
@@ -168,6 +180,66 @@
     if (!s) return null;
     const d = new Date(s);
     return Number.isFinite(d.getTime()) ? d.toISOString() : null;
+  }
+
+  function clearSubmitErrorBanner() {
+    if (submitStatus === "error") {
+      submitStatus = null;
+      submitMessage = "";
+    }
+  }
+
+  /**
+   * @param {Event & { currentTarget: HTMLInputElement }} event
+   */
+  async function handleOptionalFieldInvalid(event) {
+    const inputEl = event.currentTarget;
+    const formEl = inputEl?.form;
+    const firstInvalidInForm = formEl?.querySelector(":invalid");
+    if (firstInvalidInForm && firstInvalidInForm !== inputEl) {
+      event.preventDefault();
+      if (!firstInvalidInForm.closest(".optional-fields")) {
+        clearSubmitErrorBanner();
+      }
+      return;
+    }
+    event.preventDefault();
+    const detailsEl = /** @type {HTMLDetailsElement | null} */ (
+      inputEl?.closest("details")
+    );
+    validatingOptionalOpen = true;
+    if (validatingOptionalTimer) clearTimeout(validatingOptionalTimer);
+    if (detailsEl) {
+      detailsEl.open = true;
+    }
+    optionalFieldsOpen = true;
+    submitStatus = "error";
+    submitMessage =
+      inputEl?.id === "website"
+        ? "Webová adresa musí být celý odkaz včetně https:// (např. https://utulek.cz)."
+        : "Kontaktní e-mail nemá platný formát (např. info@spolek.cz).";
+    await tick();
+    if (validatingOptionalOpen && detailsEl) {
+      detailsEl.open = true;
+      optionalFieldsOpen = true;
+    }
+    inputEl?.focus();
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => {
+        if (!validatingOptionalOpen) return;
+        if (detailsEl) {
+          detailsEl.open = true;
+          optionalFieldsOpen = true;
+        }
+        if (inputEl && document.activeElement !== inputEl) {
+          inputEl.focus();
+        }
+      });
+    }
+    validatingOptionalTimer = setTimeout(() => {
+      validatingOptionalOpen = false;
+      validatingOptionalTimer = null;
+    }, 80);
   }
 
   async function submit() {
@@ -299,18 +371,20 @@
     kicker="SPOLEČNÁ MAPA POMOCI"
     title="Přidej místo nebo akci, "
     titleAccent="kde se dá pomoct"
-    subtitle="Víš o útulku, komunitním šatníku, knihobudce nebo sousedské brigádě? Stačí název a obec."
+    subtitle={headerSubtitle}
   />
 
   <div class="submit-layout">
     <!-- CLEAN FOCUSED FORM -->
     <div class="card">
-      <div class="tabs">
+      <div class="tabs" role="tablist" aria-label="Typ příspěvku">
         <button
           class="tab"
           class:active={kind === "org"}
           type="button"
-          on:click={() => (kind = "org")}
+          role="tab"
+          aria-selected={kind === "org"}
+          onclick={() => (kind = "org")}
         >
           <AppIcon name="map-pin" size={15} strokeWidth={2} />
           <span>Místo / spolek</span>
@@ -319,14 +393,23 @@
           class="tab"
           class:active={kind === "event"}
           type="button"
-          on:click={() => (kind = "event")}
+          role="tab"
+          aria-selected={kind === "event"}
+          onclick={() => (kind = "event")}
         >
           <AppIcon name="calendar" size={15} strokeWidth={2} />
           <span>Sousedská akce</span>
         </button>
       </div>
 
-      <form class="form" on:submit|preventDefault={submit}>
+      <form
+        class="form"
+        method="post"
+        onsubmit={(e) => {
+          e.preventDefault();
+          submit();
+        }}
+      >
         <div class="hp" aria-hidden="true">
           <label for="hp_company">Company</label>
           <input
@@ -348,7 +431,11 @@
               autocomplete="off"
               data-molly-guide="true"
               type="text"
+              required
+              aria-required="true"
               bind:value={name}
+              oninvalid={clearSubmitErrorBanner}
+              oninput={clearSubmitErrorBanner}
               placeholder="Např. Knihobudka v parku"
               maxlength="120"
             />
@@ -362,14 +449,18 @@
                 name="location_query"
                 autocomplete="off"
                 type="text"
+                required
+                aria-required="true"
                 bind:value={locationQuery}
                 placeholder="Město, obec nebo ulice"
-                on:input={() => {
+                oninvalid={clearSubmitErrorBanner}
+                oninput={() => {
+                  clearSubmitErrorBanner();
                   geoResults = [];
                   geoMessage = "";
                   geoStatus = "idle";
                 }}
-                on:keydown={(e) => {
+                onkeydown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
                     searchLocation();
@@ -380,7 +471,7 @@
               <button
                 class="btn secondary"
                 type="button"
-                on:click={searchLocation}
+                onclick={searchLocation}
                 disabled={geoStatus === "loading" ||
                   locationQuery.trim().length < 2}
               >
@@ -396,7 +487,8 @@
                   type="button"
                   class="q-pill"
                   class:active={addressLabel === city.name}
-                  on:click={() => pickQuickCity(city)}
+                  aria-pressed={addressLabel === city.name}
+                  onclick={() => pickQuickCity(city)}
                 >
                   {city.name}
                 </button>
@@ -409,7 +501,7 @@
                   <button
                     class="geo-item"
                     type="button"
-                    on:click={() => pickLocation(r)}
+                    onclick={() => pickLocation(r)}
                   >
                     <span class="geo-title">{firstText(r.label)}</span>
                     <span class="geo-sub">{r.label}</span>
@@ -450,8 +542,12 @@
                 id="event_url"
                 name="event_url"
                 autocomplete="url"
-                type="text"
+                type="url"
+                required
+                aria-required="true"
                 bind:value={eventUrl}
+                oninvalid={clearSubmitErrorBanner}
+                oninput={clearSubmitErrorBanner}
                 placeholder="https://…"
                 maxlength="220"
               />
@@ -479,8 +575,19 @@
           </div>
         {/if}
 
-        <details class="calm-drawer optional-fields">
-          <summary>Doplnit štítek, web nebo kontakt (volitelné)</summary>
+        <details
+          class="calm-drawer optional-fields"
+          bind:open={optionalFieldsOpen}
+          ontoggle={(e) => {
+            if (validatingOptionalOpen && !e.currentTarget.open) {
+              e.currentTarget.open = true;
+              optionalFieldsOpen = true;
+            }
+          }}
+        >
+          <summary onclick={() => (validatingOptionalOpen = false)}>
+            Doplnit štítek, web nebo kontakt (volitelné)
+          </summary>
           <div class="grid opt-grid">
             <div class="field wide">
               <span class="label" id="category-label">Oblast pomoci</span>
@@ -494,9 +601,14 @@
                     type="button"
                     class="q-pill"
                     class:active={category === qc.label}
-                    on:click={() => (category = qc.label)}
+                    aria-pressed={category === qc.label}
+                    onclick={() => (category = qc.label)}
                   >
-                    <AppIcon name={resolveIconKey(qc.icon)} size={14} strokeWidth={2} />
+                    <AppIcon
+                      name={resolveIconKey(qc.icon)}
+                      size={14}
+                      strokeWidth={2}
+                    />
                     <span>{qc.label}</span>
                   </button>
                 {/each}
@@ -509,8 +621,10 @@
                 id="website"
                 name="website"
                 autocomplete="url"
-                type="text"
+                type="url"
                 bind:value={website}
+                oninvalid={handleOptionalFieldInvalid}
+                oninput={clearSubmitErrorBanner}
                 placeholder="https://…"
                 maxlength="220"
               />
@@ -524,6 +638,8 @@
                 autocomplete="email"
                 type="email"
                 bind:value={email}
+                oninvalid={handleOptionalFieldInvalid}
+                oninput={clearSubmitErrorBanner}
                 placeholder="info@…"
                 maxlength="120"
               />
@@ -538,17 +654,19 @@
           </button>
         </div>
 
-        {#if submitStatus}
-          <div class={"banner " + submitStatus} aria-live="polite">
-            <div>{submitMessage}</div>
-            {#if submitStatus === "success"}
-              <a href={submittedMapUrl} class="map-jump-link">
-                <span>Ukázat místo na mapě</span>
-                <AppIcon name="arrow-right" size={15} strokeWidth={2} />
-              </a>
-            {/if}
-          </div>
-        {/if}
+        <div class="submit-live-region" aria-live="polite">
+          {#if submitStatus}
+            <div class={"banner " + submitStatus}>
+              <div>{submitMessage}</div>
+              {#if submitStatus === "success"}
+                <a href={submittedMapUrl} class="map-jump-link">
+                  <span>Ukázat místo na mapě</span>
+                  <AppIcon name="arrow-right" size={15} strokeWidth={2} />
+                </a>
+              {/if}
+            </div>
+          {/if}
+        </div>
       </form>
     </div>
 
@@ -558,7 +676,7 @@
         <AppIcon name="leaf" size={14} strokeWidth={2} />
         <span>INSPIRACE Z OKOLÍ</span>
       </span>
-      <h3>Co sem lidé nejčastěji přidávají?</h3>
+      <h2>Co sem lidé nejčastěji přidávají?</h2>
       <ul class="idea-list">
         <li>
           <strong>Menší útulky a depozita</strong>, kde uvítají deky nebo
@@ -668,7 +786,9 @@
     font-weight: 700;
     font-size: 0.85rem;
     color: var(--ink-secondary);
-    transition: background-color 0.16s ease, color 0.16s ease;
+    transition:
+      background-color 0.16s ease,
+      color 0.16s ease;
   }
 
   .tab:hover {
@@ -722,7 +842,7 @@
     background: var(--bg-surface);
     color: var(--ink-primary);
     font-family: inherit;
-    font-size: 0.92rem;
+    font-size: 1rem;
     min-height: 44px;
   }
 
@@ -770,7 +890,10 @@
     font-size: 0.8rem;
     font-weight: 700;
     cursor: pointer;
-    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      color 0.15s ease;
   }
 
   .q-pill:hover {
@@ -941,7 +1064,7 @@
     color: #8f4b0e;
   }
 
-  .side-note h3 {
+  .side-note h2 {
     margin: 0.4rem 0 0.8rem;
     font-size: 1.06rem;
     font-weight: 800;

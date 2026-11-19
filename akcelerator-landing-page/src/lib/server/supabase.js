@@ -25,7 +25,6 @@ export function resolveSupabaseConfig() {
   const serviceKey = (
     privateEnv.SUPABASE_SERVICE_ROLE_KEY ||
     privateEnv.SUPABASE_SECRET_KEY ||
-    privateEnv['API Key'] ||
     ''
   ).trim();
 
@@ -60,6 +59,17 @@ async function fetchWithTimeout(input, init = {}) {
 }
 
 /**
+ * Builds a collision-resistant SHA-256 cache signature for Supabase client singletons.
+ * @param {'anon' | 'admin' | string} role
+ * @param {string} url
+ * @param {string} key
+ * @returns {string}
+ */
+export function buildClientCacheKey(role, url, key) {
+  return crypto.createHash('sha256').update(`${role}\0${url}\0${key}`).digest('hex');
+}
+
+/**
  * Returns a module-level singleton Supabase client authenticated with PUBLIC_SUPABASE_ANON_KEY with active RLS.
  * Client queries strictly use anonKey or fail, never escalating to superuser.
  * @returns {import('@supabase/supabase-js').SupabaseClient | null}
@@ -68,7 +78,7 @@ export function getServerSupabase() {
   const { url, anonKey } = resolveSupabaseConfig();
   if (!url || !anonKey) return null;
 
-  const sig = `${url}::anon::${anonKey.slice(0, 16)}`;
+  const sig = buildClientCacheKey('anon', url, anonKey);
   if (cachedServerClient && cachedKeySignature === sig) {
     return cachedServerClient;
   }
@@ -97,7 +107,7 @@ export function getAdminSupabase() {
   const { url, serviceKey } = resolveSupabaseConfig();
   if (!url || !serviceKey) return null;
 
-  const sig = `${url}::admin::${serviceKey.slice(0, 16)}`;
+  const sig = buildClientCacheKey('admin', url, serviceKey);
   if (cachedAdminClient && cachedAdminSignature === sig) {
     return cachedAdminClient;
   }
@@ -137,13 +147,28 @@ export async function withTimeout(promise, timeoutMs = 2800, label = 'Database t
   }
 }
 
+let ephemeralIpSalt = '';
+
+/**
+ * Resolves the IP hashing salt from environment or generates a lazy per-process random salt.
+ * @returns {string}
+ */
+function resolveIpHashSalt() {
+  const configured = (privateEnv.IP_HASH_SALT || privateEnv.SUPABASE_JWT_SECRET || '').trim();
+  if (configured) return configured.slice(0, 32);
+  if (!ephemeralIpSalt) {
+    ephemeralIpSalt = crypto.randomBytes(16).toString('hex');
+  }
+  return ephemeralIpSalt;
+}
+
 /**
  * Anonymizes a client IP/identifier into a privacy-safe short SHA-256 hex digest.
  * @param {string} clientKey
  * @returns {string}
  */
 export function hashClientKey(clientKey) {
-  const salt = (privateEnv.SUPABASE_JWT_SECRET || 'akcelerator-ip-salt').slice(0, 32);
+  const salt = resolveIpHashSalt();
   return crypto
     .createHash('sha256')
     .update(`${salt}:${clientKey || 'anon'}`)

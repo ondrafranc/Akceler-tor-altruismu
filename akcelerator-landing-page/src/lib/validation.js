@@ -73,7 +73,7 @@ export function isValidLatLon(lat, lon) {
  */
 export function isCzLatLon(lat, lon) {
   if (!isValidLatLon(lat, lon)) return false;
-  return lat >= 47.5 && lat <= 51.5 && lon >= 11.5 && lon <= 19.5;
+  return lat >= 48.0 && lat <= 51.5 && lon >= 11.5 && lon <= 19.5;
 }
 
 /**
@@ -126,7 +126,9 @@ export function sanitizeHttpUrl(raw, maxLen = 280) {
     const host = parsed.hostname.toLowerCase();
     if (!host || (!host.includes('.') && host !== 'localhost')) return null;
     if (host.startsWith('.') || host.endsWith('.') || host.includes('..')) return null;
-    return parsed.toString();
+    const normalized = parsed.toString();
+    if (normalized.length > maxLen) return null;
+    return normalized;
   } catch {
     return null;
   }

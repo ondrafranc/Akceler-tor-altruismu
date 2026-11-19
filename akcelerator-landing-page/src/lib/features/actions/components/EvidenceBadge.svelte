@@ -2,33 +2,44 @@
   import AppIcon from '$lib/components/AppIcon.svelte';
   import { EVIDENCE_TIERS } from '../../../data/czech-actions.js';
 
-  export let tier = 'B';
-  export let className = '';
-  export let variant = 'pill'; // 'pill' | 'card' | 'rec'
+  /**
+   * @type {{
+   *   tier?: string,
+   *   className?: string,
+   *   variant?: 'pill' | 'card' | 'rec'
+   * }}
+   */
+  let { tier = 'B', className = '', variant = 'pill' } = $props();
 
+  /** @type {Record<string, string>} */
   const DAYLIGHT_TIER_LABELS = {
     A: 'Přímý měřitelný účinek',
     B: 'Doložený přínos',
     C: 'Komunitní smysl'
   };
 
-  $: safeTier = tier && EVIDENCE_TIERS[tier] ? tier : 'B';
-  $: tierMeta = EVIDENCE_TIERS[safeTier] || { desc: '' };
-  $: tierLabel = DAYLIGHT_TIER_LABELS[safeTier] || 'Doložený přínos';
-  $: baseClass = variant === 'card'
-    ? 'card-evidence-badge'
-    : variant === 'rec'
-      ? 'rec-evidence-pill'
-      : 'evidence-pill';
-  $: fullClass = `${baseClass} tier-${safeTier} ${className}`.trim();
+  /** @type {Record<string, { desc?: string }>} */
+  const TIER_MAP = EVIDENCE_TIERS;
+
+  const safeTier = $derived(tier && TIER_MAP[tier] ? tier : 'B');
+  const tierMeta = $derived(TIER_MAP[safeTier] || { desc: '' });
+  const tierLabel = $derived(DAYLIGHT_TIER_LABELS[safeTier] || 'Doložený přínos');
+  const baseClass = $derived(
+    variant === 'card'
+      ? 'card-evidence-badge'
+      : variant === 'rec'
+        ? 'rec-evidence-pill'
+        : 'evidence-pill'
+  );
+  const fullClass = $derived(`${baseClass} tier-${safeTier} ${className}`.trim());
 </script>
 
 <span
   class={fullClass}
-  title={tierMeta.desc || `Ověřený dopad (${safeTier})`}
+  title={tierMeta.desc || tierLabel}
 >
   <AppIcon name="shield-check" size={12} strokeWidth={2.2} />
-  <span>Ověřený dopad ({safeTier}) · {tierLabel}</span>
+  <span>{tierLabel}</span>
 </span>
 
 <style>

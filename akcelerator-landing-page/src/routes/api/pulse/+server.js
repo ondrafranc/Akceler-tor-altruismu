@@ -2,14 +2,65 @@ import { json } from '@sveltejs/kit';
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import { getServerSupabase, withTimeout } from '$lib/server/supabase.js';
-import { CZECH_CITIES } from '$lib/data/czech-actions.js';
+import { CZECH_CITIES, MICRO_ACTIONS } from '$lib/data/czech-actions.js';
 import {
   safeText,
   checkRateLimit,
   resolveClientKey,
   readJsonBodyBounded,
-  validateMutationOrigin
+  validateMutationOrigin,
+  isAuthorizedTestBypass
 } from '$lib/security.js';
+
+const ALLOWED_MICRO_ACTION_IDS = new Set([
+  ...MICRO_ACTIONS.map((a) => a.id),
+  'mindful_breathing',
+  'sanctuary_wish',
+  'altruism_step',
+  'spark_impulse',
+  'step'
+]);
+
+const ALLOWED_ACTION_PATTERNS = [
+  /^curated:[a-z0-9-]{2,72}$/,
+  /^comm-seed-\d{1,4}$/,
+  /^comm:-?\d+(?:\.\d+)?:-?\d+(?:\.\d+)?$/,
+  /^submit_\d{10,16}$/,
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+];
+
+const SAFE_CITY_RE = /^\p{L}[\p{L}\s.()-]*$/u;
+
+/**
+ * Validates pulse `actionId` against canonical micro-actions and genuine repo emitters.
+ * @param {string} actionId
+ * @returns {boolean}
+ */
+function isValidPulseActionId(actionId) {
+  if (!actionId) return false;
+  if (Array.from(actionId).length > 80) return false;
+  if (ALLOWED_MICRO_ACTION_IDS.has(actionId)) return true;
+  return ALLOWED_ACTION_PATTERNS.some((re) => re.test(actionId));
+}
+
+/**
+ * Normalizes whitespace, validates charset, and clamps city to <= 60 Unicode code points.
+ * @param {unknown} raw
+ * @returns {{ ok: boolean, value: string | null }}
+ */
+function sanitizeCityInput(raw) {
+  const normalized = safeText(raw)
+    .normalize('NFC')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  if (!normalized) return { ok: true, value: null };
+  if (!SAFE_CITY_RE.test(normalized)) {
+    return { ok: false, value: null };
+  }
+  const clamped = Array.from(normalized).slice(0, 60).join('').trim();
+  return { ok: true, value: clamped || null };
+}
 
 const PULSE_TEMPLATES = [
   {
@@ -132,7 +183,13 @@ function normalizeSlot(rawSlot) {
 }
 
 function resolveCityLocative(cityRaw) {
-  const cleaned = String(cityRaw || 'Brno').replace(/\s*\([^)]*\)/g, '').trim();
+  const sanitized = sanitizeCityInput(cityRaw);
+  const cleaned = (sanitized.ok && sanitized.value ? sanitized.value : '')
+    .replace(/\s*\([^)]*\)/g, '')
+    .trim();
+  if (!cleaned) {
+    return { cleanCityName: 'Česku', loc: 'v Česku' };
+  }
   const normKey = cleaned
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -265,7 +322,7 @@ export async function GET({ url, request }) {
 }
 
 /**
- * Lokální vývoj a automatické testy nesmí zapisovat do živé tabulky `pulse_events`.
+ * Lokální vývoj a autorizované testy nesmí zapisovat do živé tabulky `pulse_events`.
  * Výjimku lze zapnout proměnnou PULSE_ALLOW_DEV_WRITES=1.
  * @param {Request} request
  * @param {URL} url
@@ -275,8 +332,7 @@ function isNonProductionTraffic(request, url) {
   if (dev) return true;
   const host = (url.hostname || '').toLowerCase();
   if (host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]') return true;
-  const ua = request.headers.get('user-agent') || '';
-  return /HeadlessChrome|Playwright/i.test(ua);
+  return isAuthorizedTestBypass(request);
 }
 
 /**
@@ -285,40 +341,73 @@ function isNonProductionTraffic(request, url) {
  */
 export async function POST({ request, url, getClientAddress }) {
   if (!validateMutationOrigin(request, url)) {
-    return json({ success: false, error: 'Nepovolený původ požadavku.' }, { status: 403 });
+    return json(
+      { success: false, error: 'Nepovolený původ požadavku.' },
+      { status: 403, headers: { 'cache-control': 'no-store' } }
+    );
   }
 
   const clientKey = resolveClientKey(request, getClientAddress);
   const rl = checkRateLimit('pulse-post', clientKey, 30, 5 * 60 * 1000);
   if (!rl.allowed) {
-    return json({ success: false, error: 'Too many events' }, { status: 429 });
+    return json(
+      { success: false, error: 'Too many events' },
+      { status: 429, headers: { 'cache-control': 'no-store', 'retry-after': String(rl.retryAfterSec) } }
+    );
   }
 
   const parsed = await readJsonBodyBounded(request, 4096);
   if (!parsed.ok) {
-    return json({ success: false, error: parsed.error }, { status: parsed.status });
+    return json(
+      { success: false, error: parsed.error },
+      { status: parsed.status, headers: { 'cache-control': 'no-store' } }
+    );
   }
 
   const data = parsed.data;
-  const actionId = safeText(data.action_id ?? data.actionId).slice(0, 80);
+  const actionId = safeText(data.action_id ?? data.actionId)
+    .replace(/[\r\n\t]+/g, ' ')
+    .trim();
   if (!actionId) {
-    return json({ success: false, error: 'Chybí action_id.' }, { status: 400 });
+    return json(
+      { success: false, error: 'Chybí action_id.' },
+      { status: 400, headers: { 'cache-control': 'no-store' } }
+    );
   }
-  // Bez skutečného města nic nevymýšlíme (dříve se doplňovala „Praha“)
-  const city = safeText(data.city).slice(0, 60) || null;
+  if (!isValidPulseActionId(actionId)) {
+    return json(
+      { success: false, error: 'Neplatné action_id.' },
+      { status: 400, headers: { 'cache-control': 'no-store' } }
+    );
+  }
+
+  const cityRes = sanitizeCityInput(data.city);
+  if (!cityRes.ok) {
+    return json(
+      { success: false, error: 'Neplatný název města.' },
+      { status: 400, headers: { 'cache-control': 'no-store' } }
+    );
+  }
+  const city = cityRes.value;
   const kind = safeText(data.kind) === 'completed' ? 'completed' : 'click';
 
   if (isNonProductionTraffic(request, url)) {
-    return json({ success: true, skipped: 'non-production' });
+    return json(
+      { success: true, skipped: 'non-production' },
+      { headers: { 'cache-control': 'no-store' } }
+    );
   }
 
   const supabase = getServerSupabase();
   if (!supabase) {
-    return json({ success: false, error: 'Databáze není dostupná.' }, { status: 503 });
+    return json(
+      { success: false, error: 'Databáze není dostupná.' },
+      { status: 503, headers: { 'cache-control': 'no-store' } }
+    );
   }
 
   try {
-    const { data, error } = await withTimeout(
+    const { data: inserted, error } = await withTimeout(
       supabase
         .from('pulse_events')
         .insert([{ action_id: actionId, city, kind }])
@@ -327,12 +416,21 @@ export async function POST({ request, url, getClientAddress }) {
       2200,
       'Supabase pulse insert timeout'
     );
-    if (error || !data) {
-      return json({ success: false, error: 'Uložení selhalo.' }, { status: 503 });
+    if (error || !inserted) {
+      return json(
+        { success: false, error: 'Uložení selhalo.' },
+        { status: 503, headers: { 'cache-control': 'no-store' } }
+      );
     }
     LIVE_PULSE_CACHE = null;
-    return json({ success: true, id: data.id });
+    return json(
+      { success: true, id: inserted.id },
+      { headers: { 'cache-control': 'no-store' } }
+    );
   } catch {
-    return json({ success: false, error: 'Databáze neodpovídá.' }, { status: 503 });
+    return json(
+      { success: false, error: 'Databáze neodpovídá.' },
+      { status: 503, headers: { 'cache-control': 'no-store' } }
+    );
   }
 }

@@ -538,6 +538,12 @@
     gap: 0.6rem;
   }
 
+  @media (max-width: 1024px) {
+    .ji-edit input {
+      font-size: 1rem;
+    }
+  }
+
   @media (max-width: 680px) {
     .ji-edit {
       flex-wrap: wrap;

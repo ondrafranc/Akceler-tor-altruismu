@@ -9,7 +9,11 @@
   import SmallWinCelebration from "../components/SmallWinCelebration.svelte";
   import FeedbackModal from "../components/FeedbackModal.svelte";
   import MollyCompanion from "../components/MollyCompanion.svelte";
-  import MollyDock, { isCompactDock } from "../components/MollyDock.svelte";
+  import MollyDock, {
+    isCompactDock,
+    mollyDockBridge,
+    normalizeMollyIcon,
+  } from "../components/MollyDock.svelte";
   import AppIcon from "$lib/components/AppIcon.svelte";
   import { openFeedbackModal, toggleCrisisModal } from "$lib/utils.js";
   import "../styles/czech-theme.css";
@@ -310,6 +314,25 @@
     </nav>
   {/if}
 
+  {#if $isCompactDock && $mollyDockBridge.compactInflowWhisper && $mollyDockBridge.activeWhisper}
+    <div
+      class="molly-whisper-bubble is-compact-inflow"
+      role="status"
+      aria-live="polite"
+    >
+      <span class="molly-whisper-inner">
+        <span class="whisper-icon" aria-hidden="true">
+          <AppIcon
+            name={normalizeMollyIcon($mollyDockBridge.activeWhisper.icon, "paw")}
+            size={14}
+            strokeWidth={2}
+          />
+        </span>
+        <span class="whisper-text">{$mollyDockBridge.activeWhisper.text}</span>
+      </span>
+    </div>
+  {/if}
+
   <main class="main-content">
     {@render children?.()}
   </main>
@@ -329,11 +352,10 @@
         </p>
         <div class="footer-trust">
           <span>Zdarma a bez účtu</span>
-          <span aria-hidden="true">•</span>
           <span>Ověřené zdroje a poctivě popsaný dopad</span>
-          <span aria-hidden="true">•</span>
           <span>V okolí i z domova</span>
         </div>
+        <ImmediateHelp />
       </div>
 
       <div class="footer-nav-group">
@@ -350,15 +372,6 @@
           class="footer-calm-actions"
           aria-label="Rychlá opora a zpětná vazba"
         >
-          <a
-            href="/submit"
-            class="fc-btn"
-            class:active={pathname.startsWith("/submit")}
-            aria-label="Přidat tip"
-          >
-            <AppIcon name="plus" size={15} strokeWidth={2} />
-            <span>Přidat tip</span>
-          </a>
           <button
             type="button"
             class="fc-btn fc-crisis"
@@ -383,7 +396,6 @@
   </footer>
 </div>
 
-<ImmediateHelp />
 <SmallWinCelebration />
 <FeedbackModal />
 <MollyCompanion />
@@ -515,9 +527,9 @@
   }
 
   .nav-pill.world-pill {
-    background: var(--bohemian-mist, #e6f0ea);
-    border-color: var(--border-forest, #c5d9cd);
-    color: #195239;
+    color: var(--ink-secondary, #3f574a);
+    border-color: transparent;
+    background: transparent;
   }
 
   .nav-pill.world-pill.active {
@@ -727,7 +739,7 @@
 
   .footer-trust {
     display: flex;
-    gap: 0.55rem;
+    gap: 0.4rem 1.1rem;
     flex-wrap: wrap;
     font-size: 0.82rem;
     font-weight: 700;
@@ -751,10 +763,15 @@
   .footer-links {
     display: flex;
     flex-direction: column;
-    gap: 0.45rem;
+    gap: 0.1rem;
   }
 
   .footer-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0.25rem 0;
+    box-sizing: border-box;
     color: var(--ink-primary, #14281d);
     font-weight: 600;
     font-size: 0.92rem;
@@ -809,12 +826,6 @@
     color: #8f4b0e;
   }
 
-  .fc-btn.active {
-    background: var(--accent-primary, #1b5e42);
-    border-color: var(--accent-primary, #1b5e42);
-    color: #ffffff;
-  }
-
   @media (min-width: 960px) {
     .site-footer {
       background: #eaf2ec;
@@ -858,12 +869,6 @@
     .fc-btn {
       border-color: var(--border-forest-strong, #a7c4b3);
     }
-
-    .fc-btn.active {
-      background: var(--czech-forest, #1d5c40);
-      border-color: var(--czech-forest, #1d5c40);
-      color: #ffffff;
-    }
   }
 
   @media (min-width: 1025px) {
@@ -885,9 +890,15 @@
     }
 
     .nav-pill.world-pill:hover {
-      background: #daeae0;
-      border-color: var(--border-forest-strong, #a7c4b3);
-      color: var(--ink-primary, #14281d);
+      background: var(--bohemian-sage, #eef5f0);
+      border-color: transparent;
+      color: #195239;
+    }
+
+    .nav-pill.world-pill.active:hover {
+      background: var(--czech-forest, #1d5c40);
+      border-color: var(--czech-forest, #1d5c40);
+      color: #ffffff;
     }
 
     .nav-pill.add-tip:hover {
@@ -1057,6 +1068,44 @@
       line-height: 1.02;
       letter-spacing: 0.005em;
     }
+  }
+
+  .molly-whisper-bubble.is-compact-inflow {
+    position: sticky;
+    top: calc(env(safe-area-inset-top, 0px) + 66px);
+    z-index: 99;
+    margin: 0.4rem auto 0.35rem;
+    width: min(340px, calc(100% - 20px));
+    box-sizing: border-box;
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-strong, #c2cec5);
+    color: var(--ink-primary, #14281d);
+    padding: 0.54rem 0.82rem;
+    border-radius: 14px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.38;
+    box-shadow: var(--shadow-md, 0 8px 20px -6px rgba(18, 42, 30, 0.08));
+    pointer-events: none;
+  }
+
+  .molly-whisper-bubble.is-compact-inflow .molly-whisper-inner {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 6px;
+    text-align: left;
+  }
+
+  .molly-whisper-bubble.is-compact-inflow .whisper-icon {
+    flex-shrink: 0;
+    color: var(--accent-primary, #1b5e42);
+    display: inline-flex;
+    align-items: center;
+    margin-top: 1px;
+  }
+
+  .molly-whisper-bubble.is-compact-inflow .whisper-text {
+    overflow-wrap: anywhere;
   }
 
   @media (max-width: 359px) {

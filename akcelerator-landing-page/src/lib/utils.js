@@ -49,7 +49,10 @@ export function cleanTitle(raw) {
  */
 export function cleanMeta(str) {
   return String(str || '')
-    .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u2640\u2642]/gu, '')
+    .replace(
+      /[0-9#*][\uFE0E\uFE0F]?\u20E3|[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0E\uFE0F\u200D\u20E3\u2640\u2642\u{E0020}-\u{E007F}]/gu,
+      ''
+    )
     .replace(/\s{2,}/g, ' ')
     .trim();
 }

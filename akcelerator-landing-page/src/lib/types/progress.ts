@@ -2,37 +2,55 @@
  * Canonical User Progress and Sanctuary Type Definitions.
  */
 
-import type { MicroAction, SanctuaryElement } from './deed.js';
-import type { MollyTreat } from './molly.js';
+import type { SanctuaryElement } from './deed.js';
 
 export type LightType = 'lantern' | 'star' | 'wave';
 
+export interface PlantedPosition {
+  x: number;
+  y: number;
+  zone: 'sky' | 'water';
+  lightType: LightType;
+}
+
 export interface CompletedStep {
+  uid: string;
   id: string;
-  uid?: string;
   title: string;
-  completedAt: string;
-  element?: SanctuaryElement;
-  values?: string[];
+  surface?: string;
   category?: string;
-  planted?: boolean;
-  pos?: { x: number; y: number };
-  reflection?: string;
+  element: SanctuaryElement | string;
+  concreteImpact?: string;
   lightType?: LightType;
+  verifiedInitiation?: boolean;
+  awaitingPlant?: boolean;
+  plantedPos?: PlantedPosition | null;
+  note?: string;
+  timestamp: string;
+  values?: string[];
 }
 
 export interface SanctuaryWish {
-  id: string;
-  text: string;
-  createdAt: string;
+  uid: string;
+  kind: 'deed' | 'gratitude' | 'release' | 'wave' | 'lantern' | 'star' | string;
   lightType: LightType;
-  element: SanctuaryElement;
+  title: string;
+  concreteImpact?: string;
+  element: SanctuaryElement | string;
   x: number;
   y: number;
+  zone: 'sky' | 'water';
+  timestamp: string;
 }
 
 export interface ActiveCelebration {
-  action: MicroAction;
-  source: string;
-  treat?: MollyTreat;
+  open: boolean;
+  id?: string;
+  category?: string;
+  title: string;
+  message: string;
+  surface: string;
+  element: SanctuaryElement | string;
+  concreteImpact?: string;
+  [key: string]: unknown;
 }

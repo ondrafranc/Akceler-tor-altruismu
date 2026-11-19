@@ -85,7 +85,7 @@ test.describe('Challenger M3-2: Guided Help State Stress, Filter Combinations & 
     });
     expect(finalOverflow).toBe(false);
 
-    // Verify visual vertical geometry on mobile: .compass-foundations (containing .adaptive-step-block) precedes #personal-plan
+    // Verify visual vertical geometry on mobile (deed-first order): #personal-plan precedes .compass-foundations
     const geometryEvaluation = await page.evaluate(() => {
       const foundations = document.querySelector('.compass-foundations');
       const plan = document.getElementById('personal-plan');
@@ -100,10 +100,9 @@ test.describe('Challenger M3-2: Guided Help State Stress, Filter Combinations & 
 
     expect(geometryEvaluation).not.toBeNull();
     if (geometryEvaluation) {
-      expect(geometryEvaluation.fBox.top).toBeLessThan(geometryEvaluation.pBox.top);
-      expect(geometryEvaluation.fBox.bottom).toBeLessThanOrEqual(geometryEvaluation.pBox.top + 2);
+      expect(geometryEvaluation.pBox.top).toBeLessThan(geometryEvaluation.fBox.top);
+      expect(geometryEvaluation.pBox.bottom).toBeLessThanOrEqual(geometryEvaluation.fBox.top + 2);
       expect(geometryEvaluation.aBox.top).toBeGreaterThanOrEqual(geometryEvaluation.fBox.top);
-      expect(geometryEvaluation.aBox.bottom).toBeLessThanOrEqual(geometryEvaluation.pBox.top + 2);
     }
   });
 
@@ -165,8 +164,8 @@ test.describe('Challenger M3-2: Guided Help State Stress, Filter Combinations & 
       const isInitiallyOpen = await drawer.evaluate((el) => el.hasAttribute('open'));
       expect(isInitiallyOpen).toBe(false);
 
-      // Scroll summary into view
-      await summary.scrollIntoViewIfNeeded();
+      // Scroll summary into view (instant so CSS smooth-scroll doesn't skew initialScrollY)
+      await summary.evaluate((el) => el.scrollIntoView({ behavior: 'instant', block: 'center' }));
       const initialScrollY = await page.evaluate(() => window.scrollY);
 
       // 1. Open drawer

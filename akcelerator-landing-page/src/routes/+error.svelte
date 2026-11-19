@@ -13,8 +13,7 @@
     <PageHeader
       kicker="Tichá odbočka"
       title="Tady zrovna nic není, ale "
-      titleAccent="naděje nekončí"
-      titleSuffix="."
+      titleAccent="naděje nekončí."
       subtitle="Možná šlo o starší odkaz. Pojďme tě rovnou vrátit tam, kde během minuty najdeš jeden lehký, skutečný krok v Česku."
       align="center"
     />

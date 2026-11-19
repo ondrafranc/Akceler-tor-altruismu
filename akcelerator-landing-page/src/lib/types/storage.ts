@@ -4,17 +4,54 @@
 
 import type { CompletedStep, SanctuaryWish } from './progress.js';
 import type { MollyState } from './molly.js';
-import type { SubmissionRequestBody } from './api.js';
 import type { StorageKey } from '../storage/keys.js';
 
 export type { StorageKey };
 
+export interface SubmitDraftState {
+  kind?: 'org' | 'event' | string;
+  name?: string;
+  category?: string;
+  website?: string;
+  email?: string;
+  description?: string;
+  locationQuery?: string;
+  lat?: number | null;
+  lon?: number | null;
+  addressLabel?: string;
+  eventUrl?: string;
+}
+
+export interface PendingSubmissionItem {
+  id: string;
+  kind: 'org' | 'event' | string;
+  name: string;
+  category?: string | null;
+  description?: string | null;
+  city?: string | null;
+  address_label?: string | null;
+  website?: string | null;
+  event_url?: string | null;
+  event_start?: string | null;
+  event_end?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  lat: number;
+  lon: number;
+  status: 'pending' | 'approved' | 'rejected' | string;
+  created_at: string;
+  pendingModeration?: boolean;
+}
+
 export interface PartnerReturnState {
-  actionId?: string;
+  id?: string;
   title?: string;
+  category?: string;
+  values?: string[];
+  surface?: string;
   ts: number;
-  consumed?: boolean | number;
-  [key: string]: unknown;
+  consumed?: number | boolean;
+  elapsedMs?: number;
 }
 
 export type HomeEnergyMode = 'couch' | 'focus' | 'walk' | 'people';
@@ -37,8 +74,8 @@ export interface StorageSchemaMap {
   'aa_values': string[];
   'aa_guided_values_v2': string[];
   'aa_prefs_near': Record<string, unknown>;
-  'aa_my_pending_submissions_v1': SubmissionRequestBody[];
-  'aa_submit_draft_v1': Partial<SubmissionRequestBody>;
+  'aa_my_pending_submissions_v1': PendingSubmissionItem[];
+  'aa_submit_draft_v1': SubmitDraftState;
   'aa_sound_muted': '1' | '0';
   'aa_pending_return_v1': PartnerReturnState;
   'aa_molly_hints_v1': string[];

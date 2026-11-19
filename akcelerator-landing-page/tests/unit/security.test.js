@@ -1,4 +1,7 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { get } from 'svelte/store';
+
+vi.mock('$app/environment', () => ({ browser: false, dev: false }));
 import {
   safeText,
   toFiniteNumber,
@@ -12,8 +15,19 @@ import {
   checkRateLimit,
   isSubmissionTooFast,
   safeCompareTokens,
-  isAuthorizedTestBypass
+  isAuthorizedTestBypass,
+  validateMutationOrigin
 } from '$lib/security.js';
+import { resolveSupabaseConfig, hashClientKey } from '$lib/server/supabase.js';
+import { POST as submissionsPost, PATCH as submissionsPatch } from '../../src/routes/api/submissions/+server.js';
+import { GET as communityNearbyGet } from '../../src/routes/api/community-nearby/+server.js';
+import { handle as serverHandle } from '../../src/hooks.server.js';
+import {
+  completedSteps,
+  sanctuaryWishes,
+  restoreProgressFromBackupCode
+} from '$lib/progress.js';
+import { cleanMeta, exportProgressPasscode } from '$lib/utils.js';
 
 describe('security: text & number sanitization', () => {
   it('safeText handles normal strings, strips control chars and handles invalid inputs', () => {
@@ -281,5 +295,658 @@ describe('security: test bypass authorization (isAuthorizedTestBypass)', () => {
       headers: { 'x-test-bypass-secret': 'correct-e2e-secret-xyz' }
     });
     expect(isAuthorizedTestBypass(reqValid)).toBe(false);
+  });
+});
+
+describe('security: validateMutationOrigin strict Content-Type & origin enforcement', () => {
+  it('accepts same-origin application/json requests and rejects missing or non-JSON Content-Type', () => {
+    const targetUrl = new URL('https://akcelerator-altruismu.cz/api/feedback');
+
+    const validReq = new Request(targetUrl, {
+      method: 'POST',
+      headers: {
+        origin: 'https://akcelerator-altruismu.cz',
+        'content-type': 'application/json; charset=utf-8'
+      }
+    });
+    expect(validateMutationOrigin(validReq, targetUrl)).toBe(true);
+
+    const missingCtReq = new Request(targetUrl, {
+      method: 'POST',
+      headers: { origin: 'https://akcelerator-altruismu.cz' }
+    });
+    expect(validateMutationOrigin(missingCtReq, targetUrl)).toBe(false);
+
+    const formCtReq = new Request(targetUrl, {
+      method: 'POST',
+      headers: {
+        origin: 'https://akcelerator-altruismu.cz',
+        'content-type': 'application/x-www-form-urlencoded'
+      }
+    });
+    expect(validateMutationOrigin(formCtReq, targetUrl)).toBe(false);
+
+    const crossOriginReq = new Request(targetUrl, {
+      method: 'POST',
+      headers: {
+        origin: 'https://evil.example',
+        'content-type': 'application/json'
+      }
+    });
+    expect(validateMutationOrigin(crossOriginReq, targetUrl)).toBe(false);
+  });
+});
+
+describe('security: Supabase config & ephemeral IP salt (supabase.js)', () => {
+  const origApiKey = process.env['API Key'];
+  const origSalt = process.env.IP_HASH_SALT;
+  const origJwt = process.env.SUPABASE_JWT_SECRET;
+
+  afterEach(() => {
+    if (origApiKey === undefined) delete process.env['API Key'];
+    else process.env['API Key'] = origApiKey;
+    if (origSalt === undefined) delete process.env.IP_HASH_SALT;
+    else process.env.IP_HASH_SALT = origSalt;
+    if (origJwt === undefined) delete process.env.SUPABASE_JWT_SECRET;
+    else process.env.SUPABASE_JWT_SECRET = origJwt;
+  });
+
+  it('ignores non-standard "API Key" env var in resolveSupabaseConfig', () => {
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.SUPABASE_SECRET_KEY;
+    process.env['API Key'] = 'should-not-be-used';
+    const cfg = resolveSupabaseConfig();
+    expect(cfg.serviceKey).toBe('');
+  });
+
+  it('never uses static hardcoded literal salt in hashClientKey when env secrets are unset', async () => {
+    delete process.env.IP_HASH_SALT;
+    delete process.env.SUPABASE_JWT_SECRET;
+    const crypto = await import('node:crypto');
+    const legacyStaticHash = crypto
+      .createHash('sha256')
+      .update('akcelerator-ip-salt:1.2.3.4')
+      .digest('hex')
+      .slice(0, 24);
+    expect(hashClientKey('1.2.3.4')).not.toBe(legacyStaticHash);
+
+    process.env.IP_HASH_SALT = 'custom-prod-salt-123';
+    const saltedA = hashClientKey('1.2.3.4');
+    process.env.IP_HASH_SALT = 'custom-prod-salt-456';
+    const saltedB = hashClientKey('1.2.3.4');
+    expect(saltedA).not.toBe(saltedB);
+  });
+});
+
+describe('security: PATCH /api/submissions & GET /api/community-nearby hardening', () => {
+  const origModSecret = process.env.MODERATOR_SECRET;
+  const origServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const origPubUrl = process.env.PUBLIC_SUPABASE_URL;
+  const origPubAnon = process.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  afterEach(() => {
+    if (origModSecret === undefined) delete process.env.MODERATOR_SECRET;
+    else process.env.MODERATOR_SECRET = origModSecret;
+    if (origServiceKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    else process.env.SUPABASE_SERVICE_ROLE_KEY = origServiceKey;
+    if (origPubUrl === undefined) delete process.env.PUBLIC_SUPABASE_URL;
+    else process.env.PUBLIC_SUPABASE_URL = origPubUrl;
+    if (origPubAnon === undefined) delete process.env.PUBLIC_SUPABASE_ANON_KEY;
+    else process.env.PUBLIC_SUPABASE_ANON_KEY = origPubAnon;
+  });
+
+  it('enforces UUID validation (400), JSON Content-Type (415), strict admin client (503), and rate limiting (429) on PATCH /api/submissions', async () => {
+    process.env.MODERATOR_SECRET = 'test-mod-secret-value';
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    process.env.PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+    process.env.PUBLIC_SUPABASE_ANON_KEY = 'anon-key-must-not-be-used';
+
+    const clientAddr = () => '198.51.100.77';
+
+    const badCtRes = await submissionsPatch(
+      /** @type {*} */ ({
+        request: new Request('https://localhost/api/submissions', {
+          method: 'PATCH',
+          headers: {
+            'x-moderator-secret': 'test-mod-secret-value',
+            'content-type': 'text/plain'
+          },
+          body: '{"id":"550e8400-e29b-41d4-a716-446655440000","status":"approved"}'
+        }),
+        getClientAddress: clientAddr
+      })
+    );
+    expect(badCtRes.status).toBe(415);
+
+    const badUuidRes = await submissionsPatch(
+      /** @type {*} */ ({
+        request: new Request('https://localhost/api/submissions', {
+          method: 'PATCH',
+          headers: {
+            'x-moderator-secret': 'test-mod-secret-value',
+            'content-type': 'application/json'
+          },
+          body: JSON.stringify({ id: 'not-a-uuid', status: 'approved' })
+        }),
+        getClientAddress: clientAddr
+      })
+    );
+    expect(badUuidRes.status).toBe(400);
+
+    const noAdminRes = await submissionsPatch(
+      /** @type {*} */ ({
+        request: new Request('https://localhost/api/submissions', {
+          method: 'PATCH',
+          headers: {
+            'x-moderator-secret': 'test-mod-secret-value',
+            'content-type': 'application/json'
+          },
+          body: JSON.stringify({
+            id: '550e8400-e29b-41d4-a716-446655440000',
+            status: 'approved'
+          })
+        }),
+        getClientAddress: clientAddr
+      })
+    );
+    expect(noAdminRes.status).toBe(503);
+
+    // Wrong or missing secrets must return 401 and NEVER consume the valid-moderator quota
+    for (let i = 0; i < 12; i++) {
+      const unauthRes = await submissionsPatch(
+        /** @type {*} */ ({
+          request: new Request('https://localhost/api/submissions', {
+            method: 'PATCH',
+            headers: { 'x-moderator-secret': 'wrong' }
+          }),
+          getClientAddress: clientAddr
+        })
+      );
+      expect(unauthRes.status).toBe(401);
+      expect(unauthRes.headers.get('cache-control')).toBe('no-store');
+    }
+
+    // Exhaust the remaining 7 of 10 valid-secret attempts in the 15-min window and confirm 11th returns 429
+    for (let i = 0; i < 7; i++) {
+      const validRes = await submissionsPatch(
+        /** @type {*} */ ({
+          request: new Request('https://localhost/api/submissions', {
+            method: 'PATCH',
+            headers: {
+              'x-moderator-secret': 'test-mod-secret-value',
+              'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+              id: '550e8400-e29b-41d4-a716-446655440000',
+              status: 'approved'
+            })
+          }),
+          getClientAddress: clientAddr
+        })
+      );
+      expect(validRes.status).toBe(503);
+    }
+    const rateLimitedRes = await submissionsPatch(
+      /** @type {*} */ ({
+        request: new Request('https://localhost/api/submissions', {
+          method: 'PATCH',
+          headers: {
+            'x-moderator-secret': 'test-mod-secret-value',
+            'content-type': 'application/json'
+          },
+          body: JSON.stringify({
+            id: '550e8400-e29b-41d4-a716-446655440000',
+            status: 'approved'
+          })
+        }),
+        getClientAddress: clientAddr
+      })
+    );
+    expect(rateLimitedRes.status).toBe(429);
+    expect(rateLimitedRes.headers.get('cache-control')).toBe('no-store');
+    expect(Number(rateLimitedRes.headers.get('retry-after'))).toBeGreaterThan(0);
+  });
+
+  it('rate-limits GET /api/community-nearby after 120 requests', async () => {
+    const clientAddr = () => '198.51.100.88';
+    const url = new URL('https://localhost/api/community-nearby?lat=50.0755&lon=14.4378&radius_m=5000');
+
+    for (let i = 0; i < 120; i++) {
+      const res = await communityNearbyGet(
+        /** @type {*} */ ({
+          url,
+          request: new Request(url),
+          getClientAddress: clientAddr
+        })
+      );
+      expect(res.status).toBe(200);
+    }
+
+    const limitedRes = await communityNearbyGet(
+      /** @type {*} */ ({
+        url,
+        request: new Request(url),
+        getClientAddress: clientAddr
+      })
+    );
+    expect(limitedRes.status).toBe(429);
+  });
+});
+
+describe('security: restoreProgressFromBackupCode schema validation & sanitization', () => {
+  it('sanitizes restored steps/wishes, clamps coordinates, drops malformed entries, and rejects invalid objects', () => {
+    const bogusCode = exportProgressPasscode({ unrelated: 'payload' });
+    // Note: exportProgressPasscode prepends v: 1; verify malformed array elements are dropped and valid ones sanitized
+    expect(restoreProgressFromBackupCode('not-a-valid-code')).toBe(false);
+
+    const dirtyCode = exportProgressPasscode({
+      s: [
+        null,
+        'bad-string-item',
+        123,
+        {
+          id: 'zvirata_utulek_online',
+          title: '🐾 Naplnit misku',
+          element: 'invalid_element',
+          lightType: 'invalid_light',
+          plantedPos: { x: 99, y: -5, lightType: 'bogus' },
+          timestamp: 'not-a-date'
+        }
+      ],
+      w: [
+        null,
+        { bad: true },
+        {
+          title: '🕯️ Sousedská pomoc',
+          lightType: 'star',
+          element: 'bogus',
+          x: -2,
+          y: 5,
+          timestamp: '2026-11-18T12:00:00.000Z'
+        }
+      ],
+      m: { treatsFedTotal: -5, petCount: 3, availableTreats: 1, giftDeeds: 2 }
+    });
+
+    expect(restoreProgressFromBackupCode(dirtyCode)).toBe(true);
+    const steps = get(completedSteps);
+    expect(steps.length).toBe(1);
+    expect(steps[0].title).toBe('Naplnit misku');
+    expect(steps[0].element).toBe('animals');
+    expect(steps[0].lightType).toBe('lantern');
+    expect(steps[0].plantedPos?.x).toBe(0.94);
+    expect(steps[0].plantedPos?.y).toBe(0.07);
+    expect(steps[0].plantedPos?.zone).toBe('sky');
+    expect(Number.isNaN(Date.parse(steps[0].timestamp))).toBe(false);
+
+    const wishes = get(sanctuaryWishes);
+    expect(wishes.length).toBe(1);
+    expect(wishes[0].title).toBe('Sousedská pomoc');
+    expect(wishes[0].lightType).toBe('star');
+    expect(wishes[0].zone).toBe('sky');
+    expect(wishes[0].x).toBe(0.06);
+    expect(wishes[0].y).toBe(0.88);
+    expect(bogusCode.startsWith('AA1-')).toBe(true);
+  });
+
+  it('strips emoji-only and embedded emojis from restored title, concreteImpact, and note with safe defaults', () => {
+    const emojiCode = exportProgressPasscode({
+      s: [
+        {
+          id: 'emoji_only_step',
+          title: '🐾',
+          concreteImpact: '🎁 Dárek',
+          note: 'Poznámka 🔥 s emoji'
+        },
+        {
+          id: 'embedded_emoji_step',
+          title: 'Nakrmit 🐾 misku',
+          concreteImpact: 'Světlo ✨ pro útulek',
+          note: '🌟'
+        }
+      ],
+      w: [
+        {
+          title: '🌟',
+          lightType: 'star',
+          concreteImpact: '🎁 Dárek pro radost'
+        },
+        {
+          title: 'Pomoc 🐾 sousedům',
+          lightType: 'wave',
+          concreteImpact: '🔥 Teplo domova'
+        }
+      ]
+    });
+
+    expect(restoreProgressFromBackupCode(emojiCode)).toBe(true);
+    const emojiRe = /\p{Emoji_Presentation}|\p{Extended_Pictographic}/u;
+
+    const steps = get(completedSteps);
+    expect(steps.length).toBe(2);
+    expect(steps[0].title).toBe('Malý dobrý krok');
+    expect(steps[0].concreteImpact).toBe('Dárek');
+    expect(steps[0].note).toBe('Poznámka s emoji');
+    expect(steps[1].title).toBe('Nakrmit misku');
+    expect(steps[1].concreteImpact).toBe('Světlo pro útulek');
+    expect(steps[1].note).toBe('');
+    for (const s of steps) {
+      expect(s.title).not.toMatch(emojiRe);
+      expect(s.concreteImpact).not.toMatch(emojiRe);
+      expect(s.note).not.toMatch(emojiRe);
+    }
+
+    const wishes = get(sanctuaryWishes);
+    expect(wishes.length).toBe(2);
+    expect(wishes[0].title).toBe('Hvězda tiché inspirace');
+    expect(wishes[0].concreteImpact).toBe('Dárek pro radost');
+    expect(wishes[1].title).toBe('Pomoc sousedům');
+    expect(wishes[1].concreteImpact).toBe('Teplo domova');
+    for (const w of wishes) {
+      expect(w.title).not.toMatch(emojiRe);
+      expect(w.concreteImpact).not.toMatch(emojiRe);
+    }
+  });
+});
+
+describe('security: M1 iteration 2 boundary & error-handling regressions', () => {
+  const origModSecret = process.env.MODERATOR_SECRET;
+  const origServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const origPubUrl = process.env.PUBLIC_SUPABASE_URL;
+  const origPubAnon = process.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    if (origModSecret === undefined) delete process.env.MODERATOR_SECRET;
+    else process.env.MODERATOR_SECRET = origModSecret;
+    if (origServiceKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    else process.env.SUPABASE_SERVICE_ROLE_KEY = origServiceKey;
+    if (origPubUrl === undefined) delete process.env.PUBLIC_SUPABASE_URL;
+    else process.env.PUBLIC_SUPABASE_URL = origPubUrl;
+    if (origPubAnon === undefined) delete process.env.PUBLIC_SUPABASE_ANON_KEY;
+    else process.env.PUBLIC_SUPABASE_ANON_KEY = origPubAnon;
+  });
+
+  it('sanitizeHttpUrl rejects URLs exceeding maxLen after scheme/normalization expansion', () => {
+    const schemeless278 = 'example.cz/' + 'a'.repeat(267); // 278 raw -> 286 with https://
+    expect(schemeless278.length).toBe(278);
+    expect(sanitizeHttpUrl(schemeless278, 280)).toBeNull();
+
+    const noSlash280 = 'http://' + 'a'.repeat(270) + '.cz'; // 280 raw -> 281 with trailing '/'
+    expect(noSlash280.length).toBe(280);
+    expect(sanitizeHttpUrl(noSlash280, 280)).toBeNull();
+
+    const exact280 = 'https://example.cz/' + 'a'.repeat(261); // 280 normalized
+    expect(exact280.length).toBe(280);
+    expect(sanitizeHttpUrl(exact280, 280)).toBe(exact280);
+  });
+
+  it('isCzLatLon aligns strictly with 0002_rls_hardening.sql Czechia bounds (48.0..51.5, 11.5..19.5)', () => {
+    expect(isCzLatLon(47.99, 14.4378)).toBe(false);
+    expect(isCzLatLon(48.0, 14.4378)).toBe(true);
+    expect(isCzLatLon(51.5, 14.4378)).toBe(true);
+    expect(isCzLatLon(51.51, 14.4378)).toBe(false);
+    expect(isCzLatLon(50.0, 11.49)).toBe(false);
+    expect(isCzLatLon(50.0, 11.5)).toBe(true);
+    expect(isCzLatLon(50.0, 19.5)).toBe(true);
+    expect(isCzLatLon(50.0, 19.51)).toBe(false);
+  });
+
+  it('POST /api/submissions truncates fallback city from >80-char address_label to <=80 chars', async () => {
+    process.env.PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+    process.env.PUBLIC_SUPABASE_ANON_KEY = 'anon-key-test';
+
+    /** @type {Record<string, unknown> | null} */
+    let insertedRow = null;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      const bodyStr = typeof init?.body === 'string' ? init.body : '';
+      const parsed = bodyStr ? JSON.parse(bodyStr) : null;
+      insertedRow = Array.isArray(parsed) ? parsed[0] : parsed;
+      return new Response(JSON.stringify({}), {
+        status: 201,
+        headers: { 'content-type': 'application/json' }
+      });
+    });
+
+    const longAddress = 'Komunitní zahrada U Velkého Rybníka 123/45, Praha 10 - Strašnice, Hlavní město Praha, Česko';
+    expect(longAddress.length).toBeGreaterThan(80);
+
+    const url = new URL('https://localhost/api/submissions');
+    const res = await submissionsPost(
+      /** @type {*} */ ({
+        url,
+        request: new Request(url, {
+          method: 'POST',
+          headers: {
+            origin: 'https://localhost',
+            'content-type': 'application/json'
+          },
+          body: JSON.stringify({
+            hp: '',
+            elapsed_ms: 2500,
+            kind: 'org',
+            name: 'Knihobudka Strašnice',
+            category: 'community',
+            city: null,
+            address_label: longAddress,
+            lat: 50.0755,
+            lon: 14.4378
+          })
+        }),
+        getClientAddress: () => '198.51.100.91'
+      })
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(typeof body.item.city).toBe('string');
+    expect(body.item.city.length).toBe(80);
+    expect(insertedRow).not.toBeNull();
+    expect(typeof insertedRow?.city).toBe('string');
+    expect(String(insertedRow?.city).length).toBe(80);
+  });
+
+  it('PATCH /api/submissions returns 404 on PGRST116 and JSON 503 on timeout without throwing', async () => {
+    process.env.MODERATOR_SECRET = 'test-mod-secret-value';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-test-key';
+    process.env.PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+    process.env.PUBLIC_SUPABASE_ANON_KEY = 'anon-key-test';
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          code: 'PGRST116',
+          details: 'The result contains 0 rows',
+          hint: null,
+          message: 'Cannot coerce the result to a single JSON object'
+        }),
+        { status: 406, headers: { 'content-type': 'application/json' } }
+      )
+    );
+
+    const pgrstRes = await submissionsPatch(
+      /** @type {*} */ ({
+        request: new Request('https://localhost/api/submissions', {
+          method: 'PATCH',
+          headers: {
+            'x-moderator-secret': 'test-mod-secret-value',
+            'content-type': 'application/json'
+          },
+          body: JSON.stringify({
+            id: '550e8400-e29b-41d4-a716-446655440000',
+            status: 'approved'
+          })
+        }),
+        getClientAddress: () => '198.51.100.92'
+      })
+    );
+    expect(pgrstRes.status).toBe(404);
+    const pgrstJson = await pgrstRes.json();
+    expect(pgrstJson.success).toBe(false);
+
+    vi.useFakeTimers();
+    vi.spyOn(globalThis, 'fetch').mockImplementationOnce(() => new Promise(() => {}));
+
+    const timeoutPromise = submissionsPatch(
+      /** @type {*} */ ({
+        request: new Request('https://localhost/api/submissions', {
+          method: 'PATCH',
+          headers: {
+            'x-moderator-secret': 'test-mod-secret-value',
+            'content-type': 'application/json'
+          },
+          body: JSON.stringify({
+            id: '550e8400-e29b-41d4-a716-446655440000',
+            status: 'approved'
+          })
+        }),
+        getClientAddress: () => '198.51.100.92'
+      })
+    );
+
+    await vi.advanceTimersByTimeAsync(2900);
+    const timeoutRes = await timeoutPromise;
+    expect(timeoutRes.status).toBe(503);
+    const timeoutJson = await timeoutRes.json();
+    expect(timeoutJson.success).toBe(false);
+  });
+
+  it('hooks.server.js sets private/no-store Cache-Control on non-200 SSR HTML responses', async () => {
+    const res = await serverHandle({
+      event: /** @type {*} */ ({
+        request: new Request('https://localhost/nonexistent-page', { method: 'GET' }),
+        url: new URL('https://localhost/nonexistent-page')
+      }),
+      resolve: async () =>
+        new Response('<html><body>Not Found</body></html>', {
+          status: 404,
+          headers: { 'content-type': 'text/html; charset=utf-8' }
+        })
+    });
+
+    expect(res.status).toBe(404);
+    expect(res.headers.get('cache-control')).toBe('private, no-cache, no-store, must-revalidate');
+    expect(res.headers.get('pragma')).toBe('no-cache');
+  });
+
+  it('cleanMeta and restoreProgressFromBackupCode strip Unicode tag-sequence flags and keycap emojis while preserving normal digits/#/*', () => {
+    expect(cleanMeta('🏴󠁧󠁢󠁥󠁮󠁧󠁿')).toBe('');
+    expect(cleanMeta('🏴󠁧󠁢󠁳󠁣󠁴󠁿')).toBe('');
+    expect(cleanMeta('1️⃣')).toBe('');
+    expect(cleanMeta('#️⃣')).toBe('');
+    expect(cleanMeta('*️⃣')).toBe('');
+    expect(cleanMeta('1\u20E3')).toBe('');
+    expect(cleanMeta('Krok 1️⃣ hotový')).toBe('Krok hotový');
+    expect(cleanMeta('Krok 1 hotový')).toBe('Krok 1 hotový');
+    expect(cleanMeta('#1 výzva * poznámka')).toBe('#1 výzva * poznámka');
+
+    const edgeCode = exportProgressPasscode({
+      s: [
+        {
+          id: 'tag_flag_step',
+          title: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+          concreteImpact: '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+          note: 'Krok 1️⃣ hotový'
+        },
+        {
+          id: 'keycap_step',
+          title: '1️⃣',
+          concreteImpact: '#️⃣ *️⃣',
+          note: 'Krok 1 hotový'
+        }
+      ],
+      w: [
+        {
+          title: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+          lightType: 'star',
+          concreteImpact: '1️⃣'
+        },
+        {
+          title: '1️⃣',
+          lightType: 'lantern',
+          concreteImpact: 'Krok 1️⃣ hotový'
+        }
+      ]
+    });
+
+    expect(restoreProgressFromBackupCode(edgeCode)).toBe(true);
+    const steps = get(completedSteps);
+    expect(steps.length).toBe(2);
+    expect(steps[0].title).toBe('Malý dobrý krok');
+    expect(steps[0].concreteImpact).toBe('');
+    expect(steps[0].note).toBe('Krok hotový');
+    expect(steps[1].title).toBe('Malý dobrý krok');
+    expect(steps[1].concreteImpact).toBe('');
+    expect(steps[1].note).toBe('Krok 1 hotový');
+
+    const wishes = get(sanctuaryWishes);
+    expect(wishes.length).toBe(2);
+    expect(wishes[0].title).toBe('Hvězda tiché inspirace');
+    expect(wishes[0].concreteImpact).toBe('');
+    expect(wishes[1].title).toBe('Drobný osobní skutek v běžném dni');
+    expect(wishes[1].concreteImpact).toBe('Krok hotový');
+  });
+
+  it('POST /api/submissions avoids unpaired UTF-16 surrogates when truncating 4-byte characters at index 79..80 and 199..200', async () => {
+    process.env.PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+    process.env.PUBLIC_SUPABASE_ANON_KEY = 'anon-key-test';
+
+    /** @type {Record<string, unknown> | null} */
+    let insertedRow = null;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      const bodyStr = typeof init?.body === 'string' ? init.body : '';
+      const parsed = bodyStr ? JSON.parse(bodyStr) : null;
+      insertedRow = Array.isArray(parsed) ? parsed[0] : parsed;
+      return new Response(JSON.stringify({}), {
+        status: 201,
+        headers: { 'content-type': 'application/json' }
+      });
+    });
+
+    const loneSurrogateRe = /(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])/;
+    const addressWithBoundarySurrogates =
+      'a'.repeat(79) + '🌲' + 'b'.repeat(119) + '🌲' + 'c'.repeat(20);
+
+    const url = new URL('https://localhost/api/submissions');
+    const res = await submissionsPost(
+      /** @type {*} */ ({
+        url,
+        request: new Request(url, {
+          method: 'POST',
+          headers: {
+            origin: 'https://localhost',
+            'content-type': 'application/json'
+          },
+          body: JSON.stringify({
+            hp: '',
+            elapsed_ms: 2500,
+            kind: 'org',
+            name: 'Lesní školka Dubínek',
+            category: 'nature',
+            city: null,
+            address_label: addressWithBoundarySurrogates,
+            lat: 50.0755,
+            lon: 14.4378
+          })
+        }),
+        getClientAddress: () => '198.51.100.93'
+      })
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(typeof body.item.city).toBe('string');
+    expect(Array.from(body.item.city).length).toBe(80);
+    expect(body.item.city.endsWith('🌲')).toBe(true);
+    expect(body.item.city).not.toMatch(loneSurrogateRe);
+    expect(body.item.address_label).not.toMatch(loneSurrogateRe);
+    expect(Array.from(body.item.address_label).length).toBe(200);
+    expect(insertedRow).not.toBeNull();
+    expect(Array.from(String(insertedRow?.city)).length).toBe(80);
+    expect(String(insertedRow?.city)).not.toMatch(loneSurrogateRe);
+    expect(String(insertedRow?.address)).not.toMatch(loneSurrogateRe);
   });
 });

@@ -24,7 +24,7 @@ export const MICRO_ACTIONS = [
       'Otevři stránku Click and Feed.',
       `Klikni na tlačítko „Klikni zdarma a naplň misku“ – sponzor ${CLICK_AND_FEED.sponsor} za tvůj klik pošle ~${CLICK_AND_FEED.gramsPerClick} g krmiva do českých útulků.`
     ],
-    cta: 'Začít pomáhat',
+    cta: 'Nakrmit útulek teď',
     url: 'https://clickandfeed.cz/',
     reassurance: 'Zdarma a bez registrace — zabere to asi 15 vteřin.',
     selfBenefit: 'Okamžitá radost, že i v náročném dni konkrétně pomáháš',
@@ -49,7 +49,7 @@ export const MICRO_ACTIONS = [
       'Stáhni si aplikaci Záchranka (nebo v ní zkontroluj základní nastavení).',
       'Podívej se v mapě aplikace, kde je kolem tvého domova nebo školy nejbližší defibrilátor (AED).'
     ],
-    cta: 'Otevřít web aplikace Záchranka',
+    cta: 'Nastavit aplikaci Záchranka',
     url: 'https://www.zachrankaapp.cz/',
     reassurance: 'Zdarma, bez reklam a funguje i na horách bez signálu dat.',
     selfBenefit: 'Jistota, že v krizové chvíli dokážeš pohotově pomoct druhým i sobě',
@@ -74,7 +74,7 @@ export const MICRO_ACTIONS = [
       'Otevři stránku infografik Nevypusť duši a vyber si jedno téma (např. jak podpořit blízkého v úzkosti nebo jak nevyhořet).',
       'Ulož si obrázek do mobilu nebo ho pošli člověku, kterému se teď může hodit.'
     ],
-    cta: 'Otevřít infografiky Nevypusť duši',
+    cta: 'Stáhnout tahák první pomoci',
     url: 'https://nevypustdusi.cz/infografika/',
     reassurance: 'Všechny taháky jsou volně ke stažení zdarma a bez přihlašování.',
     selfBenefit: 'Praktické tipy proti vlastnímu přetížení a úzkosti od českých psychologů',
@@ -99,7 +99,7 @@ export const MICRO_ACTIONS = [
       'Otevři stránku WikiProjektu Kvalita nebo vyhledej článek o místě, které dobře znáš.',
       'Klikni na „Editovat“ a oprav překlep, zastaralý údaj nebo chybějící odkaz.'
     ],
-    cta: 'Otevřít českou Wikipedii',
+    cta: 'Upravit článek na Wikipedii',
     url: 'https://cs.wikipedia.org/wiki/Wikipedie:WikiProjekt_Kvalita',
     reassurance: 'Drobnou opravu překlepu zvládneš v prohlížeči i bez zakládání účtu.',
     selfBenefit: 'Příjemné soustředění na jednu konkrétní věc a užitečná stopa na českém webu',
@@ -149,7 +149,7 @@ export const MICRO_ACTIONS = [
       'Otevři stránku Nadace Krása pomoci a podívej se, jak funguje dobrovolnictví u seniorů.',
       'Můžeš začít nezávazným přihlášením k občasnému popovídání nebo doprovodu na procházku.'
     ],
-    cta: 'Otevřít Nadaci Krása pomoci',
+    cta: 'Potěšit osamělého seniora',
     url: 'https://www.krasapomoci.cz/',
     reassurance: 'Koordinátoři tě citlivě provedou a domluví s tebou jen to, na co se cítíš.',
     selfBenefit: 'Zpomalení v uspěchaném týdnu a obohacující setkání s člověkem plným zkušeností',
@@ -175,7 +175,7 @@ export const MICRO_ACTIONS = [
       'Vyfiltruj si jednorázovou výpomoc podle toho, co umíš (texty, grafika, tabulky, kód, konzultace).',
       'Ozvi se koordinátorovi jedním klikem.'
     ],
-    cta: 'Prohlédnout příležitosti na Česko.Digital',
+    cta: 'Vybrat úkol pro neziskovku',
     url: 'https://app.cesko.digital/opportunities',
     reassurance: 'Prohlížení je bez přihlášení a řada úkolů je jednorázová na 1–2 hodiny.',
     selfBenefit: 'Zkušenost na reálném smysluplném projektu a kontakt s přátelskou komunitou',
@@ -201,7 +201,7 @@ export const MICRO_ACTIONS = [
       'Vyber si předmět, ve kterém se cítíš jistě (stačí učivo základní školy).',
       'Nemusíš být učitel – stačí trpělivost a lidský přístup.'
     ],
-    cta: 'Zjistit info na Učíme online',
+    cta: 'Zapojit se do doučování',
     url: 'https://www.ucimeonline.cz/',
     reassurance: 'Nemusíš být učitel — stačí trpělivost s látkou základní školy.',
     selfBenefit: 'Smysluplná hodina týdně z pohodlí domova a opravdová vděčnost dítěte',
@@ -253,7 +253,7 @@ export const MICRO_ACTIONS = [
       'Cestou seber 5 kusů pohozeného plastu nebo papíru a hoď je do nejbližšího koše.',
       'Pokud chceš potkat další lidi, mrkni na mapu společných úklidů Ukliďme Česko.'
     ],
-    cta: 'Mapa akcí Ukliďme Česko',
+    cta: 'Najít úklid v okolí',
     url: 'https://www.uklidmecesko.cz/',
     reassurance: 'Nepotřebuješ se nikam hlásit — stačí tvoje běžná pěší cesta.',
     selfBenefit: 'Okamžitý viditelný výsledek přímo před očima a protažení na vzduchu',
@@ -278,7 +278,7 @@ export const MICRO_ACTIONS = [
       'Otevři iNaturalist (web nebo bezplatnou mobilní aplikaci).',
       'Vyfoť venku jakýkoliv zajímavý druh – aplikace i komunita přírodovědců ti ho pomohou určit.'
     ],
-    cta: 'Prozkoumat iNaturalist',
+    cta: 'Nahrát pozorování přírody',
     url: 'https://www.inaturalist.org/',
     reassurance: 'Druh nemusíš umět určit — aplikace i přírodovědci ti s tím pomohou.',
     selfBenefit: 'Všímavá procházka přírodou, při které objevíš druhy rostoucí hned za domem',
@@ -303,7 +303,7 @@ export const MICRO_ACTIONS = [
       'Projdi si 5 rychlých bodů, kdo může darovat krev (věk 18–65 let, váha nad 50 kg).',
       'Najdi si nejbližší transfuzní oddělení nemocnice a zarezervuj si termín pro prvodárce.'
     ],
-    cta: 'Informace pro dárce krve (ČČK)',
+    cta: 'Zjistit, kde darovat krev',
     url: 'https://www.cervenykriz.eu/darcovstvi-krve/',
     reassurance: 'Před návštěvou nemusíš ke svému praktikovi — vše proběhne v klidu na místě a samotný odběr trvá do 10 minut.',
     selfBenefit: 'Bezplatný krevní obraz, občerstvení a ze zákona den volna ve škole nebo v práci',
@@ -328,7 +328,7 @@ export const MICRO_ACTIONS = [
       'Otevři průvodce vstupem do registru a ověř si základní zdravotní podmínky (18–35 let).',
       'Najdeš tam seznam náběrových míst po celé ČR (často i na vysokých školách a festivalech).'
     ],
-    cta: 'Podmínky vstupu do registru ČNRDD',
+    cta: 'Ověřit vstup do registru',
     url: 'https://registr.kostnidren.cz/vstup-do-registru/',
     reassurance: 'Registrace není odběr – jde jen o 5minutový bezbolestný stěr vatovou štětičkou z úst.',
     selfBenefit: 'Hluboký pocit smyslu z vědomí, že jednou můžeš někomu zachránit život',
@@ -354,7 +354,7 @@ export const MICRO_ACTIONS = [
       'Vytáhni ze šuplíku starý mobil (klidně i nefunkční) a zabal ho do obálky nebo krabičky.',
       'Zanes ho na jakoukoliv Zásilkovnu s bezplatným kódem 98 765 259 (nebo najdi sběrný box na webu Remobil).'
     ],
-    cta: 'Detail a sběrná místa Remobil',
+    cta: 'Najít sběrné místo Remobil',
     url: 'https://remobil.cz/odevzdat-mobil/',
     selfBenefit: 'Uklizený šuplík bez elektroodpadu během běžné cesty kolem Zásilkovny',
     concreteImpact: '1 recyklovaný telefon + 10 Kč na charitu (celkem 221 060 mobilů)',
@@ -403,7 +403,7 @@ export const MICRO_ACTIONS = [
       'Otevři kalendář dobrovolnických akcí Brontosaura.',
       'Vyfiltruj si jednodenní nebo víkendovou akci pro prvoúčastníky (žádné předchozí zkušenosti nejsou potřeba, většina lidí jede poprvé sama).'
     ],
-    cta: 'Kalendář akcí Brontosaura',
+    cta: 'Vybrat víkendovku v přírodě',
     url: 'https://brontosaurus.cz/dobrovolnicke-akce/',
     reassurance: 'Na webu je přímo filtr „jedu poprvé“ a „jednodenní“ – drtivá většina mladých vyráží poprvé sama.',
     selfBenefit: 'Den na čerstvém vzduchu mimo město a přirozené seznámení s fajn lidmi',
@@ -453,7 +453,7 @@ export const MICRO_ACTIONS = [
       'Otevři web Sázíme budoucnost a prohlédni si mapu aktuálních komunitních výsadeb.',
       'Přidej se jako dobrovolník na sázecí akci v okolí, nebo přispěj drobnou částkou na sazenice.'
     ],
-    cta: 'Otevřít Sázíme budoucnost',
+    cta: 'Podpořit výsadbu stromů',
     url: 'https://www.sazimebudoucnost.cz/',
     reassurance: 'Můžeš se jen podívat na mapu výsadeb v okolí nebo přispět libovolnou drobnou částkou.',
     selfBenefit: 'Živé propojení s českou krajinou, kolem které budeš roky chodit',
@@ -478,7 +478,7 @@ export const MICRO_ACTIONS = [
       'Otevři web Krabice od bot a podívej se na aktuální možnosti zapojení (sběrná místa nebo online podpora Krabice online).',
       'Vyber si formu pomoci, která ti sedí.'
     ],
-    cta: 'Otevřít Krabice od bot',
+    cta: 'Udělat radost dítěti v nouzi',
     url: 'https://www.krabiceodbot.cz/',
     reassurance: 'Lze se zapojit jednorázově online i osobně přes sběrná místa v celém Česku.',
     selfBenefit: 'Čistá radost z toho, že konkrétnímu dítěti v Česku uděláš hezčí den',
@@ -529,7 +529,7 @@ export const MICRO_ACTIONS = [
       'Až uvidíš prosklenou zastávku nebo protihlukovou stěnu bez ochranných polepů, otevři v mobilu Ptačí pasti.',
       'Přidej místo jedním klikem bez přihlašování.'
     ],
-    cta: 'Otevřít mobilní web Ptačí pasti',
+    cta: 'Nahlásit nebezpečné sklo',
     url: 'https://projekty.birds.cz/ptacipasti/',
     selfBenefit: 'Smysluplné dvouminutové využití čekání na autobus místo scrollování',
     concreteImpact: '1 nahlášená skleněná plocha pro bezpečnější let ptáků',
@@ -578,7 +578,7 @@ export const MICRO_ACTIONS = [
       'Otevři komunitní mapu Na ovoce a podívej se, jaké volně přístupné stromy rostou kolem tebe.',
       'Při procházce přidej nový ovocný strom nebo bylinku (nebo si jen dojdi nasbírat, co dozrává).'
     ],
-    cta: 'Otevřít mapu Na ovoce',
+    cta: 'Přidat ovocný strom do mapy',
     url: 'https://map.na-ovoce.cz/',
     reassurance: 'Prohlížení mapy volně přístupných stromů ve tvém okolí je zcela zdarma a bez účtu.',
     selfBenefit: 'Objevíš zapomenuté třešně, jabloně a ořešáky na procházkách kolem domova',
@@ -654,7 +654,7 @@ export const MICRO_ACTIONS = [
       'Otevři katalog projektů Zooniverse a vyber si přírodu, vesmír nebo historii.',
       'Klikni na „Classify“ a v klidu u čaje projdi 5 fotek.'
     ],
-    cta: 'Prozkoumat projekty na Zooniverse',
+    cta: 'Označit fotky pro vědce',
     url: 'https://www.zooniverse.org/projects',
     selfBenefit: 'Meditativní prohlížení fotek divočiny či vesmíru u ranního čaje',
     concreteImpact: '5 klasifikovaných snímků pro skutečný vědecký výzkum',
@@ -679,7 +679,7 @@ export const MICRO_ACTIONS = [
       'Otevři český web Maratonu psaní dopisů nebo aktuálních apelů Amnesty ČR.',
       'Přečti si jeden konkrétní lidský příběh a pošli hlas na jeho obranu.'
     ],
-    cta: 'Otevřít příběhy na Amnesty ČR',
+    cta: 'Podepsat apel za svobodu',
     url: 'https://maraton.amnesty.cz/',
     selfBenefit: 'Pocit sounáležitosti a vědomí, že tvůj hlas má reálnou váhu',
     concreteImpact: '1 hlas solidarity na obranu nespravedlivě vězněného člověka',
@@ -703,7 +703,7 @@ export const MICRO_ACTIONS = [
       'Zeptej se prarodičů nebo staršího souseda v domě, jestli nepotřebují zvětšit písmo v mobilu, nastavit WhatsApp nebo promazat spam.',
       'Chceš-li pomáhat pravidelněji jako digitální asistent, mrkni na český spolek Moudrá Sovička.'
     ],
-    cta: 'Poznat projekt Moudrá Sovička',
+    cta: 'Pomoct seniorovi s mobilem',
     url: 'https://www.moudrasovicka.cz/',
     reassurance: 'Začít můžeš úplně neformálně u vlastní babičky, dědy nebo souseda v domě.',
     selfBenefit: 'Okamžitý úsměv a obrovská úleva blízkého člověka, kterému odemkneš kontakt s rodinou',
@@ -754,7 +754,7 @@ export const MICRO_ACTIONS = [
       'Otevři přehled českých workcampů a víkendovek na INEX-SDA.',
       'Vyber si místo v ČR, které tě láká atmosférou (ekofarma, hrad, festival nebo příroda).'
     ],
-    cta: 'Prohlédnout workcampy v ČR (INEX)',
+    cta: 'Vybrat workcamp v Česku',
     url: 'https://www.inexsda.cz/workcampy-v-cr/',
     selfBenefit: 'Noví kamarádi mimo bublinu a přirozená angličtina u ohně',
     concreteImpact: '1 obnovená památka, sad nebo komunitní místo v ČR',
@@ -782,7 +782,7 @@ export const MICRO_ACTIONS = [
       'Otevři web Zvíře v nouzi a ulož si do mobilu centrální linku 774 155 155.',
       'Klikni na mapu a mrkni, která záchranná stanice pokrývá tvoje město nebo chatu.'
     ],
-    cta: 'Otevřít Zvíře v nouzi (ČSOP)',
+    cta: 'Uložit linku pro zvíře v nouzi',
     url: 'https://www.zvirevnouzi.cz/',
     values: ['animals', 'environment'],
     timeMinutes: 2,
@@ -832,7 +832,7 @@ export const MICRO_ACTIONS = [
       'Otevři český portál S barvou ven.',
       'Projdi si krátké praktické tipy pro kamarády a blízké (nebo pošli odkaz někomu, kdo nechce být na věci sám).'
     ],
-    cta: 'Otevřít S barvou ven',
+    cta: 'Přečíst tipy pro oporu',
     url: 'https://www.sbarvouven.cz/',
     values: ['health', 'children', 'community'],
     timeMinutes: 10,
@@ -882,7 +882,7 @@ export const MICRO_ACTIONS = [
       'Otevři Mapko.cz a přibliž si svoji ulici nebo kolej.',
       'Najdi nejbližší komunitní kompostér či zahradu (nebo přidej nové místo, o kterém víš).'
     ],
-    cta: 'Prozkoumat mapu Mapko.cz',
+    cta: 'Najít kompostér v okolí',
     url: 'https://www.mapko.cz/',
     values: ['environment', 'community'],
     timeMinutes: 10,
@@ -907,7 +907,7 @@ export const MICRO_ACTIONS = [
       'Mrkni na Nesnězeno, jaké pekárny nebo bistra kolem tebe dnes nabízejí záchranářské balíčky.',
       'Vyzvedni si porci cestou domů a ušetři peníze i jídlo.'
     ],
-    cta: 'Podívat se na Nesnězeno',
+    cta: 'Zachránit porci jídla v okolí',
     url: 'https://nesnezeno.eco/',
     values: ['environment', 'poverty'],
     timeMinutes: 15,
@@ -932,7 +932,7 @@ export const MICRO_ACTIONS = [
       'Vyber v pokoji jednu zachovalou věc, kterou už rok nepoužíváš.',
       'Vyfoť ji mobilem a vlož zdarma na český komunitní portál Nevyhazujto.cz.'
     ],
-    cta: 'Otevřít Nevyhazujto.cz',
+    cta: 'Nabídnout věc sousedům',
     url: 'https://www.nevyhazujto.cz/',
     values: ['community', 'environment', 'poverty'],
     timeMinutes: 10,
@@ -957,7 +957,7 @@ export const MICRO_ACTIONS = [
       'Inspiruj se krátkými příběhy pamětníků na webu Paměť národa.',
       'Až budeš mluvit s babičkou či dědou, zeptej se: „Jaké bylo tvoje nejmilejší místo, když ti bylo dvacet?“ a se souhlasem zapni nahrávání.'
     ],
-    cta: 'Inspirace na Paměť národa',
+    cta: 'Poslechnout si příběh pamětníka',
     url: 'https://www.pametnaroda.cz/cs',
     values: ['elderly', 'education', 'community'],
     timeMinutes: 15,
@@ -982,7 +982,7 @@ export const MICRO_ACTIONS = [
       'Otevři portál Doučujte.cz od Člověka v tísni.',
       'Vyplň 3minutový nezávazný dotazník — koordinátor s tebou probere, jestli ti víc sedí online nebo osobní forma.'
     ],
-    cta: 'Zjistit podrobnosti na Doučujte.cz',
+    cta: 'Přihlásit se k doučování',
     url: 'https://www.doucujte.cz/',
     values: ['education', 'children', 'poverty'],
     timeMinutes: 45,
@@ -1007,7 +1007,7 @@ export const MICRO_ACTIONS = [
       'Otevři Chodci sobě a podívej se na vyřešené podněty ve svém městě.',
       'Vyfoť bariéru nebo nebezpečný úsek na své každodenní trase a připíchni ho do mapy.'
     ],
-    cta: 'Otevřít portál Chodci sobě',
+    cta: 'Nahlásit bariéru na chodníku',
     url: 'https://www.chodcisobe.cz/',
     values: ['community', 'elderly', 'health'],
     timeMinutes: 10,
@@ -1032,7 +1032,7 @@ export const MICRO_ACTIONS = [
       'Stáhni si zdarma aplikaci EPP – Pomáhej pohybem.',
       'Zapni ji při dnešní procházce a na konci vyber český projekt, kterému pošleš své body.'
     ],
-    cta: 'Prozkoumat EPP – Pomáhej pohybem',
+    cta: 'Přeměnit pohyb na pomoc',
     url: 'https://pomahejpohybem.cz/',
     values: ['health', 'environment', 'community'],
     timeMinutes: 15,
@@ -1057,7 +1057,7 @@ export const MICRO_ACTIONS = [
       'Otevři pravidla a mapu partnerských kadeřnictví na Daruj vlasy (nebo pošli návod kamarádce s dlouhými vlasy).',
       'Nech si svázaný cop ustřihnout a poslat na výrobu paruky.'
     ],
-    cta: 'Jak funguje Daruj vlasy',
+    cta: 'Zjistit, jak darovat vlasy',
     url: 'https://www.darujvlasy.cz/daruj-vlasy/',
     values: ['health', 'children'],
     timeMinutes: 15,
@@ -1082,7 +1082,7 @@ export const MICRO_ACTIONS = [
       'Otevři web Dobrý anděl a podívej se, jak funguje princip Do posledního haléře.',
       'Zvol si libovolnou drobnou částku podle svých možností.'
     ],
-    cta: 'Otevřít Dobrý anděl',
+    cta: 'Podpořit rodinu s nemocným dítětem',
     url: 'https://www.dobryandel.cz/',
     values: ['health', 'children', 'poverty'],
     timeMinutes: 3,
@@ -1107,7 +1107,7 @@ export const MICRO_ACTIONS = [
       'Prohlédni si aktuální ověřené sbírky na Znesnáze21.',
       'Přispěj třeba 50 Kč přes QR kód, nebo pošli odkaz sbírky dál.'
     ],
-    cta: 'Prohlédnout příběhy na Znesnáze21',
+    cta: 'Podpořit příběh na Znesnáze21',
     url: 'https://www.znesnaze21.cz/',
     values: ['poverty', 'health', 'elderly'],
     timeMinutes: 3,
@@ -1132,7 +1132,7 @@ export const MICRO_ACTIONS = [
       'Otevři Donio.cz a vyber si kategorii Zvířata, Příroda nebo Komunita.',
       'Podpoř projekt, který ti mluví z duše.'
     ],
-    cta: 'Prozkoumat sbírky na Donio.cz',
+    cta: 'Podpořit útulek na Donio',
     url: 'https://donio.cz/',
     values: ['animals', 'community', 'poverty'],
     timeMinutes: 3,
@@ -1310,6 +1310,6 @@ for (const action of MICRO_ACTIONS) {
   action.impactBasis = impactBasis;
   action.impactChain = custom.impactChain || buildDefaultImpactChain(action, impactEvidence);
   action.instructions = action.steps || [];
-  action.ctaLabel = 'Začít pomáhat';
+  action.ctaLabel = action.cta || 'Začít pomáhat';
   action.quickTagsLabel = `${action.timeMinutes} min · ${costLabel} · ${locationLabel} · ${commitLabel}`;
 }

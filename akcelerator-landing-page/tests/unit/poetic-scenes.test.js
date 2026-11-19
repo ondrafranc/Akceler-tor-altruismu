@@ -192,7 +192,7 @@ describe('Poetic 2-Phase Deed Transformations & Preview Diorama', () => {
       path.resolve(srcDir, 'lib/features/actions/components/ActionCard.svelte'),
       'utf8'
     );
-    expect(cardSource).toContain('class="preview-diorama-canvas"');
+    expect(cardSource).toContain('class:preview-diorama-canvas={stageMode === "preview"}');
     expect(cardSource).not.toContain('preview-diorama-svg');
 
     expect(MICRO_ACTIONS.length).toBe(45);

@@ -45,10 +45,6 @@ import {
   getPendingPartnerReturnRemainingMs,
   consumePendingPartnerReturn
 } from '$lib/features/actions/services/partnerReturnService.js';
-import {
-  fetchAmbientPulse,
-  describeAmbientPulse
-} from '$lib/features/pulse/services/pulseService.js';
 
 // 4. Security components
 import {
@@ -109,8 +105,6 @@ describe('CHALLENGER M2: Barrel Re-Export Strict Reference Identity (===)', () =
     expect(typeof savePendingPartnerReturn).toBe('function');
     expect(typeof getPendingPartnerReturnRemainingMs).toBe('function');
     expect(typeof consumePendingPartnerReturn).toBe('function');
-    expect(typeof fetchAmbientPulse).toBe('function');
-    expect(typeof describeAmbientPulse).toBe('function');
   });
 });
 

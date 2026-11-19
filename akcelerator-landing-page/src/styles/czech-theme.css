@@ -237,7 +237,8 @@ h4 {
   box-sizing: border-box;
 }
 
-@media (max-width: 680px) {
+@media (max-width: 1024px) {
+
   input,
   textarea,
   select {
@@ -319,33 +320,6 @@ h4 {
 }
 
 /* ==========================================================================
-   FLAT BOTANICAL SUBPAGE HERO BANNER (Preserves contrast for M2/M4 routes)
-   ========================================================================== */
-.subpage-hero {
-  position: relative;
-  overflow: hidden;
-  background: var(--ink-primary);
-  color: #f6f7f3;
-  border-radius: 20px;
-  padding: 2rem 2rem;
-  margin-bottom: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: var(--shadow-sm);
-}
-
-.subpage-hero > * {
-  position: relative;
-  z-index: 1;
-}
-
-@media (max-width: 680px) {
-  .subpage-hero {
-    padding: 1.35rem 1.1rem;
-    border-radius: 16px;
-  }
-}
-
-/* ==========================================================================
    CALM PROGRESSIVE DISCLOSURE CONTROLS (Anti-Overwhelm)
    ========================================================================== */
 .calm-more-wrap {
@@ -394,7 +368,7 @@ h4 {
   box-shadow: var(--shadow-sm);
 }
 
-.calm-drawer > summary {
+.calm-drawer>summary {
   list-style: none;
   cursor: pointer;
   display: flex;
@@ -407,11 +381,11 @@ h4 {
   color: var(--ink-primary);
 }
 
-.calm-drawer > summary::-webkit-details-marker {
+.calm-drawer>summary::-webkit-details-marker {
   display: none;
 }
 
-.calm-drawer > summary::after {
+.calm-drawer>summary::after {
   content: 'Rozbalit';
   font-size: 0.78rem;
   font-weight: 700;
@@ -427,14 +401,14 @@ h4 {
     border-color: var(--border-forest);
   }
 
-  .calm-drawer > summary::after {
+  .calm-drawer>summary::after {
     background: var(--bohemian-mist);
     border-color: var(--border-forest);
     color: var(--czech-forest);
   }
 }
 
-.calm-drawer[open] > summary::after {
+.calm-drawer[open]>summary::after {
   content: 'Skrýt';
 }
 

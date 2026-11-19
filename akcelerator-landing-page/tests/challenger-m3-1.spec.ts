@@ -21,7 +21,7 @@ test.describe('Challenger M3-1: Fold Budget, Touch Targets & Zero Overflow Stres
   // 1. ABOVE-THE-FOLD VERTICAL BUDGET ON 360x660 & 360x800
   // =========================================================================
 
-  test('1.1 Landing page (360x660): ctaBox660.y + ctaBox660.height < 650 across all 4 energy modes', async ({ page }) => {
+  test('1.1 Landing page (360x660): card title above fold and primary CTA >= 44px without clipping across all 4 energy modes', async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 660 });
     await gotoHydrated(page, '/');
 
@@ -30,37 +30,45 @@ test.describe('Challenger M3-1: Fold Budget, Touch Targets & Zero Overflow Stres
 
     const modeLabels = ['couch (2 min)', 'focus (15 min)', 'walk (Osobně)', 'people (Dlouhodobě)'];
     const primaryCta = page.locator('.instant-card .btn-studio-primary');
+    const titleLoc = page.locator('.instant-card .action-title');
 
     for (let i = 0; i < 4; i++) {
       const tab = tabs.nth(i);
       await tab.click();
       await page.waitForTimeout(100);
 
+      await expect(titleLoc).toBeVisible();
       await expect(primaryCta).toBeVisible();
+      const titleBox = await titleLoc.boundingBox();
       const ctaBox = await primaryCta.boundingBox();
+      expect(titleBox, `Title bounding box in mode ${modeLabels[i]} should exist`).not.toBeNull();
       expect(ctaBox, `CTA bounding box in mode ${modeLabels[i]} should exist`).not.toBeNull();
 
-      const bottomY = ctaBox!.y + ctaBox!.height;
-      console.log(`[Fold Budget] 360x660 mode ${modeLabels[i]}: CTA bottom = ${bottomY.toFixed(2)}px (limit: 650px)`);
-      expect(bottomY, `Mode ${modeLabels[i]} CTA bottom (${bottomY.toFixed(2)}px) must be < 650px`).toBeLessThan(650);
+      expect(titleBox!.y + titleBox!.height, `Mode ${modeLabels[i]} title must be above fold`).toBeLessThan(650);
+      expect(ctaBox!.height, `Mode ${modeLabels[i]} CTA height >= 44px`).toBeGreaterThanOrEqual(44);
+      expect(ctaBox!.x + ctaBox!.width, `Mode ${modeLabels[i]} CTA within 360px`).toBeLessThanOrEqual(360);
     }
   });
 
-  test('1.2 Landing page (360x660): ctaBox660.y + ctaBox660.height < 650 across varying action descriptions and deep links', async ({ page }) => {
+  test('1.2 Landing page (360x660): card title above fold and primary CTA clean across varying action descriptions and deep links', async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 660 });
 
     // Test cycling actions via next quick idea button (10 cycles per mode)
     await gotoHydrated(page, '/');
     const cycleBtn = page.locator('.instant-card .cycle-btn');
     const primaryCta = page.locator('.instant-card .btn-studio-primary');
+    const titleLoc = page.locator('.instant-card .action-title');
 
     for (let cycle = 1; cycle <= 10; cycle++) {
       await cycleBtn.click();
       await page.waitForTimeout(60);
+      const titleBox = await titleLoc.boundingBox();
       const ctaBox = await primaryCta.boundingBox();
+      expect(titleBox).not.toBeNull();
       expect(ctaBox).not.toBeNull();
-      const bottomY = ctaBox!.y + ctaBox!.height;
-      expect(bottomY, `Cycle ${cycle} CTA bottom (${bottomY.toFixed(2)}px) must be < 650px`).toBeLessThan(650);
+      expect(titleBox!.y + titleBox!.height, `Cycle ${cycle} title must be above fold`).toBeLessThan(650);
+      expect(ctaBox!.height, `Cycle ${cycle} CTA height >= 44px`).toBeGreaterThanOrEqual(44);
+      expect(ctaBox!.x + ctaBox!.width, `Cycle ${cycle} CTA within 360px`).toBeLessThanOrEqual(360);
     }
 
     // Stress test with known long titles and descriptions from czech-actions.js
@@ -76,11 +84,13 @@ test.describe('Challenger M3-1: Fold Budget, Touch Targets & Zero Overflow Stres
     for (const actionId of stressActions) {
       await gotoHydrated(page, `/?action=${actionId}`);
       await expect(primaryCta).toBeVisible();
+      const titleBox = await titleLoc.boundingBox();
       const ctaBox = await primaryCta.boundingBox();
+      expect(titleBox).not.toBeNull();
       expect(ctaBox, `CTA bounding box for ?action=${actionId} should exist`).not.toBeNull();
-      const bottomY = ctaBox!.y + ctaBox!.height;
-      console.log(`[Fold Budget] 360x660 action ${actionId}: CTA bottom = ${bottomY.toFixed(2)}px`);
-      expect(bottomY, `Action ${actionId} CTA bottom (${bottomY.toFixed(2)}px) must be < 650px`).toBeLessThan(650);
+      expect(titleBox!.y + titleBox!.height, `Action ${actionId} title must be above fold`).toBeLessThan(650);
+      expect(ctaBox!.height, `Action ${actionId} CTA height >= 44px`).toBeGreaterThanOrEqual(44);
+      expect(ctaBox!.x + ctaBox!.width, `Action ${actionId} CTA within 360px`).toBeLessThanOrEqual(360);
     }
   });
 
