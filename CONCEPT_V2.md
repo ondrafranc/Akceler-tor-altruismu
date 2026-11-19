@@ -19,7 +19,7 @@ Aplikace převádí impuls k pomoci do skutečného dobrého skutku během něko
 3. **Nulový manipulativní šum**: Žádný e-shopový / FOMO sociální nátlak (zprávy typu „právě někdo…“). Sekundární metodologie a pomocné odkazy patří do rozbalovacího detailu `Jak to funguje`.
 4. **Jednotná morphing scéna karty (`.deed-stage`)**: Karta drží jednu perzistentní scénu (`preview -> active -> payoff`) bez layoutového skoku — před spuštěním dýchající diorama očekávání, po kliknutí na partnera odemčení *„Mám hotovo“*, scéna dopadu, *„Přehrát“* a inline *„Dát Molly pamlsek“* s přirozenými českými popisky dopadu.
 5. **Reálná česká ukotvení**: Skutečné české organizace, portály a interaktivní mapa míst pomoci po celé ČR (Leaflet s dlaždicemi OpenStreetMap, geokódování Nominatim přes `/api/geocode`, `81` kurátorovaných záložních míst v ČR + `18` komunitních položek + schválené komunitní tipy ze Supabase).
-6. **Bezpečí a úcta k energii**: V patičce je vždy dostupný modál krizové pomoci (`tel:155`, `tel:112`, fokusová past a návrat fokusu); kočičí patronka Molly doprovází uživatele nevtíravě a na desktopu zůstává nepřetržitě viditelná a toulavá podél scrollovaných sekcí bez zakrývání obsahu či ovládacích prvků.
+6. **Bezpečí a úcta k energii**: V patičce je vždy dostupný modál krizové pomoci (`tel:155`, `tel:112`, fokusová past a návrat fokusu); kočičí patronka Molly doprovází uživatele nevtíravě napříč desktopem, tabletem i mobilem — zůstává viditelná a toulavá podél scrollovaných sekcí, reaguje na přímé pohlazení i přepínač Pelíšek/Procházka bez zakrývání obsahu či ovládacích prvků.
 
 ---
 

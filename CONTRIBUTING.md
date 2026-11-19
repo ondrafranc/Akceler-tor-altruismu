@@ -98,7 +98,7 @@ npm run test:unit
 # 3. Produkční sestavení aplikace
 npm run build
 
-# 4. E2E testy Playwright (17 *.spec.ts souborů / 320 testů; uvnitř akcelerator-landing-page/ vždy přes npm test -- <spec>)
+# 4. E2E testy Playwright (18 *.spec.ts souborů / 325 testů; uvnitř akcelerator-landing-page/ vždy přes npm test -- <spec>)
 cd akcelerator-landing-page
 npm test -- tests/api.spec.ts
 ```

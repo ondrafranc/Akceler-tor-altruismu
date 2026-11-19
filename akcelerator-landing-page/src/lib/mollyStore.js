@@ -229,7 +229,8 @@ export function unlockMollyTreat(action, opts = {}) {
       whisper: {
         icon: treat.icon || 'fish',
         text: `Mňau! Odemkla se dobrota za tvůj dobrý skutek: ${treat.name}. Můžeš mi ji dát!`,
-        ts
+        ts,
+        fromUnlock: true
       }
     };
     saveMollyState(next);
@@ -314,7 +315,8 @@ export function feedMolly(sourceOrAction = 'action', opts = {}) {
     icon: treat.icon || 'fish',
     text: `Mňam! Děkuji za ${treat.name || 'dobrotu'}, moc mi chutná.`,
     ts,
-    fromDock: Boolean(opts?.fromDock)
+    fromDock: Boolean(opts?.fromDock),
+    fromCelebration: source === 'celebration'
   };
 
   const nextDeeds = prevDeeds + 1;
@@ -458,7 +460,8 @@ export function petMolly(customWhisper, opts = {}) {
         icon: opts?.icon || 'paw',
         text: chosenText,
         ts,
-        fromDock: Boolean(opts?.fromDock)
+        fromDock: Boolean(opts?.fromDock),
+        fromPet: true
       }
     };
     saveMollyState(next);
@@ -500,7 +503,8 @@ export function toggleMollyPelisek() {
           nextMode === 'docked'
             ? 'Zachumlám se do pelíšku a budu tiše odpočívat.'
             : 'Už jsem vzhůru a jdu tě s radostí doprovázet!',
-        ts
+        ts,
+        fromToggle: true
       }
     };
     saveMollyState(next);
@@ -555,7 +559,8 @@ export function toggleMollyFollowMouse() {
         text: nextVal
           ? 'Mňau! Půjdu s tebou a budu tě tiše doprovázet.'
           : 'Zůstanu na svém klidném místě.',
-        ts: Date.now()
+        ts: Date.now(),
+        fromToggle: true
       }
     };
     saveMollyState(next);
@@ -580,7 +585,7 @@ export function setMollyMood(mood) {
  * Molly něco tiše pošeptá (průvodcovská nápověda) — nemění náladu, počty ani úložiště.
  * @param {string} text
  * @param {string} [icon]
- * @param {{ guide?: boolean, routePath?: string }} [opts]
+ * @param {{ guide?: boolean, routePath?: string, fromDock?: boolean, fromAutoPark?: boolean }} [opts]
  */
 export function mollyWhisper(text, icon = 'paw', opts = {}) {
   if (!text) return;
@@ -591,7 +596,9 @@ export function mollyWhisper(text, icon = 'paw', opts = {}) {
       text,
       ts: Date.now(),
       guide: !!opts?.guide,
-      routePath: opts?.routePath || null
+      routePath: opts?.routePath || null,
+      fromDock: Boolean(opts?.fromDock),
+      fromAutoPark: Boolean(opts?.fromAutoPark)
     }
   }));
 }

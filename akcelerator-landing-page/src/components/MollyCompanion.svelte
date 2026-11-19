@@ -109,14 +109,13 @@
   let lastTreatTransform = '';
 
   // Whisper bubble visibility
-  /** @type {{ icon?: string, text: string, ts?: number, guide?: boolean, fromDock?: boolean, routePath?: string } | null} */
+  /** @type {{ icon?: string, text: string, ts?: number, guide?: boolean, fromDock?: boolean, fromAutoPark?: boolean, fromPet?: boolean, fromToggle?: boolean, fromUnlock?: boolean, fromCelebration?: boolean, routePath?: string } | null} */
   let activeWhisper = $state(null);
   let whisperHideTimer = null;
   let walkArriveSafetyTimer = null;
   let dockAnchoredBubble = false;
   let bubbleTravelling = $state(false);
   let forceDockWhisper = $state(false);
-  let compactInflowWhisper = $state(false);
 
   let unsubEvents = null;
   let unsubState = null;
@@ -140,7 +139,6 @@
     pendingWhisperMs = durationMs;
     dockAnchoredBubble = false;
     forceDockWhisper = false;
-    compactInflowWhisper = false;
     whisperHideTimer = setTimeout(hideWhisperBubble, durationMs);
     placeWhisperBubble();
   }
@@ -156,7 +154,6 @@
     dockAnchoredBubble = false;
     bubbleTravelling = false;
     forceDockWhisper = false;
-    compactInflowWhisper = false;
     lastBubbleTransform = '';
     cachedWhisperRectKey = '';
     cachedWhisperRect = null;
@@ -267,19 +264,11 @@
     // Nevyžádaný tip průvodce nesmí zakrýt tlačítko/odkaz/pole. Když na spodní linii není
     // volné místo (typicky mobil s kartami přes celou šířku), počkáme a případně ho uložíme do pelíšku.
     if (activeWhisper.guide && !activeWhisper.fromDock && currentState.mode === 'roaming' && !atHome) {
-      if (vw <= MOBILE_MAX_W) {
-        const spot = findBestSpot({ preferX: posX, withBubble: true, groundOnly: true });
-        if (hardBubbleOverlapAt(spot.x, spot.y) > 35) {
-          deferGuideWhisper(activeWhisper);
-          return;
-        }
-      } else {
-        const spot = findBestSpot({ preferX: posX, withBubble: true });
-        const bestPlaced = findBestWhisperRectWithCost(spot.x, spot.y, actorScale(vw), vw, vh);
-        if (hardBubbleOverlapAt(spot.x, spot.y) > 0 && bestPlaced.obsCost > 0) {
-          deferGuideWhisper(activeWhisper);
-          return;
-        }
+      const spot = findBestSpot({ preferX: posX, withBubble: true });
+      const bestPlaced = findBestWhisperRectWithCost(spot.x, spot.y, spot.scale || actorScale(vw), vw, vh);
+      if (vw <= 1024 ? bestPlaced.obsCost > 0 : hardBubbleOverlapAt(spot.x, spot.y) > 0 && bestPlaced.obsCost > 0) {
+        deferGuideWhisper(activeWhisper);
+        return;
       }
     }
     if (activeWhisper.routePath) {
@@ -287,12 +276,12 @@
     }
     deferTries = 0;
 
-    if (activeWhisper.fromDock) {
+    if (activeWhisper.fromDock || ($isCompactDock && (activeWhisper.fromPet || activeWhisper.fromToggle))) {
       bubbleTravelling = false;
       bubbleEl.classList.remove('is-travelling');
       if (whisperHideTimer) clearTimeout(whisperHideTimer);
       whisperHideTimer = setTimeout(hideWhisperBubble, pendingWhisperMs || 4800);
-      if (currentState.mode === 'roaming' && !atHome) {
+      if (currentState.mode === 'roaming' && !atHome && !crowdedPark && activeWhisper.fromDock) {
         const curRaw = scoreSpot(posX, posY, actorScale(vw), vw, collectObstacles(vw, vh, false), false);
         if (curRaw > 0) {
           relocateToFreeSpot(false);
@@ -300,23 +289,28 @@
       }
       updateBubbleAnchorMode(posX, posY);
       evaluateDockWhisperFallback(posX, posY);
-      if (
-        $isCompactDock &&
-        vw <= MOBILE_MAX_W &&
-        (activeWhisper.fromDock || currentState.mode === 'docked' || crowdedPark)
-      ) {
-        const { obsCost } = findBestWhisperRectWithCost(posX, posY, actorScale(vw), vw, vh);
-        if (obsCost > 0) {
-          compactInflowWhisper = true;
-          await svelteTick();
-          if (mounted && !atHome) {
-            measureLayoutAndObstacles(vw, vh);
-            if (currentState.mode === 'roaming') {
-              relocateToFreeSpot(false);
-            }
-          }
-        }
+      lastBubbleTransform = '';
+      applyActorTransform();
+      return;
+    }
+
+    if ($isCompactDock && !activeWhisper.guide) {
+      const { obsCost } = findBestWhisperRectWithCost(posX, posY, actorScale(vw), vw, vh);
+      const inlineCelebrationVisible = Boolean(
+        (activeWhisper.fromUnlock || activeWhisper.fromCelebration) &&
+          document.querySelector('.in-situ-celebration')
+      );
+      if (obsCost > 0 && inlineCelebrationVisible) {
+        hideWhisperBubble();
+        return;
       }
+      bubbleTravelling = false;
+      bubbleEl.classList.remove('is-travelling');
+      if (whisperHideTimer) clearTimeout(whisperHideTimer);
+      whisperHideTimer = setTimeout(hideWhisperBubble, pendingWhisperMs || 4200);
+      updateBubbleAnchorMode(posX, posY);
+      evaluateDockWhisperFallback(posX, posY);
+      lastBubbleTransform = '';
       applyActorTransform();
       return;
     }
@@ -371,7 +365,7 @@
     let startY = vh * 0.44;
 
     const activeStage = document.querySelector(
-      '.card-effect-stage canvas.impact-payoff-canvas, .sanctuary-canvas, .instant-card'
+      '.deed-stage canvas.impact-payoff-canvas, .card-effect-stage canvas.impact-payoff-canvas, .sanctuary-canvas, .instant-card'
     );
     if (activeStage) {
       const rect = activeStage.getBoundingClientRect();
@@ -428,7 +422,7 @@
   // Molly i její bublina jsou pevně umístěné nad stránkou. Vybírá si místo podle toho,
   // co je zrovna pod ní: tlačítka, odkazy, pole formuláře, nadpisy, odstavce ani mapu nikdy nepřekrývá.
   const OBSTACLE_SELECTOR =
-    'a[href], button, input, select, textarea, label, summary, [role="button"], [data-molly-guide], h1, h2, h3, h4, p, .hero-overline, .page-header-kicker, .section-overline, .smart-nearest-banner, .count-heading, .deed-preview-stage, .card-effect-stage, .bento-cta, .card-cta, .card-title, .card-overline, .chip, .pill, .cat-pill, .city-chip, .q-pill, .preset-pill, .topic-pill, .filter-chip, .source-chip, .radius-pill, .energy-tab, .mobile-guided-preview-bar, .feedback-pill, .deck-header-bar, .deck-indicator, .deck-nav-btn, .instant-card, .action-card, .place-card, .bento-card, .portal-card, .portal-mini, .nav-capsule, .top-nav, .card, .compass-shell, .highlight-card, .alt-card, .local-card, .side-note, .empty-box, .calm-drawer, .footer-col, .footer-brand, .footer-desc, .footer-heading, .footer-trust, .map-frame, .leaflet-container, .quick-tags-pill, .category-aura-chip, .molly-celebration-note, .legend-chip, .qd-chip';
+    'a[href], button, input, select, textarea, label, summary, [role="button"], [data-molly-guide], h1, h2, h3, h4, p, .hero-overline, .hero-lead, .hero-mobile-claim, .page-header-kicker, .section-overline, .smart-nearest-banner, .count-heading, .deed-stage, .deed-preview-stage, .card-effect-stage, .how-details-content, .in-situ-affirmation, .molly-inline-fed-badge, .action-impact-summary, .stage-kicker, .feature-tag, .sanctuary-preview-window, .bento-icon-wrap, .bento-cta, .card-cta, .card-title, .card-overline, .pc-meta-top, .pc-addr, .pc-decision-box, .chip, .pill, .cat-pill, .city-chip, .q-pill, .preset-pill, .topic-pill, .filter-chip, .source-chip, .radius-pill, .energy-tab, .mobile-guided-preview-bar, .feedback-pill, .deck-header-bar, .deck-indicator, .deck-nav-btn, .instant-card, .action-card, .place-card, .bento-card, .portal-card, .portal-mini, .nav-capsule, .top-nav, .card, .compass-shell, .highlight-card, .alt-card, .local-card, .side-note, .empty-box, .calm-drawer, .footer-col, .footer-brand, .footer-desc, .footer-heading, .footer-trust, .map-frame, .leaflet-container, .quick-tags-pill, .category-aura-chip, .molly-celebration-note, .legend-chip, .qd-chip';
   const MOBILE_MAX_W = 680;
 
   function viewportSize() {
@@ -446,14 +440,28 @@
   }
 
   /**
-   * Přirozené cílové měřítko Molly pro danou šířku viewportu (`0.78` na laptopu, `0.92` na širokém PC).
+   * Přirozené cílové měřítko Molly pro danou šířku viewportu (`0.64–0.68` na mobilu, `0.76` na tabletu,
+   * `0.78` na laptopu, `0.92` na širokém PC).
    * @param {number} vw
    * @returns {number}
    */
   function baseActorScale(vw) {
-    if (vw <= MOBILE_MAX_W) return 0.72;
+    if (vw <= 420) return 0.64;
+    if (vw <= MOBILE_MAX_W) return 0.68;
+    if (vw <= 1024) return 0.76;
     if (vw <= 1365) return 0.78;
     return 0.92;
+  }
+
+  /**
+   * Kompaktní náhradní měřítka pro hustší části stránky s nulovým překryvem.
+   * @param {number} vw
+   * @returns {number[]}
+   */
+  function fallbackScalesForViewport(vw) {
+    if (vw <= MOBILE_MAX_W) return [0.58, 0.52, 0.46, 0.44];
+    if (vw <= 1024) return [0.68, 0.62, 0.56, 0.50, 0.46];
+    return [0.68, 0.62, 0.58, 0.54];
   }
 
   /**
@@ -461,7 +469,6 @@
    * @returns {number}
    */
   function actorScale(vw) {
-    if (vw <= MOBILE_MAX_W) return 0.72;
     return activeDesktopScale > 0 ? activeDesktopScale : baseActorScale(vw);
   }
 
@@ -475,7 +482,8 @@
    *   topNavBottom: number,
    *   dock: DOMRect | null,
    *   crisis: DOMRect | null,
-   *   feedback: DOMRect | null
+   *   feedback: DOMRect | null,
+   *   sanctuaryPill: DOMRect | null
    * }}
    */
   let layoutMetricsCache = {
@@ -487,7 +495,8 @@
     topNavBottom: 0,
     dock: null,
     crisis: null,
-    feedback: null
+    feedback: null,
+    sanctuaryPill: null
   };
 
   /**
@@ -561,6 +570,10 @@
     const fbR = fbEl?.getBoundingClientRect();
     const feedback = fbR && fbR.width > 0 && fbR.height > 0 ? fbR : null;
 
+    const spEl = atHome ? document.querySelector('.molly-sanctuary-pill') : null;
+    const spR = spEl?.getBoundingClientRect();
+    const sanctuaryPill = spR && spR.width > 0 && spR.height > 0 ? spR : null;
+
     let groundY;
     if (vw <= MOBILE_MAX_W) {
       groundY = Math.round(vh - 10);
@@ -568,7 +581,7 @@
       groundY = vh <= 620 ? vh - 12 : vh - 18;
     }
 
-    layoutMetricsCache = { ts: now, vw, vh, clientW, groundY, topNavBottom, dock, crisis, feedback };
+    layoutMetricsCache = { ts: now, vw, vh, clientW, groundY, topNavBottom, dock, crisis, feedback, sanctuaryPill };
     if (bubbleEl) {
       bubbleW = bubbleEl.offsetWidth;
       bubbleH = bubbleEl.offsetHeight;
@@ -582,6 +595,12 @@
     const controls = document.querySelectorAll('a[href], button, input, select, textarea');
     for (const el of controls) {
       if (el.closest('.molly-companion-layer, .molly-pelisek-dock, .top-nav')) continue;
+      if (
+        vw <= 1024 &&
+        el.matches('a.bento-card, a.card, a.portal-card, a.portal-mini, a.alt-card, a.local-card')
+      ) {
+        continue;
+      }
       const t = el.getBoundingClientRect();
       if (t.width <= 0 || t.height <= 0) continue;
       ctrlRects.push({ l: t.left, t: t.top, r: t.right, b: t.bottom });
@@ -704,28 +723,301 @@
 
   function findBestWhisperRectWithCost(x, y, s, vw, vh) {
     if (!bubbleW || !bubbleH) return { rect: null, obsCost: 0 };
-    const clientW = ensureLayoutMetrics(vw, vh).clientW || vw;
+    const metrics = ensureLayoutMetrics(vw, vh);
+    const clientW = metrics.clientW || vw;
     const obstacles = collectObstacles(vw, vh, true);
-    const { topNavBottom } = ensureLayoutMetrics(vw, vh);
+    const { topNavBottom } = metrics;
     const minTop =
       topNavBottom > 0
-        ? Math.max(60, Math.ceil(topNavBottom + (vw <= MOBILE_MAX_W ? 3 : 8)))
+        ? Math.max(60, Math.ceil(topNavBottom + (vw <= MOBILE_MAX_W ? 4 : 8)))
         : 64;
     const maxTop = Math.max(minTop, vh - bubbleH - 8);
     const isParkedOrDock = Boolean(
       activeWhisper?.fromDock ||
+      activeWhisper?.fromToggle ||
       currentState.mode === 'docked' ||
       atHome ||
       crowdedPark
     );
     const catVisible = currentState.mode === 'roaming' && !atHome && !crowdedPark;
     const cat = catVisible ? catRectAt(x, y, s) : null;
+    const maxBubbleLeft = Math.max(8, clientW - 8 - bubbleW);
+    const halfCatW = Math.round(LOGICAL_W * 0.5 * s);
+
+    const calcFullObsCost = (rect) => {
+      let obsCost = 0;
+      for (const o of obstacles) {
+        const area = overlapArea(rect, o);
+        if (area > 0) obsCost += area * o.w;
+      }
+      for (const t of cachedControlRects) {
+        const area = overlapArea(rect, t);
+        if (area > 0) obsCost += area * 2;
+      }
+      if (cat) {
+        obsCost += overlapArea(rect, cat) * 4;
+      }
+      return obsCost;
+    };
+
+    const calcProtectedOverlap = (rect) => {
+      let ov = 0;
+      if (cat) ov += overlapArea(rect, cat);
+      const d = metrics.dock;
+      if (d) ov += overlapArea(rect, { l: d.left - 3, t: d.top - 3, r: d.right + 3, b: d.bottom + 3 });
+      const c = metrics.crisis;
+      if (c) ov += overlapArea(rect, { l: c.left - 4, t: c.top - 4, r: c.right + 4, b: c.bottom + 4 });
+      const fb = metrics.feedback;
+      if (fb) ov += overlapArea(rect, { l: fb.left - 4, t: fb.top - 4, r: fb.right + 4, b: fb.bottom + 4 });
+      return ov;
+    };
+
+    // Compact viewports (mobile & tablet <= 1024px): strictly anchor either directly adjacent
+    // to Molly (beside her on her floor band or directly above her ears) OR directly beneath
+    // the header Molly dock — never floating disconnected in the middle of the viewport.
+    if (vw <= 1024) {
+      if (catVisible && cat) {
+        const clampX = (v) => Math.max(8, Math.min(maxBubbleLeft, Math.round(v)));
+        const bandMinY = Math.max(minTop, Math.floor(cat.t - bubbleH - 44));
+        const bandMaxY = maxTop;
+        const adjacentXs = Array.from(
+          new Set([
+            clampX(cat.l - 8 - bubbleW),
+            clampX(cat.r + 8),
+            clampX(x - bubbleW * 0.5),
+            clampX(cat.r - bubbleW),
+            clampX(cat.l),
+            maxBubbleLeft,
+            8
+          ])
+        );
+        /** @type {Set<number>} */
+        const adjacentYSet = new Set([
+          Math.max(bandMinY, Math.min(bandMaxY, Math.round(y - bubbleH))),
+          Math.max(bandMinY, Math.min(bandMaxY, Math.round(cat.t))),
+          Math.max(bandMinY, Math.min(bandMaxY, Math.floor(cat.t - bubbleH - 8))),
+          bandMaxY,
+          bandMinY
+        ]);
+        for (let ty = bandMaxY; ty >= bandMinY; ty -= 4) {
+          adjacentYSet.add(ty);
+        }
+        const adjacentYs = Array.from(adjacentYSet);
+
+        let bestAdj = null;
+        let bestAdjScore = Infinity;
+        let bestAdjObsCost = Infinity;
+        const catMidY = (cat.t + cat.b) * 0.5;
+
+        for (const ty of adjacentYs) {
+          if (ty < minTop || ty > maxTop) continue;
+          for (const lx of adjacentXs) {
+            const rect = { l: lx, t: ty, r: lx + bubbleW, b: ty + bubbleH };
+            const obsCost = calcFullObsCost(rect);
+            const dist =
+              Math.hypot(lx + bubbleW * 0.5 - x, ty + bubbleH * 0.5 - catMidY) * 0.08;
+            const score = obsCost * 100 + dist;
+            if (score < bestAdjScore) {
+              bestAdjScore = score;
+              bestAdj = rect;
+              bestAdjObsCost = obsCost;
+            }
+          }
+        }
+
+        if (bestAdj && bestAdjObsCost <= 0) {
+          return { rect: bestAdj, obsCost: 0 };
+        }
+
+        // Expand local zero-collision search slightly upward within the same card/lower region
+        // (up to 195px above Molly) before ever falling back to overlapping readable paragraph text.
+        const expandedMinY = Math.max(minTop, Math.floor(cat.t - bubbleH - 195));
+        if (expandedMinY < bandMinY) {
+          let bestNearFree = null;
+          let bestNearScore = Infinity;
+          for (let ty = bandMinY - 2; ty >= expandedMinY; ty -= 4) {
+            if (ty < minTop || ty > maxTop) continue;
+            for (const lx of adjacentXs) {
+              const rect = { l: lx, t: ty, r: lx + bubbleW, b: ty + bubbleH };
+              if (calcFullObsCost(rect) > 0) continue;
+              const score = Math.abs(cat.t - rect.b) + Math.abs(lx + bubbleW * 0.5 - x) * 0.12;
+              if (score < bestNearScore) {
+                bestNearScore = score;
+                bestNearFree = rect;
+              }
+            }
+          }
+          if (bestNearFree) {
+            return { rect: bestNearFree, obsCost: 0 };
+          }
+        }
+
+        // Direct tap on Molly while scrolled over dense cards: keep speech bubble anchored
+        // cleanly right above Molly's head (or beside her) with zero cat/dock/crisis overlap.
+        if (!activeWhisper?.fromDock && !activeWhisper?.fromToggle && !activeWhisper?.guide) {
+          const aboveY = Math.max(minTop, Math.min(maxTop, Math.floor(cat.t - bubbleH - 8)));
+          const fallbackCands = [
+            { l: clampX(x - bubbleW * 0.5), t: aboveY },
+            { l: clampX(cat.r - bubbleW), t: aboveY },
+            { l: clampX(cat.l), t: aboveY },
+            { l: clampX(cat.l - 8 - bubbleW), t: Math.max(minTop, Math.min(maxTop, Math.round(y - bubbleH))) },
+            { l: clampX(cat.r + 8), t: Math.max(minTop, Math.min(maxTop, Math.round(y - bubbleH))) },
+            { l: maxBubbleLeft, t: aboveY },
+            { l: 8, t: aboveY }
+          ];
+          let bestLocal = null;
+          let bestLocalScore = Infinity;
+          let bestLocalObs = Infinity;
+          for (const c of fallbackCands) {
+            const rect = { l: c.l, t: c.t, r: c.l + bubbleW, b: c.t + bubbleH };
+            const prot = calcProtectedOverlap(rect);
+            const fullObs = calcFullObsCost(rect);
+            const dist = Math.hypot(rect.l + bubbleW * 0.5 - x, rect.b - cat.t) * 0.05;
+            const score = prot * 100000 + dist + (fullObs > 0 ? 1 : 0);
+            if (score < bestLocalScore) {
+              bestLocalScore = score;
+              bestLocal = rect;
+              bestLocalObs = fullObs;
+            }
+          }
+          if (bestLocal && calcProtectedOverlap(bestLocal) <= 0) {
+            return { rect: bestLocal, obsCost: bestLocalObs };
+          }
+        }
+      }
+
+      // Docked / sanctuary / parked compact whisper: zero-CLS fixed placement that strictly
+      // avoids h1/buttons/controls by preferring (A) above sanctuary pill on /svet,
+      // (B) directly beneath header .molly-pelisek-dock when free, (C) clean bottom toast band,
+      // or (D) nearest zero-obstacle pocket when Molly is not on the floor.
+      const d = metrics.dock;
+      const centerX = Math.max(8, Math.min(maxBubbleLeft, Math.round((clientW - bubbleW) * 0.5)));
+      const dockTop = Math.max(minTop, Math.min(maxTop, Math.ceil((d?.bottom || topNavBottom || 60) + 4)));
+      const dockPreferredX = d
+        ? Math.max(8, Math.min(maxBubbleLeft, Math.round(d.right - bubbleW)))
+        : centerX;
+      const dockXs = Array.from(new Set([dockPreferredX, centerX, maxBubbleLeft, 8]));
+
+      // (A) On /svet (atHome), anchor directly over the quiet lake above .molly-sanctuary-pill
+      const sp = atHome ? metrics.sanctuaryPill : null;
+      if (sp) {
+        const spLeft = Math.max(8, Math.min(maxBubbleLeft, Math.round(sp.left)));
+        const spXs = Array.from(new Set([spLeft, centerX, maxBubbleLeft, 8]));
+        const spBaseY = Math.max(minTop, Math.min(maxTop, Math.floor(sp.top - bubbleH - 8)));
+        const spYs = [spBaseY, Math.max(minTop, spBaseY - 14), Math.max(minTop, spBaseY - 28)];
+        for (const ty of spYs) {
+          for (const lx of spXs) {
+            const rect = { l: lx, t: ty, r: lx + bubbleW, b: ty + bubbleH };
+            if (calcFullObsCost(rect) <= 0) {
+              return { rect, obsCost: 0 };
+            }
+          }
+        }
+      }
+
+      // (B) Directly beneath header .molly-pelisek-dock if zero-collision
+      for (const lx of dockXs) {
+        const rect = { l: lx, t: dockTop, r: lx + bubbleW, b: dockTop + bubbleH };
+        if (calcFullObsCost(rect) <= 0) {
+          return { rect, obsCost: 0 };
+        }
+      }
+
+      // (C) Clean bottom viewport toast band if zero-collision
+      const bottomBandMinY = Math.max(minTop, maxTop - 44);
+      const bottomXs = Array.from(new Set([centerX, maxBubbleLeft, 8, dockPreferredX]));
+      for (let ty = maxTop; ty >= bottomBandMinY; ty -= 4) {
+        for (const lx of bottomXs) {
+          const rect = { l: lx, t: ty, r: lx + bubbleW, b: ty + bubbleH };
+          if (calcFullObsCost(rect) <= 0) {
+            return { rect, obsCost: 0 };
+          }
+        }
+      }
+
+      // (D) Zero-collision pocket scan across viewport when Molly is docked/atHome/parked
+      /** @type {Set<number>} */
+      const pocketYSet = new Set([dockTop, maxTop, minTop]);
+      for (let ty = minTop; ty <= maxTop; ty += 6) {
+        pocketYSet.add(ty);
+      }
+      for (const o of obstacles) {
+        const belowObs = Math.ceil(o.b + 2);
+        if (belowObs >= minTop && belowObs <= maxTop) pocketYSet.add(belowObs);
+        const aboveObs = Math.floor(o.t - bubbleH - 2);
+        if (aboveObs >= minTop && aboveObs <= maxTop) pocketYSet.add(aboveObs);
+      }
+      const preferAnchorY = atHome ? (sp ? Math.max(minTop, sp.top - bubbleH - 8) : maxTop) : dockTop;
+      let bestFree = null;
+      let bestFreeScore = Infinity;
+      let bestPocketFallback = null;
+      let bestPocketFallbackScore = Infinity;
+      let bestPocketFallbackObs = Infinity;
+      for (const ty of pocketYSet) {
+        if (ty < minTop || ty > maxTop) continue;
+        for (const lx of dockXs) {
+          const rect = { l: lx, t: ty, r: lx + bubbleW, b: ty + bubbleH };
+          const obsCost = calcFullObsCost(rect);
+          if (obsCost <= 0) {
+            const score = Math.abs(ty - preferAnchorY) + Math.abs(lx - dockPreferredX) * 0.08;
+            if (score < bestFreeScore) {
+              bestFreeScore = score;
+              bestFree = rect;
+            }
+          } else {
+            const prot = calcProtectedOverlap(rect);
+            const fbScore =
+              prot * 100000 + obsCost * 10 + Math.abs(ty - preferAnchorY) * 0.05 + Math.abs(lx - dockPreferredX) * 0.03;
+            if (fbScore < bestPocketFallbackScore) {
+              bestPocketFallbackScore = fbScore;
+              bestPocketFallback = rect;
+              bestPocketFallbackObs = obsCost;
+            }
+          }
+        }
+      }
+      if (bestFree) {
+        return { rect: bestFree, obsCost: 0 };
+      }
+
+      // (E) Absolute fallback if viewport has zero obstacle-free band: pick lowest-overlap pocket
+      const dockCands = [
+        { l: dockPreferredX, t: dockTop },
+        { l: centerX, t: dockTop },
+        { l: centerX, t: maxTop },
+        { l: maxBubbleLeft, t: dockTop },
+        { l: 8, t: dockTop }
+      ];
+      if (bestPocketFallback) {
+        dockCands.push({ l: bestPocketFallback.l, t: bestPocketFallback.t });
+      }
+      let bestDock = bestPocketFallback || {
+        l: dockPreferredX,
+        t: dockTop,
+        r: dockPreferredX + bubbleW,
+        b: dockTop + bubbleH
+      };
+      let bestDockScore = bestPocketFallback ? bestPocketFallbackScore : Infinity;
+      let bestDockObs = bestPocketFallback ? bestPocketFallbackObs : calcFullObsCost(bestDock);
+      for (const c of dockCands) {
+        const rect = { l: c.l, t: c.t, r: c.l + bubbleW, b: c.t + bubbleH };
+        const prot = calcProtectedOverlap(rect);
+        const fullObs = calcFullObsCost(rect);
+        const score =
+          prot * 100000 + fullObs * 10 + Math.abs(c.t - preferAnchorY) * 0.05 + Math.abs(c.l - dockPreferredX) * 0.03;
+        if (score < bestDockScore) {
+          bestDockScore = score;
+          bestDock = rect;
+          bestDockObs = fullObs;
+        }
+      }
+      return { rect: bestDock, obsCost: bestDockObs };
+    }
+
     const preferredY = catVisible
       ? Math.max(minTop, Math.min(maxTop, y - Math.round(LOGICAL_H * s) - 8 - bubbleH))
       : minTop;
 
-    const maxBubbleLeft = Math.max(8, clientW - 8 - bubbleW);
-    const halfCatW = Math.round(LOGICAL_W * 0.5 * s);
     const candXs = Array.from(
       new Set([
         Math.max(8, Math.min(maxBubbleLeft, Math.round(clientW - 10 - bubbleW))),
@@ -759,18 +1051,7 @@
         if (ty < minTop || ty > maxTop) continue;
         for (const lx of xs) {
           const rect = { l: lx, t: ty, r: lx + bubbleW, b: ty + bubbleH };
-          let obsCost = 0;
-          for (const o of obstacles) {
-            const area = overlapArea(rect, o);
-            if (area > 0) obsCost += area * o.w;
-          }
-          for (const t of cachedControlRects) {
-            const area = overlapArea(rect, t);
-            if (area > 0) obsCost += area * 2;
-          }
-          if (cat) {
-            obsCost += overlapArea(rect, cat) * 4;
-          }
+          const obsCost = calcFullObsCost(rect);
           const distPref = isParkedOrDock ? (ty - minTop) * 0.05 : Math.abs(ty - preferredY) * 0.1;
           const score = obsCost * 100 + distPref;
           if (score < bestScore) {
@@ -953,8 +1234,11 @@
       let boxBottom = r.bottom;
       if (
         textRange &&
+        (!isMobile || !/^H[1-3]$/.test(el.tagName)) &&
         (el.matches(
-          'h4, p, label, .hero-overline, .section-overline, .page-header-kicker, .count-heading, .bento-cta, .card-cta, .card-title, .card-overline'
+          isMobile
+            ? 'h4, label, .hero-overline, .section-overline, .page-header-kicker, .count-heading, .bento-cta, .card-cta, .card-overline, .pc-addr'
+            : 'h4, p, label, .hero-overline, .section-overline, .page-header-kicker, .count-heading, .bento-cta, .card-cta, .card-title, .card-overline, .pc-title, .pc-addr'
         ) ||
           (el.tagName === 'SUMMARY' && !el.closest('.instant-card'))) &&
         !el.closest('.instant-card, .site-footer, button') &&
@@ -991,13 +1275,19 @@
         el.tagName === 'H1' ||
         el.tagName === 'H2' ||
         el.tagName === 'H3' ||
+        (vw <= 1024 && el.tagName === 'P') ||
         el.matches('[role="button"]') ||
-        el.matches('a[href]') ||
+        (el.matches('a[href]') && (!isMobile || !isBlockCardLink)) ||
         (inInstantCard && el.matches('h1, h2, p, summary')) ||
         el.matches(
-          '.deck-header-bar, .deck-indicator, .deck-nav-btn, .energy-tab, .filter-chip, .source-chip, .radius-pill, .preset-pill, .topic-pill, .chip, .pill, .cat-pill, .city-chip, .q-pill, .mobile-guided-preview-bar, .map-frame, .leaflet-container, .deed-preview-stage, .card-effect-stage, .footer-brand, .footer-desc, .footer-heading, .quick-tags-pill, .category-aura-chip, .molly-celebration-note, .legend-chip, .qd-chip'
+          '.hero-lead, .hero-mobile-claim, .action-impact-summary, .how-details-content, .in-situ-affirmation, .molly-inline-fed-badge, .stage-kicker, .feature-tag, .sanctuary-preview-window, .bento-icon-wrap, .pc-meta-top, .pc-addr, .pc-decision-box, .deck-header-bar, .deck-indicator, .deck-nav-btn, .energy-tab, .filter-chip, .source-chip, .radius-pill, .preset-pill, .topic-pill, .chip, .pill, .cat-pill, .city-chip, .q-pill, .mobile-guided-preview-bar, .map-frame, .leaflet-container, .deed-stage, .deed-preview-stage, .card-effect-stage, .footer-brand, .footer-desc, .footer-heading, .quick-tags-pill, .category-aura-chip, .molly-celebration-note, .legend-chip, .qd-chip'
         );
-      const catHard = isMobile ? true : isHardDesktopCatTarget;
+      const isMobileCardContainer =
+        isBlockCardLink ||
+        (el.matches(
+          '.instant-card, .action-card, .place-card, .card, .portal-card, .compass-shell, .highlight-card, .side-note, .empty-box, .calm-drawer, .footer-col'
+        ) && !el.matches('a[href], button, summary, [role="button"]'));
+      const catHard = isMobile ? isHardDesktopCatTarget || !isMobileCardContainer : isHardDesktopCatTarget;
       const isProminentHeading =
         !catHard &&
         el.matches('h2, h3, .section-overline, .page-header-kicker, .count-heading');
@@ -1012,20 +1302,20 @@
       const catPadY = catHard ? 1.5 : isProminentHeading ? 3 : 1;
       const catWeight = catHard ? (isHeading ? 1.5 : 2) : isProminentHeading ? 4 : isSoftText ? 2.4 : 0.25;
 
+      const isEmptyWrapperCard =
+        isBlockCardLink ||
+        (el.matches(
+          '.instant-card, .card, .bento-card, .portal-card, .action-card, .place-card, .compass-shell, .highlight-card, .side-note, .empty-box, .calm-drawer, .footer-col'
+        ) &&
+          !el.matches('a[href], button, summary'));
       const isHardBubbleTarget =
         el.tagName === 'H1' ||
         el.tagName === 'BUTTON' ||
         el.matches(
-          'a.btn-studio-primary, .deck-header-bar, .deck-indicator, .deck-nav-btn, .map-frame, .leaflet-container, .crisis-trigger, .footer-brand, .footer-desc, .footer-heading'
+          'a.btn-studio-primary, .page-header-kicker, .page-header-subtitle, .section-overline, .hero-overline, .deck-header-bar, .deck-indicator, .deck-nav-btn, .map-frame, .leaflet-container, .crisis-trigger, .footer-brand, .footer-desc, .footer-heading'
         ) ||
-        inInstantCard;
-      const isSoftCardSurface =
-        !isHardBubbleTarget &&
-        (isBlockCardLink ||
-          (el.matches(
-            '.card, .bento-card, .portal-card, .action-card, .place-card, .compass-shell, .highlight-card, .side-note, .empty-box, .calm-drawer, .footer-col'
-          ) &&
-            !el.matches('a[href], button, summary')));
+        (inInstantCard && !isEmptyWrapperCard);
+      const isSoftCardSurface = !isHardBubbleTarget && isEmptyWrapperCard;
       const bubWeight = isHardBubbleTarget ? 16 : isSoftCardSurface ? 0.35 : isHeading ? 2.5 : 2;
 
       catObstacles.push({
@@ -1038,16 +1328,18 @@
         heading: isProminentHeading,
         text: isSoftText
       });
-      bubbleObstacles.push({
-        l: boxLeft - bubPad,
-        t: visTop - bubPad,
-        r: boxRight + bubPad,
-        b: visBottom + bubPad,
-        w: bubWeight,
-        hard: true,
-        heading: false,
-        text: false
-      });
+      if (!(vw <= 1024 && isEmptyWrapperCard)) {
+        bubbleObstacles.push({
+          l: boxLeft - bubPad,
+          t: visTop - bubPad,
+          r: boxRight + bubPad,
+          b: visBottom + bubPad,
+          w: bubWeight,
+          hard: true,
+          heading: false,
+          text: false
+        });
+      }
     }
 
     if (textRange && document.body) {
@@ -1345,33 +1637,6 @@
     const withBubble = Boolean(opts.withBubble);
     const preferX = Number.isFinite(opts.preferX) ? /** @type {number} */ (opts.preferX) : posX;
 
-    if (vw <= MOBILE_MAX_W) {
-      const s = 0.72;
-      const { minX, maxX } = roamRange(vw, s);
-      let best = {
-        x: Math.max(minX, Math.min(maxX, preferX)),
-        y: gY,
-        score: Infinity,
-        raw: Infinity,
-        scale: s
-      };
-      for (let x = minX; x <= maxX + 0.1; x += 10) {
-        if (
-          opts.requireWalkableFrom &&
-          !isWalkPathClear(opts.requireWalkableFrom.x, opts.requireWalkableFrom.y, x, gY, s, vw, obstacles)
-        ) {
-          continue;
-        }
-        const raw = scoreSpot(x, gY, s, vw, obstacles, withBubble);
-        let score = raw * 120 + Math.abs(x - preferX) * 0.45;
-        if (Number.isFinite(opts.avoidX) && Math.abs(x - /** @type {number} */ (opts.avoidX)) < 130) {
-          score += 6000;
-        }
-        if (score < best.score) best = { x, y: gY, score, raw, scale: s };
-      }
-      return best;
-    }
-
     const baseS = opts.scaleOverride || baseActorScale(vw);
     /**
      * @param {number} s
@@ -1396,10 +1661,12 @@
       for (let x = Math.max(fullMinX, fullMaxX - 48); x <= fullMaxX; x += 4) {
         xSet.add(x);
       }
-      for (let x = centralMinX; x <= centralMaxX + 0.1; x += 6) {
+      const centralStep = vw <= MOBILE_MAX_W ? 5 : 6;
+      for (let x = centralMinX; x <= centralMaxX + 0.1; x += centralStep) {
         xSet.add(Math.max(fullMinX, Math.min(fullMaxX, Math.round(x))));
       }
-      for (let x = fullMinX; x <= fullMaxX + 0.1; x += 12) {
+      const fullStep = vw <= MOBILE_MAX_W ? 8 : 12;
+      for (let x = fullMinX; x <= fullMaxX + 0.1; x += fullStep) {
         xSet.add(Math.max(fullMinX, Math.min(fullMaxX, Math.round(x))));
       }
       const candXs = Array.from(xSet);
@@ -1408,8 +1675,8 @@
         : Array.from(
             new Set([
               gY,
-              Math.min(vh - 4, gY + 8),
-              Math.min(vh - 2, gY + 13),
+              Math.min(vh - 4, gY + 6),
+              Math.min(vh - 2, gY + 10),
               Math.min(vh - 1, gY + 16),
               Math.max(96, gY - 6)
             ])
@@ -1434,7 +1701,7 @@
           }
           const bd = scoreSpotBreakdown(x, y, s, vw, obstacles, withBubble);
           const raw = bd.hard;
-          const edgeBias = x < 72 || x > clientW - 72 ? 24 : 0;
+          const edgeBias = vw > MOBILE_MAX_W && (x < 72 || x > clientW - 72) ? 24 : 0;
           let score =
             raw * 150 +
             bd.softCost +
@@ -1453,7 +1720,7 @@
     };
 
     const primaryBest = searchForScale(baseS);
-    const fallbackScales = [0.68, 0.62, 0.58, 0.54];
+    const fallbackScales = fallbackScalesForViewport(vw);
     let floorWinner = null;
     if (primaryBest.raw <= 0 || opts.scaleOverride) {
       floorWinner = primaryBest;
@@ -1478,7 +1745,6 @@
 
     const fromPt = opts.preferClearPathFrom;
     const shouldComparePocket =
-      vw > 1024 &&
       !opts.groundOnly &&
       (!floorWinner ||
         (fromPt &&
@@ -1489,124 +1755,151 @@
       return floorWinner;
     }
 
-    if (vw > 1024 && !opts.groundOnly) {
+    if (!opts.groundOnly) {
       const distWeight = opts.nearbyBias ? 1.18 : 0.44;
-      const pocketScales = [baseS, ...fallbackScales];
-      for (const s of pocketScales) {
-        const halfDomW = LOGICAL_W * 0.5 * s;
-        const fullMinX = Math.ceil(halfDomW + 1.5);
-        const fullMaxX = Math.max(fullMinX, Math.floor(clientW - halfDomW - 1.5));
-        const xSet = new Set([
-          fullMinX,
-          fullMaxX,
-          Math.max(fullMinX, Math.min(fullMaxX, Math.round(preferX))),
-          Math.max(fullMinX, Math.min(fullMaxX, Math.round(clientW * 0.55)))
-        ]);
-        for (let x = fullMinX; x <= Math.min(fullMaxX, fullMinX + 48); x += 4) xSet.add(x);
-        for (let x = Math.max(fullMinX, fullMaxX - 48); x <= fullMaxX; x += 4) xSet.add(x);
-        for (let x = fullMinX; x <= fullMaxX; x += 16) xSet.add(x);
-        const candXs = Array.from(xSet);
+      const pocketScales = opts.scaleOverride ? [baseS] : [baseS, ...fallbackScales];
+      const deepScrolledOnCompact =
+        vw <= 1024 && typeof window !== 'undefined' && window.scrollY > 220;
+      const pocketTiers = deepScrolledOnCompact ? ['groundBand', 'deepScroll'] : ['groundBand'];
 
-        const minPocketY = Math.max(
-          Math.ceil((metrics.topNavBottom || 64) + LOGICAL_H * s + 6),
-          120
-        );
-        const maxPocketY = Math.max(minPocketY, gY - 12);
-        /** @type {number[]} */
-        const pocketYs = [];
-        for (let y = maxPocketY; y >= minPocketY; y -= 24) {
-          pocketYs.push(y);
-        }
-        if (!pocketYs.includes(minPocketY)) pocketYs.push(minPocketY);
+      for (const tier of pocketTiers) {
+        for (const s of pocketScales) {
+          const halfDomW = LOGICAL_W * 0.5 * s;
+          const fullMinX = Math.ceil(halfDomW + 1.5);
+          const fullMaxX = Math.max(fullMinX, Math.floor(clientW - halfDomW - 1.5));
+          const xSet = new Set([
+            fullMinX,
+            fullMaxX,
+            Math.max(fullMinX, Math.min(fullMaxX, Math.round(preferX))),
+            Math.max(fullMinX, Math.min(fullMaxX, Math.round(clientW * 0.55)))
+          ]);
+          for (let x = fullMinX; x <= Math.min(fullMaxX, fullMinX + 48); x += 4) xSet.add(x);
+          for (let x = Math.max(fullMinX, fullMaxX - 48); x <= fullMaxX; x += 4) xSet.add(x);
+          const pocketXStep = vw <= MOBILE_MAX_W ? 10 : 16;
+          for (let x = fullMinX; x <= fullMaxX; x += pocketXStep) xSet.add(x);
+          const candXs = Array.from(xSet);
 
-        let pocketBest = {
-          x: Math.max(fullMinX, Math.min(fullMaxX, preferX)),
-          y: maxPocketY,
-          score: Infinity,
-          raw: Infinity,
-          scale: s
-        };
-        for (const y of pocketYs) {
-          for (const x of candXs) {
-            if (
-              opts.requireWalkableFrom &&
-              !isWalkPathClear(opts.requireWalkableFrom.x, opts.requireWalkableFrom.y, x, y, s, vw, obstacles)
-            ) {
-              continue;
-            }
-            const bd = scoreSpotBreakdown(x, y, s, vw, obstacles, withBubble);
-            const raw = bd.hard;
-            const edgeBias = x < 72 || x > clientW - 72 ? 24 : 0;
-            let clearanceBonus = 0;
-            if (raw <= 0 && bd.headingArea <= 0) {
-              const clearBelow45 =
-                y + 45 <= gY && scoreSpot(x, y + 45, s, vw, obstacles, false) <= 0;
-              const clearBelow90 =
-                clearBelow45 && y + 90 <= gY && scoreSpot(x, y + 90, s, vw, obstacles, false) <= 0;
-              const clearAbove30 =
-                y - 30 >= minPocketY && scoreSpot(x, y - 30, s, vw, obstacles, false) <= 0;
-              clearanceBonus =
-                (clearBelow45 ? 140 : 0) + (clearBelow90 ? 140 : 0) + (clearAbove30 ? 80 : 0);
-            }
-            const pathHits = opts.preferClearPathFrom
-              ? pathObstructionSteps(
-                  opts.preferClearPathFrom.x,
-                  opts.preferClearPathFrom.y,
-                  x,
-                  y,
-                  s,
-                  vw,
-                  obstacles
-                )
-              : 0;
-            const pathPenalty = pathHits * 260;
-            let score =
-              raw * 150 +
-              bd.softCost +
-              Math.abs(x - preferX) * distWeight +
-              Math.abs(y - gY) * 0.6 +
-              edgeBias +
-              pathPenalty -
-              clearanceBonus;
-            if (Number.isFinite(opts.avoidX) && Math.abs(x - /** @type {number} */ (opts.avoidX)) < 130) {
-              score += 6000;
-            }
-            if (score < pocketBest.score) {
-              pocketBest = { x, y, score, raw, scale: s };
+          const topSafeY = Math.ceil((metrics.topNavBottom || 64) + LOGICAL_H * s + 8);
+          const minPocketY =
+            vw <= 1024
+              ? tier === 'groundBand'
+                ? Math.max(topSafeY, Math.ceil(vh - 166 + LOGICAL_H * s))
+                : Math.max(topSafeY, Math.ceil(vh * 0.35 + LOGICAL_H * s))
+              : Math.max(topSafeY, 120);
+          const maxPocketY = Math.max(minPocketY, gY - 8);
+          /** @type {Set<number>} */
+          const pocketYSet = new Set([maxPocketY, minPocketY]);
+          const yStep = vw <= 1024 ? (tier === 'groundBand' ? 8 : 14) : 24;
+          for (let y = maxPocketY; y >= minPocketY; y -= yStep) {
+            pocketYSet.add(y);
+          }
+          if (opts.requireWalkableFrom) {
+            const curY = Math.round(opts.requireWalkableFrom.y);
+            if (curY >= minPocketY && curY <= maxPocketY) {
+              pocketYSet.add(curY);
             }
           }
-        }
-        if (pocketBest.raw <= 0) {
-          if (floorWinner && fromPt) {
-            const pocketHits = pathObstructionSteps(
-              fromPt.x,
-              fromPt.y,
-              pocketBest.x,
-              pocketBest.y,
-              pocketBest.scale,
-              vw,
-              obstacles
-            );
-            const floorHits = pathObstructionSteps(
-              fromPt.x,
-              fromPt.y,
-              floorWinner.x,
-              floorWinner.y,
-              floorWinner.scale,
-              vw,
-              obstacles
-            );
-            if (floorHits < pocketHits || (floorHits === pocketHits && floorHits === 0)) {
-              return floorWinner;
+          if (vw <= 1024) {
+            const catH = Math.ceil(LOGICAL_H * s + CAT_SAFETY_TOP + 3);
+            for (const o of obstacles) {
+              if (!o.hard) continue;
+              const above = Math.floor(o.t - 2);
+              if (above >= minPocketY && above <= maxPocketY) pocketYSet.add(above);
+              const below = Math.ceil(o.b + catH);
+              if (below >= minPocketY && below <= maxPocketY) pocketYSet.add(below);
             }
           }
-          return pocketBest;
-        }
-        if (
-          pocketBest.raw < bestOverall.raw ||
-          (pocketBest.raw === bestOverall.raw && pocketBest.score < bestOverall.score)
-        ) {
-          bestOverall = pocketBest;
+          const pocketYs = Array.from(pocketYSet);
+
+          let pocketBest = {
+            x: Math.max(fullMinX, Math.min(fullMaxX, preferX)),
+            y: maxPocketY,
+            score: Infinity,
+            raw: Infinity,
+            scale: s
+          };
+          for (const y of pocketYs) {
+            for (const x of candXs) {
+              if (
+                opts.requireWalkableFrom &&
+                !isWalkPathClear(opts.requireWalkableFrom.x, opts.requireWalkableFrom.y, x, y, s, vw, obstacles)
+              ) {
+                continue;
+              }
+              const bd = scoreSpotBreakdown(x, y, s, vw, obstacles, withBubble);
+              const raw = bd.hard;
+              const edgeBias = vw > MOBILE_MAX_W && (x < 72 || x > clientW - 72) ? 24 : 0;
+              let clearanceBonus = 0;
+              if (vw > 1024 && raw <= 0 && bd.headingArea <= 0) {
+                const clearBelow45 =
+                  y + 45 <= gY && scoreSpot(x, y + 45, s, vw, obstacles, false) <= 0;
+                const clearBelow90 =
+                  clearBelow45 && y + 90 <= gY && scoreSpot(x, y + 90, s, vw, obstacles, false) <= 0;
+                const clearAbove30 =
+                  y - 30 >= minPocketY && scoreSpot(x, y - 30, s, vw, obstacles, false) <= 0;
+                clearanceBonus =
+                  (clearBelow45 ? 140 : 0) + (clearBelow90 ? 140 : 0) + (clearAbove30 ? 80 : 0);
+              }
+              const pathHits = opts.preferClearPathFrom
+                ? pathObstructionSteps(
+                    opts.preferClearPathFrom.x,
+                    opts.preferClearPathFrom.y,
+                    x,
+                    y,
+                    s,
+                    vw,
+                    obstacles
+                  )
+                : 0;
+              const pathPenalty = pathHits * 260;
+              let score =
+                raw * 150 +
+                bd.softCost +
+                Math.abs(x - preferX) * distWeight +
+                Math.abs(y - gY) * (vw <= 1024 ? 1.8 : 0.6) +
+                edgeBias +
+                pathPenalty -
+                clearanceBonus;
+              if (Number.isFinite(opts.avoidX) && Math.abs(x - /** @type {number} */ (opts.avoidX)) < 130) {
+                score += 6000;
+              }
+              if (score < pocketBest.score) {
+                pocketBest = { x, y, score, raw, scale: s };
+              }
+            }
+          }
+          if (pocketBest.raw <= 0) {
+            if (floorWinner && fromPt) {
+              const pocketHits = pathObstructionSteps(
+                fromPt.x,
+                fromPt.y,
+                pocketBest.x,
+                pocketBest.y,
+                pocketBest.scale,
+                vw,
+                obstacles
+              );
+              const floorHits = pathObstructionSteps(
+                fromPt.x,
+                fromPt.y,
+                floorWinner.x,
+                floorWinner.y,
+                floorWinner.scale,
+                vw,
+                obstacles
+              );
+              if (floorHits < pocketHits || (floorHits === pocketHits && floorHits === 0)) {
+                return floorWinner;
+              }
+            }
+            return pocketBest;
+          }
+          if (
+            pocketBest.raw < bestOverall.raw ||
+            (pocketBest.raw === bestOverall.raw && pocketBest.score < bestOverall.score)
+          ) {
+            bestOverall = pocketBest;
+          }
         }
       }
     }
@@ -1635,7 +1928,7 @@
     }
     const wasParked = crowdedPark;
     crowdedPark = false;
-    if (vw > MOBILE_MAX_W && spot.scale) {
+    if (spot.scale) {
       targetDesktopScale = spot.scale;
       activeDesktopScale = spot.scale;
     }
@@ -1722,7 +2015,7 @@
 
     // Když byla Molly schovaná v pelíšku (`wasParked`), vyjde z klidného místa na podlaze
     if (wasParked) {
-      if (vw > MOBILE_MAX_W && spot.scale) {
+      if (spot.scale) {
         targetDesktopScale = spot.scale;
         activeDesktopScale = spot.scale;
       }
@@ -1742,7 +2035,7 @@
       return false;
     }
 
-    const spotScale = vw > MOBILE_MAX_W && spot.scale ? spot.scale : s;
+    const spotScale = spot.scale || s;
     const safeCw = ensureLayoutMetrics(vw, vh).clientW || vw;
     const halfDomWAtSpot = LOGICAL_W * 0.5 * spotScale;
     const minXAtSpot = Math.ceil(halfDomWAtSpot + 1.5);
@@ -1754,19 +2047,25 @@
         : hereBd;
 
     // Pokud na současném místě nepřekrývá žádný ovládací prvek, nadpis ani výrazný text, v klidu zůstane
+    const curPosBd = walking ? scoreSpotBreakdown(posX, posY, s, vw, obstacles, false) : hereBd;
+    const deepScrolledCompact = vw <= 1024 && typeof window !== 'undefined' && window.scrollY > 220;
+    const insideCompactBand =
+      vw > 1024 || baseY - LOGICAL_H * s >= (deepScrolledCompact ? vh * 0.34 : vh - 168);
     const currentIsClean =
+      insideCompactBand &&
       hereBd.hard <= 0 &&
+      curPosBd.hard <= 0 &&
       hereBd.headingArea <= 0 &&
       hereBd.softTextRatio <= 0.18;
     const spotIsGround = Math.abs(spot.y - gY) <= 18;
     const pocketCanStay =
       !curOnFloor &&
+      insideCompactBand &&
       ((!spotIsGround && Math.abs(baseY - spot.y) <= 48) ||
         (spotIsGround && !isStraightPathClear(baseX, baseY, spot.x, spot.y, spotScale, vw, obstacles)));
 
     if (currentIsClean && (curOnFloor || pocketCanStay)) {
       if (
-        vw > MOBILE_MAX_W &&
         spot.scale &&
         Math.abs(spot.scale - targetDesktopScale) > 0.004 &&
         fitsAtSpotScale &&
@@ -1780,13 +2079,13 @@
       return walking;
     }
     if (
+      insideCompactBand &&
       fitsAtSpotScale &&
       spot.raw >= hereBd.hard &&
       hereBd.headingArea <= 0 &&
       Math.hypot(baseX - spot.x, baseY - spot.y) < 8
     ) {
       if (
-        vw > MOBILE_MAX_W &&
         spot.scale &&
         Math.abs(spot.scale - targetDesktopScale) > 0.004 &&
         bdAtSpotScale.hard <= 0 &&
@@ -1798,7 +2097,7 @@
       return walking;
     }
 
-    if (vw > MOBILE_MAX_W && spot.scale && Math.abs(spot.scale - targetDesktopScale) > 0.004) {
+    if (spot.scale && Math.abs(spot.scale - targetDesktopScale) > 0.004) {
       targetDesktopScale = spot.scale;
       ensureLoopRunning();
     }
@@ -1808,15 +2107,29 @@
     followTargetX = spot.x;
     followTargetY = spot.y;
 
-    if (prefersReducedMotion()) {
-      if (vw > MOBILE_MAX_W && spot.scale) {
+    const blockedDirectPathOnCompact =
+      vw <= 1024 &&
+      (hereBd.hard > 0 || curPosBd.hard > 0 || hereBd.headingArea > 0 || !insideCompactBand) &&
+      !isStraightPathClear(posX, posY, targetX, targetY, spotScale, vw, obstacles);
+
+    if (prefersReducedMotion() || blockedDirectPathOnCompact) {
+      if (spot.scale) {
         activeDesktopScale = spot.scale;
+        targetDesktopScale = spot.scale;
       }
       posX = targetX;
       posY = targetY;
       vx = 0;
       vy = 0;
+      if (posX < vw * 0.25) facing = 1;
+      else if (posX > vw * 0.75) facing = -1;
+      behavior = 'IDLE_SIT';
+      behaviorTimer = 3.8 + Math.random() * 2.4;
+      stepAside = false;
+      urgentStepAside = false;
+      lastActorTransform = '';
       applyActorTransform();
+      onArrived();
       return false;
     }
 
@@ -1891,7 +2204,7 @@
       });
       if (escapeSpot.raw <= 0 && Math.abs(escapeSpot.x - posX) >= 12) {
         crowdedPark = false;
-        if (vw > MOBILE_MAX_W && escapeSpot.scale) {
+        if (escapeSpot.scale) {
           targetDesktopScale = escapeSpot.scale;
         }
         targetX = escapeSpot.x;
@@ -1912,7 +2225,7 @@
     if (posX > maxX - 75) dir = -1;
     else if (posX < minX + 75) dir = 1;
     else if (Math.random() < 0.35) dir = -dir;
-    const strollDist = inRightMargin ? 16 + Math.random() * 24 : 65 + Math.random() * 130;
+    const strollDist = inRightMargin ? 16 + Math.random() * 24 : vw <= MOBILE_MAX_W ? 45 + Math.random() * 85 : 65 + Math.random() * 130;
     const preferX = Math.max(minX, Math.min(maxX, posX + dir * strollDist));
 
     const walkableSpot = findBestSpot({
@@ -1931,7 +2244,7 @@
       Math.hypot(walkableSpot.x - posX, walkableSpot.y - posY) >= 16
     ) {
       crowdedPark = false;
-      if (vw > MOBILE_MAX_W && walkableSpot.scale) {
+      if (walkableSpot.scale) {
         targetDesktopScale = walkableSpot.scale;
       }
       targetX = walkableSpot.x;
@@ -2002,21 +2315,17 @@
     invalidateLayoutCache();
     const { vw, vh } = viewportSize();
     isCompactDock.set(vw <= 1024);
-    if (vw > MOBILE_MAX_W) {
-      targetDesktopScale = baseActorScale(vw);
-      if (crowdedPark || activeDesktopScale <= 0) {
-        activeDesktopScale = targetDesktopScale;
-      }
+    targetDesktopScale = baseActorScale(vw);
+    if (crowdedPark || activeDesktopScale <= 0) {
+      activeDesktopScale = targetDesktopScale;
     }
     const { minX, maxX } = roamRange(vw);
     const gY = groundLine(vw, vh);
     const minFloorY =
-      vw <= MOBILE_MAX_W
-        ? gY
-        : vw > 1024
-          ? Math.max(96, layoutMetricsCache.topNavBottom || 96)
-          : Math.max(96, gY - 6);
-    const maxFloorY = vw <= MOBILE_MAX_W ? gY : Math.min(vh - 1, gY + 16);
+      vw <= 1024
+        ? Math.max(88, layoutMetricsCache.topNavBottom || 88, Math.ceil(vh - 166 + LOGICAL_H * actorScale(vw)))
+        : Math.max(88, layoutMetricsCache.topNavBottom || 88);
+    const maxFloorY = Math.min(vh - 1, gY + 16);
     posX = Math.max(minX, Math.min(maxX, posX));
     targetX = Math.max(minX, Math.min(maxX, targetX));
     posY = Math.max(minFloorY, Math.min(maxFloorY, posY));
@@ -2039,12 +2348,10 @@
       const range = roamRange(vs.vw);
       const floorY = groundLine(vs.vw, vs.vh);
       const minFY =
-        vs.vw <= MOBILE_MAX_W
-          ? floorY
-          : vs.vw > 1024
-            ? Math.max(96, layoutMetricsCache.topNavBottom || 96)
-            : Math.max(96, floorY - 6);
-      const maxFY = vs.vw <= MOBILE_MAX_W ? floorY : Math.min(vs.vh - 1, floorY + 16);
+        vs.vw <= 1024
+          ? Math.max(88, layoutMetricsCache.topNavBottom || 88, Math.ceil(vs.vh - 166 + LOGICAL_H * actorScale(vs.vw)))
+          : Math.max(88, layoutMetricsCache.topNavBottom || 88);
+      const maxFY = Math.min(vs.vh - 1, floorY + 16);
       posX = Math.max(range.minX, Math.min(range.maxX, posX));
       targetX = Math.max(range.minX, Math.min(range.maxX, targetX));
       posY = Math.max(minFY, Math.min(maxFY, posY));
@@ -2177,9 +2484,19 @@
         (behavior !== 'WALK_ROAM' || Math.abs(targetX - pointerX) < 110)
       ) {
         const el = e.target;
+        const hoveredAnchor =
+          el && typeof el.closest === 'function' ? el.closest('a[href]') : null;
+        const onEmptyBlockCardSurface = Boolean(
+          hoveredAnchor &&
+            hoveredAnchor.matches(
+              'a.bento-card, a.card, a.portal-card, a.portal-mini, a.alt-card, a.local-card'
+            ) &&
+            !el.closest('h1, h2, h3, h4, p, .bento-cta, .card-cta, .bento-icon-wrap, button')
+        );
         if (
           el &&
           typeof el.closest === 'function' &&
+          !onEmptyBlockCardSurface &&
           el.closest('button, a, input, select, textarea, [role="button"]') &&
           !el.closest('.molly-pelisek-dock')
         ) {
@@ -2191,29 +2508,84 @@
     }
   }
 
+  /** @type {{ x: number, y: number, ts: number, onBlockCardLink: boolean } | null} */
+  let pendingPetTap = null;
+  let suppressBlockCardClickUntil = 0;
+
   function handleWindowPointerDown(e) {
     lastInteractionTs = Date.now();
+    pendingPetTap = null;
+    if (e.button && e.button !== 0) return;
+    if (currentState.mode !== 'roaming' || atHome || crowdedPark) return;
+
     const el = e.target;
+    let onBlockCardLink = false;
     if (el && typeof el.closest === 'function') {
       // Native clicks inside .molly-pelisek-dock / bubliny obsluhují jejich vlastní tlačítka
       if (el.closest('.molly-pelisek-dock, .molly-whisper-bubble')) {
         return;
       }
-      // Never intercept clicks on any page interactive control or canvas stage
+      // Never intercept clicks on interactive controls, text/CTAs, or canvas stages
       if (
         el.closest(
-          'button, a, input, select, textarea, label, summary, [role="button"], .sanctuary-viewport, canvas.impact-payoff-canvas'
+          'button, input, select, textarea, label, summary, [role="button"], .sanctuary-viewport, .deed-stage, canvas.stage-canvas, canvas.impact-payoff-canvas'
         )
       ) {
         return;
       }
+      const anchor = el.closest('a[href]');
+      if (anchor) {
+        const isBlockCardAnchor = anchor.matches(
+          'a.bento-card, a.card, a.portal-card, a.portal-mini, a.alt-card, a.local-card'
+        );
+        const insideCardContent = Boolean(
+          el.closest('h1, h2, h3, h4, p, .bento-cta, .card-cta, .bento-icon-wrap')
+        );
+        if (!isBlockCardAnchor || insideCardContent) {
+          return;
+        }
+        onBlockCardLink = true;
+      }
     }
 
+    const vw = window.innerWidth || 1280;
+    const s = actorScale(vw);
+    const safeCw =
+      layoutMetricsCache.vw === vw && layoutMetricsCache.clientW > 0
+        ? layoutMetricsCache.clientW
+        : vw;
+    const halfDomW = LOGICAL_W * 0.5 * s;
+    const drawX = Math.max(Math.ceil(halfDomW + 1.5), Math.min(Math.floor(safeCw - halfDomW - 1.5), posX));
+    const dist = Math.hypot(e.clientX - drawX, e.clientY - (posY - 38 * s));
+    const hitRadius = onBlockCardLink ? Math.max(36, 46 * s) : Math.max(44, 48 * s);
+    if (dist < hitRadius) {
+      pendingPetTap = { x: e.clientX, y: e.clientY, ts: Date.now(), onBlockCardLink };
+    }
+  }
+
+  function handleWindowPointerUp(e) {
+    if (!pendingPetTap) return;
+    const tap = pendingPetTap;
+    pendingPetTap = null;
     if (currentState.mode !== 'roaming' || atHome || crowdedPark) return;
-    const s = actorScale(window.innerWidth || 1280);
-    const dist = Math.hypot(e.clientX - posX, e.clientY - (posY - 24 * s));
-    if (dist < 44) {
+    const moved = Math.hypot(e.clientX - tap.x, e.clientY - tap.y);
+    if (moved <= 10 && Date.now() - tap.ts < 650) {
+      if (tap.onBlockCardLink) {
+        suppressBlockCardClickUntil = Date.now() + 400;
+      }
       triggerPetInteraction(false);
+    }
+  }
+
+  function handleWindowPointerCancel() {
+    pendingPetTap = null;
+  }
+
+  function handleWindowClickCapture(e) {
+    if (Date.now() <= suppressBlockCardClickUntil) {
+      suppressBlockCardClickUntil = 0;
+      e.preventDefault();
+      e.stopPropagation();
     }
   }
 
@@ -2419,7 +2791,7 @@
     }
     const wasParked = crowdedPark;
     crowdedPark = false;
-    if (vw > MOBILE_MAX_W && spot.scale) {
+    if (spot.scale) {
       targetDesktopScale = spot.scale;
     }
     targetX = spot.x;
@@ -2520,17 +2892,12 @@
     scrolledOnCurrentRoute = false;
     measureLayoutAndObstacles();
     const { vw, vh } = viewportSize();
-    if (vw > MOBILE_MAX_W) {
-      activeDesktopScale = baseActorScale(vw);
-      targetDesktopScale = activeDesktopScale;
-    }
+    activeDesktopScale = baseActorScale(vw);
+    targetDesktopScale = activeDesktopScale;
     const range = roamRange(vw);
     const cw = clientViewportWidth(vw);
-    const defaultDesktopX = Math.round(cw - 28);
-    posX =
-      vw <= MOBILE_MAX_W
-        ? Math.max(range.minX, Math.min(range.maxX, vw * 0.3))
-        : Math.max(range.minX, Math.min(range.maxX, defaultDesktopX));
+    const defaultStartX = Math.round(cw - Math.ceil(LOGICAL_W * 0.5 * activeDesktopScale) - 10);
+    posX = Math.max(range.minX, Math.min(range.maxX, defaultStartX));
     posY = groundLine(vw, vh);
     targetX = posX;
     targetY = posY;
@@ -2634,7 +3001,6 @@
       let isScalingNow = false;
       if (
         typeof window !== 'undefined' &&
-        (window.innerWidth || 1280) > MOBILE_MAX_W &&
         targetDesktopScale > 0 &&
         activeDesktopScale > 0 &&
         Math.abs(targetDesktopScale - activeDesktopScale) > 0.002
@@ -2762,11 +3128,7 @@
       if (typeof window !== 'undefined') {
         const curVw = window.innerWidth || 1280;
         const effScale =
-          curVw <= MOBILE_MAX_W
-            ? 0.72
-            : activeDesktopScale > 0
-              ? activeDesktopScale
-              : baseActorScale(curVw);
+          activeDesktopScale > 0 ? activeDesktopScale : baseActorScale(curVw);
         const safeCw =
           layoutMetricsCache.vw === curVw && layoutMetricsCache.clientW > 0
             ? layoutMetricsCache.clientW
@@ -2873,7 +3235,7 @@
           return;
         }
         crowdedPark = false;
-        if (curVw > MOBILE_MAX_W && spot.scale) {
+        if (spot.scale) {
           targetDesktopScale = spot.scale;
           activeDesktopScale = spot.scale;
         }
@@ -2910,12 +3272,21 @@
             bubbleH = bubbleEl.offsetHeight;
           }
           const vs = viewportSize();
+          targetDesktopScale = baseActorScale(vs.vw);
+          if (crowdedPark || activeDesktopScale <= 0) {
+            activeDesktopScale = targetDesktopScale;
+          }
           const range = roamRange(vs.vw);
           const floorY = groundLine(vs.vw, vs.vh);
+          const minFY =
+            vs.vw <= 1024
+              ? Math.max(88, layoutMetricsCache.topNavBottom || 88, Math.ceil(vs.vh - 166 + LOGICAL_H * actorScale(vs.vw)))
+              : Math.max(88, layoutMetricsCache.topNavBottom || 88);
+          const maxFY = Math.min(vs.vh - 1, floorY + 16);
           posX = Math.max(range.minX, Math.min(range.maxX, posX));
           targetX = Math.max(range.minX, Math.min(range.maxX, targetX));
-          posY = floorY;
-          targetY = floorY;
+          posY = Math.max(minFY, Math.min(maxFY, posY));
+          targetY = Math.max(minFY, Math.min(maxFY, targetY));
           lastBubbleTransform = '';
           if (currentState.mode === 'roaming' && !atHome) {
             relocateToFreeSpot(Boolean(activeWhisper && bubbleW));
@@ -2953,6 +3324,13 @@
     window.addEventListener('pointerdown', handleWindowPointerDown, {
       passive: true
     });
+    window.addEventListener('pointerup', handleWindowPointerUp, {
+      passive: true
+    });
+    window.addEventListener('pointercancel', handleWindowPointerCancel, {
+      passive: true
+    });
+    window.addEventListener('click', handleWindowClickCapture, true);
     window.addEventListener('resize', handleWindowResize, {
       passive: true
     });
@@ -3037,6 +3415,9 @@
     if (typeof window !== 'undefined') {
       window.removeEventListener('pointermove', handleWindowPointerMove);
       window.removeEventListener('pointerdown', handleWindowPointerDown);
+      window.removeEventListener('pointerup', handleWindowPointerUp);
+      window.removeEventListener('pointercancel', handleWindowPointerCancel);
+      window.removeEventListener('click', handleWindowClickCapture, true);
       window.removeEventListener('resize', handleWindowResize);
       window.removeEventListener('scroll', handleWindowScroll);
       window.removeEventListener('keydown', onUserActivity);
@@ -3069,10 +3450,51 @@
   });
 
   const nextGiftText = $derived(describeNextMollyGift($mollyState.giftDeeds));
+  function wakeFromAutoPark() {
+    if (typeof window === 'undefined' || atHome) return;
+    measureLayoutAndObstacles();
+    const { vw } = viewportSize();
+    const spot = findBestSpot({ preferX: posX, withBubble: false });
+    if (spot.raw <= 0) {
+      crowdedPark = false;
+      if (spot.scale) {
+        targetDesktopScale = spot.scale;
+        activeDesktopScale = spot.scale;
+      }
+      posX = spot.x;
+      posY = spot.y;
+      targetX = spot.x;
+      targetY = spot.y;
+      followTargetX = spot.x;
+      followTargetY = spot.y;
+      vx = 0;
+      vy = 0;
+      if (posX < vw * 0.25) facing = 1;
+      else if (posX > vw * 0.75) facing = -1;
+      lastActorTransform = '';
+      applyActorTransform();
+      spawnHeartBurst(6);
+      playMollyMeow();
+      ensureLoopRunning();
+      mollyWhisper('Už jsem vzhůru a jdu tě s radostí doprovázet!', 'paw', { fromDock: true });
+      return;
+    }
+    playMollyPurr(0.8, 0.6);
+    mollyWhisper('Tady je těsno — popojeď kousek.', 'home', {
+      fromDock: true,
+      fromAutoPark: true
+    });
+  }
+
+  $effect(() => {
+    if (!crowdedPark && activeWhisper?.fromAutoPark) {
+      hideWhisperBubble();
+    }
+  });
+
   const roamingWhisper = $derived(
     activeWhisper &&
       !forceDockWhisper &&
-      !compactInflowWhisper &&
       ($isCompactDock || ($mollyState.mode === 'roaming' && !atHome && !crowdedPark))
   );
 
@@ -3084,8 +3506,8 @@
       atHome,
       isParked: crowdedPark,
       forceDockWhisper,
-      compactInflowWhisper,
-      onPet: () => triggerPetInteraction(true)
+      onPet: () => triggerPetInteraction(true),
+      onWakeFromPark: wakeFromAutoPark
     });
   });
 </script>
@@ -3289,16 +3711,19 @@
 
   @media (min-width: 681px) and (max-width: 1024px) {
     .molly-whisper-bubble {
-      max-width: 230px;
+      max-width: 296px;
+      padding: 5px 11px;
+      font-size: 0.74rem;
+      line-height: 1.28;
     }
   }
 
   @media (max-width: 680px) {
     .molly-whisper-bubble {
-      max-width: min(260px, calc(100vw - 20px));
-      padding: 6px 10px;
-      font-size: 0.74rem;
-      line-height: 1.3;
+      max-width: min(268px, calc(100vw - 88px));
+      padding: 5px 9px;
+      font-size: 0.72rem;
+      line-height: 1.24;
     }
   }
 

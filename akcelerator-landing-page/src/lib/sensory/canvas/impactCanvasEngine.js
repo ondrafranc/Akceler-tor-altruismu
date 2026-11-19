@@ -27,6 +27,7 @@ export function mountImpactCanvas(cv, o = {}) {
   if (!c) {
     const noop = () => { };
     noop.setPrimed = () => { };
+    noop.setTeased = () => { };
     return noop;
   }
 
@@ -36,6 +37,8 @@ export function mountImpactCanvas(cv, o = {}) {
   const cs = spec.colors || ['#34d399', '#10b981', '#fbbf24', '#38bdf8'];
   const isPreview = Boolean(o.preview);
   let isPrimed = Boolean(o.primed);
+  let isTeased = Boolean(o.teased);
+  let teasePhase = 0;
   const h = isPreview ? 82 : 92;
   const cy = isPreview ? 43 : h * 0.5 + 2;
   const by = isPreview ? h - 8 : h - 11;
@@ -209,13 +212,23 @@ export function mountImpactCanvas(cv, o = {}) {
     }
 
     let p = 0;
-    const targetPreviewP = isPrimed ? 0.14 : 0.0;
+    let targetPreviewP = 0.0;
+    if (isPrimed) {
+      targetPreviewP = 0.14;
+    } else if (isTeased && !red) {
+      // Jemný anticipační nádech plátna v náhledu (špička <= 0.115, striktně pod hranicí 0.14)
+      if (!force) {
+        teasePhase += 0.048 * step;
+      }
+      targetPreviewP = 0.045 + 0.07 * (0.5 - 0.5 * Math.cos(teasePhase));
+    }
 
     if (isPreview) {
       if (red) {
-        previewP = targetPreviewP;
+        previewP = isPrimed ? 0.14 : 0.0;
       } else if (!force) {
-        previewP += (targetPreviewP - previewP) * Math.min(1, 0.14 * step);
+        const easeRate = isTeased && !isPrimed ? 0.18 : 0.14;
+        previewP += (targetPreviewP - previewP) * Math.min(1, easeRate * step);
         if (Math.abs(targetPreviewP - previewP) < 0.001) {
           previewP = targetPreviewP;
         }
@@ -340,7 +353,7 @@ export function mountImpactCanvas(cv, o = {}) {
 
     // Automatické uspání smyčky po ustálení animace (nulová spotřeba baterie v klidu)
     const settled = isPreview
-      ? Math.abs(previewP - targetPreviewP) < 0.002
+      ? !(isTeased && !isPrimed && !red) && Math.abs(previewP - targetPreviewP) < 0.002
       : ripples.length === 0 &&
       burstEnergy <= 0.01 &&
       (isClimax ? transitionProgress >= 1.0 : transitionProgress >= 0.25 && frame > 80);
@@ -421,6 +434,22 @@ export function mountImpactCanvas(cv, o = {}) {
       wakeUpLoop();
       if (red || !isVisible) {
         fn(true);
+      }
+    }
+  };
+
+  cleanup.setTeased = (val) => {
+    const next = Boolean(val);
+    if (next !== isTeased) {
+      isTeased = next;
+      if (next) {
+        teasePhase = 0;
+      }
+      if (!red) {
+        wakeUpLoop();
+        if (!isVisible) {
+          fn(true);
+        }
       }
     }
   };

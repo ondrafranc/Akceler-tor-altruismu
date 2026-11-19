@@ -1487,7 +1487,7 @@
   />
 
   <!-- UNIFIED SEARCH + FILTER BAR -->
-  <div class="controls-card">
+  <div class="controls-card" class:filters-open={filtersOpen}>
     <div class="controls-top search-capsule">
       <button type="button" class="gps-btn" onclick={useGps} disabled={gpsStatus === 'requesting'}>
         <AppIcon name="navigation" size={15} />
@@ -2064,7 +2064,7 @@
   /* Controls Card */
   .controls-card {
     background: var(--bg-surface, #ffffff);
-    border: 1px solid var(--border-subtle, #dce3dd);
+    border: 1px solid var(--border-forest, #c5d9cd);
     border-radius: 16px;
     padding: 0.72rem 0.9rem;
     box-shadow: var(--shadow-sm);
@@ -2248,8 +2248,12 @@
   }
 
   .near-filters-drawer {
-    flex: 1 1 560px;
+    flex: 0 0 auto;
     min-width: 0;
+  }
+
+  .near-filters-drawer[open] {
+    flex: 1 1 560px;
   }
 
   .near-filters-summary {
@@ -3129,6 +3133,96 @@
 
   :global(.aa-map-pin:hover .pin-bubble) {
     transform: scale(1.14);
+  }
+
+  @media (min-width: 981px) {
+    .controls-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      column-gap: 0.55rem;
+    }
+
+    .controls-top {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .controls-utility-row {
+      grid-column: 2;
+      grid-row: 1;
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
+      align-items: center;
+      flex-wrap: nowrap;
+      gap: 0.45rem;
+    }
+
+    .controls-card:not(.filters-open) .near-filters-drawer {
+      flex: 0 0 auto;
+    }
+
+    .controls-card .info-note,
+    .controls-card .geo-dropdown,
+    .controls-presets-row {
+      grid-column: 1 / -1;
+    }
+
+    .controls-card.filters-open .controls-utility-row {
+      grid-column: 1 / -1;
+      grid-row: auto;
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--border-subtle, #dce3dd);
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .controls-card.filters-open .near-filters-drawer {
+      flex: 1 1 560px;
+    }
+  }
+
+  @media (min-width: 981px) and (max-width: 1024px) and (max-height: 820px) {
+    .near-page :global(.page-header) {
+      padding: 0.48rem 0 0.42rem;
+      margin-bottom: 0.45rem;
+    }
+
+    .near-page :global(.page-header-kicker) {
+      margin-bottom: 0.22rem;
+    }
+
+    .near-page :global(.page-header-title) {
+      font-size: 1.72rem;
+      line-height: 1.12;
+    }
+
+    .near-page :global(.page-header-subtitle) {
+      margin-top: 0.16rem;
+      font-size: 0.88rem;
+      line-height: 1.38;
+    }
+
+    .controls-card {
+      padding: 0.46rem 0.72rem;
+      margin-bottom: 0.45rem;
+    }
+
+    .controls-presets-row {
+      margin-top: 0.34rem;
+      padding-top: 0.34rem;
+    }
+
+    .controls-card.filters-open .controls-utility-row {
+      margin-top: 0.34rem;
+      padding-top: 0.34rem;
+    }
+
+    .count-heading {
+      font-size: 0.86rem;
+    }
   }
 
   @media (max-width: 1024px) {

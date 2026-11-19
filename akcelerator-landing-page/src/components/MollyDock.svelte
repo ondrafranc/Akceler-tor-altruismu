@@ -11,13 +11,13 @@
    * Shared bridge between MollyCompanion and MollyDock so only a single dock instance is mounted at a time.
    * @type {import('svelte/store').Writable<{
    *   pendingTip: { icon?: string, text: string } | null,
-   *   activeWhisper: { icon?: string, text: string, ts?: number, guide?: boolean, fromDock?: boolean } | null,
+   *   activeWhisper: { icon?: string, text: string, ts?: number, guide?: boolean, fromDock?: boolean, fromAutoPark?: boolean, fromPet?: boolean, fromToggle?: boolean, fromUnlock?: boolean, fromCelebration?: boolean } | null,
    *   hasFinePointer: boolean,
    *   atHome: boolean,
    *   isParked: boolean,
    *   forceDockWhisper?: boolean,
-   *   compactInflowWhisper?: boolean,
-   *   onPet: () => void
+   *   onPet: () => void,
+   *   onWakeFromPark?: () => void
    * }>}
    */
   export const mollyDockBridge = writable({
@@ -27,8 +27,8 @@
     atHome: false,
     isParked: false,
     forceDockWhisper: false,
-    compactInflowWhisper: false,
-    onPet: () => {}
+    onPet: () => {},
+    onWakeFromPark: () => {}
   });
 
   /** @type {Record<string, string>} */
@@ -85,8 +85,20 @@
 
   const nextGiftText = $derived(describeNextMollyGift($mollyState.giftDeeds));
   const giftProgress = $derived(getNextMollyGiftProgress($mollyState.giftDeeds));
+  const isUserDocked = $derived($mollyState.mode === 'docked');
+  const isAutoParked = $derived(!isUserDocked && Boolean($mollyDockBridge.isParked));
   const isDockedVisual = $derived(
-    $mollyState.mode === 'docked' || $mollyDockBridge.atHome || $mollyDockBridge.isParked
+    isUserDocked || $mollyDockBridge.atHome || isAutoParked
+  );
+  const toggleAriaLabel = $derived(
+    isUserDocked
+      ? 'Pozvat Molly na procházku'
+      : isAutoParked
+        ? 'Molly odpočívá v pelíšku — kliknutím ji zkusíš pozvat na procházku'
+        : 'Dopřát Molly odpočinek v pelíšku'
+  );
+  const toggleLabelText = $derived(
+    isUserDocked ? 'Procházka' : isAutoParked ? 'V pelíšku' : 'Pelíšek'
   );
   const showDockWhisper = $derived(
     variant === 'floating' &&
@@ -185,26 +197,28 @@
     <button
       type="button"
       class="molly-dock-toggle-btn"
+      class:is-auto-parked={isAutoParked}
+      class:is-user-docked={isUserDocked}
       onpointerdown={(e) => e.stopPropagation()}
       onclick={(e) => {
         e.stopPropagation();
-        toggleMollyPelisek();
+        if (isAutoParked && $mollyDockBridge.onWakeFromPark) {
+          $mollyDockBridge.onWakeFromPark();
+        } else {
+          toggleMollyPelisek();
+        }
       }}
-      aria-pressed={$mollyState.mode === 'docked'}
-      aria-label={$mollyState.mode === 'docked'
-        ? 'Pozvat Molly na procházku'
-        : 'Dopřát Molly odpočinek v pelíšku'}
-      title={$mollyState.mode === 'docked'
-        ? 'Pozvat Molly na procházku'
-        : 'Dopřát Molly odpočinek v pelíšku'}
+      aria-pressed={isUserDocked || isAutoParked}
+      aria-label={toggleAriaLabel}
+      title={toggleAriaLabel}
     >
       <AppIcon
-        name={$mollyState.mode === 'docked' ? 'footprints' : 'armchair'}
+        name={isUserDocked ? 'footprints' : 'armchair'}
         size={14}
         strokeWidth={2}
       />
       <span class="molly-toggle-text">
-        {$mollyState.mode === 'docked' ? 'Procházka' : 'Pelíšek'}
+        {toggleLabelText}
       </span>
     </button>
 
@@ -512,6 +526,28 @@
   .molly-dock-follow-btn:hover {
     background: var(--bg-subtle, #edf2ee);
     border-color: var(--border-strong, #c2cec5);
+  }
+
+  .molly-dock-toggle-btn.is-auto-parked {
+    background: var(--accent-warm-tint, #fef6e8);
+    border-color: rgba(143, 75, 14, 0.38);
+    color: var(--accent-warm-ink, #8f4b0e);
+  }
+
+  .molly-dock-toggle-btn.is-auto-parked:hover {
+    background: var(--hero-dawn, #fef3c7);
+    border-color: rgba(143, 75, 14, 0.55);
+  }
+
+  .molly-dock-toggle-btn.is-user-docked {
+    background: var(--bohemian-mist, #e6f0ea);
+    border-color: var(--czech-forest, #1d5c40);
+    color: var(--czech-forest, #1d5c40);
+  }
+
+  .molly-dock-toggle-btn.is-user-docked:hover {
+    background: var(--bohemian-sage, #eef5f0);
+    border-color: var(--czech-forest-hover, #164932);
   }
 
   .molly-dock-follow-btn.is-active {

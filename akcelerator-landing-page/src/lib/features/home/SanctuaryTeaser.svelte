@@ -115,11 +115,17 @@
     align-items: center;
     padding: 2.2rem 2.4rem;
     border-radius: 22px;
-    background: var(--bg-surface, #ffffff);
+    background: linear-gradient(
+      135deg,
+      var(--bohemian-sage, #eef5f0) 0%,
+      var(--bohemian-mist, #e6f0ea) 100%
+    );
     color: var(--ink-primary, #14281d);
-    border: 1px solid var(--border-subtle, #dce3dd);
+    border: 1px solid var(--border-forest, #c5d9cd);
     border-top: 3px solid var(--czech-linden, #256f4e);
-    box-shadow: var(--shadow-md, 0 8px 20px -6px rgba(18, 42, 30, 0.08));
+    box-shadow:
+      0 12px 30px -12px rgba(24, 62, 44, 0.12),
+      0 2px 8px rgba(24, 62, 44, 0.05);
     overflow: hidden;
   }
 
@@ -132,8 +138,8 @@
     letter-spacing: 0.08em;
     color: var(--accent-warm-ink, #8f4b0e);
     text-transform: uppercase;
-    background: var(--accent-warm-tint, #fef6e8);
-    border: 1px solid rgba(143, 75, 14, 0.24);
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-forest, #c5d9cd);
     padding: 0.26rem 0.68rem;
     border-radius: 999px;
     margin-bottom: 0.85rem;
@@ -177,8 +183,8 @@
     font-size: 0.76rem;
     font-weight: 600;
     color: var(--ink-secondary, #3f574a);
-    background: var(--bg-subtle, #edf2ee);
-    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-forest, #c5d9cd);
     padding: 0.22rem 0.58rem;
     border-radius: 999px;
   }
@@ -240,8 +246,8 @@
     min-height: 44px;
     padding: 0.7rem 1.1rem;
     border-radius: 999px;
-    background: var(--bg-subtle, #edf2ee);
-    border: 1px solid var(--border-strong, #c2cec5);
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-forest-strong, #a7c4b3);
     color: var(--ink-primary, #14281d);
     font-size: 0.88rem;
     font-weight: 700;
@@ -253,22 +259,22 @@
   }
 
   .sanctuary-breath-link:hover {
-    background: var(--bohemian-mist, #e6f0ea);
-    border-color: var(--accent-primary, #1b5e42);
+    background: var(--bohemian-sage, #eef5f0);
+    border-color: var(--czech-linden, #256f4e);
   }
 
   .breath-icon {
     display: inline-flex;
     align-items: center;
-    color: var(--accent-primary, #1b5e42);
+    color: var(--czech-forest, #1d5c40);
   }
 
   .breath-pill-time {
     font-size: 0.72rem;
     padding: 0.12rem 0.45rem;
     border-radius: 999px;
-    background: var(--bg-surface, #ffffff);
-    border: 1px solid var(--border-subtle, #dce3dd);
+    background: var(--bohemian-sage, #eef5f0);
+    border: 1px solid var(--border-forest, #c5d9cd);
     color: var(--ink-secondary, #3f574a);
   }
 

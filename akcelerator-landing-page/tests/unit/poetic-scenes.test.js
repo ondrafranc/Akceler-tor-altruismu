@@ -334,6 +334,82 @@ describe('Poetic 2-Phase Deed Transformations & Preview Diorama', () => {
     handle.destroy();
   });
 
+  it('impactCanvas preview teased breath updates in-place, preserves delayed gratification, auto-sleeps after ending, and honors prefers-reduced-motion', () => {
+    const sBarvou = MICRO_ACTIONS.find((a) => a.id === 's_barvou_ven');
+    const rainbowColors = ['#fb7185', '#fb923c', '#facc15', '#34d399', '#38bdf8', '#c084fc'];
+    const cv = createMockCanvas(380, 92);
+
+    const handle = Sensory.impactCanvas(cv, {
+      action: sBarvou,
+      preview: true,
+      primed: false,
+      teased: false,
+      silent: true
+    });
+    expect(cv.getContextCalls).toBe(1);
+
+    // Let resting preview sleep
+    stepFrames(100);
+    expect(rafQueue.length).toBe(0);
+
+    // Enable gentle ambient tease breath -> wakes loop in-place without recreating context or leaking rainbow/climax
+    cv.ops.length = 0;
+    handle.update({
+      action: sBarvou,
+      preview: true,
+      primed: false,
+      teased: true,
+      silent: true
+    });
+    expect(cv.getContextCalls).toBe(1);
+    expect(rafQueue.length).toBe(1);
+
+    stepFrames(45);
+    const leakedRainbow = cv.ops.filter(
+      (o) => o.op === 'stroke' && rainbowColors.includes(o.strokeStyle)
+    );
+    expect(leakedRainbow.length).toBe(0);
+    expect(cv.getAttribute('data-molly-mini')).toBeNull();
+    expect(cv.getAttribute('data-molly-arcs')).toBeNull();
+
+    // Turning teased back off settles previewP -> 0 and auto-sleeps cleanly
+    handle.update({
+      action: sBarvou,
+      preview: true,
+      primed: false,
+      teased: false,
+      silent: true
+    });
+    stepFrames(140);
+    expect(rafQueue.length).toBe(0);
+    handle.destroy();
+
+    // Under prefers-reduced-motion, teased never schedules any rAF loop
+    globalThis.window = /** @type {Window & typeof globalThis} */ (/** @type {unknown} */ ({
+      devicePixelRatio: 1,
+      matchMedia: (q) => ({ matches: q.includes('prefers-reduced-motion') }),
+      addEventListener: () => {}
+    }));
+    const redCv = createMockCanvas(380, 92);
+    const redHandle = Sensory.impactCanvas(redCv, {
+      action: sBarvou,
+      preview: true,
+      primed: false,
+      teased: true,
+      silent: true
+    });
+    expect(rafQueue.length).toBe(0);
+    redHandle.update({
+      action: sBarvou,
+      preview: true,
+      primed: false,
+      teased: false,
+      silent: true
+    });
+    expect(rafQueue.length).toBe(0);
+    redHandle.destroy();
+  });
+
   it('snaps climax directly to p = 1 on frame 0 without scheduling rAF when prefers-reduced-motion is active', () => {
     globalThis.window = /** @type {Window & typeof globalThis} */ (/** @type {unknown} */ ({
       devicePixelRatio: 1,

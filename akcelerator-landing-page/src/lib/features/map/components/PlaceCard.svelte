@@ -144,7 +144,9 @@
     Boolean(safePhone || tpl?.mailtoUrl || showMapyQuick || showTemplateQuick),
   );
   const effectiveMetric = $derived(localPlaceMetric || placeMetric || 0);
-  const effectMeta = $derived(getActionEffectMeta(placeAction, effectiveMetric));
+  const effectMeta = $derived(
+    getActionEffectMeta(placeAction, effectiveMetric),
+  );
 </script>
 
 {#if p}
@@ -283,7 +285,11 @@
     </div>
 
     {#if hasQuickContacts}
-      <div class="pc-quick-contacts" role="group" aria-label="Rychlý kontakt a mapa">
+      <div
+        class="pc-quick-contacts"
+        role="group"
+        aria-label="Rychlý kontakt a mapa"
+      >
         {#if safePhone}
           <a
             href={`tel:${safePhone.replace(/[^\d+]/g, "")}`}
@@ -325,7 +331,8 @@
             onclick={() => onToggleTemplate?.(p)}
           >
             <AppIcon name="message-circle" size={14} />
-            <span>{openTemplateId === p.id ? "Skrýt zprávu" : "Co napsat"}</span>
+            <span>{openTemplateId === p.id ? "Skrýt zprávu" : "Co napsat"}</span
+            >
           </button>
         {/if}
       </div>
@@ -494,7 +501,7 @@
 <style>
   .place-card {
     background: var(--bg-surface, #ffffff);
-    border: 1px solid var(--border-subtle, #dce3dd);
+    border: 1px solid var(--border-forest, #c5d9cd);
     border-radius: 16px;
     padding: 1.1rem 1.2rem;
     box-shadow: var(--shadow-sm);
@@ -506,6 +513,36 @@
     max-width: 100%;
     box-sizing: border-box;
     overflow-wrap: break-word;
+  }
+
+  @media (min-width: 981px) and (max-width: 1024px) and (max-height: 820px) {
+    .place-card {
+      padding: 0.78rem 1rem;
+    }
+
+    .pc-meta-top {
+      margin-bottom: 0.24rem;
+    }
+
+    .pc-title {
+      margin-bottom: 0.2rem;
+      font-size: 1.05rem;
+    }
+
+    .pc-addr {
+      margin-bottom: 0.32rem;
+    }
+
+    .pc-desc {
+      margin-bottom: 0.45rem;
+      line-height: 1.4;
+      font-size: 0.84rem;
+    }
+
+    .pc-decision-box {
+      padding: 0.48rem 0.72rem;
+      margin-bottom: 0.55rem;
+    }
   }
 
   .place-card:hover,

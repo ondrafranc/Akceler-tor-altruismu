@@ -44,6 +44,7 @@ export function impactCanvas(node, params = {}) {
       mode: spec.mode,
       preview: isPreview,
       primed: Boolean(p?.primed),
+      teased: Boolean(p?.teased),
       climax: !isPreview && Boolean(p?.climax),
       onWeightUpdate: isPreview
         ? undefined
@@ -67,6 +68,7 @@ export function impactCanvas(node, params = {}) {
         setup(nextParams);
       } else if (nextParams?.preview) {
         destroy?.setPrimed?.(Boolean(nextParams?.primed));
+        destroy?.setTeased?.(Boolean(nextParams?.teased));
       }
     },
     destroy() {

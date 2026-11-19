@@ -116,7 +116,7 @@
     padding: 1.55rem 1.45rem;
     border-radius: 18px;
     background: var(--bg-surface, #ffffff);
-    border: 1px solid var(--border-subtle, #dce3dd);
+    border: 1px solid var(--border-forest, #c5d9cd);
     box-shadow: var(--shadow-sm, 0 2px 8px rgba(18, 42, 30, 0.05));
     text-decoration: none;
     color: inherit;
@@ -173,6 +173,8 @@
   }
 
   .bento-cta {
+    align-self: flex-start;
+    width: fit-content;
     font-size: 0.9rem;
     font-weight: 700;
     color: var(--czech-forest, #1d5c40);
@@ -199,6 +201,20 @@
     .bento-paths {
       grid-template-columns: minmax(0, 1fr);
       gap: 0.9rem;
+    }
+  }
+
+  @media (max-width: 680px) {
+    .bento-card {
+      padding: 1.2rem 1.2rem;
+    }
+
+    .bento-icon-wrap {
+      margin-bottom: 0.78rem;
+    }
+
+    .bento-desc {
+      margin-bottom: 0.85rem;
     }
   }
 </style>

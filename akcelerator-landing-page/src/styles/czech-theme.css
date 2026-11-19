@@ -271,7 +271,7 @@ h4 {
   width: 100%;
   padding: 1.5rem 0 1.25rem;
   margin-bottom: 1.35rem;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-forest);
 }
 
 @media (min-width: 960px) {
@@ -380,7 +380,7 @@ h4 {
 
 .calm-drawer {
   background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-forest);
   border-radius: 16px;
   padding: 0.95rem 1.25rem;
   box-shadow: var(--shadow-sm);
@@ -407,11 +407,11 @@ h4 {
   content: 'Rozbalit';
   font-size: 0.78rem;
   font-weight: 700;
-  color: var(--accent-primary);
+  color: var(--czech-forest);
   padding: 0.26rem 0.68rem;
   border-radius: 999px;
-  background: var(--bg-subtle);
-  border: 1px solid var(--border-subtle);
+  background: var(--bohemian-mist);
+  border: 1px solid var(--border-forest);
 }
 
 @media (min-width: 960px) {

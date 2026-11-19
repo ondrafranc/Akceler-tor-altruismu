@@ -101,11 +101,11 @@ Akcelerátor altruismu/
 │   │   │   ├── app/guided/+page.svelte        # Průvodce výběrem na míru během 60 sekund (WCAG 2.4.3 pořadí)
 │   │   │   ├── app/online/+page.svelte        # Filtrovatelný katalog samostatných karet online i lokálních mikro-akcí
 │   │   │   └── api/                           # Backend endpointy (/community-nearby, /feedback, /geocode, /nearby, /pulse, /submissions, /test-supabase)
-│   └── tests/                                 # Vitest jednotkové testy (17 souborů / 216 testů) a Playwright E2E (17 *.spec.ts / 320 testů)
+│   └── tests/                                 # Vitest jednotkové testy (17 souborů / 216 testů) a Playwright E2E (18 *.spec.ts / 324 testů)
 ```
 
 ### Hlavní trasy aplikace (Routes)
-1. **`/` (Hlavní stránka)** — Prosvětlený vstup s `<picture>` WebP svítáním nad českou lesní tůní (`/art/sanctuary-dawn.*`), dynamickým Hero claimem reagujícím na aktivní režim (`HOME_MODES`, `?intent=`, `?action=`), jednotnou morphing scénou `.deed-stage` (`preview -> active -> payoff`), 4 skutečně filtrujícími záložkami energie (`45` *Mám 2 min* / `8` *Mám 15 min* / `16` *Osobně* / `9` *Dlouhodobě*), `sessionStorage` stavem balíčku (`AA_HOME_DECK_STATE_KEY`), plynule toulavou kočkou Molly na desktopu, rychlými portály, skokem do českých měst a upoutávkou na *Krajinu dobra*.
+1. **`/` (Hlavní stránka)** — Prosvětlený vstup s `<picture>` WebP svítáním nad českou lesní tůní (`/art/sanctuary-dawn.*`) sahajícím za horní lištu na desktopu, tabletu i mobilu, vlevo zarovnaným editorial přivítáním (`Pomáhat může být lehké.` + dynamická teplá kurzíva `.hero-serif` a mobilní podtitulek `.hero-mobile-claim` reagující na aktivní režim `HOME_MODES`, `?intent=` i `?action=`), jednotnou morphing scénou `.deed-stage` (`preview -> active -> payoff`), 4 skutečně filtrujícími záložkami energie (`45` *Mám 2 min* / `8` *Mám 15 min* / `16` *Osobně* / `9` *Dlouhodobě*), `sessionStorage` stavem balíčku (`AA_HOME_DECK_STATE_KEY`), plynule toulavou a hladitelnou kočkou Molly napříč desktopem, tabletem i mobilem, rychlými portály, skokem do českých měst a upoutávkou na *Krajinu dobra*.
 2. **`/near` (Mapa pomoci v okolí)** — Reálná místa pomoci po celé ČR (Leaflet + dlaždice OpenStreetMap, geokódování Nominatim přes `/api/geocode`, `81` kurátorovaných míst v `fallback-places.js` a schválené komunitní tipy ze Supabase `community_submissions` se zálohou `18` položek v `community-items.js`), šuplík sekundárních filtrů *„Filtrovat“*, sjednocená nápověda mise `getPlaceActionHint`, 1-tap `tel:`/`mailto:`/`Mapy.cz` a připravené šablony zpráv (včetně rozlišení kočičích útulků).
 3. **`/svet` (Krajina dobra)** — Tiché útočiště s českou lesní tůní (`sanctuary-dawn.*` / `sanctuary-twilight.*`), lucernami a hvězdami dobrých skutků, dechovým cvičením, líně načítanou noční vrstvou, jediným počítadlem pamlsků pro Molly a výchozím ztlumeným zvukem.
 4. **`/app` (Rozcestník)** — Čtyřkartový přehled cest (*Krajina dobra*, *Průvodce*, *Mapa v okolí*, *Drobné skutky*).
@@ -124,7 +124,7 @@ Akcelerátor altruismu/
 | `npm run check` | Provede striktní typovou kontrolu (`svelte-check`) | Runs strict TypeScript/JSDoc typechecking |
 | `npm run test:unit` | Spustí jednotkové testy (Vitest: `17` souborů, `216` testů) | Runs fast Vitest unit test suite (`17` files, `216` tests) |
 | `npm run test:api` | Spustí API integrační testy (`tests/api.spec.ts`) — zkratka z root `package.json` | Runs Playwright API tests (`tests/api.spec.ts`) via root `package.json` shorthand |
-| `npm test` | Spustí kompletní Playwright E2E sadu (`17` `*.spec.ts` / `320` testů) | Runs full Playwright end-to-end test suite (`17` specs / `320` tests) |
+| `npm test` | Spustí kompletní Playwright E2E sadu (`18` `*.spec.ts` / `325` testů) | Runs full Playwright end-to-end test suite (`18` specs / `325` tests) |
 
 Aktuální stav migrace na Svelte 5: `23/31` `.svelte` souborů využívá Runes (`$state`, `$derived`, `$props()`, `$effect`), `2` soubory jsou bezstavový Svelte 5 (`src/routes/+error.svelte`, `src/lib/features/home/SanctuaryTeaser.svelte`) a `6` komponent zatím drží starší syntaxi Svelte 4. Pro spuštění konkrétní E2E specifikace (včetně API testů) z `akcelerator-landing-page/` používejte vždy `npm test -- <spec>` (např. `npm test -- tests/api.spec.ts` nebo z kořene `npm --prefix akcelerator-landing-page test -- tests/api.spec.ts`), nikoli holé `npx playwright test`.
 

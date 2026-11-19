@@ -11,8 +11,6 @@
   import MollyCompanion from "../components/MollyCompanion.svelte";
   import MollyDock, {
     isCompactDock,
-    mollyDockBridge,
-    normalizeMollyIcon,
   } from "../components/MollyDock.svelte";
   import AppIcon from "$lib/components/AppIcon.svelte";
   import { openFeedbackModal, toggleCrisisModal } from "$lib/utils.js";
@@ -80,11 +78,45 @@
   let menuOpen = $state(false);
   let isNarrowMobile = $state(false);
   let drawerTopPx = $state(64);
+  /** @type {'none' | 'dark' | 'light'} */
+  let topNavShieldMode = $state(/** @type {'none' | 'dark' | 'light'} */ ("none"));
+  /** @type {'none' | 'dark' | 'light'} */
+  const effectiveTopShield = $derived(pathname !== "/" ? "light" : topNavShieldMode);
 
   /** @type {HTMLElement | null} */
   let headerEl = $state(null);
   /** @type {HTMLElement | null} */
   let drawerEl = $state(null);
+
+  function syncTopNavShield() {
+    if (typeof window === "undefined") return;
+    if (pathname !== "/") {
+      if (topNavShieldMode !== "light") topNavShieldMode = "light";
+      return;
+    }
+    const sy = window.scrollY || 0;
+    if (sy <= 6) {
+      if (topNavShieldMode !== "none") topNavShieldMode = "none";
+      return;
+    }
+    const navBottom = headerEl?.getBoundingClientRect().bottom || 62;
+    const isNarrow = (window.innerWidth || 1280) <= 680;
+    const probeEl = isNarrow
+      ? document.querySelector(".hero-wave") || document.querySelector(".hero-painted-backdrop")
+      : document.querySelector(".hero-stage");
+    let nextMode = /** @type {'dark' | 'light'} */ ("light");
+    if (probeEl) {
+      const pr = probeEl.getBoundingClientRect();
+      if (isNarrow && probeEl.classList.contains("hero-wave")) {
+        nextMode = pr.top <= navBottom - 6 ? "light" : "dark";
+      } else {
+        nextMode = pr.bottom <= navBottom + 4 ? "light" : "dark";
+      }
+    }
+    if (topNavShieldMode !== nextMode) {
+      topNavShieldMode = nextMode;
+    }
+  }
 
   function updateDrawerTop() {
     if (headerEl) {
@@ -108,6 +140,7 @@
 
   afterNavigate(() => {
     menuOpen = false;
+    syncTopNavShield();
   });
 
   onMount(() => {
@@ -137,6 +170,7 @@
       if (menuOpen) {
         updateDrawerTop();
       }
+      syncTopNavShield();
     };
 
     syncBreakpoints();
@@ -146,6 +180,7 @@
     compactMql?.addEventListener?.("change", syncBreakpoints);
     narrowMql?.addEventListener?.("change", syncBreakpoints);
     window.addEventListener("resize", syncBreakpoints, { passive: true });
+    window.addEventListener("scroll", syncTopNavShield, { passive: true });
 
     /** @param {KeyboardEvent} e */
     const onKeyDown = (e) => {
@@ -170,6 +205,7 @@
       compactMql?.removeEventListener?.("change", syncBreakpoints);
       narrowMql?.removeEventListener?.("change", syncBreakpoints);
       window.removeEventListener("resize", syncBreakpoints);
+      window.removeEventListener("scroll", syncTopNavShield);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("pointerdown", onPointerDownOutside);
     };
@@ -206,8 +242,17 @@
   />
 </svelte:head>
 
-<div class="app-shell" data-hydrated={hydrated ? "true" : undefined}>
-  <header class="top-nav" class:is-drawer-open={menuOpen} bind:this={headerEl}>
+<div
+  class="app-shell"
+  data-hydrated={hydrated ? "true" : undefined}
+>
+  <header
+    class="top-nav"
+    class:is-drawer-open={menuOpen}
+    class:shield-light={effectiveTopShield === "light"}
+    class:shield-dark={effectiveTopShield === "dark"}
+    bind:this={headerEl}
+  >
     <div class="nav-capsule">
       <a href="/" class="brand">
         <span class="brand-mark" aria-hidden="true">
@@ -314,25 +359,6 @@
     </nav>
   {/if}
 
-  {#if $isCompactDock && $mollyDockBridge.compactInflowWhisper && $mollyDockBridge.activeWhisper}
-    <div
-      class="molly-whisper-bubble is-compact-inflow"
-      role="status"
-      aria-live="polite"
-    >
-      <span class="molly-whisper-inner">
-        <span class="whisper-icon" aria-hidden="true">
-          <AppIcon
-            name={normalizeMollyIcon($mollyDockBridge.activeWhisper.icon, "paw")}
-            size={14}
-            strokeWidth={2}
-          />
-        </span>
-        <span class="whisper-text">{$mollyDockBridge.activeWhisper.text}</span>
-      </span>
-    </div>
-  {/if}
-
   <main class="main-content">
     {@render children?.()}
   </main>
@@ -419,11 +445,51 @@
     overflow: visible;
   }
 
+  .top-nav::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.16s ease;
+  }
+
+  .top-nav.shield-light::before {
+    opacity: 1;
+    background: linear-gradient(
+      180deg,
+      var(--bg-canvas, #f6f7f3) 0%,
+      var(--bg-canvas, #f6f7f3) 78%,
+      rgba(246, 247, 243, 0.86) 90%,
+      rgba(246, 247, 243, 0) 100%
+    );
+  }
+
+  .top-nav.shield-dark::before {
+    opacity: 1;
+    background: linear-gradient(
+      180deg,
+      rgba(8, 25, 17, 0.98) 0%,
+      rgba(8, 25, 17, 0.94) 76%,
+      rgba(8, 25, 17, 0.56) 90%,
+      rgba(8, 25, 17, 0) 100%
+    );
+  }
+
+  .top-nav.shield-light .nav-capsule,
+  .top-nav.shield-dark .nav-capsule {
+    background: #ffffff;
+  }
+
   .top-nav.is-drawer-open {
     z-index: 949;
   }
 
   .nav-capsule {
+    position: relative;
+    z-index: 1;
     pointer-events: auto;
     width: 100%;
     max-width: 1140px;
@@ -431,9 +497,10 @@
     margin: 0 auto;
     padding: 0.42rem 0.65rem 0.42rem 0.8rem;
     border-radius: 999px;
-    background: var(--bg-surface, #ffffff);
-    border: 1px solid var(--border-subtle, #dce3dd);
-    box-shadow: var(--shadow-sm, 0 2px 8px rgba(18, 42, 30, 0.05));
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid var(--border-forest, #c5d9cd);
+    box-shadow: 0 6px 20px -8px rgba(24, 62, 44, 0.12),
+      0 1px 3px rgba(24, 62, 44, 0.05);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -682,10 +749,10 @@
   .site-footer {
     position: relative;
     margin-top: 3.5rem;
-    background: var(--bg-subtle, #edf2ee);
+    background: var(--bohemian-mist, #e6f0ea);
     color: var(--ink-secondary, #3f574a);
     padding: 2.75rem 1.25rem;
-    border-top: 1px solid var(--border-subtle, #dce3dd);
+    border-top: 1px solid var(--border-forest, #c5d9cd);
   }
 
   .footer-inner {
@@ -721,7 +788,7 @@
     width: 9px;
     height: 9px;
     border-radius: 50%;
-    background: var(--accent-primary, #1b5e42);
+    background: var(--czech-linden, #256f4e);
     flex-shrink: 0;
   }
 
@@ -790,7 +857,7 @@
     gap: 0.5rem;
     margin-top: 0.45rem;
     padding-top: 0.65rem;
-    border-top: 1px solid var(--border-subtle, #dce3dd);
+    border-top: 1px solid var(--border-forest, #c5d9cd);
   }
 
   .fc-btn {
@@ -804,7 +871,7 @@
     box-sizing: border-box;
     padding: 0.55rem 0.95rem;
     border-radius: 999px;
-    border: 1px solid var(--border-strong, #c2cec5);
+    border: 1px solid var(--border-forest-strong, #a7c4b3);
     background: var(--bg-surface, #ffffff);
     color: var(--ink-primary, #14281d);
     font-family: inherit;
@@ -1068,44 +1135,6 @@
       line-height: 1.02;
       letter-spacing: 0.005em;
     }
-  }
-
-  .molly-whisper-bubble.is-compact-inflow {
-    position: sticky;
-    top: calc(env(safe-area-inset-top, 0px) + 66px);
-    z-index: 99;
-    margin: 0.4rem auto 0.35rem;
-    width: min(340px, calc(100% - 20px));
-    box-sizing: border-box;
-    background: var(--bg-surface, #ffffff);
-    border: 1px solid var(--border-strong, #c2cec5);
-    color: var(--ink-primary, #14281d);
-    padding: 0.54rem 0.82rem;
-    border-radius: 14px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    line-height: 1.38;
-    box-shadow: var(--shadow-md, 0 8px 20px -6px rgba(18, 42, 30, 0.08));
-    pointer-events: none;
-  }
-
-  .molly-whisper-bubble.is-compact-inflow .molly-whisper-inner {
-    display: inline-flex;
-    align-items: flex-start;
-    gap: 6px;
-    text-align: left;
-  }
-
-  .molly-whisper-bubble.is-compact-inflow .whisper-icon {
-    flex-shrink: 0;
-    color: var(--accent-primary, #1b5e42);
-    display: inline-flex;
-    align-items: center;
-    margin-top: 1px;
-  }
-
-  .molly-whisper-bubble.is-compact-inflow .whisper-text {
-    overflow-wrap: anywhere;
   }
 
   @media (max-width: 359px) {
