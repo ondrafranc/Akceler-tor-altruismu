@@ -13,7 +13,7 @@
 - [ ] `npm run test:unit` passes (all unit tests green)
 - [ ] `npm run build` succeeds locally
 - [ ] Relevant Playwright E2E specs pass via `npm test -- <spec>`
-- [ ] Tested on desktop (`1440×900`) and narrow mobile (`360×800` / `375×667`)
+- [ ] Tested on desktop (`1280×800`, `1440×900`, `1920×1080`) and narrow mobile (`360×800` / `375×667`)
 - [ ] No secrets or sensitive `.env` files committed
 - [ ] New or modified components adhere to Svelte 5 Runes (`$state`, `$derived`, `$props()`, `$effect`) and project rules in `AGENTS.md` / `.agents/rules/`
 - [ ] Relevant `.md` documentation, `.agents/rules/`, and `CHANGELOG.md` are synced with code/test changes per `AGENTS.md` §3

@@ -2,16 +2,33 @@
   import AppIcon from '$lib/components/AppIcon.svelte';
   import { HOPE_FACTS } from '../../data/czech-actions.js';
 
-  export let hopeIndex = 0;
-  export let onNextHope = null;
+  /**
+   * @type {{
+   *   hopeIndex?: number,
+   *   onNextHope?: (() => void) | null
+   * }}
+   */
+  let { hopeIndex = 0, onNextHope = null } = $props();
 
-  $: activeHope = HOPE_FACTS && HOPE_FACTS.length ? HOPE_FACTS[hopeIndex % HOPE_FACTS.length] : null;
+  let localOffset = $state(0);
+
+  $effect(() => {
+    hopeIndex;
+    localOffset = 0;
+  });
+
+  const effectiveIndex = $derived(hopeIndex + localOffset);
+  const activeHope = $derived(
+    HOPE_FACTS && HOPE_FACTS.length
+      ? HOPE_FACTS[((effectiveIndex % HOPE_FACTS.length) + HOPE_FACTS.length) % HOPE_FACTS.length]
+      : null
+  );
 
   function cycleNext() {
     if (onNextHope) {
       onNextHope();
     } else {
-      hopeIndex = (hopeIndex + 1) % (HOPE_FACTS?.length || 1);
+      localOffset = (localOffset + 1) % (HOPE_FACTS?.length || 1);
     }
   }
 </script>
@@ -42,7 +59,7 @@
     {/if}
     <div class="qh-actions">
       <a href={activeHope.actionHref} class="qh-link">{activeHope.actionLabel}</a>
-      <button type="button" class="qh-next" on:click={cycleNext}>
+      <button type="button" class="qh-next" onclick={cycleNext}>
         <AppIcon name="refresh-cw" size={14} strokeWidth={2.1} />
         <span>Další důkaz naděje</span>
       </button>
@@ -64,7 +81,7 @@
     font-size: 0.74rem;
     font-weight: 700;
     letter-spacing: 0.08em;
-    color: var(--accent-warm, #b8651b);
+    color: var(--accent-warm-ink, #8f4b0e);
     text-transform: uppercase;
     display: block;
     margin-bottom: 0.55rem;
@@ -88,7 +105,7 @@
 
   .qh-source-row {
     font-size: 0.84rem;
-    color: var(--ink-muted, #61786b);
+    color: var(--ink-muted, #516659);
     margin-bottom: 0.75rem;
     display: flex;
     align-items: center;
@@ -160,7 +177,7 @@
   }
 
   .qh-next:hover {
-    background: #e1eae4;
+    background: var(--bohemian-mist, #e6f0ea);
     border-color: var(--accent-primary, #1b5e42);
   }
 

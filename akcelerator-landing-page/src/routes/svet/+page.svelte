@@ -2618,7 +2618,7 @@
   <section class="sanctuary-stage">
     <div class="sanctuary-top">
       <div class="sanctuary-intro">
-        <div class="kicker">KRAJINA DOBRA · SKUTEČNÉ SKUTKY V ČESKU</div>
+        <div class="kicker">KRAJINA DOBRA · TICHÉ ÚTOČIŠTĚ</div>
         <h1>
           Krajina, kde svítí <span class="serif-accent">dobré skutky</span>
         </h1>
@@ -2750,7 +2750,10 @@
             aria-pressed={atmosphereMode === "dawn"}
           >
             <AppIcon name="sunrise" size={15} strokeWidth={2} />
-            <span><span class="atmo-prefix">Zlaté</span> <span class="atmo-main">svítání</span></span>
+            <span
+              ><span class="atmo-prefix">Zlaté</span>
+              <span class="atmo-main">svítání</span></span
+            >
           </button>
           <button
             type="button"
@@ -2763,7 +2766,10 @@
             aria-pressed={atmosphereMode === "night"}
           >
             <AppIcon name="moon" size={15} strokeWidth={2} />
-            <span><span class="atmo-prefix">Hvězdná</span> <span class="atmo-main">noc</span></span>
+            <span
+              ><span class="atmo-prefix">Hvězdná</span>
+              <span class="atmo-main">noc</span></span
+            >
           </button>
         </div>
 
@@ -2775,7 +2781,10 @@
             title="Inspirace náhodným dobrým skutkem"
           >
             <AppIcon name="sparkles" size={15} strokeWidth={2} />
-            <span><span class="hud-btn-prefix">Náhodný</span> <span class="hud-btn-main">skutek</span></span>
+            <span
+              ><span class="hud-btn-prefix">Náhodný</span>
+              <span class="hud-btn-main">skutek</span></span
+            >
           </button>
           <button
             type="button"
@@ -2791,7 +2800,9 @@
               size={15}
               strokeWidth={2}
             />
-            <span class="sound-btn-label">{soundEnabled ? "Tóny: zapnuto" : "Jemné tóny"}</span>
+            <span class="sound-btn-label"
+              >{soundEnabled ? "Tóny: zapnuto" : "Jemné tóny"}</span
+            >
           </button>
         </div>
       </div>
@@ -3064,7 +3075,7 @@
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.1em;
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
     margin-bottom: 0.24rem;
   }
 
@@ -3255,7 +3266,7 @@
     border-radius: 999px;
     background: rgba(6, 24, 16, 0.94);
     border: 1px solid rgba(253, 230, 138, 0.48);
-    color: #fef3c7;
+    color: var(--hero-dawn, #fef3c7);
     font-size: 0.76rem;
     display: inline-flex;
     align-items: center;
@@ -3276,7 +3287,7 @@
   }
 
   .hp-hint {
-    color: #a7f3d0;
+    color: var(--bohemian-mist, #e6f0ea);
     font-weight: 700;
   }
 
@@ -3303,7 +3314,7 @@
     height: 34px;
     border-radius: 50%;
     background: var(--accent-warm-tint);
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3331,7 +3342,7 @@
     font-size: 0.66rem;
     font-weight: 800;
     letter-spacing: 0.08em;
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
   }
 
   .seed-auto-btn {
@@ -3368,7 +3379,7 @@
     border-radius: 999px;
     background: rgba(8, 30, 21, 0.95);
     border: 1px solid rgba(253, 230, 138, 0.45);
-    color: #fef3c7;
+    color: var(--hero-dawn, #fef3c7);
     font-size: 0.83rem;
     font-weight: 600;
     z-index: 5;
@@ -3392,7 +3403,7 @@
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.1em;
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
     margin-bottom: 0.3rem;
   }
 
@@ -3507,11 +3518,11 @@
   }
 
   .legend-chip.legend-star .chip-symbol {
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
   }
 
   .legend-chip.legend-lantern .chip-symbol {
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
   }
 
   .legend-chip.legend-molly .chip-symbol {
@@ -3580,7 +3591,7 @@
     border-radius: 999px;
     background: var(--accent-warm-tint);
     border: 1px solid rgba(184, 101, 27, 0.35);
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
     font-size: 0.74rem;
     font-weight: 700;
     line-height: 1.2;
@@ -3607,7 +3618,7 @@
     align-items: center;
     justify-content: center;
     line-height: 1;
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
     transition:
       transform 0.18s ease,
       color 0.18s ease;
@@ -3722,7 +3733,7 @@
     border-radius: 999px;
     border: 1px solid rgba(253, 230, 138, 0.55);
     background: rgba(10, 30, 21, 0.92);
-    color: #fef3c7;
+    color: var(--hero-dawn, #fef3c7);
     font-family: inherit;
     font-size: 0.76rem;
     font-weight: 700;

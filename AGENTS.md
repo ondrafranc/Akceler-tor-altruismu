@@ -5,6 +5,8 @@
 
 Každá obrazovka, text i technické rozhodnutí slouží jedinému cíli: pomoc druhým musí být okamžitá, bezpracná a vizuálně přitažlivá — krásné stránky a přímá cesta od impulzu ke skutečnému dobrému skutku. Dílčí pravidla nejsou dogma: jakmile některé brání kráse nebo jednoduchosti, zpochybni ho a oprav.
 
+Atmosféra a identita webu staví na pocitu **„klidného útočiště“** — návratu tam, kde člověku bylo (nebo bude) dobře, přirozeně ukotveného v české krajině a českém lese. Tím nenápadně a bez jakéhokoli patosu připomíná přirozenou českou sounáležitost a štědrost. Nepoužívej patetická hesla (např. *„Skutečné skutky v Česku“*) ani popisné slovo *„malovaná / malovaný“* v textacích.
+
 ## 2. Základní principy uživatelského zážitku
 1. **Okamžitý, prosvětlený vstup bez překážek**:
    - Na mobilu ani desktopu nestojí nad hlavní kartou na `/` celoobrazovkové uvítací plakáty, kotevní scroll-tlačítka, morální kázání ani stěny filtrů. Tvrdé zamčení stránkování `100dvh` bez scrollu na malém mobilu (`360×800`, `375×667`) je trvale vyřazeno ve prospěch přirozeného scrollu s hlavní kartou a CTA vysoko u horního okraje.

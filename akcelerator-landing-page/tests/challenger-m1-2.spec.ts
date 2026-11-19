@@ -28,7 +28,7 @@ test.describe('Challenger M1-2: Responsiveness, Visual Stability & Sensory Engin
     // Living diorama card & kicker
     const card = section.locator('.sanctuary-portal-card');
     await expect(card).toBeVisible();
-    await expect(card.locator('.stage-kicker')).toContainText('KRAJINA DOBRA · MALOVANÝ SVĚT POMOCI');
+    await expect(card.locator('.stage-kicker')).toContainText('KRAJINA DOBRA · TICHÉ ÚTOČIŠTĚ');
 
     // Picture element, WebP source & JPG fallback
     const picture = section.locator('picture');
@@ -40,7 +40,7 @@ test.describe('Challenger M1-2: Responsiveness, Visual Stability & Sensory Engin
     const img = picture.locator('img.preview-bg-img');
     await expect(img).toBeVisible();
     await expect(img).toHaveAttribute('src', '/art/sanctuary-dawn.jpg');
-    await expect(img).toHaveAttribute('alt', 'Malovaná česká tůň zalitá zlatým svítáním s plovoucími lucernami dobrých skutků');
+    await expect(img).toHaveAttribute('alt', 'Klidná česká lesní tůň za ranního svítání obklopená břízami a smrky');
 
     // Verify image actually loads (scroll into view for loading="lazy")
     await img.scrollIntoViewIfNeeded();

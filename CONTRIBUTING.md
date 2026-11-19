@@ -47,7 +47,7 @@ Databázové migrace a bezpečnostní nastavení jsou popsány v [DEPLOYMENT_INS
 
 ### Politika Svelte 5 Runes
 - Veškeré **nové a refaktorované** `.svelte` komponenty musí používat **Svelte 5 Runes** (`$state`, `$derived`, `$props()`, `$effect`).
-- Aktuální pokrytí v `src/`: `20/31` `.svelte` souborů používá Runes, `1` bezstavový Svelte 5 soubor (`src/routes/+error.svelte` s `onclick=`) a `10` zbývajících komponent se starší syntaxí Svelte 4 (`SmallWinCelebration.svelte`, `CityJumpStrip.svelte`, `HopeCarousel.svelte`, `PathwaysBento.svelte`, `PortalsDrawer.svelte`, `QuickStartSection.svelte`, `SanctuaryTeaser.svelte`, `DeedInspectorModal.svelte`, `ProgressDashboard.svelte`, `src/routes/app/+page.svelte`) se migruje postupně při své úpravě — do nově psaných nebo refaktorovaných souborů staré vzory nepřidávejte.
+- Aktuální pokrytí v `src/`: `23/31` `.svelte` souborů používá Runes, `2` bezstavové Svelte 5 soubory (`src/routes/+error.svelte`, `src/lib/features/home/SanctuaryTeaser.svelte` s `onclick=`) a `6` zbývajících komponent se starší syntaxí Svelte 4 (`SmallWinCelebration.svelte`, `PortalsDrawer.svelte`, `QuickStartSection.svelte`, `DeedInspectorModal.svelte`, `ProgressDashboard.svelte`, `src/routes/app/+page.svelte`) se migruje postupně při své úpravě — do nově psaných nebo refaktorovaných souborů staré vzory nepřidávejte.
 
 ### Příklad typované Runes komponenty (`"checkJs": true`)
 ```svelte
@@ -98,7 +98,7 @@ npm run test:unit
 # 3. Produkční sestavení aplikace
 npm run build
 
-# 4. E2E testy Playwright (16 *.spec.ts souborů / 315 testů; uvnitř akcelerator-landing-page/ vždy přes npm test -- <spec>)
+# 4. E2E testy Playwright (17 *.spec.ts souborů / 320 testů; uvnitř akcelerator-landing-page/ vždy přes npm test -- <spec>)
 cd akcelerator-landing-page
 npm test -- tests/api.spec.ts
 ```

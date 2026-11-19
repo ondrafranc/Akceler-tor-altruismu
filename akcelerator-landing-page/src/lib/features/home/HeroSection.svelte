@@ -165,9 +165,9 @@
     gap: 0.5rem;
     padding: 0.28rem 0.72rem;
     border-radius: 999px;
-    background: #e3f0e8;
-    border: 1px solid #bdd8c8;
-    color: #195239;
+    background: var(--bohemian-mist, #e6f0ea);
+    border: 1px solid var(--border-forest, #c5d9cd);
+    color: var(--accent-primary, #1b5e42);
     font-size: 0.8rem;
     font-weight: 700;
     letter-spacing: 0.015em;
@@ -178,7 +178,7 @@
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: #1f7a52;
+    background: var(--czech-linden, #256f4e);
     flex-shrink: 0;
   }
 
@@ -279,7 +279,7 @@
   .sanctuary-hero-btn:hover {
     background: var(--bohemian-mist, #e6f0ea);
     border-color: var(--czech-linden, #256f4e);
-    color: #195239;
+    color: var(--accent-primary, #1b5e42);
   }
 
   @media (min-width: 681px) {
@@ -289,19 +289,19 @@
       background:
         radial-gradient(
           92% 88% at 78% 24%,
-          rgba(38, 144, 97, 0.88) 0%,
-          rgba(26, 104, 70, 0.42) 48%,
+          rgba(37, 111, 78, 0.72) 0%,
+          rgba(29, 92, 64, 0.38) 48%,
           transparent 70%
         ),
         radial-gradient(
           68% 74% at 12% 14%,
-          rgba(251, 191, 36, 0.3) 0%,
-          rgba(52, 211, 153, 0.16) 38%,
+          rgba(254, 243, 199, 0.18) 0%,
+          rgba(37, 111, 78, 0.16) 38%,
           transparent 64%
         ),
         radial-gradient(
           64% 58% at 44% 78%,
-          rgba(245, 158, 11, 0.22) 0%,
+          rgba(254, 243, 199, 0.14) 0%,
           transparent 62%
         ),
         linear-gradient(158deg, #0e3323 0%, #164b34 50%, #1e6043 100%);
@@ -313,16 +313,16 @@
     .hero-painted-backdrop {
       position: absolute;
       inset: 0;
-      opacity: 0.78;
+      opacity: 0.86;
       mask-image: linear-gradient(
         90deg,
-        rgba(0, 0, 0, 0.72) 0%,
+        rgba(0, 0, 0, 0.78) 0%,
         rgba(0, 0, 0, 0.94) 48%,
         rgba(0, 0, 0, 1) 100%
       );
       -webkit-mask-image: linear-gradient(
         90deg,
-        rgba(0, 0, 0, 0.72) 0%,
+        rgba(0, 0, 0, 0.78) 0%,
         rgba(0, 0, 0, 0.94) 48%,
         rgba(0, 0, 0, 1) 100%
       );
@@ -335,21 +335,16 @@
       background:
         radial-gradient(
           circle at 15% 18%,
-          rgba(253, 224, 71, 0.22) 0%,
-          rgba(52, 211, 153, 0.14) 32%,
-          transparent 54%
-        ),
-        radial-gradient(
-          circle at 72% 38%,
-          rgba(52, 211, 153, 0.28) 0%,
-          transparent 44%
+          rgba(246, 231, 193, 0.08) 0%,
+          rgba(37, 111, 78, 0.1) 34%,
+          transparent 56%
         ),
         radial-gradient(
           circle at 58% 24%,
-          rgba(251, 191, 36, 0.24) 0%,
-          transparent 36%
+          rgba(246, 231, 193, 0.08) 0%,
+          transparent 38%
         );
-      filter: blur(26px);
+      filter: blur(28px);
       pointer-events: none;
     }
 
@@ -358,6 +353,7 @@
       inset: 0;
       z-index: 0;
       pointer-events: none;
+      opacity: 0.34;
     }
 
     .hero-scrim {
@@ -367,24 +363,26 @@
       pointer-events: none;
       background: linear-gradient(
         90deg,
-        rgba(7, 26, 17, 0.7) 0%,
-        rgba(8, 30, 20, 0.66) 49%,
-        rgba(10, 35, 24, 0.24) 61%,
-        transparent 75%
+        rgba(8, 25, 17, 0.72) 0%,
+        rgba(9, 28, 19, 0.66) 48%,
+        rgba(11, 33, 22, 0.24) 61%,
+        transparent 76%
       );
     }
 
     .firefly {
       position: absolute;
       border-radius: 50%;
-      background: #6ee7b7;
-      box-shadow: 0 0 16px 4px rgba(52, 211, 153, 0.62);
-      animation: floatFirefly 8s ease-in-out infinite;
+      max-width: 3px;
+      max-height: 3px;
+      background: rgba(246, 231, 193, 0.55);
+      box-shadow: 0 0 5px 1px rgba(246, 231, 193, 0.22);
+      animation: floatFirefly 10s ease-in-out infinite;
     }
 
     .firefly.gold {
-      background: #fef08a;
-      box-shadow: 0 0 18px 5px rgba(251, 191, 36, 0.72);
+      background: rgba(246, 231, 193, 0.62);
+      box-shadow: 0 0 6px 1px rgba(246, 231, 193, 0.25);
     }
 
     .hero-inner {
@@ -402,15 +400,15 @@
       border-radius: 0;
       background: transparent;
       border: none;
-      color: #d1fae5;
+      color: var(--bohemian-mist, #e6f0ea);
       font-size: 0.82rem;
       font-weight: 600;
       letter-spacing: 0.02em;
     }
 
     .live-dot {
-      background: #34d399;
-      box-shadow: 0 0 12px 2px rgba(52, 211, 153, 0.85);
+      background: var(--border-forest-strong, #a7c4b3);
+      box-shadow: 0 0 10px 2px rgba(197, 217, 205, 0.55);
     }
 
     .hero-title {
@@ -423,22 +421,22 @@
     .hero-serif {
       font-size: clamp(2.1rem, 3.2vw, 3.02rem);
       line-height: 1.06;
-      color: #fde68a;
-      background: linear-gradient(118deg, #fde68a 0%, #bbf7d0 54%, #fef08a 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: #f6e7c1;
+      background: none;
+      -webkit-background-clip: border-box;
+      background-clip: border-box;
+      -webkit-text-fill-color: #f6e7c1;
     }
 
     .hero-lead {
-      color: #f0fdf4;
+      color: var(--bg-canvas, #f6f7f3);
       font-size: 1.06rem;
       line-height: 1.65;
       margin: 0 0 1.75rem 0;
     }
 
     .hero-lead strong {
-      color: #fef08a;
+      color: #f6e7c1;
     }
 
     .hero-btn {
@@ -447,38 +445,38 @@
     }
 
     .hero-btn.primary {
-      background: rgba(13, 47, 32, 0.74);
-      color: #ecfdf5;
-      border: 1px solid rgba(110, 231, 183, 0.56);
+      background: rgba(11, 35, 24, 0.72);
+      color: var(--bg-canvas, #f6f7f3);
+      border: 1px solid rgba(255, 255, 255, 0.28);
       backdrop-filter: blur(10px);
-      box-shadow: 0 8px 22px -8px rgba(4, 18, 12, 0.3);
+      box-shadow: 0 8px 22px -8px rgba(4, 18, 12, 0.34);
     }
 
     .hero-btn.primary:hover {
-      background: rgba(18, 63, 43, 0.84);
-      border-color: rgba(167, 243, 208, 0.82);
+      background: rgba(16, 52, 36, 0.86);
+      border-color: rgba(246, 231, 193, 0.6);
       color: #ffffff;
       transform: translateY(-2px);
-      box-shadow: 0 12px 26px -8px rgba(4, 18, 12, 0.42);
+      box-shadow: 0 12px 26px -8px rgba(4, 18, 12, 0.44);
     }
 
     .hero-copy a:focus-visible {
-      outline: 2px solid #fef3c7;
+      outline: 2px solid var(--hero-dawn, #fef3c7);
       outline-offset: 3px;
       box-shadow: 0 0 0 5px rgba(10, 35, 24, 0.72);
     }
 
     .sanctuary-hero-btn {
-      background: rgba(9, 34, 23, 0.78);
-      color: #fef08a;
-      border: 1px solid rgba(253, 230, 138, 0.52);
+      background: rgba(10, 31, 21, 0.72);
+      color: #f6e7c1;
+      border: 1px solid rgba(246, 231, 193, 0.36);
       backdrop-filter: blur(10px);
-      box-shadow: 0 8px 22px -8px rgba(4, 18, 12, 0.3);
+      box-shadow: 0 8px 22px -8px rgba(4, 18, 12, 0.34);
     }
 
     .sanctuary-hero-btn:hover {
-      background: rgba(16, 58, 40, 0.82);
-      border-color: rgba(254, 240, 138, 0.78);
+      background: rgba(16, 52, 36, 0.86);
+      border-color: rgba(246, 231, 193, 0.68);
       color: #ffffff;
       transform: translateY(-2px);
     }
@@ -621,8 +619,8 @@
       height: 140px;
       background: radial-gradient(
         80% 90% at 24% 25%,
-        rgba(253, 224, 71, 0.28) 0%,
-        rgba(52, 211, 153, 0.16) 55%,
+        rgba(254, 243, 199, 0.2) 0%,
+        rgba(37, 111, 78, 0.16) 55%,
         transparent 100%
       );
       pointer-events: none;
@@ -690,14 +688,14 @@
       margin-bottom: 0.2rem;
       border-radius: 999px;
       background: rgba(9, 34, 23, 0.72);
-      border: 1px solid rgba(253, 230, 138, 0.42);
-      color: #fef3c7;
+      border: 1px solid rgba(254, 243, 199, 0.42);
+      color: var(--hero-dawn, #fef3c7);
       font-size: 0.69rem;
       font-weight: 700;
     }
 
     .live-dot {
-      background: #34d399;
+      background: var(--border-forest, #c5d9cd);
     }
 
     .hero-desktop-heading,

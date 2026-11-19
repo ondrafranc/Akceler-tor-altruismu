@@ -249,9 +249,11 @@
     gap: 4px;
     padding: 3px 4px;
     border-radius: 999px;
-    background: var(--bg-surface, #ffffff);
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     border: 1px solid var(--border-strong, #c2cec5);
-    box-shadow: var(--shadow-sm, 0 2px 8px rgba(18, 42, 30, 0.05));
+    box-shadow: 0 4px 16px rgba(18, 42, 30, 0.08);
     pointer-events: auto;
     z-index: 941;
     flex-shrink: 0;
@@ -351,7 +353,7 @@
     height: 18px;
     border-radius: 999px;
     background: var(--accent-warm-tint, #fef6e8);
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
     border: 1px solid rgba(143, 75, 14, 0.32);
     flex-shrink: 0;
   }
@@ -424,7 +426,7 @@
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
     font-weight: 800;
     background: var(--accent-warm-tint, #fef6e8);
     border: 1px solid rgba(143, 75, 14, 0.24);
@@ -435,10 +437,10 @@
   }
 
   .molly-dock-pet-btn.has-pending-treat .molly-treat-counter {
-    background: #fde68a;
-    border-color: #b8651b;
-    color: #78350f;
-    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.24);
+    background: var(--hero-dawn, #fef3c7);
+    border-color: var(--accent-warm, #b8651b);
+    color: var(--accent-warm-ink, #8f4b0e);
+    box-shadow: 0 0 0 2px rgba(184, 101, 27, 0.22);
   }
 
   .molly-pending-treat-pill {
@@ -447,7 +449,7 @@
     justify-content: center;
     padding: 1px 5px;
     border-radius: 999px;
-    background: #1b5e42;
+    background: var(--accent-primary, #1b5e42);
     color: #ffffff;
     font-size: 0.68rem;
     font-weight: 800;
@@ -464,7 +466,7 @@
   .molly-gift-icon {
     display: inline-flex;
     align-items: center;
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
   }
 
   .molly-gift-track {
@@ -515,7 +517,7 @@
   .molly-dock-follow-btn.is-active {
     background: var(--accent-warm-tint, #fef6e8);
     border-color: rgba(143, 75, 14, 0.45);
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
   }
 
   .molly-pelisek-dock.is-compact .molly-dock-pet-btn,
@@ -619,15 +621,15 @@
 
   @media (min-width: 1025px) and (max-width: 1859px) {
     .molly-pelisek-dock:not(.is-header-dock) {
-      left: 8px;
+      left: 6px;
       bottom: 14px;
       gap: 1px;
       padding: 2px;
-      max-width: 152px;
+      max-width: 146px;
     }
 
     .molly-pelisek-dock:not(.is-header-dock) .molly-dock-pet-btn {
-      padding: 0 2px;
+      padding: 0 1px;
       gap: 2px;
       min-height: 44px;
       min-width: 44px;
@@ -650,8 +652,8 @@
     }
 
     .molly-pelisek-dock:not(.is-header-dock) .molly-treat-counter {
-      padding: 0 2px;
-      gap: 1px;
+      padding: 0 1px;
+      gap: 3px;
       font-size: 0.65rem;
       border: none;
     }

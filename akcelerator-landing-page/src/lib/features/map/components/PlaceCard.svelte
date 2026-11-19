@@ -73,10 +73,10 @@
     community: {
       icon: "handshake",
       label: "Komunita / knihobudka",
-      color: "#0f766e",
+      color: "#2b5938",
     },
     food: { icon: "utensils", label: "Potraviny a šatník", color: "#8f4b0e" },
-    animals: { icon: "paw", label: "Zvířata a útulek", color: "#2c5282" },
+    animals: { icon: "paw", label: "Zvířata a útulek", color: "#1d4f5f" },
   };
 
   const HELP_WAY_META = {
@@ -525,7 +525,7 @@
     gap: 0.25rem 0.35rem;
     flex-wrap: wrap;
     font-size: 0.76rem;
-    color: var(--ink-muted, #61786b);
+    color: var(--ink-muted, #516659);
     margin-bottom: 0.4rem;
   }
 
@@ -543,7 +543,7 @@
   }
 
   .pc-sep {
-    color: var(--ink-muted, #61786b);
+    color: var(--ink-muted, #516659);
   }
 
   .pc-cat {
@@ -562,12 +562,12 @@
   }
 
   .pc-community-badge {
-    color: #0f766e;
+    color: var(--linden-canopy-ink, #2b5938);
     font-weight: 600;
   }
 
   .pc-pending-badge {
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
     font-weight: 600;
   }
 
@@ -588,7 +588,7 @@
     align-items: center;
     gap: 0.3rem;
     font-size: 0.8rem;
-    color: var(--ink-muted, #61786b);
+    color: var(--ink-muted, #516659);
     margin-bottom: 0.55rem;
   }
 
@@ -819,7 +819,7 @@
     justify-content: space-between;
     gap: 0.45rem;
     font-size: 0.72rem;
-    color: var(--ink-muted, #61786b);
+    color: var(--ink-muted, #516659);
     flex-wrap: wrap;
   }
 

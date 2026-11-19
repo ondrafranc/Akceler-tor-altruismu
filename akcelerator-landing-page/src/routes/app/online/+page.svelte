@@ -533,7 +533,7 @@
     box-sizing: border-box;
     padding: 0.62rem 1rem 0.62rem 2.35rem;
     border-radius: 999px;
-    border: 1px solid var(--border-strong, #c2cec5);
+    border: 1px solid var(--border-forest, #c5d9cd);
     background: var(--bg-surface, #ffffff);
     color: var(--ink-primary, #14281d);
     font-family: var(--font-sans);
@@ -554,7 +554,7 @@
     gap: 0.42rem;
     padding: 0.62rem 1.1rem;
     border-radius: 999px;
-    border: 1px solid var(--border-strong, #c2cec5);
+    border: 1px solid var(--border-forest, #c5d9cd);
     background: var(--bg-surface, #ffffff);
     color: var(--ink-primary, #14281d);
     font-family: var(--font-sans);
@@ -568,8 +568,8 @@
   }
 
   .btn-random-spark:hover {
-    background: var(--bg-subtle, #edf2ee);
-    border-color: var(--accent-primary, #1b5e42);
+    background: var(--bohemian-sage, #eef5f0);
+    border-color: var(--border-forest-strong, #a7c4b3);
   }
 
   .return-dopamine-title {
@@ -603,7 +603,7 @@
     gap: 0.36rem;
     padding: 0.5rem 0.95rem;
     border-radius: 999px;
-    border: 1px solid var(--border-subtle, #dce3dd);
+    border: 1px solid var(--border-forest, #c5d9cd);
     background: var(--bg-surface, #ffffff);
     color: var(--ink-primary, #14281d);
     font-family: var(--font-sans);
@@ -617,8 +617,8 @@
   }
 
   .filter-chip:hover {
-    border-color: var(--accent-primary, #1b5e42);
-    background: var(--bg-subtle, #edf2ee);
+    border-color: var(--border-forest-strong, #a7c4b3);
+    background: var(--bohemian-sage, #eef5f0);
   }
 
   .filter-chip.active {
@@ -661,7 +661,7 @@
   .grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1.2rem;
+    gap: 1.5rem;
   }
 
   .online-methodology-drawer {
@@ -762,6 +762,7 @@
   @media (max-width: 980px) {
     .grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.15rem;
     }
   }
 

@@ -873,7 +873,6 @@
       <div class="instant-card" id="dnesni-skutek">
         <div class="studio-head">
           <span class="studio-label">
-            <span class="studio-ready-dot" aria-hidden="true"></span>
             <span>Chci pomoct právě teď:</span>
           </span>
           <button
@@ -1040,21 +1039,19 @@
   @media (min-width: 681px) {
     .home-sections {
       background:
-        linear-gradient(180deg, var(--surface-page, #f6f7f3) 0px, rgba(246, 247, 243, 0) 96px),
-        radial-gradient(56% 420px at 14% 210px, rgba(167, 243, 208, 0.32) 0%, transparent 72%),
-        radial-gradient(56% 420px at 86% 230px, rgba(254, 243, 199, 0.38) 0%, transparent 72%);
+        linear-gradient(180deg, var(--bg-canvas, #f6f7f3) 0px, rgba(246, 247, 243, 0) 96px),
+        radial-gradient(56% 420px at 14% 210px, rgba(230, 240, 234, 0.72) 0%, transparent 72%),
+        radial-gradient(56% 420px at 86% 230px, rgba(254, 246, 232, 0.55) 0%, transparent 72%);
     }
 
     .instant-card {
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(246, 252, 248, 0.99) 100%);
-      border: 1px solid rgba(253, 230, 138, 0.46);
+      background: linear-gradient(180deg, var(--bg-surface, #ffffff) 0%, var(--bohemian-sage, #eef5f0) 100%);
+      border: 1px solid var(--border-forest, #c5d9cd);
       border-radius: 26px;
       padding: 1.14rem 1.42rem 0.98rem;
       box-shadow:
-        0 28px 56px -14px rgba(4, 18, 12, 0.42),
-        0 0 40px -6px rgba(52, 211, 153, 0.28),
-        0 0 22px -6px rgba(251, 191, 36, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.95);
+        var(--shadow-lg, 0 14px 32px -10px rgba(18, 42, 30, 0.11), 0 4px 10px rgba(18, 42, 30, 0.04)),
+        0 2px 8px rgba(27, 94, 66, 0.06);
     }
   }
 
@@ -1078,23 +1075,14 @@
     letter-spacing: -0.005em;
   }
 
-  .studio-ready-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #10b981;
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
-    flex-shrink: 0;
-  }
-
   .cycle-link {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.35rem;
-    border: 1px solid rgba(16, 185, 129, 0.22);
-    background: rgba(16, 185, 129, 0.08);
-    color: #065f46;
+    border: 1px solid var(--border-forest, #c5d9cd);
+    background: var(--bohemian-sage, #eef5f0);
+    color: var(--accent-primary, #1b5e42);
     font-family: var(--font-sans);
     font-size: 0.8rem;
     font-weight: 700;
@@ -1113,9 +1101,9 @@
   }
 
   .cycle-link:hover {
-    background: rgba(16, 185, 129, 0.15);
-    border-color: rgba(16, 185, 129, 0.38);
-    color: #044e36;
+    background: var(--bohemian-mist, #e6f0ea);
+    border-color: var(--border-forest-strong, #a7c4b3);
+    color: var(--czech-forest-hover, #164932);
   }
 
   .cycle-link:active {
@@ -1128,8 +1116,8 @@
     gap: 0.24rem;
     padding: 0.24rem;
     border-radius: 999px;
-    background: #e8f2ec;
-    border: 1px solid rgba(16, 82, 54, 0.1);
+    background: var(--bohemian-sage, #eef5f0);
+    border: 1px solid var(--border-forest, #c5d9cd);
     margin-bottom: 0.68rem;
   }
 
@@ -1162,19 +1150,19 @@
   }
 
   .tab-icon-couch {
-    color: #d97706;
+    color: var(--accent-warm-ink, #8f4b0e);
   }
 
   .tab-icon-focus {
-    color: #4f46e5;
+    color: var(--forest-brook-ink, #1d4f5f);
   }
 
   .tab-icon-walk {
-    color: #e11d48;
+    color: var(--rowan-ink, #8a3b2c);
   }
 
   .tab-icon-people {
-    color: #059669;
+    color: var(--accent-primary, #1b5e42);
   }
 
   .energy-tab:hover {
@@ -1183,27 +1171,27 @@
   }
 
   .energy-tab.active {
-    background: linear-gradient(135deg, #0d3322 0%, #17563b 100%);
+    background: linear-gradient(135deg, var(--czech-forest-hover, #164932) 0%, var(--czech-forest, #1d5c40) 100%);
     color: #ffffff;
     box-shadow:
-      0 4px 12px rgba(9, 29, 20, 0.2),
-      inset 0 1px 0 rgba(253, 230, 138, 0.26);
+      0 4px 12px rgba(20, 40, 29, 0.18),
+      inset 0 1px 0 rgba(254, 243, 199, 0.22);
   }
 
   .energy-tab.active .tab-icon-couch {
-    color: #fde68a;
+    color: var(--hero-dawn, #fef3c7);
   }
 
   .energy-tab.active .tab-icon-focus {
-    color: #bfdbfe;
+    color: #cde4ea;
   }
 
   .energy-tab.active .tab-icon-walk {
-    color: #fecdd3;
+    color: #f7d6cf;
   }
 
   .energy-tab.active .tab-icon-people {
-    color: #6ee7b7;
+    color: #d8ebe0;
   }
 
   @media (max-width: 1024px) {

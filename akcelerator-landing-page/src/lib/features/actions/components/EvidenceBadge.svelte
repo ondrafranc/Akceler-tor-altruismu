@@ -66,14 +66,14 @@
   }
 
   .tier-B {
-    background: #eff6ff;
-    color: #1d4ed8;
-    border: 1px solid #bfdbfe;
+    background: var(--forest-brook-tint, #eaf2f4);
+    color: var(--forest-brook-ink, #1d4f5f);
+    border: 1px solid var(--forest-brook-border, #b8cfd6);
   }
 
   .tier-C {
     background: var(--accent-warm-tint, #fef6e8);
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
     border: 1px solid rgba(184, 101, 27, 0.3);
   }
 </style>

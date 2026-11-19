@@ -1,6 +1,6 @@
 <script>
-  import AppIcon from '$lib/components/AppIcon.svelte';
-  import { trackEvent } from '../../analytics.js';
+  import AppIcon from "$lib/components/AppIcon.svelte";
+  import { trackEvent } from "../../analytics.js";
 </script>
 
 <section
@@ -12,29 +12,37 @@
       <div class="sanctuary-kicker-row">
         <span class="stage-kicker">
           <AppIcon name="trees" size={13} strokeWidth={2.1} />
-          <span>KRAJINA DOBRA · MALOVANÝ SVĚT POMOCI</span>
+          <span>KRAJINA DOBRA · TICHÉ ÚTOČIŠTĚ</span>
         </span>
       </div>
       <h2>
-        Podívej se, jak drobné skutky <span class="serif-gold">rozsvěcují krajinu</span>
+        Podívej se, jak drobné skutky <span class="serif-gold"
+          >rozsvěcují krajinu</span
+        >
       </h2>
       <p>
-        Interaktivní malovaná tůň, kde každá lucerna na hladině a hvězda na
-        obloze představuje skutečnou lidskou pomoc. Vyzkoušej živý svět, rozsviť
-        svůj dnešní dobrý skutek nebo si dopřej minutu klidného dechu.
+        Klidná česká lesní tůň, kde každá lucerna na hladině a hvězda na obloze
+        připomíná jeden dobrý skutek. Zastav se na chvíli, rozsviť ten svůj nebo
+        si dopřej minutu klidného dechu.
       </p>
 
       <div class="sanctuary-features-strip" aria-hidden="true">
         <span class="feature-tag">
-          <span class="feature-icon"><AppIcon name="flame" size={13} strokeWidth={2} /></span>
+          <span class="feature-icon"
+            ><AppIcon name="flame" size={13} strokeWidth={2} /></span
+          >
           <span>Plovoucí lucerny</span>
         </span>
         <span class="feature-tag">
-          <span class="feature-icon"><AppIcon name="star" size={13} strokeWidth={2} /></span>
+          <span class="feature-icon"
+            ><AppIcon name="star" size={13} strokeWidth={2} /></span
+          >
           <span>Zářící hvězdy</span>
         </span>
         <span class="feature-tag">
-          <span class="feature-icon"><AppIcon name="wind" size={13} strokeWidth={2} /></span>
+          <span class="feature-icon"
+            ><AppIcon name="wind" size={13} strokeWidth={2} /></span
+          >
           <span>Klidný dech</span>
         </span>
       </div>
@@ -43,7 +51,7 @@
         <a
           href="/svet"
           class="sanctuary-open-btn"
-          on:click={() => trackEvent("aa_home_portal_svet")}
+          onclick={() => trackEvent("aa_home_portal_svet")}
         >
           <AppIcon name="trees" size={17} strokeWidth={2} />
           <span>Vstoupit do Krajiny dobra</span>
@@ -65,14 +73,14 @@
       href="/svet"
       class="sanctuary-preview-window"
       aria-label="Otevřít živou Krajinu dobra"
-      on:click={() => trackEvent("aa_home_portal_svet_preview")}
+      onclick={() => trackEvent("aa_home_portal_svet_preview")}
     >
       <div class="preview-stage">
         <picture>
           <source srcset="/art/sanctuary-dawn-800.webp" type="image/webp" />
           <img
             src="/art/sanctuary-dawn.jpg"
-            alt="Malovaná česká tůň zalitá zlatým svítáním s plovoucími lucernami dobrých skutků"
+            alt="Klidná česká lesní tůň za ranního svítání obklopená břízami a smrky"
             loading="lazy"
             decoding="async"
             class="preview-bg-img"
@@ -122,7 +130,7 @@
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.08em;
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
     text-transform: uppercase;
     background: var(--accent-warm-tint, #fef6e8);
     border: 1px solid rgba(143, 75, 14, 0.24);
@@ -203,7 +211,9 @@
     font-size: 0.94rem;
     text-decoration: none;
     box-shadow: var(--shadow-sm, 0 2px 8px rgba(18, 42, 30, 0.05));
-    transition: background-color 0.2s var(--ease-gentle), border-color 0.2s var(--ease-gentle);
+    transition:
+      background-color 0.2s var(--ease-gentle),
+      border-color 0.2s var(--ease-gentle);
     box-sizing: border-box;
   }
 
@@ -237,11 +247,13 @@
     font-weight: 700;
     text-decoration: none;
     box-sizing: border-box;
-    transition: background-color 0.18s ease, border-color 0.18s ease;
+    transition:
+      background-color 0.18s ease,
+      border-color 0.18s ease;
   }
 
   .sanctuary-breath-link:hover {
-    background: #e1eae4;
+    background: var(--bohemian-mist, #e6f0ea);
     border-color: var(--accent-primary, #1b5e42);
   }
 
@@ -274,7 +286,9 @@
     box-shadow: var(--shadow-sm, 0 2px 8px rgba(18, 42, 30, 0.05));
     text-decoration: none;
     background: var(--bg-subtle, #edf2ee);
-    transition: transform 0.22s var(--ease-gentle, ease), border-color 0.22s ease;
+    transition:
+      transform 0.22s var(--ease-gentle, ease),
+      border-color 0.22s ease;
   }
 
   .sanctuary-preview-window:hover {
@@ -339,7 +353,10 @@
     color: var(--ink-primary, #14281d);
     font-size: 0.8rem;
     font-weight: 700;
-    transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+    transition:
+      background-color 0.18s ease,
+      color 0.18s ease,
+      border-color 0.18s ease;
   }
 
   .sanctuary-preview-window:hover .spw-enter {
@@ -350,18 +367,23 @@
 
   @media (min-width: 961px) {
     .sanctuary-portal-card {
-      background: linear-gradient(135deg, #eaf3ed 0%, #dfece4 100%);
+      background: linear-gradient(
+        135deg,
+        var(--bohemian-sage, #eef5f0) 0%,
+        var(--bohemian-mist, #e6f0ea) 100%
+      );
       color: var(--ink-primary, #14281d);
-      border: 1px solid #bcd5c6;
+      border: 1px solid var(--border-forest, #c5d9cd);
       border-top: 3px solid var(--czech-linden, #256f4e);
-      box-shadow: 0 12px 30px -12px rgba(24, 62, 44, 0.12),
+      box-shadow:
+        0 12px 30px -12px rgba(24, 62, 44, 0.12),
         0 2px 8px rgba(24, 62, 44, 0.05);
     }
 
     .stage-kicker {
-      background: #ffffff;
-      border-color: #bdd5c7;
-      color: #195239;
+      background: var(--bg-surface, #ffffff);
+      border-color: var(--border-forest, #c5d9cd);
+      color: var(--accent-warm-ink, #8f4b0e);
     }
 
     .sanctuary-copy h2 {
@@ -373,13 +395,13 @@
     }
 
     .sanctuary-copy p {
-      color: #355243;
+      color: var(--ink-secondary, #3f574a);
     }
 
     .feature-tag {
-      background: #ffffff;
-      border-color: #c2d9cb;
-      color: #244334;
+      background: var(--bg-surface, #ffffff);
+      border-color: var(--border-forest, #c5d9cd);
+      color: var(--ink-secondary, #3f574a);
     }
 
     .feature-icon {
@@ -399,13 +421,13 @@
     }
 
     .sanctuary-breath-link {
-      background: #ffffff;
-      border-color: #b4cebf;
+      background: var(--bg-surface, #ffffff);
+      border-color: var(--border-forest-strong, #a7c4b3);
       color: var(--ink-primary, #14281d);
     }
 
     .sanctuary-breath-link:hover {
-      background: #f4f9f6;
+      background: var(--bohemian-sage, #eef5f0);
       border-color: var(--czech-linden, #256f4e);
     }
 
@@ -415,12 +437,12 @@
 
     .breath-pill-time {
       background: var(--bohemian-sage, #eef5f0);
-      border-color: #c2d9cb;
-      color: #2c4a3b;
+      border-color: var(--border-forest, #c5d9cd);
+      color: var(--ink-secondary, #3f574a);
     }
 
     .sanctuary-preview-window {
-      border-color: #b4cebf;
+      border-color: var(--border-forest-strong, #a7c4b3);
       background: var(--bohemian-mist, #e6f0ea);
     }
 
@@ -430,12 +452,12 @@
 
     .spw-live-pill {
       background: rgba(255, 255, 255, 0.95);
-      border-color: #c5d9cd;
+      border-color: var(--border-forest, #c5d9cd);
       color: var(--ink-primary, #14281d);
     }
 
     .live-pulse-dot {
-      background: #1f7a52;
+      background: var(--czech-linden, #256f4e);
     }
   }
 

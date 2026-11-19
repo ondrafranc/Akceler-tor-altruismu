@@ -473,6 +473,11 @@
     resize: vertical;
   }
 
+  textarea::placeholder {
+    color: var(--ink-muted, #516659);
+    opacity: 1;
+  }
+
   .rating-block {
     display: flex;
     flex-direction: column;
@@ -489,7 +494,7 @@
   .star-btn {
     border: 1px solid transparent;
     background: transparent;
-    color: var(--ink-muted, #61786b);
+    color: var(--ink-muted, #516659);
     cursor: pointer;
     min-width: 44px;
     min-height: 44px;
@@ -509,7 +514,7 @@
   }
 
   .star-btn.active {
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
     background: var(--accent-warm-tint, #fef6e8);
     border-color: rgba(143, 75, 14, 0.24);
   }
@@ -538,8 +543,9 @@
   }
 
   .status-box.error {
-    background: #fef2f2;
-    color: #991b1b;
+    background: var(--rowan-tint, #fbf0ed);
+    border: 1px solid var(--rowan-border, #e5c1b8);
+    color: var(--rowan-ink, #8a3b2c);
   }
 
   .submit-btn {

@@ -597,6 +597,13 @@
     border-color: var(--accent-primary-hover, #144732);
   }
 
+  @media (hover: hover) and (pointer: fine) {
+    .deck-dot-sep,
+    .deck-swipe-hint {
+      display: none;
+    }
+  }
+
   @media (max-width: 680px) {
     .deck-container {
       gap: 0.24rem;

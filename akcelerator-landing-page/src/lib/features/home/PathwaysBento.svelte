@@ -1,5 +1,8 @@
 <script>
   import AppIcon from '$lib/components/AppIcon.svelte';
+
+  /** @type {{ children?: import('svelte').Snippet }} */
+  let { children } = $props();
 </script>
 
 <section class="content-wrap paths-section" aria-label="Tři cesty k pomoci">
@@ -57,7 +60,7 @@
     </a>
   </div>
 
-  <slot />
+  {@render children?.()}
 </section>
 
 <style>
@@ -72,22 +75,26 @@
   }
 
   .section-overline {
+    width: fit-content;
+    max-width: 100%;
     font-size: 0.76rem;
     font-weight: 800;
     letter-spacing: 0.1em;
-    color: #047857;
+    color: var(--accent-warm-ink, #8f4b0e);
     text-transform: uppercase;
     display: block;
-    margin-bottom: 0.45rem;
+    margin: 0 auto 0.45rem;
   }
 
   .section-header h2 {
+    width: fit-content;
+    max-width: 100%;
     font-family: var(--font-sans);
     font-size: clamp(1.7rem, 3.2vw, 2.4rem);
     font-weight: 800;
     line-height: 1.18;
     color: var(--ink-primary, #14281d);
-    margin: 0;
+    margin: 0 auto;
   }
 
   .serif-accent {
@@ -133,9 +140,9 @@
   }
 
   .bento-icon-wrap.pine {
-    background: #dff0e6;
-    color: #1b5e42;
-    border: 1px solid #bed9c9;
+    background: var(--bohemian-mist, #e6f0ea);
+    color: var(--accent-primary, #1b5e42);
+    border: 1px solid var(--border-forest, #c5d9cd);
   }
 
   .bento-icon-wrap.forest {
@@ -146,7 +153,7 @@
 
   .bento-icon-wrap.warm {
     background: var(--accent-warm-tint, #fef6e8);
-    color: #944f12;
+    color: var(--accent-warm-ink, #8f4b0e);
     border: 1px solid rgba(184, 101, 27, 0.26);
   }
 

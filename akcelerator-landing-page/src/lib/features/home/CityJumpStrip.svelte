@@ -3,7 +3,11 @@
   import { CZECH_CITIES } from '../../data/czech-actions.js';
   import { trackEvent } from '../../analytics.js';
 
-  export let cities = CZECH_CITIES.slice(0, 8);
+  /**
+   * @typedef {{ id: string, name: string, lat: number, lon: number, radius: number }} CzechCity
+   */
+  /** @type {{ cities?: CzechCity[] }} */
+  let { cities = CZECH_CITIES.slice(0, 8) } = $props();
 </script>
 
 <div class="city-strip" aria-label="Rychlý skok do města na mapě">
@@ -12,10 +16,10 @@
     <span>Rychle na mapu:</span>
   </span>
   <div class="city-strip-links">
-    {#each cities as city}
+    {#each cities as city (city.id)}
       <a
         href={`/near?lat=${city.lat}&lon=${city.lon}&r=${Math.round(city.radius / 1000)}`}
-        on:click={() => trackEvent("aa_home_city_jump", { city: city.id })}
+        onclick={() => trackEvent("aa_home_city_jump", { city: city.id })}
       >
         {city.name}
       </a>
@@ -77,7 +81,7 @@
   }
 
   .city-strip-links a:hover {
-    background: #e1eae4;
+    background: var(--bohemian-mist, #e6f0ea);
     border-color: var(--accent-primary, #1b5e42);
     color: var(--accent-primary-hover, #144732);
   }

@@ -79,10 +79,11 @@
   --border-strong: #c2cec5;
   --ink-primary: #14281d;
   --ink-secondary: #3f574a;
-  --ink-muted: #61786b;
+  --ink-muted: #516659;
   --accent-primary: #1b5e42;
   --accent-primary-hover: #144732;
   --accent-warm: #b8651b;
+  --accent-warm-ink: #8f4b0e;
   --accent-warm-tint: #fef6e8;
 
   /* Authentic Czech Bohemian Linden & Šumava Meadow/Forest Accents */
@@ -93,6 +94,19 @@
   --bohemian-sage: #eef5f0;
   --border-forest: #c5d9cd;
   --border-forest-strong: #a7c4b3;
+
+  /* Semantic Czech Landscape Palette (Brook, Canopy, Moss, Rowan, Dawn) */
+  --forest-brook-ink: #1d4f5f;
+  --forest-brook-tint: #eaf2f4;
+  --forest-brook-border: #b8cfd6;
+  --linden-canopy-ink: #2b5938;
+  --moss-olive-ink: #4a5926;
+  --moss-olive-tint: #f2f5e9;
+  --moss-olive-border: #cad4b0;
+  --rowan-ink: #8a3b2c;
+  --rowan-tint: #fbf0ed;
+  --rowan-border: #e5c1b8;
+  --hero-dawn: #fef3c7;
 
   /* Harmonized Botanical Tokens (Warm Czech Daylight Grounding) */
   --forest-deep: var(--czech-forest-hover);
@@ -196,6 +210,10 @@ h4 {
   letter-spacing: -0.025em;
 }
 
+:where(a) {
+  color: inherit;
+}
+
 /* Unified 1140px Responsive Containers */
 .app-container {
   width: 100%;
@@ -270,7 +288,7 @@ h4 {
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: var(--accent-warm);
+  color: var(--accent-warm-ink);
   margin-bottom: 0.4rem;
 }
 
@@ -469,7 +487,7 @@ select:focus-visible {
   padding: 0.22rem 0.6rem;
   border-radius: 999px;
   background: var(--accent-warm-tint);
-  color: var(--accent-warm);
+  color: var(--accent-warm-ink);
   border: 1px solid rgba(184, 101, 27, 0.28);
   line-height: 1.2;
 }
@@ -607,7 +625,7 @@ select:focus-visible {
 
 .return-dopamine-strip .impact-payoff-badge {
   background: var(--accent-warm-tint);
-  color: var(--accent-warm);
+  color: var(--accent-warm-ink);
   border-color: rgba(184, 101, 27, 0.28);
 }
 

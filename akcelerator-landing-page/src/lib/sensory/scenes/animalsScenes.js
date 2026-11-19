@@ -15,72 +15,116 @@ import {
 } from '../graphics/primitives.js';
 
 export function renderKibble(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-    // 🐾 Zvířata v útulku: Prázdná miska a čekající pejsek -> Parabolický proud granulí, plná miska a vrtící ocásek
-    const bowlX = cx + 10;
-    const bowlW = 68;
+    // Zvířata v útulku: Klidná kameninová miska a čekající pejsek -> Teplý proud granulí, plná miska a radostné vrtění
+    const bowlX = cx + 16;
+    const bowlW = 66;
     const bowlH = 16;
     const bowlY = by - 4;
 
-    c.fillStyle = 'rgba(0, 0, 0, 0.42)';
+    // Měkké teplé podsvícení kameninové misky při proměně
+    if (p > 0.04) {
+      drawGlow(c, bowlX, bowlY - bowlH * 0.5, 44 + p * 18, '#f6e7c1', 0.08 + p * 0.24);
+    }
+
+    // Jemný kontaktní stín pod pejskem i miskou
+    c.fillStyle = 'rgba(4, 12, 9, 0.42)';
     c.beginPath();
-    c.ellipse(bowlX, bowlY + 3, bowlW * 0.56, 5.5, 0, 0, Math.PI * 2);
+    c.ellipse(bowlX, bowlY + 3, bowlW * 0.58, 5, 0, 0, Math.PI * 2);
+    c.fill();
+    c.beginPath();
+    c.ellipse(cx - 46, bowlY + 2.5, 22, 4.4, 0, 0, Math.PI * 2);
     c.fill();
 
-    // Pejsek vlevo od misky (sklopená ouška před akcí -> nastražená ouška a radostné vrtění po akci)
-    const dogBreath = Math.sin(wt * 2.2) * 1.0;
-    const tailWag = Math.sin(wt * (2.0 + p * 6.5)) * (0.12 + p * 0.42);
-    const earLift = lerp(-0.48, 0.12, easeOut(p));
+    // Silueta čekajícího pejska v jemných teplých hnědo-kaštanových tónech české krajiny
+    const dogBreath = Math.sin(wt * 2.0) * 0.7;
+    const tailWag = Math.sin(wt * (1.8 + p * 6.2)) * (0.1 + p * 0.44);
+    const earLift = lerp(-0.34, 0.14, easeOut(p));
+    const headLift = easeOut(p) * 3.2;
+
     c.save();
-    c.translate(cx - 46, bowlY + 1);
+    c.translate(cx - 44, bowlY + 1);
+
+    // Ocásek (klidný oblouk -> veselé vrtění)
     c.save();
-    c.translate(-22, -14);
+    c.translate(-19, -11);
     c.rotate(tailWag);
-    c.strokeStyle = '#d97706';
-    c.lineWidth = 3.2;
+    c.strokeStyle = '#9b6a41';
+    c.lineWidth = 2.8;
     c.lineCap = 'round';
     c.beginPath();
     c.moveTo(0, 0);
-    c.quadraticCurveTo(-7, -9, -11, -17 - p * 3);
+    c.quadraticCurveTo(-7, -8, -10, -15 - p * 3);
     c.stroke();
     c.restore();
 
-    c.fillStyle = '#291d16';
-    c.strokeStyle = `rgba(253, 230, 138, ${0.32 + p * 0.35})`;
-    c.lineWidth = 1.2;
+    // Tělo pejska (sedící silueta s jemným kaštanovým stínováním)
+    const coatGrad = c.createLinearGradient(-18, -30, 8, 0);
+    coatGrad.addColorStop(0, '#5a3e2b');
+    coatGrad.addColorStop(0.55, '#3b281d');
+    coatGrad.addColorStop(1, '#261912');
+    c.fillStyle = coatGrad;
+    c.strokeStyle = `rgba(246, 231, 193, ${0.22 + p * 0.28})`;
+    c.lineWidth = 1.0;
+
     c.beginPath();
-    c.ellipse(-12, -11 + dogBreath, 13, 8.5, 0.18, 0, Math.PI * 2);
+    c.moveTo(-19, 0);
+    c.quadraticCurveTo(-22, -16 + dogBreath, -8, -21 + dogBreath);
+    c.quadraticCurveTo(2, -23 + dogBreath, 5, -12 + dogBreath * 0.5);
+    c.quadraticCurveTo(6, -3, 8, 0);
+    c.lineTo(-19, 0);
+    c.closePath();
     c.fill();
     c.stroke();
 
-    const headLift = p * 3;
+    // Světlejší náprsenka a přední tlapka
+    c.fillStyle = 'rgba(232, 206, 168, 0.22)';
     c.beginPath();
-    c.ellipse(1, -21 - headLift + dogBreath * 0.7, 8, 7, -0.05 - p * 0.12, 0, Math.PI * 2);
+    c.ellipse(1.5, -10 + dogBreath * 0.5, 4.2, 7.5, -0.18, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = '#6c4b33';
+    c.beginPath();
+    c.ellipse(8.5, -1.6, 4.2, 2.1, 0, 0, Math.PI * 2);
+    c.fill();
+
+    // Hlava a jemný čumáček nakloněný směrem k misce
+    const hy = -23 - headLift + dogBreath * 0.65;
+    c.fillStyle = coatGrad;
+    c.beginPath();
+    c.ellipse(1.5, hy, 8.2, 7.0, -0.06 - p * 0.1, 0, Math.PI * 2);
     c.fill();
     c.stroke();
 
+    // Čumák
+    c.fillStyle = '#4e3525';
+    c.beginPath();
+    c.ellipse(9.2, hy + 1.4, 4.2, 3.0, 0.08, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = '#19120e';
+    c.beginPath();
+    c.arc(12.6, hy + 0.6, 1.5, 0, Math.PI * 2);
+    c.fill();
+
+    // Měkké sklopené ouško (po akci se jemně zvedne)
     c.save();
-    c.translate(-3, -25 - headLift + dogBreath * 0.7);
+    c.translate(-2.5, hy - 3.2);
     c.rotate(earLift);
-    c.fillStyle = '#d97706';
+    c.fillStyle = '#7b5234';
     c.beginPath();
-    c.ellipse(0, 3, 3.2, 5.5, 0, 0, Math.PI * 2);
+    c.ellipse(0, 4.2, 3.1, 5.6, 0.12, 0, Math.PI * 2);
     c.fill();
     c.restore();
 
-    c.fillStyle = '#0f0c0a';
+    // Klidný jiskřivý pohled
+    c.fillStyle = '#f6e7c1';
     c.beginPath();
-    c.arc(8, -20 - headLift + dogBreath * 0.7, 1.9, 0, Math.PI * 2);
-    c.fill();
-    c.fillStyle = '#fef08a';
-    c.beginPath();
-    c.arc(3.5, -22.5 - headLift + dogBreath * 0.7, 1.8, 0, Math.PI * 2);
+    c.arc(5.2, hy - 1.2, 1.35, 0, Math.PI * 2);
     c.fill();
     c.restore();
 
-    // Tělo keramické misky (zadní okraj + vnitřek)
-    c.fillStyle = '#1c120b';
+    // Tělo kameninové misky (vnitřní stín)
+    c.fillStyle = '#18110c';
     c.beginPath();
-    c.ellipse(bowlX, bowlY - bowlH, bowlW / 2, 5.5, 0, 0, Math.PI * 2);
+    c.ellipse(bowlX, bowlY - bowlH, bowlW / 2, 5.0, 0, 0, Math.PI * 2);
     c.fill();
 
     // Sypající se parabolický proud granulí a vršící se kopec v misce
@@ -91,9 +135,9 @@ export function renderKibble(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame,
           const dp = (pourP * 2.2 + d * 0.13) % 1;
           const kx = lerp(bowlX + 34, bowlX - 6 + (d % 3) * 6, dp);
           const ky = lerp(cy - 30, bowlY - bowlH - 2, dp * dp);
-          c.fillStyle = d % 2 === 0 ? '#fbbf24' : '#d97706';
+          c.fillStyle = d % 2 === 0 ? '#dfb06a' : '#b87638';
           c.beginPath();
-          c.ellipse(kx, ky, 3.2, 2.3, dp * 2, 0, Math.PI * 2);
+          c.ellipse(kx, ky, 3.0, 2.1, dp * 2, 0, Math.PI * 2);
           c.fill();
         }
       }
@@ -103,41 +147,49 @@ export function renderKibble(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame,
       for (let i = 0; i < kCount; i++) {
         const row = Math.floor(i / 7);
         const colIdx = i % 7;
-        const rowSpan = 24 - row * 5;
+        const rowSpan = 23 - row * 5;
         const kx = bowlX - rowSpan + (colIdx / 6) * rowSpan * 2;
-        const ky = bowlY - bowlH - 1 - row * 3.2 + Math.sin(i * 1.7) * 1.1;
-        c.fillStyle = i % 2 === 0 ? '#fbbf24' : '#f59e0b';
+        const ky = bowlY - bowlH - 1 - row * 3.1 + Math.sin(i * 1.7) * 1.0;
+        c.fillStyle = i % 2 === 0 ? '#e3b56f' : '#c07e3e';
         c.beginPath();
-        c.ellipse(kx, ky, 4.1, 2.9, (i % 4) * 0.35, 0, Math.PI * 2);
+        c.ellipse(kx, ky, 3.9, 2.7, (i % 4) * 0.35, 0, Math.PI * 2);
         c.fill();
-        c.fillStyle = 'rgba(255, 255, 255, 0.42)';
+        c.fillStyle = 'rgba(255, 248, 232, 0.35)';
         c.beginPath();
-        c.arc(kx - 1.1, ky - 0.9, 0.9, 0, Math.PI * 2);
+        c.arc(kx - 1.0, ky - 0.8, 0.85, 0, Math.PI * 2);
         c.fill();
       }
     }
 
-    // Přední stěna misky s tlapkou
+    // Přední stěna matné české terakotové misky se smetanovým okrajem
     const bGrad = c.createLinearGradient(bowlX - bowlW / 2, bowlY - bowlH, bowlX + bowlW / 2, bowlY);
-    bGrad.addColorStop(0, '#f59e0b');
-    bGrad.addColorStop(1, '#b45309');
+    bGrad.addColorStop(0, '#c07241');
+    bGrad.addColorStop(0.55, '#9d552b');
+    bGrad.addColorStop(1, '#6f391b');
     c.fillStyle = bGrad;
-    c.strokeStyle = '#fde68a';
-    c.lineWidth = 1.6;
+    c.strokeStyle = 'rgba(243, 229, 204, 0.72)';
+    c.lineWidth = 1.3;
     c.beginPath();
     c.moveTo(bowlX - bowlW / 2, bowlY - bowlH);
     c.quadraticCurveTo(bowlX - bowlW * 0.45, bowlY, bowlX - bowlW * 0.35, bowlY);
     c.lineTo(bowlX + bowlW * 0.35, bowlY);
     c.quadraticCurveTo(bowlX + bowlW * 0.45, bowlY, bowlX + bowlW / 2, bowlY - bowlH);
-    c.ellipse(bowlX, bowlY - bowlH, bowlW / 2, 5.2, 0, 0, Math.PI);
+    c.ellipse(bowlX, bowlY - bowlH, bowlW / 2, 4.8, 0, 0, Math.PI);
     c.fill();
     c.stroke();
-    drawPaw(c, bowlX, bowlY - 6, 4.5, '#fde68a');
+
+    // Jemný glazurou světlý okraj a drobná tlapka
+    c.strokeStyle = 'rgba(246, 231, 193, 0.55)';
+    c.lineWidth = 1.0;
+    c.beginPath();
+    c.ellipse(bowlX, bowlY - bowlH, bowlW / 2, 4.8, 0, Math.PI, Math.PI * 2);
+    c.stroke();
+    drawPaw(c, bowlX, bowlY - 6, 4.2, 'rgba(246, 231, 193, 0.82)');
 
     if (p > 0.35) {
       const celP = easeOut(subP(p, 0.35, 1.0));
-      drawSteam(c, bowlX, bowlY - bowlH - 10, 15 * celP, wt);
-      drawHeart(c, cx - 22, bowlY - 30 - celP * 5 + Math.sin(wt * 3) * 2, 5.8 * celP, '#fbbf24');
+      drawSteam(c, bowlX, bowlY - bowlH - 10, 14 * celP, wt);
+      drawHeart(c, cx - 18, bowlY - 30 - celP * 5 + Math.sin(wt * 3) * 2, 5.4 * celP, '#f6e7c1');
     }
 }
 

@@ -107,13 +107,13 @@ export function mountImpactCanvas(cv, o = {}) {
     ro.observe(cv);
   }
 
-  // Jemné světlušky v botanické smaragdové scéně (normalizované napříč šířkou plátna)
-  const stars = Array.from({ length: isPreview ? 16 : 22 }, (_, i) => ({
+  // Jemné světelné body v klidné lesní soumrakové scéně (bez ostré neonové zeleně)
+  const stars = Array.from({ length: isPreview ? 12 : 18 }, (_, i) => ({
     nx: ((i * 53 + 17) % 293) / 293,
     ny: (isPreview ? 0.14 : 0.10) + (((i * 29 + 11) % 100) / 100) * (isPreview ? 0.70 : 0.76),
-    r: 0.75 + (i % 3) * 0.45,
+    r: 0.65 + (i % 3) * 0.32,
     phase: i * 0.7,
-    col: i % 2 === 0 ? '#fde68a' : '#6ee7b7'
+    col: i % 2 === 0 ? '#f6e7c1' : '#c5d9cd'
   }));
 
   const emitProgress = (ratio) => {
@@ -271,23 +271,23 @@ export function mountImpactCanvas(cv, o = {}) {
     const cx = w / 2;
     c.scale(scale, scale);
 
-    // Jednotná botanicko-smaragdová scénická kulisa pro plátno odměny;
+    // Jednotná klidná lesní soumraková kulisa pro plátno odměny;
     // v režimu preview prosvítá plynulý gradient .deed-preview-stage bez viditelného švu pod .preview-hud
     if (!isPreview) {
       const bgGrad = c.createLinearGradient(0, 0, 0, h);
-      bgGrad.addColorStop(0, '#113e2b');
-      bgGrad.addColorStop(0.56, '#072016');
-      bgGrad.addColorStop(1, '#03100b');
+      bgGrad.addColorStop(0, '#1b362b');
+      bgGrad.addColorStop(0.56, '#11261e');
+      bgGrad.addColorStop(1, '#091711');
       c.fillStyle = bgGrad;
       c.fillRect(0, 0, w, h);
     }
 
     // Měkká středová záře reagující na proměnu skutku i na hover anticipaci
-    const auraAlpha = isPreview ? 0.15 + p * 0.48 : 0.10 + p * 0.16 + burstEnergy * 0.14;
-    drawGlow(c, cx, cy + 2, Math.min(104, w * 0.36), cs[0] || '#34d399', auraAlpha);
+    const auraAlpha = isPreview ? 0.08 + p * 0.34 : 0.08 + p * 0.14 + burstEnergy * 0.12;
+    drawGlow(c, cx, cy + 2, Math.min(104, w * 0.36), '#f6e7c1', auraAlpha);
 
     // Jemný horizont krajiny u paty scény
-    c.fillStyle = 'rgba(2, 12, 8, 0.55)';
+    c.fillStyle = 'rgba(7, 19, 14, 0.48)';
     c.beginPath();
     c.moveTo(0, h);
     c.lineTo(0, by + 2);
@@ -297,10 +297,10 @@ export function mountImpactCanvas(cv, o = {}) {
     c.closePath();
     c.fill();
 
-    // Světlušky v pozadí
+    // Jemné světelné body v pozadí
     const time = red ? 0 : frame * 0.025;
     for (const s of stars) {
-      const op = red ? 0.32 : 0.18 + 0.42 * (0.5 + 0.5 * Math.sin(time * 1.4 + s.phase));
+      const op = red ? 0.22 : 0.10 + 0.24 * (0.5 + 0.5 * Math.sin(time * 1.2 + s.phase));
       c.fillStyle = s.col;
       c.globalAlpha = op;
       c.beginPath();

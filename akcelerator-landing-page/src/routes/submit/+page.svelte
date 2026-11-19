@@ -846,6 +846,12 @@
     min-height: 44px;
   }
 
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--ink-muted, #516659);
+    opacity: 1;
+  }
+
   textarea {
     resize: vertical;
     min-height: 66px;
@@ -1014,9 +1020,9 @@
   }
 
   .banner.error {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    color: #991b1b;
+    background: var(--rowan-tint, #fbf0ed);
+    border: 1px solid var(--rowan-border, #e5c1b8);
+    color: var(--rowan-ink, #8a3b2c);
   }
 
   .banner.success {
@@ -1061,7 +1067,7 @@
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.1em;
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
   }
 
   .side-note h2 {

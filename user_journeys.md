@@ -5,7 +5,7 @@ Hlavním vstupem do produktu je **`/`** (okamžitý 45-kartový balíček skutk�
 ---
 
 ## 1. Okamžitý mikro-skutek na `/` (15–60 s)
-1. Uživatel otevře `/` — nad kartou nejsou žádné překážky; rovnou vidí kartu skutku v jednotné morphing scéně `.deed-stage`, primární CTA nad ohybem (včetně `375×667`) a 4 záložky energie (`45` *Mám 2 min* / `8` *Mám 15 min* / `16` *Osobně* / `9` *Dlouhodobě*).
+1. Uživatel otevře `/` — nad kartou nejsou žádné překážky; rovnou vidí kartu skutku v jednotné morphing scéně `.deed-stage`, primární CTA nad ohybem (včetně `375×667`) a 4 záložky energie (`45` *Mám 2 min* / `8` *Mám 15 min* / `16` *Osobně* / `9` *Dlouhodobě*). Přepnutí kterékoli záložky nebo otevření `?intent=` / `?action=` dynamicky aktualizuje Hero nadpis i claim (`.hero-serif` / `.hero-mobile-claim`), zatímco Molly zůstává na desktopu nepřetržitě viditelná a toulavá podél sekcí (včetně sekce „JAK SE ZAPOJIT“) bez mizení nebo překrývání karet.
 2. Čerstvá návštěva otevírá 2minutový krok; při listování nebo přepnutí režimu se stav ukládá do `sessionStorage` (`AA_HOME_DECK_STATE_KEY`). Přímý odkaz `/?action=<id>` otevře cílový skutek i nad uzavřenou denní relací s tlačítkem *„Zpět k dnešnímu shrnutí“*.
 3. Jedním kliknutím na hlavní CTA otevře stránku partnera.
 4. Po návratu odemkne potvrzení *„Mám hotovo“*, scéna plynule přejde do dopadu (`payoff`), zobrazí se *„Přehrát“* a tlačítko *„Dát Molly pamlsek“*.
@@ -21,13 +21,13 @@ Hlavním vstupem do produktu je **`/`** (okamžitý 45-kartový balíček skutk�
 3. Jedním kliknutím spustí vybraný krok nebo přejde na `/near`.
 
 ## 4. Katalog skutků `/app/online` (30–90 s)
-1. Uživatel otevře `/app/online`, kde výchozí pohled *„Doporučené“* upřednostňuje online/telefonní akce (`mode !== 'local'`).
+1. Uživatel otevře `/app/online`, kde výchozí pohled *„Doporučené“* upřednostňuje online/telefonní akce (`mode !== 'local'`) a na desktopu (`> 980 px`) zobrazuje skutky ve 3sloupcové mřížce (`gap: 1.5rem`) jako zřetelně oddělené samostatné bílé karty (`1px` lesní rámeček `--border-forest`, `20px` zaoblení, jemný stín) se zarovnanými spodními CTA.
 2. Filtruje skutky podle času, nákladů a způsobu zapojení.
 3. Jedním kliknutím ze zarovnaného spodního CTA přejde přímo ke konkrétní akci.
 
 ## 5. Klidná reflexe v Krajině dobra `/svet`
 1. Uživatel přejde na `/svet` (z navigace, upoutávky na `/` nebo předáním od kočky Molly).
-2. Prohlédne si rozsvícené dobré skutky v krajině, může přepnout do noční atmosféry (líně načítaná noční vrstva), vyzkoušet dechový pacer, rituální lištu, nakrmit Molly v jediném počítadle nebo zapnout doprovodný zvuk (ve výchozím stavu vypnutý).
+2. Prohlédne si rozsvícené dobré skutky v klidné české lesní tůni (`sanctuary-dawn.*` / `sanctuary-twilight.*`), může přepnout do noční atmosféry (líně načítaná noční vrstva), vyzkoušet dechový pacer, rituální lištu, nakrmit Molly v jediném počítadle nebo zapnout doprovodný zvuk (ve výchozím stavu vypnutý).
 
 ## 6. Přidání komunitního tipu přes `/submit`
 1. Uživatel otevře `/submit` a přepne typ tipu (jednorázová akce vs. stálé místo pomoci) s dynamickým podtitulkem.

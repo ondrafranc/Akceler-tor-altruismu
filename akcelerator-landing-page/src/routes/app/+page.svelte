@@ -1,7 +1,7 @@
 <script>
-  import { trackEvent } from '../../lib/analytics.js';
-  import AppIcon from '$lib/components/AppIcon.svelte';
-  import PageHeader from '$lib/components/PageHeader.svelte';
+  import { trackEvent } from "../../lib/analytics.js";
+  import AppIcon from "$lib/components/AppIcon.svelte";
+  import PageHeader from "$lib/components/PageHeader.svelte";
 </script>
 
 <svelte:head>
@@ -18,14 +18,19 @@
   />
 
   <div class="grid">
-    <a class="card featured-svet" href="/svet" on:click={() => trackEvent('aa_app_choice', { choice: 'svet' })}>
+    <a
+      class="card featured-svet"
+      href="/svet"
+      on:click={() => trackEvent("aa_app_choice", { choice: "svet" })}
+    >
       <span class="card-overline">
         <AppIcon name="trees" size={14} strokeWidth={2} />
         <span>ŽIVÁ KRAJINA A KLIDNÝ DECH</span>
       </span>
       <div class="card-title">Krajina dobra</div>
       <div class="card-desc">
-        Prozkoumej malovanou krajinu plnou skutečných dobrých skutků, rozsviť v ní ten svůj nebo si dopřej minutu klidného dechu.
+        Zastav se u klidné české lesní tůně, rozsviť svůj dnešní dobrý skutek
+        nebo si dopřej minutu klidného dechu.
       </div>
       <div class="card-cta">
         <span>Vstoupit do Krajiny dobra</span>
@@ -33,14 +38,20 @@
       </div>
     </a>
 
-    <a class="card" href="/app/guided" data-molly-guide="true" on:click={() => trackEvent('aa_app_choice', { choice: 'guided' })}>
+    <a
+      class="card"
+      href="/app/guided"
+      data-molly-guide="true"
+      on:click={() => trackEvent("aa_app_choice", { choice: "guided" })}
+    >
       <span class="card-overline">
         <AppIcon name="compass" size={14} strokeWidth={2} />
         <span>VÝBĚR NA MÍRU</span>
       </span>
       <div class="card-title">Průvodce podle tvé situace</div>
       <div class="card-desc">
-        Zvolíš si čas a blízké téma — průvodce ti hned doporučí jeden konkrétní ověřený krok.
+        Zvolíš si čas a blízké téma — průvodce ti hned doporučí jeden konkrétní
+        ověřený krok.
       </div>
       <div class="card-cta">
         <span>Spustit průvodce</span>
@@ -48,14 +59,19 @@
       </div>
     </a>
 
-    <a class="card" href="/near" on:click={() => trackEvent('aa_app_choice', { choice: 'near' })}>
+    <a
+      class="card"
+      href="/near"
+      on:click={() => trackEvent("aa_app_choice", { choice: "near" })}
+    >
       <span class="card-overline">
         <AppIcon name="map-pin" size={14} strokeWidth={2} />
         <span>VE TVÉM MĚSTĚ A KRAJI</span>
       </span>
       <div class="card-title">Mapa pomoci v okolí</div>
       <div class="card-desc">
-        Útulky, veřejné knihobudky, šatníky, potravinové banky a spolky po celé ČR s připravenou zprávou na oslovení.
+        Útulky, veřejné knihobudky, šatníky, potravinové banky a spolky po celé
+        ČR s připravenou zprávou na oslovení.
       </div>
       <div class="card-cta">
         <span>Otevřít mapu v okolí</span>
@@ -63,14 +79,19 @@
       </div>
     </a>
 
-    <a class="card" href="/app/online" on:click={() => trackEvent('aa_app_choice', { choice: 'online' })}>
+    <a
+      class="card"
+      href="/app/online"
+      on:click={() => trackEvent("aa_app_choice", { choice: "online" })}
+    >
       <span class="card-overline">
         <AppIcon name="zap" size={14} strokeWidth={2} />
         <span>Z DOMOVA I CESTOU VEN</span>
       </span>
       <div class="card-title">Drobné skutky na pár minut</div>
       <div class="card-desc">
-        Ověřené české projekty přehledně na jednom místě — od naplnění misky v útulku jedním klikem až po mapování studánek.
+        Ověřené české projekty přehledně na jednom místě — od naplnění misky v
+        útulku jedním klikem až po mapování studánek.
       </div>
       <div class="card-cta">
         <span>Prohlédnout online tipy</span>

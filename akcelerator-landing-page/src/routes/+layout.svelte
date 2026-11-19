@@ -459,8 +459,8 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: #e4f0e8;
-    border: 1px solid #b9d5c4;
+    background: var(--bohemian-mist, #e6f0ea);
+    border: 1px solid var(--border-forest, #c5d9cd);
     color: var(--czech-forest, #1d5c40);
     display: inline-flex;
     align-items: center;
@@ -515,7 +515,7 @@
   }
 
   .nav-pill:hover {
-    color: #195239;
+    color: var(--accent-primary, #1b5e42);
     background: var(--bohemian-sage, #eef5f0);
   }
 
@@ -671,7 +671,7 @@
   .mobile-drawer-action.is-crisis {
     background: var(--accent-warm-tint, #fef6e8);
     border-color: rgba(143, 75, 14, 0.28);
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
   }
 
   .main-content {
@@ -823,14 +823,14 @@
   .fc-btn.fc-crisis {
     border-color: rgba(143, 75, 14, 0.3);
     background: var(--accent-warm-tint, #fef6e8);
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
   }
 
   @media (min-width: 960px) {
     .site-footer {
-      background: #eaf2ec;
+      background: var(--bohemian-mist, #e6f0ea);
       border-top: 1px solid var(--border-forest, #c5d9cd);
-      color: #2f4b3d;
+      color: var(--ink-secondary, #3f574a);
     }
 
     .footer-brand {
@@ -843,7 +843,7 @@
 
     .footer-subbrand,
     .footer-desc {
-      color: #335041;
+      color: var(--ink-secondary, #3f574a);
     }
 
     .footer-trust {
@@ -851,7 +851,7 @@
     }
 
     .footer-heading {
-      color: #2f4b3d;
+      color: var(--ink-secondary, #3f574a);
     }
 
     .footer-links a {
@@ -884,15 +884,15 @@
     }
 
     .brand-mark {
-      background: #e4f0e8;
-      border-color: #b9d5c4;
+      background: var(--bohemian-mist, #e6f0ea);
+      border-color: var(--border-forest, #c5d9cd);
       color: var(--czech-forest, #1d5c40);
     }
 
     .nav-pill.world-pill:hover {
       background: var(--bohemian-sage, #eef5f0);
       border-color: transparent;
-      color: #195239;
+      color: var(--accent-primary, #1b5e42);
     }
 
     .nav-pill.world-pill.active:hover {
@@ -904,7 +904,7 @@
     .nav-pill.add-tip:hover {
       background: var(--bohemian-sage, #eef5f0);
       border-color: var(--border-forest-strong, #a7c4b3);
-      color: #195239;
+      color: var(--accent-primary, #1b5e42);
     }
 
     .site-footer {

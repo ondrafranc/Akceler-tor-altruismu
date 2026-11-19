@@ -58,9 +58,9 @@
 
   const KIND_META = {
     ngo: { icon: 'building', label: 'Neziskovka / spolek', color: '#1b5e42' },
-    community: { icon: 'handshake', label: 'Komunita / knihobudka', color: '#0f766e' },
+    community: { icon: 'handshake', label: 'Komunita / knihobudka', color: '#2b5938' },
     food: { icon: 'utensils', label: 'Potraviny a šatník', color: '#8f4b0e' },
-    animals: { icon: 'paw', label: 'Zvířata a útulek', color: '#2c5282' }
+    animals: { icon: 'paw', label: 'Zvířata a útulek', color: '#1d4f5f' }
   };
 
   const ALL_KINDS = ['ngo', 'community', 'food', 'animals'];
@@ -2190,7 +2190,7 @@
 
   .geo-opt span {
     font-size: 0.76rem;
-    color: var(--ink-muted, #61786b);
+    color: var(--ink-muted, #516659);
   }
 
   .controls-presets-row {
@@ -2791,8 +2791,9 @@
 
   .map-error-box {
     padding: 0.75rem 1rem;
-    background: #fef2f2;
-    color: #991b1b;
+    background: var(--rowan-tint, #fbf0ed);
+    border: 1px solid var(--rowan-border, #e5c1b8);
+    color: var(--rowan-ink, #8a3b2c);
     font-size: 0.85rem;
   }
 
@@ -2888,7 +2889,7 @@
     display: block;
     font-size: 0.76rem;
     font-weight: 800;
-    color: var(--ink-muted, #61786b);
+    color: var(--ink-muted, #516659);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     margin-bottom: 0.45rem;
@@ -2910,7 +2911,7 @@
   }
 
   .nv-meta {
-    color: var(--ink-muted, #61786b);
+    color: var(--ink-muted, #516659);
     font-size: 0.77rem;
   }
 
@@ -2978,11 +2979,24 @@
     border-radius: 12px;
     background: var(--bg-surface, #ffffff);
     border: 1px solid var(--border-subtle, #dce3dd);
+    color: var(--ink-primary, #14281d);
     text-decoration: none;
     display: flex;
     flex-direction: column;
     gap: 0.16rem;
     box-sizing: border-box;
+    transition:
+      border-color 0.16s ease,
+      background-color 0.16s ease;
+  }
+
+  .portal-mini:visited {
+    color: var(--ink-primary, #14281d);
+  }
+
+  .portal-mini:hover {
+    border-color: var(--border-forest-strong, #a7c4b3);
+    background: var(--bohemian-sage, #eef5f0);
   }
 
   .portal-mini strong {
@@ -3083,7 +3097,7 @@
 
   :global(.aa-map-pin .pin-bubble.is-community) {
     background: var(--bg-subtle, #edf2ee);
-    border: 2px solid #0f766e;
+    border: 2px solid var(--linden-canopy-ink, #2b5938);
   }
 
   :global(.aa-map-pin .pin-bubble.is-active) {
@@ -3100,7 +3114,7 @@
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: #8f4b0e;
+    background: var(--accent-warm-ink, #8f4b0e);
     color: #ffffff;
     font-style: normal;
     display: flex;

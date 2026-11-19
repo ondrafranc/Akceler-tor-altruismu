@@ -22,7 +22,8 @@ Kódová báze uvnitř `akcelerator-landing-page/src/` dodržuje jednosměrný t
 ## 2. Svelte 5 Runes, Vite a čistota modulů
 1. **Svelte 5 Runes politika a aktuální pokrytí (`31` `.svelte` souborů)**:
    - Veškeré **nové a refaktorované** `.svelte` komponenty musí používat Svelte 5 Runes (`$props()`, `$state()`, `$derived()`, `$effect()`).
-   - Aktuální stav v `src/`: `20/31` souborů používá Runes, `1` bezstavový Svelte 5 route (`src/routes/+error.svelte` s `onclick=`) a `10` zbývajících starších Svelte 4 komponent (`SmallWinCelebration.svelte`, `CityJumpStrip.svelte`, `HopeCarousel.svelte`, `PathwaysBento.svelte`, `PortalsDrawer.svelte`, `QuickStartSection.svelte`, `SanctuaryTeaser.svelte`, `DeedInspectorModal.svelte`, `ProgressDashboard.svelte`, `src/routes/app/+page.svelte`) se migruje postupně při úpravách — do upravovaného souboru staré vzory nepřidávej.
+   - Aktuální stav v `src/`: `23/31` souborů používá Runes, `2` bezstavové Svelte 5 soubory (`src/routes/+error.svelte`, `src/lib/features/home/SanctuaryTeaser.svelte` s `onclick=`) a `6` zbývajících starších Svelte 4 komponent (`SmallWinCelebration.svelte`, `PortalsDrawer.svelte`, `QuickStartSection.svelte`, `DeedInspectorModal.svelte`, `ProgressDashboard.svelte`, `src/routes/app/+page.svelte`) se migruje postupně při úpravách — do upravovaného souboru staré vzory nepřidávej.
+   - Statické vizuální podklady české lesní tůně (`static/art/sanctuary-{dawn,twilight}.{jpg,webp,-800.webp}` a `static/og-image-czech.jpg`) jsou uloženy přímo v `akcelerator-landing-page/static/` (původní procedurální skripty v `scripts/` byly odstraněny).
 2. **Automatické načítání `@lucide/svelte` ve Vite**:
    - `akcelerator-landing-page/vite.config.js` automaticky čte `src/lib/icons/lucideIcons.js` a vkládá importy do `optimizeDeps.include`. Nové ikony stačí přidat do `lucideIcons.js` a `iconRegistry.js` — `vite.config.js` se ručně neupravuje.
 3. **Kanonický barrel vs. zakázané fasády a mrtvý kód**:

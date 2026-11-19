@@ -69,9 +69,11 @@ Akcelerátor altruismu/
     ├── svelte.config.js                       # Vercel adaptér (nodejs24.x) a CSP noncy
     ├── vite.config.js                         # Vite konfigurace a auto-registrace ikon
     ├── vercel.json                            # Vercel konfigurace pro root directory aplikace
+    ├── static/                                # Statické assety (art/sanctuary-{dawn,twilight}.{jpg,webp,-800.webp}, og-image-czech.jpg)
     ├── src/
     │   ├── hooks.server.js                    # Bezpečnostní hlavičky + Cache-Control pro CSP noncy
     │   ├── service-worker.js                  # Offline podpora statických assetů
+    │   ├── styles/                            # Globální Czech forest design tokeny (czech-theme.css)
     │   ├── components/                        # Globální UI a patronka Molly (MollyCompanion, MollyDock, ImmediateHelp, FeedbackModal, SmallWinCelebration)
     │   ├── lib/
     │   │   ├── audio/                         # Líný Web Audio syntezátor a presety (audioContext, synthesizer, presets)
@@ -90,25 +92,25 @@ Akcelerátor altruismu/
     │   │   ├── storage/                       # Centrální registr klíčů (keys.ts) a SSR-safe adaptér (index.ts)
     │   │   └── types/                         # Kanonické TypeScript definice (deed, sensory, molly, progress, api, storage)
 │   │   ├── routes/
-│   │   │   ├── +page.svelte                   # Hlavní vstup: <picture> WebP svítání + jednotná .deed-stage + 45 skutků
+│   │   │   ├── +page.svelte                   # Hlavní vstup: <picture> WebP české tůně + dynamický claim (HOME_MODES) + toulavá Molly + .deed-stage + 45 skutků
 │   │   │   ├── +error.svelte                  # Bezstavová 404 stránka se zpětnou navigací
 │   │   │   ├── near/+page.svelte              # Mapa pomoci v ČR (Leaflet + OSM + 81 kurátorovaných míst + komunita)
-│   │   │   ├── svet/+page.svelte              # Krajina dobra (líná noční vrstva, dechový pacer, sdílené skutky)
+│   │   │   ├── svet/+page.svelte              # Krajina dobra (tichá česká lesní tůň, líná noční vrstva, dechový pacer, sdílené skutky)
 │   │   │   ├── submit/+page.svelte            # Komunitní formulář pro přidání místa nebo akce s nativní validací
 │   │   │   ├── app/+page.svelte               # Přehledový rozcestník 4 cest pomoci
 │   │   │   ├── app/guided/+page.svelte        # Průvodce výběrem na míru během 60 sekund (WCAG 2.4.3 pořadí)
-│   │   │   ├── app/online/+page.svelte        # Filtrovatelný katalog online i lokálních mikro-akcí
+│   │   │   ├── app/online/+page.svelte        # Filtrovatelný katalog samostatných karet online i lokálních mikro-akcí
 │   │   │   └── api/                           # Backend endpointy (/community-nearby, /feedback, /geocode, /nearby, /pulse, /submissions, /test-supabase)
-│   └── tests/                                 # Vitest jednotkové testy (17 souborů / 216 testů) a Playwright E2E (16 *.spec.ts / 315 testů)
+│   └── tests/                                 # Vitest jednotkové testy (17 souborů / 216 testů) a Playwright E2E (17 *.spec.ts / 320 testů)
 ```
 
 ### Hlavní trasy aplikace (Routes)
-1. **`/` (Hlavní stránka)** — Prosvětlený vstup s `<picture>` WebP svítáním, jednotná morphing scéna `.deed-stage` (`preview -> active -> payoff`), 4 skutečně filtrující záložky energie (`45` *Mám 2 min* / `8` *Mám 15 min* / `16` *Osobně* / `9` *Dlouhodobě*), `sessionStorage` stav balíčku (`AA_HOME_DECK_STATE_KEY`), podpora deep-linků `/?action=<id>`, rychlé portály, skok do českých měst a upoutávka na *Krajinu dobra*.
+1. **`/` (Hlavní stránka)** — Prosvětlený vstup s `<picture>` WebP svítáním nad českou lesní tůní (`/art/sanctuary-dawn.*`), dynamickým Hero claimem reagujícím na aktivní režim (`HOME_MODES`, `?intent=`, `?action=`), jednotnou morphing scénou `.deed-stage` (`preview -> active -> payoff`), 4 skutečně filtrujícími záložkami energie (`45` *Mám 2 min* / `8` *Mám 15 min* / `16` *Osobně* / `9` *Dlouhodobě*), `sessionStorage` stavem balíčku (`AA_HOME_DECK_STATE_KEY`), plynule toulavou kočkou Molly na desktopu, rychlými portály, skokem do českých měst a upoutávkou na *Krajinu dobra*.
 2. **`/near` (Mapa pomoci v okolí)** — Reálná místa pomoci po celé ČR (Leaflet + dlaždice OpenStreetMap, geokódování Nominatim přes `/api/geocode`, `81` kurátorovaných míst v `fallback-places.js` a schválené komunitní tipy ze Supabase `community_submissions` se zálohou `18` položek v `community-items.js`), šuplík sekundárních filtrů *„Filtrovat“*, sjednocená nápověda mise `getPlaceActionHint`, 1-tap `tel:`/`mailto:`/`Mapy.cz` a připravené šablony zpráv (včetně rozlišení kočičích útulků).
-3. **`/svet` (Krajina dobra)** — Interaktivní plátno dobrých skutků s jezerem, dechovým cvičením, líně načítanou noční vrstvou, jediným počítadlem pamlsků pro Molly a výchozím ztlumeným zvukem.
+3. **`/svet` (Krajina dobra)** — Tiché útočiště s českou lesní tůní (`sanctuary-dawn.*` / `sanctuary-twilight.*`), lucernami a hvězdami dobrých skutků, dechovým cvičením, líně načítanou noční vrstvou, jediným počítadlem pamlsků pro Molly a výchozím ztlumeným zvukem.
 4. **`/app` (Rozcestník)** — Čtyřkartový přehled cest (*Krajina dobra*, *Průvodce*, *Mapa v okolí*, *Drobné skutky*).
 5. **`/app/guided` (Průvodce na míru)** — Výběr témat, času a nákladů s plánem `#personal-plan` před filtry přímo v DOM (`WCAG 2.4.3`), zdůvodněním a přechodem na `/near`.
-6. **`/app/online` (Katalog mikro-skutků)** — Filtrovatelný přehled skutků podle času, nákladů a místa s prioritou online/telefonních kroků ve výchozím pohledu *„Doporučené“*.
+6. **`/app/online` (Katalog mikro-skutků)** — Filtrovatelný přehled skutků podle času, nákladů a místa se samostatnými bílými kartami (`ActionCard` `variant="directory"`, `#ffffff` povrch, lesní rámeček a stín) ve vícesloupcové desktopové mřížce (`gap: 1.5rem`) a prioritou online/telefonních kroků ve výchozím pohledu *„Doporučené“*.
 7. **`/submit` (Přidat místo nebo akci)** — Komunitní formulář s dynamickým podtitulkem, přístupnými záložkami typu tipu, automatickým geokódováním, nativní validací i automatickým rozbalením volitelných polí a moderačním schvalováním.
 
 ---
@@ -122,9 +124,9 @@ Akcelerátor altruismu/
 | `npm run check` | Provede striktní typovou kontrolu (`svelte-check`) | Runs strict TypeScript/JSDoc typechecking |
 | `npm run test:unit` | Spustí jednotkové testy (Vitest: `17` souborů, `216` testů) | Runs fast Vitest unit test suite (`17` files, `216` tests) |
 | `npm run test:api` | Spustí API integrační testy (`tests/api.spec.ts`) — zkratka z root `package.json` | Runs Playwright API tests (`tests/api.spec.ts`) via root `package.json` shorthand |
-| `npm test` | Spustí kompletní Playwright E2E sadu (`16` `*.spec.ts` / `315` testů) | Runs full Playwright end-to-end test suite (`16` specs / `315` tests) |
+| `npm test` | Spustí kompletní Playwright E2E sadu (`17` `*.spec.ts` / `320` testů) | Runs full Playwright end-to-end test suite (`17` specs / `320` tests) |
 
-Aktuální stav migrace na Svelte 5: `20/31` `.svelte` souborů využívá Runes (`$state`, `$derived`, `$props()`, `$effect`), `1` soubor je bezstavový Svelte 5 (`src/routes/+error.svelte`) a `10` komponent zatím drží starší syntaxi Svelte 4. Pro spuštění konkrétní E2E specifikace (včetně API testů) z `akcelerator-landing-page/` používejte vždy `npm test -- <spec>` (např. `npm test -- tests/api.spec.ts` nebo z kořene `npm --prefix akcelerator-landing-page test -- tests/api.spec.ts`), nikoli holé `npx playwright test`.
+Aktuální stav migrace na Svelte 5: `23/31` `.svelte` souborů využívá Runes (`$state`, `$derived`, `$props()`, `$effect`), `2` soubory jsou bezstavový Svelte 5 (`src/routes/+error.svelte`, `src/lib/features/home/SanctuaryTeaser.svelte`) a `6` komponent zatím drží starší syntaxi Svelte 4. Pro spuštění konkrétní E2E specifikace (včetně API testů) z `akcelerator-landing-page/` používejte vždy `npm test -- <spec>` (např. `npm test -- tests/api.spec.ts` nebo z kořene `npm --prefix akcelerator-landing-page test -- tests/api.spec.ts`), nikoli holé `npx playwright test`.
 
 ---
 

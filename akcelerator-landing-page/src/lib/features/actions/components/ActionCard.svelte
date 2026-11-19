@@ -399,8 +399,8 @@
 
   const PREVIEW_CUE_BY_ID = {
     zvirata_utulek_online: {
-      promise: "1 klik zdarma = ~25 g granulí do misky",
-      status: "Miska čeká prázdná",
+      promise: "Zdarma · přes 1 068 tun krmiva útulkům",
+      status: "Připraveno k naplnění",
     },
     donio_utulky: {
       promise: "100 % daru přímo útulku či projektu",
@@ -659,7 +659,64 @@
     class:is-done={isCompleted}
     data-category-theme={categoryAura?.theme || "default"}
   >
-    <!-- 0. Jednotná horní živá scéna (preview -> active -> payoff bez skoku layoutu) -->
+    <!-- 1. Standardizovaná hlavička: Kategorie · Čas · Cena · Režim -->
+    <div class="action-meta-line card-meta-top">
+      {#if categoryAura}
+        <span
+          class="category-aura-chip category-aura-{categoryAura.theme}"
+          aria-label="Kategorie: {categoryAura.label}"
+        >
+          <span class="category-aura-icon" aria-hidden="true">
+            <AppIcon
+              name={getCategoryIcon(categoryAura.theme)}
+              size={12}
+              strokeWidth={2.1}
+            />
+          </span>
+          <span class="category-aura-label">{categoryAura.shortLabel}</span>
+        </span>
+      {/if}
+      <span class="quick-tags-pill quick-tags-inline">
+        {action.quickTagsLabel || "2 min · Zdarma · Online"}
+      </span>
+      {#if isCompleted}
+        <span class="done-dot done-inline">
+          <AppIcon name="check" size={12} strokeWidth={2.4} />
+          <span>Splněno</span>
+        </span>
+      {/if}
+    </div>
+
+    {#if savedValues && savedValues.length > 0 && onTogglePersonalValues}
+      <div class="card-personal-row">
+        <button
+          type="button"
+          class="personal-values-pill"
+          class:active={usePersonalValues}
+          onclick={onTogglePersonalValues}
+          title="Přizpůsobit podle témat vybraných v průvodci"
+        >
+          <AppIcon
+            name={usePersonalValues ? "sparkles" : "target"}
+            size={13}
+            strokeWidth={2}
+          />
+          <span>
+            {usePersonalValues
+              ? `Tvoje témata (${getSavedValueLabels(savedValues)})`
+              : "Moje témata"}
+          </span>
+        </button>
+      </div>
+    {/if}
+
+    <!-- 2. Název příležitosti -->
+    <h2 class="action-title card-title rec-title">{actionTitle}</h2>
+
+    <!-- 3. Jasné vysvětlení jednoho konkrétního skutku -->
+    <p class="action-desc card-desc rec-desc">{action.desc}</p>
+
+    <!-- 3b. Jednotná živá scéna proměny Před -> Po (preview -> active -> payoff bez skoku layoutu) -->
     {#if showStage}
       <!-- svelte-ignore a11y_click_events_have_key_events -->
       <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -802,63 +859,6 @@
         ></canvas>
       </div>
     {/if}
-
-    <!-- 1. Standardizovaná hlavička: Kategorie · Čas · Cena · Režim -->
-    <div class="action-meta-line card-meta-top">
-      {#if categoryAura}
-        <span
-          class="category-aura-chip category-aura-{categoryAura.theme}"
-          aria-label="Kategorie: {categoryAura.label}"
-        >
-          <span class="category-aura-icon" aria-hidden="true">
-            <AppIcon
-              name={getCategoryIcon(categoryAura.theme)}
-              size={12}
-              strokeWidth={2.1}
-            />
-          </span>
-          <span class="category-aura-label">{categoryAura.shortLabel}</span>
-        </span>
-      {/if}
-      <span class="quick-tags-pill quick-tags-inline">
-        {action.quickTagsLabel || "2 min · Zdarma · Online"}
-      </span>
-      {#if isCompleted}
-        <span class="done-dot done-inline">
-          <AppIcon name="check" size={12} strokeWidth={2.4} />
-          <span>Splněno</span>
-        </span>
-      {/if}
-    </div>
-
-    {#if savedValues && savedValues.length > 0 && onTogglePersonalValues}
-      <div class="card-personal-row">
-        <button
-          type="button"
-          class="personal-values-pill"
-          class:active={usePersonalValues}
-          onclick={onTogglePersonalValues}
-          title="Přizpůsobit podle témat vybraných v průvodci"
-        >
-          <AppIcon
-            name={usePersonalValues ? "sparkles" : "target"}
-            size={13}
-            strokeWidth={2}
-          />
-          <span>
-            {usePersonalValues
-              ? `Tvoje témata (${getSavedValueLabels(savedValues)})`
-              : "Moje témata"}
-          </span>
-        </button>
-      </div>
-    {/if}
-
-    <!-- 2. Název příležitosti -->
-    <h2 class="action-title card-title rec-title">{actionTitle}</h2>
-
-    <!-- 3. Jasné vysvětlení jednoho konkrétního skutku -->
-    <p class="action-desc card-desc rec-desc">{action.desc}</p>
 
     <!-- 4. Přínos (v katalogu viditelný přímo; na instant kartě výhradně v detailu bez duplicity) -->
     {#if variant === "directory"}
@@ -1194,6 +1194,33 @@
     max-width: 100%;
   }
 
+  .action-card.directory-card {
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-forest, #c5d9cd);
+    border-radius: 20px;
+    padding: 1.15rem 1.1rem;
+    box-shadow:
+      0 2px 10px -2px rgba(20, 40, 29, 0.06),
+      0 1px 3px rgba(20, 40, 29, 0.04);
+    transition:
+      border-color 0.18s ease,
+      box-shadow 0.18s ease;
+  }
+
+  .action-card.directory-card:hover {
+    border-color: var(--border-forest-strong, #a7c4b3);
+    box-shadow:
+      0 10px 24px -8px rgba(20, 40, 29, 0.12),
+      0 2px 6px rgba(27, 94, 66, 0.06);
+  }
+
+  .action-card.directory-card.spotlight {
+    border-color: var(--accent-warm, #b8651b);
+    box-shadow:
+      0 0 0 3px rgba(184, 101, 27, 0.2),
+      0 12px 26px -8px rgba(20, 40, 29, 0.14);
+  }
+
   /* =========================================================================
      ŽIVÁ SCÉNA OČEKÁVÁNÍ (UNIFIED RADIANT SANCTUARY DIORAMA + NON-OVERLAPPING HUD)
      ========================================================================= */
@@ -1205,23 +1232,23 @@
     flex-direction: column;
     width: 100%;
     height: auto;
-    margin: 0 0 0.65rem 0;
-    border-radius: 16px;
+    margin: 0.2rem 0 0.55rem 0;
+    border-radius: 14px;
     overflow: hidden;
     cursor: default;
     user-select: none;
     background:
       radial-gradient(
-        88% 92% at 50% 24%,
-        rgba(52, 211, 153, 0.28) 0%,
-        rgba(251, 191, 36, 0.1) 44%,
+        82% 88% at 50% 24%,
+        rgba(246, 231, 193, 0.08) 0%,
+        rgba(37, 111, 78, 0.14) 44%,
         transparent 74%
       ),
-      linear-gradient(180deg, #175239 0%, #103c29 48%, #082217 82%, #04130d 100%);
-    border: 1px solid rgba(52, 211, 153, 0.42);
+      linear-gradient(180deg, #1b362b 0%, #132920 56%, #0c1d16 100%);
+    border: 1px solid rgba(197, 217, 205, 0.32);
     box-shadow:
-      0 12px 26px -12px rgba(4, 20, 13, 0.44),
-      inset 0 1px 0 rgba(255, 255, 255, 0.16);
+      0 2px 10px -4px rgba(10, 29, 20, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
     transition:
       border-color 0.24s ease,
       box-shadow 0.24s ease,
@@ -1236,8 +1263,8 @@
     pointer-events: none;
     background: radial-gradient(
       165px 110px at var(--spot-x) var(--spot-y),
-      rgba(253, 230, 138, 0.38) 0%,
-      rgba(251, 191, 36, 0.18) 48%,
+      rgba(253, 230, 138, 0.22) 0%,
+      rgba(251, 191, 36, 0.08) 48%,
       transparent 100%
     );
     opacity: 0;
@@ -1245,11 +1272,11 @@
   }
 
   .deed-preview-stage.is-primed {
-    border-color: rgba(251, 191, 36, 0.76);
+    border-color: rgba(253, 230, 138, 0.54);
     box-shadow:
-      0 14px 30px -8px rgba(180, 120, 16, 0.28),
-      0 0 0 2px rgba(251, 191, 36, 0.3),
-      inset 0 1px 0 rgba(254, 243, 199, 0.36);
+      0 6px 18px -6px rgba(180, 120, 16, 0.22),
+      0 0 0 1px rgba(251, 191, 36, 0.2),
+      inset 0 1px 0 rgba(254, 243, 199, 0.24);
   }
 
   .deed-preview-stage.is-primed::after {
@@ -1266,27 +1293,27 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.4rem;
-    padding: 0.42rem 0.52rem 0.08rem;
+    gap: 0.55rem;
+    padding: 0.44rem 0.72rem 0.34rem;
     background: transparent;
-    border-bottom: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     pointer-events: none;
   }
 
   .preview-promise-pill {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.34rem;
     min-width: 0;
-    max-width: 68%;
-    padding: 0.2rem 0.58rem;
-    border-radius: 999px;
-    background: rgba(4, 20, 14, 0.84);
-    border: 1px solid rgba(253, 230, 138, 0.46);
-    color: #fef3c7;
-    font-size: 0.72rem;
-    font-weight: 700;
-    line-height: 1.2;
+    max-width: 66%;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    border: none;
+    color: #f6e7c1;
+    font-size: 0.74rem;
+    font-weight: 600;
+    line-height: 1.25;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1302,45 +1329,45 @@
   }
 
   .deed-preview-stage :global(.preview-promise-spark) {
-    color: #fbbf24;
+    color: #e6c686;
     flex-shrink: 0;
   }
 
   .preview-status-pill {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.32rem;
     flex-shrink: 0;
-    padding: 0.18rem 0.52rem;
-    border-radius: 999px;
-    background: rgba(5, 26, 18, 0.8);
-    border: 1px solid rgba(52, 211, 153, 0.44);
-    color: #d1fae5;
-    font-size: 0.68rem;
-    font-weight: 700;
-    line-height: 1.2;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    border: none;
+    color: #d6e4dc;
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1.25;
     white-space: nowrap;
-    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    transition: color 0.2s ease;
   }
 
   .preview-status-pill.nudged {
-    background: rgba(22, 18, 6, 0.86);
-    border-color: rgba(253, 230, 138, 0.74);
-    color: #fef3c7;
+    background: transparent;
+    border: none;
+    color: #f6e7c1;
   }
 
   .preview-status-dot {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
-    background: #34d399;
-    box-shadow: 0 0 8px #34d399;
+    background: #a7c4b3;
+    box-shadow: none;
     flex-shrink: 0;
   }
 
   .preview-status-pill.nudged .preview-status-dot {
-    background: #fbbf24;
-    box-shadow: 0 0 8px #fbbf24;
+    background: #f6e7c1;
+    box-shadow: 0 0 6px rgba(246, 231, 193, 0.55);
   }
 
   .preview-diorama-canvas {
@@ -1363,7 +1390,7 @@
     flex-wrap: nowrap;
     overflow: hidden;
     font-size: 0.78rem;
-    color: var(--ink-muted, #61786b);
+    color: var(--ink-muted, #516659);
     margin-bottom: 0.38rem;
   }
 
@@ -1378,9 +1405,9 @@
     display: block;
     padding: 0.2rem 0.6rem;
     border-radius: 999px;
-    background: rgba(16, 185, 129, 0.1);
-    border: 1px solid rgba(52, 211, 153, 0.28);
-    color: #065f46;
+    background: var(--bohemian-sage, #eef5f0);
+    border: 1px solid var(--border-forest, #c5d9cd);
+    color: var(--accent-primary, #1b5e42);
     font-size: 0.74rem;
     font-weight: 700;
     line-height: 1.2;
@@ -1394,18 +1421,18 @@
   }
 
   .directory-card .action-meta-line {
-    gap: 0.28rem;
+    gap: 0.24rem;
   }
 
   .directory-card .category-aura-chip {
-    padding: 0.16rem 0.44rem;
-    font-size: 0.68rem;
+    padding: 0.15rem 0.42rem;
+    font-size: 0.67rem;
     letter-spacing: 0;
   }
 
   .directory-card .quick-tags-pill {
-    padding: 0.15rem 0.4rem;
-    font-size: 0.66rem;
+    padding: 0.14rem 0.36rem;
+    font-size: 0.65rem;
     letter-spacing: 0;
   }
 
@@ -1443,15 +1470,15 @@
   }
 
   .category-aura-animals {
-    background: rgba(251, 191, 36, 0.17);
-    border: 1px solid rgba(245, 158, 11, 0.36);
-    color: #92400e;
+    background: var(--accent-warm-tint, #fef6e8);
+    border: 1px solid rgba(184, 101, 27, 0.32);
+    color: var(--accent-warm-ink, #8f4b0e);
   }
 
   .category-aura-wildlife {
-    background: #ecfdf5;
-    border: 1px solid #a7f3d0;
-    color: #0f766e;
+    background: var(--bohemian-mist, #e6f0ea);
+    border: 1px solid var(--border-forest, #c5d9cd);
+    color: var(--czech-forest, #1d5c40);
   }
 
   .category-aura-nature {
@@ -1461,21 +1488,21 @@
   }
 
   .category-aura-science {
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    color: #1d4ed8;
+    background: var(--forest-brook-tint, #eaf2f4);
+    border: 1px solid var(--forest-brook-border, #b8cfd6);
+    color: var(--forest-brook-ink, #1d4f5f);
   }
 
   .category-aura-community {
-    background: #f5f3ff;
-    border: 1px solid #ddd6fe;
-    color: #5b21b6;
+    background: var(--moss-olive-tint, #f2f5e9);
+    border: 1px solid var(--moss-olive-border, #cad4b0);
+    color: var(--moss-olive-ink, #4a5926);
   }
 
   .category-aura-care {
-    background: var(--accent-warm-tint, #fef6e8);
-    border: 1px solid rgba(184, 101, 27, 0.28);
-    color: #9a3412;
+    background: var(--rowan-tint, #fbf0ed);
+    border: 1px solid var(--rowan-border, #e5c1b8);
+    color: var(--rowan-ink, #8a3b2c);
   }
 
   .category-aura-default {
@@ -1567,7 +1594,7 @@
     display: block;
     font-size: 0.78rem;
     line-height: 1.44;
-    color: var(--ink-muted, #61786b);
+    color: var(--ink-muted, #516659);
   }
 
   .partner-trust-line > span + span {
@@ -1683,8 +1710,13 @@
     padding: 0.8rem 1.15rem;
     box-sizing: border-box;
     border-radius: 14px;
-    background: linear-gradient(135deg, #155339 0%, #1d6b49 52%, #16553a 100%);
-    border: 1px solid rgba(52, 211, 153, 0.34);
+    background: linear-gradient(
+      135deg,
+      var(--czech-forest-hover, #164932) 0%,
+      var(--accent-primary, #1b5e42) 52%,
+      var(--czech-forest, #1d5c40) 100%
+    );
+    border: 1px solid rgba(216, 235, 224, 0.34);
     color: #ffffff;
     font-weight: 800;
     font-size: 0.95rem;
@@ -1705,7 +1737,7 @@
     position: absolute;
     inset: 0;
     z-index: -1;
-    background: linear-gradient(90deg, rgba(16, 185, 129, 0.42), rgba(251, 191, 36, 0.48));
+    background: linear-gradient(90deg, rgba(37, 111, 78, 0.42), rgba(251, 191, 36, 0.42));
     transform-origin: left center;
     transform: scaleX(var(--spark-charge, 0));
     transition: transform 0.06s linear;
@@ -1728,24 +1760,24 @@
   .btn-studio-primary.cta-nudged,
   :global(.btn-studio-primary.spark-ready) {
     box-shadow:
-      0 14px 28px -4px rgba(16, 185, 129, 0.45),
-      0 0 0 3px rgba(251, 191, 36, 0.65);
+      0 14px 28px -4px rgba(27, 94, 66, 0.34),
+      0 0 0 3px rgba(184, 101, 27, 0.55);
   }
 
   .btn-studio-primary :global(.cta-lead-icon) {
-    color: #fde68a;
+    color: var(--hero-dawn, #fef3c7);
     flex-shrink: 0;
   }
 
   .btn-studio-primary :global(.cta-arrow-icon) {
-    color: #a7f3d0;
+    color: #d8ebe0;
     flex-shrink: 0;
     transition: transform 0.18s ease, color 0.18s ease;
   }
 
   .btn-studio-primary:hover :global(.cta-arrow-icon) {
     transform: translate(2px, -2px);
-    color: #fde68a;
+    color: var(--hero-dawn, #fef3c7);
   }
 
   .btn-studio-done {
@@ -1774,7 +1806,7 @@
   }
 
   .btn-studio-done:hover {
-    background: #dfeae3;
+    background: var(--bohemian-mist, #e6f0ea);
     color: var(--ink-primary, #14281d);
     border-color: var(--accent-primary, #1b5e42);
   }
@@ -1830,7 +1862,7 @@
 
   .deed-stage .impact-payoff-badge {
     background: var(--accent-warm-tint, #fef6e8);
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
     border: 1px solid rgba(184, 101, 27, 0.28);
     border-radius: 999px;
     padding: 0.2rem 0.55rem;
@@ -1934,12 +1966,12 @@
     border-radius: 999px;
     background: var(--accent-warm-tint, #fef6e8);
     border: 1px solid rgba(184, 101, 27, 0.28);
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
   }
 
   .molly-celebration-note :global(.badge-paw-svg),
   .molly-celebration-note :global(.molly-note-paw-svg) {
-    color: var(--accent-warm, #b8651b);
+    color: var(--accent-warm-ink, #8f4b0e);
     display: inline-block;
     vertical-align: -2px;
     margin-right: 0.2rem;
@@ -1995,7 +2027,7 @@
     border-radius: 999px;
     border: 1px solid rgba(184, 101, 27, 0.45);
     background: var(--accent-warm-tint, #fef6e8);
-    color: #8f4b0e;
+    color: var(--accent-warm-ink, #8f4b0e);
     font-family: inherit;
     font-size: 0.84rem;
     font-weight: 800;
@@ -2005,8 +2037,8 @@
   }
 
   .btn-inline-feed-molly:hover {
-    background: #fde68a;
-    border-color: #b8651b;
+    background: var(--hero-dawn, #fef3c7);
+    border-color: var(--accent-warm, #b8651b);
     transform: translateY(-1px);
   }
 
@@ -2067,7 +2099,7 @@
   }
 
   .btn-session-close:hover {
-    background: #e1eae4;
+    background: var(--bohemian-mist, #e6f0ea);
     border-color: var(--accent-primary, #1b5e42);
   }
 
@@ -2117,7 +2149,7 @@
     flex-wrap: wrap;
     font-size: 0.73rem;
     line-height: 1.4;
-    color: var(--ink-muted, #61786b);
+    color: var(--ink-muted, #516659);
     text-align: left;
   }
 
@@ -2128,7 +2160,7 @@
     max-width: 100%;
     font-size: 0.73rem;
     line-height: 1.4;
-    color: var(--ink-muted, #61786b);
+    color: var(--ink-muted, #516659);
     text-align: left;
     overflow-wrap: anywhere;
   }
@@ -2198,7 +2230,7 @@
     display: inline-flex;
     align-items: center;
     box-sizing: border-box;
-    color: var(--ink-muted, #61786b);
+    color: var(--ink-muted, #516659);
     font-family: var(--font-sans);
     font-size: 0.74rem;
     font-weight: 600;
@@ -2208,7 +2240,7 @@
   }
 
   .broken-link-btn:hover {
-    color: var(--accent-warm, #b8651b);
+    color: var(--accent-warm-ink, #8f4b0e);
   }
 
   @media (max-width: 680px) {
@@ -2245,10 +2277,10 @@
 
     .preview-hud {
       flex-wrap: nowrap;
-      min-height: 32px;
+      min-height: 28px;
       align-items: center;
-      padding: 0.2rem 0.36rem;
-      gap: 0.25rem;
+      padding: 0.28rem 0.54rem 0.24rem;
+      gap: 0.35rem;
       box-sizing: border-box;
     }
 
@@ -2256,16 +2288,16 @@
       flex: 1 1 auto;
       min-width: 0;
       max-width: none;
-      padding: 0.14rem 0.44rem;
-      font-size: 0.66rem;
+      padding: 0;
+      font-size: 0.67rem;
     }
 
     .preview-status-pill,
     .preview-status-pill.nudged {
       display: inline-flex;
       flex-shrink: 0;
-      padding: 0.14rem 0.42rem;
-      font-size: 0.64rem;
+      padding: 0;
+      font-size: 0.65rem;
     }
 
     .deed-stage .stage-canvas,
@@ -2433,13 +2465,13 @@
     }
 
     .preview-hud {
-      min-height: 32px;
-      padding: 0.18rem 0.34rem;
+      min-height: 26px;
+      padding: 0.24rem 0.48rem 0.2rem;
     }
 
     .preview-promise-pill {
-      padding: 0.12rem 0.4rem;
-      font-size: 0.64rem;
+      padding: 0;
+      font-size: 0.65rem;
     }
 
     .deed-stage .stage-canvas,
