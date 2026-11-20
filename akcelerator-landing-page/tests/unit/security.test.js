@@ -335,6 +335,74 @@ describe('security: validateMutationOrigin strict Content-Type & origin enforcem
     });
     expect(validateMutationOrigin(crossOriginReq, targetUrl)).toBe(false);
   });
+
+  it('rejects sec-fetch-site: same-site without matching Origin while allowing same-origin/none or absent headers', () => {
+    const targetUrl = new URL('https://akcelerator-altruismu.cz/api/feedback');
+
+    const sameSiteNoOrigin = new Request(targetUrl, {
+      method: 'POST',
+      headers: {
+        'sec-fetch-site': 'same-site',
+        'content-type': 'application/json'
+      }
+    });
+    expect(validateMutationOrigin(sameSiteNoOrigin, targetUrl)).toBe(false);
+
+    const sameSiteNormalizedNoOrigin = new Request(targetUrl, {
+      method: 'POST',
+      headers: {
+        'sec-fetch-site': ' SAME-SITE ',
+        'content-type': 'application/json'
+      }
+    });
+    expect(validateMutationOrigin(sameSiteNormalizedNoOrigin, targetUrl)).toBe(false);
+
+    const sameSiteSubdomainOrigin = new Request(targetUrl, {
+      method: 'POST',
+      headers: {
+        'sec-fetch-site': 'same-site',
+        origin: 'https://evil.akcelerator-altruismu.cz',
+        'content-type': 'application/json'
+      }
+    });
+    expect(validateMutationOrigin(sameSiteSubdomainOrigin, targetUrl)).toBe(false);
+
+    const sameSiteMatchingOrigin = new Request(targetUrl, {
+      method: 'POST',
+      headers: {
+        'sec-fetch-site': 'same-site',
+        origin: 'https://akcelerator-altruismu.cz',
+        'content-type': 'application/json'
+      }
+    });
+    expect(validateMutationOrigin(sameSiteMatchingOrigin, targetUrl)).toBe(true);
+
+    const sameOriginNoOriginHeader = new Request(targetUrl, {
+      method: 'POST',
+      headers: {
+        'sec-fetch-site': 'same-origin',
+        'content-type': 'application/json'
+      }
+    });
+    expect(validateMutationOrigin(sameOriginNoOriginHeader, targetUrl)).toBe(true);
+
+    const noneNoOriginHeader = new Request(targetUrl, {
+      method: 'POST',
+      headers: {
+        'sec-fetch-site': 'none',
+        'content-type': 'application/json'
+      }
+    });
+    expect(validateMutationOrigin(noneNoOriginHeader, targetUrl)).toBe(true);
+
+    const absentBothHeaders = new Request(targetUrl, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json'
+      }
+    });
+    expect(validateMutationOrigin(absentBothHeaders, targetUrl)).toBe(true);
+  });
 });
 
 describe('security: Supabase config & ephemeral IP salt (supabase.js)', () => {
@@ -948,5 +1016,124 @@ describe('security: M1 iteration 2 boundary & error-handling regressions', () =>
     expect(Array.from(String(insertedRow?.city)).length).toBe(80);
     expect(String(insertedRow?.city)).not.toMatch(loneSurrogateRe);
     expect(String(insertedRow?.address)).not.toMatch(loneSurrogateRe);
+  });
+
+  it('POST /api/submissions emits Cache-Control: no-store across 403, 400, 200 (honeypot), 503, 200, and 429 responses', async () => {
+    const url = new URL('https://localhost/api/submissions');
+
+    // 403 cross-origin
+    const res403 = await submissionsPost(
+      /** @type {*} */ ({
+        url,
+        request: new Request(url, {
+          method: 'POST',
+          headers: { origin: 'https://evil.example', 'content-type': 'application/json' },
+          body: JSON.stringify({})
+        }),
+        getClientAddress: () => '198.51.100.201'
+      })
+    );
+    expect(res403.status).toBe(403);
+    expect(res403.headers.get('cache-control')).toBe('no-store');
+
+    // 200 honeypot
+    const resHoneypot = await submissionsPost(
+      /** @type {*} */ ({
+        url,
+        request: new Request(url, {
+          method: 'POST',
+          headers: { origin: 'https://localhost', 'content-type': 'application/json' },
+          body: JSON.stringify({ hp: 'bot-filled' })
+        }),
+        getClientAddress: () => '198.51.100.201'
+      })
+    );
+    expect(resHoneypot.status).toBe(200);
+    expect(resHoneypot.headers.get('cache-control')).toBe('no-store');
+
+    // 400 validation error
+    const res400 = await submissionsPost(
+      /** @type {*} */ ({
+        url,
+        request: new Request(url, {
+          method: 'POST',
+          headers: { origin: 'https://localhost', 'content-type': 'application/json' },
+          body: JSON.stringify({ hp: '', elapsed_ms: 2500, kind: 'org', name: 'A' })
+        }),
+        getClientAddress: () => '198.51.100.201'
+      })
+    );
+    expect(res400.status).toBe(400);
+    expect(res400.headers.get('cache-control')).toBe('no-store');
+
+    // 503 missing Supabase config
+    delete process.env.PUBLIC_SUPABASE_URL;
+    delete process.env.PUBLIC_SUPABASE_ANON_KEY;
+    const validPayload = {
+      hp: '',
+      elapsed_ms: 2500,
+      kind: 'org',
+      name: 'Komunitní centrum Lipová',
+      category: 'community',
+      city: 'Praha',
+      lat: 50.0755,
+      lon: 14.4378
+    };
+    const res503 = await submissionsPost(
+      /** @type {*} */ ({
+        url,
+        request: new Request(url, {
+          method: 'POST',
+          headers: { origin: 'https://localhost', 'content-type': 'application/json' },
+          body: JSON.stringify(validPayload)
+        }),
+        getClientAddress: () => '198.51.100.201'
+      })
+    );
+    expect(res503.status).toBe(503);
+    expect(res503.headers.get('cache-control')).toBe('no-store');
+
+    // 200 mocked Supabase insert
+    process.env.PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+    process.env.PUBLIC_SUPABASE_ANON_KEY = 'anon-key-test';
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({}), { status: 201, headers: { 'content-type': 'application/json' } })
+    );
+    const res200 = await submissionsPost(
+      /** @type {*} */ ({
+        url,
+        request: new Request(url, {
+          method: 'POST',
+          headers: { origin: 'https://localhost', 'content-type': 'application/json' },
+          body: JSON.stringify(validPayload)
+        }),
+        getClientAddress: () => '198.51.100.201'
+      })
+    );
+    expect(res200.status).toBe(200);
+    expect(res200.headers.get('cache-control')).toBe('no-store');
+
+    // 429 rate-limited (15/10min per IP; already made 3 non-honeypot requests above from 198.51.100.201)
+    let res429 = null;
+    for (let i = 0; i < 15; i++) {
+      const r = await submissionsPost(
+        /** @type {*} */ ({
+          url,
+          request: new Request(url, {
+            method: 'POST',
+            headers: { origin: 'https://localhost', 'content-type': 'application/json' },
+            body: JSON.stringify(validPayload)
+          }),
+          getClientAddress: () => '198.51.100.201'
+        })
+      );
+      if (r.status === 429) {
+        res429 = r;
+        break;
+      }
+    }
+    expect(res429).not.toBeNull();
+    expect(res429?.headers.get('cache-control')).toBe('no-store');
+    expect(Number(res429?.headers.get('retry-after'))).toBeGreaterThan(0);
   });
 });

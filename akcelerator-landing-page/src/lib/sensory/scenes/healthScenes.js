@@ -15,7 +15,7 @@ import {
 } from '../graphics/primitives.js';
 
 export function renderBloodDrop(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-    // 🩸 Darování krve: 3D rubínová kapka vlevo a 3 tichá srdce vpravo -> 3 pulsující EKG linie života rozsvěcující 3 hřejivá srdce
+    // Darování krve: 3D rubínová kapka vlevo a 3 tichá srdce vpravo -> 3 pulsující EKG linie života rozsvěcující 3 hřejivá srdce
     const dropX = cx - 58;
     const dropFloat = red ? 0 : Math.sin(wt * 2.2) * 1.1;
     const dropY = cy + dropFloat;
@@ -218,7 +218,7 @@ export function renderBloodDrop(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fra
 }
 
 export function renderDnaHelix(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-    // 🧬 Registr kostní dřeně: Dva oddělené nespojené řetězce -> 100% molekulární shoda a sepnutá dvoušroubovice
+    // Registr kostní dřeně: Dva oddělené nespojené řetězce -> 100% molekulární shoda a sepnutá dvoušroubovice
     const rungs = 15;
     const sep = (1 - easeOut(p)) * 13;
     const spanH = Math.min(82, spanX * 0.72);
@@ -272,7 +272,7 @@ export function renderDnaHelix(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fram
 }
 
 export function renderHairSilk(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-    // 💇‍♀️ Daruj vlasy: Svázaný cop vlevo -> Hedvábné zlatavě růžové prameny splývající do květinové koruny
+    // Daruj vlasy: Svázaný cop vlevo -> Hedvábné zlatavě růžové prameny splývající do květinové koruny
     const leftX = cx - 64;
     const rightX = cx + 44;
     const flowP = easeOut(subP(p, 0, 0.82));
@@ -313,7 +313,7 @@ export function renderHairSilk(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fram
 }
 
 export function renderEcgRescue(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-    // 🚑 Aplikace Záchranka: Slabá křivka a zhasnuté AED -> Živý PQRST srdeční tep a GPS maják AED
+    // Aplikace Záchranka: Slabá křivka a zhasnuté AED -> Živý PQRST srdeční tep a GPS maják AED
     const leftX = cx - spanX + 10;
     const aedX = cx + spanX - 28;
     const ecgEnd = aedX - 22;
@@ -386,7 +386,7 @@ export function renderEcgRescue(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fra
 }
 
 export function renderMindWave(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-    // 🧠 Nevypusť duši: Chaotické zašmodrchané klubko myšlenek -> Plynulé rozpletení do klidné harmonické vlny
+    // Nevypusť duši: Chaotické zašmodrchané klubko myšlenek -> Plynulé rozpletení do klidné harmonické vlny
     const untangle = easeOut(p);
     const pts = 52;
     const waveSpan = Math.min(96, spanX * 0.82);
@@ -442,7 +442,7 @@ export function renderMindWave(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fram
 }
 
 export function renderBreathLotus(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-    // 🧘 Opatruj.se: Zavřené poupě na klidné hladině -> Rozkvetlý 7lístkový lotos s dechovými kruhy
+    // Opatruj.se: Zavřené poupě na klidné hladině -> Rozkvetlý 7lístkový lotos s dechovými kruhy
     const baseL = by - 8;
     const bloom = easeOut(p);
     const breath = 1 + Math.sin(wt * 1.6) * 0.06;

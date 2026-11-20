@@ -24,7 +24,7 @@ export async function handle({ event, resolve }) {
   }
 
   if (
-    event.request.method === 'GET' &&
+    (event.request.method === 'GET' || event.request.method === 'HEAD') &&
     !event.url.pathname.startsWith('/api/') &&
     !headers.has('cache-control') &&
     (headers.get('content-type') || '').includes('text/html')

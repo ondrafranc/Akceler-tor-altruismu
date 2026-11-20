@@ -21,6 +21,10 @@ import {
   GET as geocodeGet,
   _resetGeocodeStateForTests
 } from '../../src/routes/api/geocode/+server.js';
+import {
+  GET as feedbackGet,
+  POST as feedbackPost
+} from '../../src/routes/api/feedback/+server.js';
 import { GET as nearbyGet } from '../../src/routes/api/nearby/+server.js';
 
 const APP_ROOT = path.resolve(import.meta.dirname, '../..');
@@ -710,5 +714,312 @@ describe('M2 #4d & #5: /api/nearby unified cache key & service-worker.js dead sy
     expect(swSrc).not.toContain("addEventListener('sync'");
     expect(swSrc).toContain('/offline.html');
     expect(swSrc).toContain("url.pathname.startsWith('/api/')");
+  });
+});
+
+describe('M1 security remediations: feedback rate limit & no-store, geocode fallback no-store', () => {
+  const origBypass = process.env.TEST_BYPASS_SECRET;
+  const origVercelEnv = process.env.VERCEL_ENV;
+  const origUrl = process.env.PUBLIC_SUPABASE_URL;
+  const origAnon = process.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    _resetGeocodeStateForTests();
+    if (origBypass === undefined) delete process.env.TEST_BYPASS_SECRET;
+    else process.env.TEST_BYPASS_SECRET = origBypass;
+    if (origVercelEnv === undefined) delete process.env.VERCEL_ENV;
+    else process.env.VERCEL_ENV = origVercelEnv;
+    if (origUrl === undefined) delete process.env.PUBLIC_SUPABASE_URL;
+    else process.env.PUBLIC_SUPABASE_URL = origUrl;
+    if (origAnon === undefined) delete process.env.PUBLIC_SUPABASE_ANON_KEY;
+    else process.env.PUBLIC_SUPABASE_ANON_KEY = origAnon;
+  });
+
+  it('GET /api/feedback rate-limits at 30/min with no-store and retry-after, while honoring authorized test bypass', async () => {
+    delete process.env.PUBLIC_SUPABASE_URL;
+    delete process.env.PUBLIC_SUPABASE_ANON_KEY;
+    delete process.env.VERCEL_ENV;
+    process.env.TEST_BYPASS_SECRET = 'm1-feedback-bypass';
+
+    const url = new URL('http://localhost/api/feedback');
+    const ip = () => '198.51.100.210';
+
+    for (let i = 0; i < 30; i++) {
+      const res = await feedbackGet(
+        /** @type {*} */ ({
+          url,
+          request: new Request(url),
+          getClientAddress: ip
+        })
+      );
+      expect(res.status).toBe(503);
+      expect(res.headers.get('cache-control')).toBe('no-store');
+    }
+
+    const blocked = await feedbackGet(
+      /** @type {*} */ ({
+        url,
+        request: new Request(url),
+        getClientAddress: ip
+      })
+    );
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers.get('cache-control')).toBe('no-store');
+    expect(Number(blocked.headers.get('retry-after'))).toBeGreaterThan(0);
+
+    const bypassed = await feedbackGet(
+      /** @type {*} */ ({
+        url,
+        request: new Request(url, { headers: { 'x-test-bypass-secret': 'm1-feedback-bypass' } }),
+        getClientAddress: ip
+      })
+    );
+    expect(bypassed.status).toBe(503);
+    expect(bypassed.headers.get('cache-control')).toBe('no-store');
+  });
+
+  it('POST /api/feedback sets Cache-Control: no-store on 403, 400, 503, 200, and 429 responses', async () => {
+    delete process.env.VERCEL_ENV;
+    delete process.env.TEST_BYPASS_SECRET;
+    const url = new URL('https://localhost/api/feedback');
+    const ip = () => '198.51.100.211';
+
+    // 403 cross-origin
+    const res403 = await feedbackPost(
+      /** @type {*} */ ({
+        url,
+        request: new Request(url, {
+          method: 'POST',
+          headers: { origin: 'https://evil.example', 'content-type': 'application/json' },
+          body: JSON.stringify({ message: 'test' })
+        }),
+        getClientAddress: ip
+      })
+    );
+    expect(res403.status).toBe(403);
+    expect(res403.headers.get('cache-control')).toBe('no-store');
+
+    // 400 validation error
+    const res400 = await feedbackPost(
+      /** @type {*} */ ({
+        url,
+        request: new Request(url, {
+          method: 'POST',
+          headers: { origin: 'https://localhost', 'content-type': 'application/json' },
+          body: JSON.stringify({ message: '' })
+        }),
+        getClientAddress: ip
+      })
+    );
+    expect(res400.status).toBe(400);
+    expect(res400.headers.get('cache-control')).toBe('no-store');
+
+    // 503 unconfigured Supabase
+    delete process.env.PUBLIC_SUPABASE_URL;
+    delete process.env.PUBLIC_SUPABASE_ANON_KEY;
+    const res503 = await feedbackPost(
+      /** @type {*} */ ({
+        url,
+        request: new Request(url, {
+          method: 'POST',
+          headers: { origin: 'https://localhost', 'content-type': 'application/json' },
+          body: JSON.stringify({ message: 'Skvělý projekt' })
+        }),
+        getClientAddress: ip
+      })
+    );
+    expect(res503.status).toBe(503);
+    expect(res503.headers.get('cache-control')).toBe('no-store');
+
+    // 200 mocked Supabase insert
+    process.env.PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+    process.env.PUBLIC_SUPABASE_ANON_KEY = 'anon-key-test';
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({}), { status: 201, headers: { 'content-type': 'application/json' } })
+    );
+    const res200 = await feedbackPost(
+      /** @type {*} */ ({
+        url,
+        request: new Request(url, {
+          method: 'POST',
+          headers: { origin: 'https://localhost', 'content-type': 'application/json' },
+          body: JSON.stringify({ message: 'Skvělý projekt', rating: 5 })
+        }),
+        getClientAddress: ip
+      })
+    );
+    expect(res200.status).toBe(200);
+    expect(res200.headers.get('cache-control')).toBe('no-store');
+
+    // 429 rate-limited (25/10min per IP)
+    let res429 = null;
+    for (let i = 0; i < 26; i++) {
+      const r = await feedbackPost(
+        /** @type {*} */ ({
+          url,
+          request: new Request(url, {
+            method: 'POST',
+            headers: { origin: 'https://localhost', 'content-type': 'application/json' },
+            body: JSON.stringify({ message: 'Další zpráva' })
+          }),
+          getClientAddress: ip
+        })
+      );
+      if (r.status === 429) {
+        res429 = r;
+        break;
+      }
+    }
+    expect(res429).not.toBeNull();
+    expect(res429?.headers.get('cache-control')).toBe('no-store');
+    expect(Number(res429?.headers.get('retry-after'))).toBeGreaterThan(0);
+  });
+
+  it('GET /api/geocode emits no-store on fallback:true (empty Nominatim & rejected Nominatim across fresh, inflight, and cached hits) and s-maxage=86400 on valid responses', async () => {
+    // 1. Empty Nominatim ([]) -> fallback: true -> no-store on fresh, inflight, and cache hit
+    _resetGeocodeStateForTests();
+    /** @type {(res: Response) => void} */
+    let resolveEmptyFetch = () => {};
+    /** @type {() => void} */
+    let markEmptyFetchStarted = () => {};
+    const emptyFetchStarted = new Promise((resolve) => {
+      markEmptyFetchStarted = () => resolve(undefined);
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveEmptyFetch = resolve;
+          markEmptyFetchStarted();
+        })
+    );
+
+    const emptyUrl = new URL('http://localhost/api/geocode?q=neznamaulice201&limit=3');
+    const pFresh = geocodeGet(
+      /** @type {*} */ ({
+        url: emptyUrl,
+        request: new Request(emptyUrl),
+        getClientAddress: () => '198.51.100.212'
+      })
+    );
+    const pInflight = geocodeGet(
+      /** @type {*} */ ({
+        url: emptyUrl,
+        request: new Request(emptyUrl),
+        getClientAddress: () => '198.51.100.213'
+      })
+    );
+
+    await emptyFetchStarted;
+    resolveEmptyFetch(
+      new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { 'content-type': 'application/json' }
+      })
+    );
+
+    const [freshEmptyRes, inflightEmptyRes] = await Promise.all([pFresh, pInflight]);
+    expect(freshEmptyRes.status).toBe(200);
+    expect(freshEmptyRes.headers.get('cache-control')).toBe('no-store');
+    expect((await freshEmptyRes.json()).fallback).toBe(true);
+
+    expect(inflightEmptyRes.status).toBe(200);
+    expect(inflightEmptyRes.headers.get('cache-control')).toBe('no-store');
+    expect((await inflightEmptyRes.json()).fallback).toBe(true);
+
+    const cachedEmptyRes = await geocodeGet(
+      /** @type {*} */ ({
+        url: emptyUrl,
+        request: new Request(emptyUrl),
+        getClientAddress: () => '198.51.100.214'
+      })
+    );
+    expect(cachedEmptyRes.status).toBe(200);
+    expect(cachedEmptyRes.headers.get('cache-control')).toBe('no-store');
+    expect((await cachedEmptyRes.json()).fallback).toBe(true);
+
+    // 2. Rejected Nominatim -> fallback: true -> no-store on fresh, inflight, and cache hit
+    _resetGeocodeStateForTests();
+    /** @type {(err: Error) => void} */
+    let rejectFetch = () => {};
+    /** @type {() => void} */
+    let markErrFetchStarted = () => {};
+    const errFetchStarted = new Promise((resolve) => {
+      markErrFetchStarted = () => resolve(undefined);
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejectFetch = reject;
+          markErrFetchStarted();
+        })
+    );
+
+    const errUrl = new URL('http://localhost/api/geocode?q=neznamaulice202&limit=3');
+    const pErrFresh = geocodeGet(
+      /** @type {*} */ ({
+        url: errUrl,
+        request: new Request(errUrl),
+        getClientAddress: () => '198.51.100.215'
+      })
+    );
+    const pErrInflight = geocodeGet(
+      /** @type {*} */ ({
+        url: errUrl,
+        request: new Request(errUrl),
+        getClientAddress: () => '198.51.100.216'
+      })
+    );
+
+    await errFetchStarted;
+    rejectFetch(new Error('Network down'));
+    const [errFreshRes, errInflightRes] = await Promise.all([pErrFresh, pErrInflight]);
+    expect(errFreshRes.status).toBe(200);
+    expect(errFreshRes.headers.get('cache-control')).toBe('no-store');
+    expect((await errFreshRes.json()).fallback).toBe(true);
+
+    expect(errInflightRes.status).toBe(200);
+    expect(errInflightRes.headers.get('cache-control')).toBe('no-store');
+    expect((await errInflightRes.json()).fallback).toBe(true);
+
+    const errCachedRes = await geocodeGet(
+      /** @type {*} */ ({
+        url: errUrl,
+        request: new Request(errUrl),
+        getClientAddress: () => '198.51.100.217'
+      })
+    );
+    expect(errCachedRes.status).toBe(200);
+    expect(errCachedRes.headers.get('cache-control')).toBe('no-store');
+
+    // 3. Valid Nominatim hit & instant match still emit s-maxage=86400
+    _resetGeocodeStateForTests();
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify([{ lat: '50.0755', lon: '14.4378', display_name: 'Karlín, Praha', address: { country_code: 'cz' } }]),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    );
+    const okUrl = new URL('http://localhost/api/geocode?q=neznamaulice203&limit=3');
+    const okRes = await geocodeGet(
+      /** @type {*} */ ({
+        url: okUrl,
+        request: new Request(okUrl),
+        getClientAddress: () => '198.51.100.218'
+      })
+    );
+    expect(okRes.status).toBe(200);
+    expect(okRes.headers.get('cache-control')).toContain('s-maxage=86400');
+
+    const instantUrl = new URL('http://localhost/api/geocode?q=Brno&limit=3');
+    const instantRes = await geocodeGet(
+      /** @type {*} */ ({
+        url: instantUrl,
+        request: new Request(instantUrl),
+        getClientAddress: () => '198.51.100.219'
+      })
+    );
+    expect(instantRes.status).toBe(200);
+    expect(instantRes.headers.get('cache-control')).toContain('s-maxage=86400');
   });
 });

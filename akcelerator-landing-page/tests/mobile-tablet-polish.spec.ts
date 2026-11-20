@@ -545,19 +545,39 @@ test.describe('Mobile & Tablet Experience Parity Polish (MT1-MT4)', () => {
     const afterTap0 = await page.evaluate(() => {
       const heroCopy = document.querySelector('.hero-copy')!.getBoundingClientRect();
       const card = document.querySelector('.instant-card')!.getBoundingClientRect();
-      const whisper = document.querySelector('.molly-whisper-bubble')!.getBoundingClientRect();
+      const whisperEl = document.querySelector('.molly-whisper-bubble') as HTMLElement;
+      const whisper = whisperEl.getBoundingClientRect();
       const actor = document.querySelector('.molly-roaming-actor')!.getBoundingClientRect();
+      const catVisual = {
+        left: actor.left + actor.width * 0.14,
+        right: actor.right - actor.width * 0.14,
+        top: actor.top + actor.height * 0.12,
+        bottom: actor.bottom - 2
+      };
+      const catOverlap =
+        Math.max(0, Math.min(whisper.right, catVisual.right) - Math.max(whisper.left, catVisual.left)) *
+        Math.max(0, Math.min(whisper.bottom, catVisual.bottom) - Math.max(whisper.top, catVisual.top));
+      const edgeDx = Math.round(Math.max(0, whisper.left - catVisual.right, catVisual.left - whisper.right));
+      const edgeDy = Math.round(Math.max(0, whisper.top - catVisual.bottom, catVisual.top - whisper.bottom));
       return {
         heroCopyY: Math.round(heroCopy.top),
         cardY: Math.round(card.top),
-        whisperVertDistToMolly: Math.round(Math.abs(whisper.bottom - actor.bottom)),
+        anchor: whisperEl.getAttribute('data-bubble-anchor') || '',
+        catOverlap: Math.round(catOverlap),
+        edgeDx,
+        edgeDy,
+        edgeDist: Math.round(Math.hypot(edgeDx, edgeDy)),
         inflowCount: document.querySelectorAll('.molly-whisper-bubble.is-compact-inflow').length
       };
     });
     expect(afterTap0.inflowCount, 'No in-flow whisper element pushing layout').toBe(0);
     expect(afterTap0.heroCopyY, '0px hero CLS on Molly tap at scrollY=0').toBe(home390.heroCopyY);
     expect(afterTap0.cardY, '0px card CLS on Molly tap at scrollY=0').toBe(home390.cardY);
-    expect(afterTap0.whisperVertDistToMolly, 'Whisper anchored close to Molly at scrollY=0').toBeLessThanOrEqual(80);
+    expect(afterTap0.anchor, '390x844 scrollY=0 whisper uses Molly-adjacent anchor').toMatch(/^(above|left|right)$/);
+    expect(afterTap0.catOverlap, '390x844 scrollY=0 whisper never overlaps Molly visual body').toBe(0);
+    expect(afterTap0.edgeDx, '390x844 scrollY=0 edgeDx <= 32').toBeLessThanOrEqual(32);
+    expect(afterTap0.edgeDy, '390x844 scrollY=0 edgeDy <= 48').toBeLessThanOrEqual(48);
+    expect(afterTap0.edgeDist, '390x844 scrollY=0 edgeDist <= 52').toBeLessThanOrEqual(52);
     expect(await detectMollyAndWhisperOverlaps(page), '390x844 tap@0 zero overlaps').toEqual([]);
 
     // Check Mám 15 min tab preview HUD has zero truncation too
@@ -595,21 +615,35 @@ test.describe('Mobile & Tablet Experience Parity Polish (MT1-MT4)', () => {
       await page.waitForTimeout(220);
     }
     const afterScrollTaps = await page.evaluate(() => {
-      const whisper = document.querySelector('.molly-whisper-bubble')!.getBoundingClientRect();
+      const whisperEl = document.querySelector('.molly-whisper-bubble') as HTMLElement;
+      const whisper = whisperEl.getBoundingClientRect();
       const actor = document.querySelector('.molly-roaming-actor')!.getBoundingClientRect();
+      const catVisual = {
+        left: actor.left + actor.width * 0.14,
+        right: actor.right - actor.width * 0.14,
+        top: actor.top + actor.height * 0.12,
+        bottom: actor.bottom - 2
+      };
       const catOverlap =
         Math.max(0, Math.min(whisper.right, actor.right) - Math.max(whisper.left, actor.left)) *
         Math.max(0, Math.min(whisper.bottom, actor.bottom) - Math.max(whisper.top, actor.top));
+      const edgeDx = Math.round(Math.max(0, whisper.left - catVisual.right, catVisual.left - whisper.right));
+      const edgeDy = Math.round(Math.max(0, whisper.top - catVisual.bottom, catVisual.top - whisper.bottom));
       return {
         scrollY: window.scrollY,
-        whisperToMollyGap: Math.round(actor.top - whisper.bottom),
-        whisperCenterToMollyY: Math.round(Math.abs((whisper.top + whisper.bottom) / 2 - (actor.top + actor.bottom) / 2)),
+        anchor: whisperEl.getAttribute('data-bubble-anchor') || '',
+        edgeDx,
+        edgeDy,
+        edgeDist: Math.round(Math.hypot(edgeDx, edgeDy)),
         catOverlap: Math.round(catOverlap)
       };
     });
     expect(afterScrollTaps.scrollY, '0px scroll-anchoring drift across repeated Molly taps').toBe(syBefore);
     expect(afterScrollTaps.catOverlap, 'Scrolled whisper never overlaps Molly').toBe(0);
-    expect(afterScrollTaps.whisperCenterToMollyY, 'Scrolled whisper stays anchored near Molly on same card (not detached mid-viewport)').toBeLessThanOrEqual(210);
+    expect(afterScrollTaps.anchor, 'Scrolled whisper anchored directly next to Molly').toMatch(/^(above|left|right)$/);
+    expect(afterScrollTaps.edgeDx, 'Scrolled whisper edgeDx <= 32').toBeLessThanOrEqual(32);
+    expect(afterScrollTaps.edgeDy, 'Scrolled whisper edgeDy <= 48').toBeLessThanOrEqual(48);
+    expect(afterScrollTaps.edgeDist, 'Scrolled whisper edgeDist <= 52').toBeLessThanOrEqual(52);
     expect(await detectMollyAndWhisperOverlaps(page), '390x844 tap@360 zero overlaps').toEqual([]);
 
     // 1b. 360x800 & 390x812 phones keep clear breathing room below floating header capsule
@@ -662,6 +696,84 @@ test.describe('Mobile & Tablet Experience Parity Polish (MT1-MT4)', () => {
     });
     expect(align768.leftDiff, '768x1024 hero-copy left aligns with instant-card').toBeLessThanOrEqual(2);
     expect(align768.rightDiff, '768x1024 hero-copy right aligns with instant-card').toBeLessThanOrEqual(2);
+
+    // 3b. Whisper bubble proximity & zero-overlap across 375x667, 768x1024, and 1024x768
+    for (const vp of [
+      { width: 375, height: 667 },
+      { width: 768, height: 1024 },
+      { width: 1024, height: 768 }
+    ]) {
+      await page.setViewportSize(vp);
+      await gotoHydrated(page, '/');
+      await page.evaluate(() => {
+        localStorage.clear();
+        sessionStorage.clear();
+      });
+      await page.reload();
+      await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 20_000 });
+      await page
+        .waitForFunction(
+          () => {
+            const actor = document.querySelector('.molly-roaming-actor');
+            return Boolean(
+              actor && (actor.classList.contains('is-docked') || actor.getAttribute('data-molly-behavior') !== 'WALK_ROAM')
+            );
+          },
+          null,
+          { timeout: 3500 }
+        )
+        .catch(() => {});
+      await page.locator('.molly-pelisek-dock .molly-dock-pet-btn').click();
+      await expect(page.locator('.molly-whisper-bubble:not(.is-travelling)')).toBeVisible({ timeout: 3000 });
+      const checkVp = await page.evaluate(() => {
+        const wEl = document.querySelector('.molly-whisper-bubble:not(.is-travelling)') as HTMLElement;
+        const aEl = document.querySelector('.molly-roaming-actor') as HTMLElement;
+        const b = wEl.getBoundingClientRect();
+        const ar = aEl.getBoundingClientRect();
+        const isDocked = aEl.classList.contains('is-docked');
+        const catVisual = {
+          left: ar.left + ar.width * 0.14,
+          right: ar.right - ar.width * 0.14,
+          top: ar.top + ar.height * 0.12,
+          bottom: ar.bottom - 2
+        };
+        const catOverlap = isDocked
+          ? 0
+          : Math.round(
+              Math.max(0, Math.min(b.right, catVisual.right) - Math.max(b.left, catVisual.left)) *
+                Math.max(0, Math.min(b.bottom, catVisual.bottom) - Math.max(b.top, catVisual.top))
+            );
+        const edgeDx = Math.round(Math.max(0, b.left - catVisual.right, catVisual.left - b.right));
+        const edgeDy = Math.round(Math.max(0, b.top - catVisual.bottom, catVisual.top - b.bottom));
+        return {
+          anchor: wEl.getAttribute('data-bubble-anchor') || '',
+          isDocked,
+          catOverlap,
+          edgeDx,
+          edgeDy,
+          edgeDist: Math.round(Math.hypot(edgeDx, edgeDy)),
+          inViewport: b.left >= 6 && b.right <= window.innerWidth - 6 && b.top >= 60 && b.bottom <= window.innerHeight - 6
+        };
+      });
+      expect(['above', 'left', 'right', 'dock'], `${vp.width}x${vp.height} valid anchor`).toContain(checkVp.anchor);
+      expect(checkVp.inViewport, `${vp.width}x${vp.height} whisper inside viewport`).toBe(true);
+      if (!checkVp.isDocked) {
+        expect(checkVp.catOverlap, `${vp.width}x${vp.height} catOverlap === 0`).toBe(0);
+        expect(checkVp.edgeDx, `${vp.width}x${vp.height} edgeDx <= 32`).toBeLessThanOrEqual(32);
+        expect(checkVp.edgeDy, `${vp.width}x${vp.height} edgeDy <= 48`).toBeLessThanOrEqual(48);
+        expect(checkVp.edgeDist, `${vp.width}x${vp.height} edgeDist <= 52`).toBeLessThanOrEqual(52);
+      }
+      const overlaps = await detectMollyAndWhisperOverlaps(page);
+      if (vp.width === 375 && vp.height === 667) {
+        // On ultra-compact 375x667 above-the-fold, .instant-card fills 115..667; ensure CTA, headings, stage & tabs stay clear
+        const criticalOverlaps = overlaps.filter((o) =>
+          /btn-studio-primary|H1|H2|H3|deed-stage|energy-tab|crisis-trigger/.test(o)
+        );
+        expect(criticalOverlaps, '375x667 zero critical CTA/heading/stage overlaps').toEqual([]);
+      } else {
+        expect(overlaps, `${vp.width}x${vp.height} zero overlaps`).toEqual([]);
+      }
+    }
 
     // 4. 390x844 mobile payoff: cohesive dark emerald .payoff-head, Dát Molly pamlsek well inside viewport
     await page.setViewportSize({ width: 390, height: 844 });

@@ -188,6 +188,139 @@ test.describe('Desktop Experience Polish Regressions (R1-R5)', () => {
     await expect(page.locator('.molly-roaming-actor')).not.toHaveClass(/is-docked/);
   });
 
+  test('R1b: Desktop 1440x900 Molly whisper bubble anchors next to Molly when roaming and renders full-width >= 180px above dock when docked', async ({
+    page
+  }) => {
+    test.setTimeout(60_000);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await gotoHydrated(page, '/');
+    await page.evaluate(() => document.fonts.ready);
+
+    for (const scrollY of [0, 400]) {
+      await page.evaluate((y) => window.scrollTo({ top: y, behavior: 'instant' as ScrollBehavior }), scrollY);
+      await page.waitForTimeout(220);
+      await page
+        .waitForFunction(
+          () => {
+            const actor = document.querySelector('.molly-roaming-actor');
+            return Boolean(actor && !actor.classList.contains('is-docked') && actor.getAttribute('data-molly-behavior') !== 'WALK_ROAM');
+          },
+          null,
+          { timeout: 3500 }
+        )
+        .catch(() => {});
+
+      await page.locator('.molly-pelisek-dock .molly-dock-pet-btn').click();
+      const roamBubble = page.locator('.molly-whisper-bubble:not(.is-travelling)');
+      await expect(roamBubble, `1440x900 y=${scrollY}: roaming whisper visible`).toBeVisible({ timeout: 3500 });
+
+      const sampleRoam = async () =>
+        page.evaluate(() => {
+          const wEl = document.querySelector('.molly-whisper-bubble:not(.is-travelling)') as HTMLElement;
+          const aEl = document.querySelector('.molly-roaming-actor') as HTMLElement;
+          const b = wEl.getBoundingClientRect();
+          const ar = aEl.getBoundingClientRect();
+          const catVisual = {
+            left: ar.left + ar.width * 0.14,
+            right: ar.right - ar.width * 0.14,
+            top: ar.top + ar.height * 0.12,
+            bottom: ar.bottom - 2
+          };
+          const catOverlap = Math.round(
+            Math.max(0, Math.min(b.right, catVisual.right) - Math.max(b.left, catVisual.left)) *
+              Math.max(0, Math.min(b.bottom, catVisual.bottom) - Math.max(b.top, catVisual.top))
+          );
+          const edgeDx = Math.round(Math.max(0, b.left - catVisual.right, catVisual.left - b.right));
+          const edgeDy = Math.round(Math.max(0, b.top - catVisual.bottom, catVisual.top - b.bottom));
+          const overlaps: string[] = [];
+          for (const el of document.querySelectorAll('h1, h2, h3, a.btn-studio-primary, button')) {
+            if (el.closest('.molly-companion-layer, .molly-pelisek-dock')) continue;
+            const closedDetails = el.closest('details:not([open])');
+            if (closedDetails && !el.closest('summary')) continue;
+            if (typeof (el as HTMLElement).checkVisibility === 'function' && !(el as HTMLElement).checkVisibility()) continue;
+            const tr = el.getBoundingClientRect();
+            const w = Math.min(b.right, tr.right) - Math.max(b.left, tr.left);
+            const h = Math.min(b.bottom, tr.bottom) - Math.max(b.top, tr.top);
+            if (w > 2 && h > 2) overlaps.push(el.tagName);
+          }
+          return {
+            anchor: wEl.getAttribute('data-bubble-anchor') || '',
+            left: Math.round(b.left),
+            top: Math.round(b.top),
+            catOverlap,
+            edgeDx,
+            edgeDy,
+            edgeDist: Math.round(Math.hypot(edgeDx, edgeDy)),
+            overlaps
+          };
+        });
+
+      const r0 = await sampleRoam();
+      expect(['above', 'left', 'right'], `1440x900 y=${scrollY}: roaming anchor`).toContain(r0.anchor);
+      expect(r0.catOverlap, `1440x900 y=${scrollY}: catOverlap === 0`).toBe(0);
+      expect(r0.edgeDx, `1440x900 y=${scrollY}: edgeDx <= 32`).toBeLessThanOrEqual(32);
+      expect(r0.edgeDy, `1440x900 y=${scrollY}: edgeDy <= 48`).toBeLessThanOrEqual(48);
+      expect(r0.edgeDist, `1440x900 y=${scrollY}: edgeDist <= 52`).toBeLessThanOrEqual(52);
+      expect(r0.overlaps, `1440x900 y=${scrollY}: zero control/heading overlaps`).toEqual([]);
+
+      await page.waitForTimeout(400);
+      const r1 = await sampleRoam();
+      expect(Math.abs(r1.left - r0.left), `1440x900 y=${scrollY}: stable left`).toBeLessThanOrEqual(3);
+      expect(Math.abs(r1.top - r0.top), `1440x900 y=${scrollY}: stable top`).toBeLessThanOrEqual(3);
+    }
+
+    // Dock Molly and verify .molly-dock-whisper width >= 180px (no 150px squeeze) and zero overlap with dock
+    const toggleBtn = page.locator('.molly-dock-toggle-btn');
+    await toggleBtn.click();
+    await expect(page.locator('.molly-roaming-actor')).toHaveClass(/is-docked/);
+    await page.locator('.molly-pelisek-dock .molly-dock-pet-btn').click();
+    const dockWhisper = page.locator('.molly-dock-whisper');
+    await expect(dockWhisper).toBeVisible({ timeout: 3000 });
+
+    const dockAudit = await page.evaluate(() => {
+      const wEl = document.querySelector('.molly-dock-whisper') as HTMLElement;
+      const dEl = document.querySelector('.molly-pelisek-dock') as HTMLElement;
+      const wr = wEl.getBoundingClientRect();
+      const dr = dEl.getBoundingClientRect();
+      const overlap =
+        Math.max(0, Math.min(wr.right, dr.right) - Math.max(wr.left, dr.left)) *
+        Math.max(0, Math.min(wr.bottom, dr.bottom) - Math.max(wr.top, dr.top));
+      return {
+        anchor: wEl.getAttribute('data-bubble-anchor') || '',
+        width: Math.round(wr.width),
+        gapToDock: Math.round(dr.top - wr.bottom),
+        overlap: Math.round(overlap)
+      };
+    });
+    expect(dockAudit.anchor).toBe('dock');
+    expect(dockAudit.width, 'Desktop .molly-dock-whisper must not squeeze to 150px').toBeGreaterThanOrEqual(180);
+    expect(dockAudit.gapToDock).toBeGreaterThanOrEqual(2);
+    expect(dockAudit.gapToDock).toBeLessThanOrEqual(24);
+    expect(dockAudit.overlap).toBe(0);
+
+    // Wake Molly back up and confirm roaming whisper anchors next to Molly again
+    await toggleBtn.click();
+    await expect(page.locator('.molly-roaming-actor')).not.toHaveClass(/is-docked/);
+    await page.locator('.molly-pelisek-dock .molly-dock-pet-btn').click();
+    await expect(page.locator('.molly-whisper-bubble:not(.is-travelling)')).toBeVisible({ timeout: 3500 });
+    const wakeDist = await page.evaluate(() => {
+      const wEl = document.querySelector('.molly-whisper-bubble:not(.is-travelling)') as HTMLElement;
+      const aEl = document.querySelector('.molly-roaming-actor') as HTMLElement;
+      const b = wEl.getBoundingClientRect();
+      const ar = aEl.getBoundingClientRect();
+      const catVisual = {
+        left: ar.left + ar.width * 0.14,
+        right: ar.right - ar.width * 0.14,
+        top: ar.top + ar.height * 0.12,
+        bottom: ar.bottom - 2
+      };
+      const edgeDx = Math.max(0, b.left - catVisual.right, catVisual.left - b.right);
+      const edgeDy = Math.max(0, b.top - catVisual.bottom, catVisual.top - b.bottom);
+      return Math.round(Math.hypot(edgeDx, edgeDy));
+    });
+    expect(wakeDist).toBeLessThanOrEqual(52);
+  });
+
   test('R2: Unified Czech forest palette across 6 routes with zero off-brand leaks and >= 4.5:1 contrast', async ({ page }) => {
     test.setTimeout(60_000);
     await stubOsmTiles(page);

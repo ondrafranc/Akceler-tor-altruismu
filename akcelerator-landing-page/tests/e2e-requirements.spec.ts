@@ -515,15 +515,16 @@ test.describe('Tier 1: Feature Coverage', () => {
       expect(text).not.toContain('+1');
     });
 
-    test('F9-4: Molly time-based greetings return friendly Czech salutations for all hours', async ({ page }) => {
+    test('F9-4: Molly time-based greetings return calm Czech salutations for all hours', async ({ page }) => {
       const greeting = await page.evaluate(() => {
         const h = new Date().getHours();
-        if (h >= 5 && h < 10) return 'Dobré ráno!';
-        if (h >= 10 && h < 18) return 'Ahoj!';
-        if (h >= 18 && h < 23) return 'Dobrý večer!';
-        return 'Ahoj, noční sovo!';
+        if (h >= 5 && h < 10) return 'Dobré ráno.';
+        if (h >= 10 && h < 18) return 'Klidný den.';
+        if (h >= 18 && h < 23) return 'Dobrý večer.';
+        return 'Tichou noc.';
       });
-      expect(['Dobré ráno!', 'Ahoj!', 'Dobrý večer!', 'Ahoj, noční sovo!']).toContain(greeting);
+      expect(['Dobré ráno.', 'Klidný den.', 'Dobrý večer.', 'Tichou noc.']).toContain(greeting);
+      expect(greeting).not.toContain('!');
     });
 
     test('F9-5: Breathing co-regulation guide in Krajina dobra sets Molly mood to breathing and purrs calmly', async ({ page }) => {
@@ -997,14 +998,14 @@ test.describe('Tier 2: Boundary & Corner Cases', () => {
 
   // --- F9 Boundaries ---
   test.describe('F9 Boundaries: Tone & Voice Edge Cases', () => {
-    test('F9-B1: All 24 hours produce non-empty greeting in Czech', async ({ page }) => {
+    test('F9-B1: All 24 hours produce non-empty calm greeting in Czech', async ({ page }) => {
       const greetings = await page.evaluate(() => {
         const results = [];
         for (let h = 0; h < 24; h++) {
-          let g = 'Ahoj, noční sovo!';
-          if (h >= 5 && h < 10) g = 'Dobré ráno!';
-          else if (h >= 10 && h < 18) g = 'Ahoj!';
-          else if (h >= 18 && h < 23) g = 'Dobrý večer!';
+          let g = 'Tichou noc.';
+          if (h >= 5 && h < 10) g = 'Dobré ráno.';
+          else if (h >= 10 && h < 18) g = 'Klidný den.';
+          else if (h >= 18 && h < 23) g = 'Dobrý večer.';
           results.push(g);
         }
         return results;
@@ -1012,6 +1013,7 @@ test.describe('Tier 2: Boundary & Corner Cases', () => {
       expect(greetings).toHaveLength(24);
       for (const g of greetings) {
         expect(g.length).toBeGreaterThan(0);
+        expect(g).not.toContain('!');
       }
     });
 

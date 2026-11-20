@@ -7,6 +7,7 @@ export const MOLLY_TREAT_BY_FOOD = {
   salmon: {
     icon: 'fish',
     name: 'lososová granulka',
+    nameAcc: 'lososovou granulku',
     shortLabel: 'Rybka pro Molly',
     color: '#f59e0b',
     foodType: 'salmon'
@@ -14,6 +15,7 @@ export const MOLLY_TREAT_BY_FOOD = {
   milk: {
     icon: 'milk',
     name: 'teplé kočičí mlíčko v misce',
+    nameAcc: 'teplé kočičí mlíčko',
     shortLabel: 'Mlíčko pro Molly',
     color: '#fde68a',
     foodType: 'milk'
@@ -21,6 +23,7 @@ export const MOLLY_TREAT_BY_FOOD = {
   tuna: {
     icon: 'fish',
     name: 'rýžový polštářek s tuňákem',
+    nameAcc: 'rýžový polštářek s tuňákem',
     shortLabel: 'Voňavé sousto pro Molly',
     color: '#fbbf24',
     foodType: 'tuna'
@@ -28,6 +31,7 @@ export const MOLLY_TREAT_BY_FOOD = {
   catnip: {
     icon: 'leaf',
     name: 'čerstvý lístek šanty kočičí',
+    nameAcc: 'čerstvý lístek šanty kočičí',
     shortLabel: 'Lístek šanty pro Molly',
     color: '#4ade80',
     foodType: 'catnip'
@@ -35,6 +39,7 @@ export const MOLLY_TREAT_BY_FOOD = {
   cream: {
     icon: 'heart',
     name: 'smetanový pamlsek a klubíčko',
+    nameAcc: 'smetanový pamlsek a klubíčko',
     shortLabel: 'Smetanový pamlsek pro Molly',
     color: '#f472b6',
     foodType: 'cream'
@@ -42,6 +47,7 @@ export const MOLLY_TREAT_BY_FOOD = {
   star_treat: {
     icon: 'sparkles',
     name: 'křupavá hvězdička',
+    nameAcc: 'křupavou hvězdičku',
     shortLabel: 'Křupavá hvězdička pro Molly',
     color: '#a78bfa',
     foodType: 'star_treat'
@@ -180,7 +186,7 @@ export function pluralSkutek(n) {
 export function describeNextMollyGift(deeds) {
   const n = Math.max(0, Number(deeds) || 0);
   const next = MOLLY_MILESTONES.find((m) => n < m.at);
-  if (!next) return 'Molly má všechny dárky. Děkuje za každý tvůj skutek!';
+  if (!next) return 'Molly už má všechny dárky. Děkuje za každý tvůj skutek.';
   const left = next.at - n;
   const verb = left >= 2 && left <= 4 ? 'chybějí' : 'chybí';
   return `Do dárku „${next.name}“ ${verb} ${left} ${pluralSkutek(left)}.`;
@@ -210,33 +216,33 @@ export function getNextMollyGiftProgress(deeds) {
 export const MOLLY_ROUTE_GUIDES = {
   '/': {
     icon: 'paw',
-    hint: 'Vyber, kolik máš času, a já ti ukážu jeden lehký skutek.',
-    nudge: 'Tenhle skutek zabere jen chvilku. Zkusíš ho se mnou?'
+    hint: 'Vyber si, kolik máš dnes času — ukážu ti jeden klidný skutek.',
+    nudge: 'Tenhle drobný krok zabere jen chvilku.'
   },
   '/app': {
     icon: 'compass',
-    hint: 'Vyber si cestu, která ti dnes sedí. Každá vede ke skutečné pomoci.',
-    nudge: 'Když si nebudeš jistý výběrem, ráda ti pomůžu najít krok na míru.'
+    hint: 'Vyber si cestu, která ti dnes sedí.',
+    nudge: 'Když si nebudeš vědět rady s výběrem, najdeme krok na míru.'
   },
   '/app/guided': {
     icon: 'compass',
     hint: 'Společně najdeme pomoc, která ti dnes nejlépe sedne.',
-    nudge: 'Tenhle skutek ti teď sedí nejvíc. Zkusíš ho?'
+    nudge: 'Tenhle skutek by ti teď mohl sedět.'
   },
   '/app/online': {
     icon: 'clock',
-    hint: 'Tady stačí pár minut a telefon. Vyber si jeden krok.',
-    nudge: 'Tenhle krok zvládneš hned teď, odkudkoliv.'
+    hint: 'Tady stačí pár minut z domova. Vyber si jeden krok.',
+    nudge: 'Tenhle krok zvládneš v klidu odkudkoliv.'
   },
   '/near': {
     icon: 'map-pin',
     hint: 'Podívej se, kdo potřebuje pomoc kousek od tebe.',
-    nudge: 'Začni třeba tímto místem — najdeš u něj i jednoduchý návod, jak pomoci.'
+    nudge: 'Můžeš začít tímto místem — je tu i krátký návod.'
   },
   '/svet': {
     icon: 'sparkles',
-    hint: 'Tady u jezera ráda odpočívám. Vyber si místo na hladině a rozsviť své světlo dobra.',
-    nudge: 'Zkus se mnou chvilku klidně dýchat.'
+    hint: 'Tady u lesní tůně odpočívám. Dotykem hladiny rozsvítíš své světlo.',
+    nudge: 'Zkus si tu na chvilku klidně vydechnout.'
   },
   '/submit': {
     icon: 'sprout',
@@ -251,28 +257,26 @@ export const MOLLY_ROUTE_GUIDES = {
  */
 export function getMollyGreeting(d = new Date()) {
   const h = d.getHours();
-  if (h >= 5 && h < 10) return 'Dobré ráno!';
-  if (h >= 10 && h < 18) return 'Ahoj!';
-  if (h >= 18 && h < 23) return 'Dobrý večer!';
-  return 'Ahoj, noční sovo!';
+  if (h >= 5 && h < 10) return 'Dobré ráno.';
+  if (h >= 10 && h < 18) return 'Klidný den.';
+  if (h >= 18 && h < 23) return 'Dobrý večer.';
+  return 'Tichou noc.';
 }
 
 /**
- * Vlídná a hřejivá šeptanda při pohlazení, když uživatel ještě nezískal pamlsek (delayed gratification).
+ * Vlídná a klidná šeptanda při pohlazení, když uživatel ještě nezískal pamlsek (delayed gratification).
  * Záměrně bez kárání či herních hlášek — Molly vyjadřuje vděčnost za blízkost a jemně
  * směřuje pozornost ke skutečnému dobrému skutku, po kterém si s radostí pochutná na odměně.
  */
 export const MOLLY_UNEARNED_PET_WHISPERS = [
-  'Mrrr… děkuji za pohlazení! Za jeden dobrý skutek si pak ráda dám rybku.',
-  'Mňau ~ pohlazení hřeje! Pamlsky si šetřím na oslavu dobrého skutku.',
-  'Předu radostí, že jsi tu. Až někomu pomůžeš, oslavíme to dobrotou.',
-  'Mňamku si schovávám za dobrý skutek — najdeš tu pomoc i na dvě minuty!',
-  'Mrrr… pohlazení hřeje. Až uděláme malý dobrý skutek, ráda si dám pamlsek.',
-  'Děkuji za pohlazení! Dobroty si nechávám na oslavu dobrého skutku.',
-  'Předu ti do dlaně. Každý dobrý čin začíná malým krokem — pak si zamlsám.',
-  'Mňau! Tvoje blízkost mě těší. Za dobrý skutek mě čeká čerstvá dobrota.',
-  'Mrrr… každé pohlazení zahřeje. Za dobrý skutek si ráda dám odměnu.',
-  'Tichounce předu s tebou. Na pamlsek se těším po tvém dobrém skutku.'
+  'Mrrr… děkuji za pohlazení. Pamlsek si šetřím za dobrý skutek.',
+  'Tvoje blízkost mě těší. Pomoc druhým najdeš i na dvě minuty.',
+  'Předu ti pod dlaní. Pamlsky si nechávám na poděkování za skutek.',
+  'Mrrr… pohlazení hřeje. Pomoc druhým začíná i maličkostí.',
+  'Tichounce předu s tebou. Po dobrém skutku si dám dobrotu.',
+  'Děkuji za pohlazení. Čerstvou dobrotu si zasloužím za tvůj skutek.',
+  'Mrrr… každý dobrý krok začíná v klidu. Pak si dám odměnu.',
+  'Předu s tebou. Na pamlsek se těším po tvém dobrém skutku.'
 ];
 
 /**
@@ -280,14 +284,13 @@ export const MOLLY_UNEARNED_PET_WHISPERS = [
  */
 export const MOLLY_PET_WHISPERS = [
   'Mrrr… každá drobná laskavost krásně hřeje.',
-  'Předu radostí! Děkuji, že tu dnes jsi.',
+  'Tichounce předu. Děkuji, že tu dnes jsi.',
   'Mrrr… tvá laskavost zahřeje víc než odpolední slunce.',
-  'Mňau ~ u jezera v Krajině dobra už svítí tvoje světýlka.',
-  'Tichounce předu s tebou. Každý malý čin se počítá.',
+  'U lesní tůně v Krajině dobra je klidné místo i pro tebe.',
+  'Předu s tebou. Každý malý skutek se počítá.',
   'Mrrr… klidně si na chvilku vydechni, hlídám to tu s tebou.',
-  'Mňau ~ děláš svět o kousek vlídnějším místem.',
-  'Tvoje pomoc má smysl. I malý krok mění den k lepšímu.',
-  'Mrrr ~ protahuji tlapky a posílám ti klid do dnešního dne.'
+  'Děláš svět kolem o kousek vlídnějším místem.',
+  'Tvoje pomoc má smysl. I malý krok mění den k lepšímu.'
 ];
 
 

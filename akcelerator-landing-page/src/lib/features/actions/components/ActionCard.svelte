@@ -1354,9 +1354,7 @@
             size={13}
             class="badge-paw-svg molly-note-paw-svg"
           />
-          <strong>Molly děkuje a má radost!</strong> V
-          <a href="/svet" class="molly-svet-inline-link">Krajině dobra</a> na ni
-          za tvůj skutek čeká zasloužený pamlsek.
+          <strong>Molly děkuje.</strong> Pamlsek za tvůj skutek už na ni čeká — můžeš jí ho dát tady nebo u tůně v <a href="/svet" class="molly-svet-inline-link">Krajině dobra</a>.
         </div>
         {#if $mollyState.availableTreats > 0 && !fedInCelebration}
           <div class="molly-inline-feed-row">
@@ -1376,7 +1374,7 @@
         {:else if fedInCelebration}
           <div class="molly-inline-fed-badge" role="status">
             <AppIcon name="heart" size={14} strokeWidth={2.2} />
-            <span>Molly spokojeně chroupe pamlsek a přede radostí!</span>
+            <span>Molly spokojeně chroupe pamlsek a tiše přede.</span>
           </div>
         {/if}
         <div class="return-dopamine-actions in-situ-actions">

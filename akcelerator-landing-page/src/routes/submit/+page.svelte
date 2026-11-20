@@ -341,7 +341,7 @@
       }
       safeRemoveItem(DRAFT_KEY, "session");
 
-      submittedMapUrl = `/near?lat=${lat}&lon=${lon}`;
+      submittedMapUrl = `/near?lat=${encodeURIComponent(String(lat))}&lon=${encodeURIComponent(String(lon))}`;
       submitStatus = "success";
       submitMessage =
         data?.moderationNotice ||

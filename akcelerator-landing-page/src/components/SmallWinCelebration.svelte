@@ -177,9 +177,9 @@
               />
             </span>
             <span>
-              Patronka <strong>Molly</strong> ti s láskou děkuje za dobrotu (<strong
-                >{effectMeta.mollyTreat.name}</strong
-              >) a spokojeně na tebe čeká u jezera v Krajině dobra.
+              Patronka <strong>Molly</strong> ti děkuje za dobrotu (<strong
+                >{effectMeta.mollyTreat.nameAcc || effectMeta.mollyTreat.name}</strong
+              >) a klidně čeká u lesní tůně v Krajině dobra.
             </span>
           </div>
           {#if !fedThisCelebration && $mollyState.availableTreats > 0}
@@ -200,7 +200,7 @@
             <div class="molly-fed-badge" role="status">
               <AppIcon name="sparkles" size={16} strokeWidth={2} />
               <span>
-                Molly spokojeně chroupe svůj zasloužený pamlsek a přede radostí!
+                Molly spokojeně chroupe svůj pamlsek a tiše přede.
               </span>
             </div>
           {/if}

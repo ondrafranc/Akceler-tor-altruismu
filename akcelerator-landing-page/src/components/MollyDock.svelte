@@ -71,7 +71,8 @@
   } from '$lib/mollyStore.js';
   import {
     describeNextMollyGift,
-    getNextMollyGiftProgress
+    getNextMollyGiftProgress,
+    pluralPamlsek
   } from '$lib/mollyTypes.js';
   import AppIcon from '$lib/components/AppIcon.svelte';
 
@@ -114,7 +115,7 @@
   const pendingTreatCount = $derived(Math.max(0, Number($mollyState.availableTreats) || 0));
   const pendingTreatHint = $derived(
     pendingTreatCount > 0
-      ? `Čeká ${pendingTreatCount} pamlsek pro Molly — kliknutím ji hned nakrmíš. `
+      ? `${pendingTreatCount >= 2 && pendingTreatCount <= 4 ? 'Čekají' : 'Čeká'} ${pendingTreatCount} ${pluralPamlsek(pendingTreatCount)} pro Molly — kliknutím ji nakrmíš. `
       : ''
   );
 </script>
@@ -128,7 +129,7 @@
   aria-label="Patronka Molly a klidový pelíšek"
 >
   {#if showDockWhisper && $mollyDockBridge.activeWhisper}
-    <div class="molly-dock-whisper">
+    <div class="molly-dock-whisper" data-bubble-anchor="dock">
       <span class="dock-whisper-icon" aria-hidden="true">
         <AppIcon name={whisperIconKey} size={13} strokeWidth={2} />
       </span>
@@ -300,7 +301,7 @@
     bottom: calc(100% + 8px);
     left: 0;
     width: max-content;
-    max-width: 250px;
+    max-width: min(248px, calc(100vw - 24px));
     box-sizing: border-box;
     padding: 7px 11px;
     border-radius: 12px;
@@ -315,6 +316,20 @@
     gap: 6px;
     pointer-events: none;
     box-shadow: var(--shadow-md, 0 8px 20px -6px rgba(18, 42, 30, 0.08));
+  }
+
+  .molly-dock-whisper[data-bubble-anchor='dock']::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 20px;
+    width: 8px;
+    height: 8px;
+    background: var(--bg-surface, #ffffff);
+    border-right: 1px solid var(--border-strong, #c2cec5);
+    border-bottom: 1px solid var(--border-strong, #c2cec5);
+    transform: rotate(45deg);
+    pointer-events: none;
   }
 
   .dock-whisper-icon {
@@ -721,7 +736,7 @@
     }
 
     .molly-pelisek-dock:not(.is-header-dock) .molly-dock-whisper {
-      max-width: 150px;
+      max-width: min(248px, calc(100vw - 24px));
     }
   }
 

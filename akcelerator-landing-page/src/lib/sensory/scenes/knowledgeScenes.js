@@ -15,7 +15,7 @@ import {
 } from '../graphics/primitives.js';
 
 export function renderWikiInk(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-    // 📝 Wikipedie: Otevřená encyklopedie s chybějícím faktem [?] -> Zlaté plnicí pero dopisující ověřený řádek a hvězdy poznání
+    // Wikipedie: Otevřená encyklopedie s chybějícím faktem [?] -> Zlaté plnicí pero dopisující ověřený řádek a hvězdy poznání
     const bkY = cy - 14;
     const bkH = 40;
     const halfW = 46;
@@ -103,7 +103,7 @@ export function renderWikiInk(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame
 }
 
 export function renderCodeNodes(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-    // 💻 Česko.Digital: Zřetelné izolované digitální uzly -> Propojená síť pomoci ve tvaru štítu/srdce s datovými pulsy
+    // Česko.Digital: Zřetelné izolované digitální uzly -> Propojená síť pomoci ve tvaru štítu/srdce s datovými pulsy
     const nodes = [
       [cx - 58, cy - 6],
       [cx - 28, cy - 18],
@@ -178,7 +178,7 @@ export function renderCodeNodes(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fra
 }
 
 export function renderCosmosScience(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-    // 🔭 Zooniverse: Rozostřený oblak v hledáčku -> Zaostřený zelený zámek, měkká eliptická mlhovina a 3ramenná spirální galaxie se 14 hvězdami
+    // Zooniverse: Rozostřený oblak v hledáčku -> Zaostřený zelený zámek, měkká eliptická mlhovina a 3ramenná spirální galaxie se 14 hvězdami
     const focusP = easeOut(p);
     const galY = cy + 2;
     const padX = lerp(46, 38, focusP);
@@ -315,7 +315,7 @@ export function renderCosmosScience(c, { p, prep, wt, cx, cy, by, w, h, cs, red,
 }
 
 export function renderTutoringSpark(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-    // 🧑‍🏫 Učíme online: Zašmodrchaná čmáranice a zhasnutá žárovka -> Jasná dráha poznání rozsvěcující žárovku
+    // Učíme online: Zašmodrchaná čmáranice a zhasnutá žárovka -> Jasná dráha poznání rozsvěcující žárovku
     const sparkP = easeOut(p);
     const bulbX = cx + 38;
     const bulbY = cy - 6;
@@ -363,7 +363,7 @@ export function renderTutoringSpark(c, { p, prep, wt, cx, cy, by, w, h, cs, red,
 }
 
 export function renderSchoolPencil(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-    // ✏️ Doučujte.cz: Sešit s otazníky -> Zlatá tužka kreslící vzestupnou křivku a hvězdy porozumění
+    // Doučujte.cz: Sešit s otazníky -> Zlatá tužka kreslící vzestupnou křivku a hvězdy porozumění
     const nbX = cx - 44;
     const nbY = cy - 16;
     const nbW = 88;

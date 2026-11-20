@@ -267,11 +267,14 @@ export async function readJsonBodyBounded(request, maxBytes = 32_768) {
  * @returns {boolean}
  */
 export function validateMutationOrigin(request, url) {
-  const secFetchSite = request.headers.get('sec-fetch-site');
+  const secFetchSite = (request.headers.get('sec-fetch-site') || '').trim().toLowerCase();
   if (secFetchSite && secFetchSite !== 'same-origin' && secFetchSite !== 'same-site' && secFetchSite !== 'none') {
     return false;
   }
-  const origin = request.headers.get('origin');
+  const origin = (request.headers.get('origin') || '').trim();
+  if (secFetchSite === 'same-site' && !origin) {
+    return false;
+  }
   if (origin) {
     try {
       const originUrl = new URL(origin);

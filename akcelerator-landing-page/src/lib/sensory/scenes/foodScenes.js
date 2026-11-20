@@ -15,7 +15,7 @@ import {
 } from '../graphics/primitives.js';
 
 export function renderRice(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-    // 🍚 Freerice: Vzpřímené bledé stéblo a prázdná miska OSN -> Zlatý klas sklánějící se k misce plné rýže
+    // Freerice: Vzpřímené bledé stéblo a prázdná miska OSN -> Zlatý klas sklánějící se k misce plné rýže
     const bowlX = cx + 22;
     const bowlW = 58;
     const bowlY = by - 3;
@@ -109,7 +109,7 @@ export function renderRice(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, g
 }
 
 export function renderFoodBank(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-    // 🥫 Potravinová banka: Prázdný dvoupatrový regál -> Police zaplňující se bedýnkami, konzervami a chlebem
+    // Potravinová banka: Prázdný dvoupatrový regál -> Police zaplňující se bedýnkami, konzervami a chlebem
     const rx = cx - 42;
     const ry = cy - 16;
     const rw = 84;
@@ -169,7 +169,7 @@ export function renderFoodBank(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fram
 }
 
 export function renderSoupLantern(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-    // 🍞 Naděje: Zhasnutá pouliční lampa v chladném dešti -> Hřejivý kužel lucerny a napařená polévka pod střechou
+    // Naděje: Zhasnutá pouliční lampa v chladném dešti -> Hřejivý kužel lucerny a napařená polévka pod střechou
     const lampX = cx - 36;
     const bowlX = cx + 16;
     const baseS = by - 3;
@@ -240,7 +240,7 @@ export function renderSoupLantern(c, { p, prep, wt, cx, cy, by, w, h, cs, red, f
 }
 
 export function renderZeroWastePot(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-    // 🥕 Zachraň jídlo: Křivá mrkev s natí, rajče a bylinka vedle studeného hrnce -> Oblouk do měděného hrnce a voňavá večeře
+    // Zachraň jídlo: Křivá mrkev s natí, rajče a bylinka vedle studeného hrnce -> Oblouk do měděného hrnce a voňavá večeře
     const potY = by - 4;
     const potW = 46;
     const potH = 22;
@@ -375,7 +375,7 @@ export function renderZeroWastePot(c, { p, prep, wt, cx, cy, by, w, h, cs, red, 
 }
 
 export function renderBakerySave(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-    // 🥐 Nesnězeno: Hodiny před zavíračkou a složený sáček -> Zachráněný kraftový sáček s křupavou bagetou a croissantem
+    // Nesnězeno: Hodiny před zavíračkou a složený sáček -> Zachráněný kraftový sáček s křupavou bagetou a croissantem
     const clkX = cx - 44;
     const clkY = cy + 2;
     const bagX = cx + 14;
