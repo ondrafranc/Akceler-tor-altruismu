@@ -60,7 +60,6 @@ const config = {
 				'font-src': ['self', 'data:'],
 				'connect-src': [
 					'self',
-					'https://*.supabase.co',
 					'https://va.vercel-scripts.com',
 					'https://*.tile.openstreetmap.org',
 					'https://tile.openstreetmap.org'

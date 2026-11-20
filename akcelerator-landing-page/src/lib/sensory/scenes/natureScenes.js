@@ -15,7 +15,7 @@ import {
 } from '../graphics/primitives.js';
 
 export function renderForestBloom(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-  // 🌳 Sázíme budoucnost: Drobná sazenička na holině mezi pařezy -> Mohutný rozvětvený smaragdový dub
+  // Sázíme budoucnost: Drobná sazenička na holině mezi pařezy -> Mohutný rozvětvený smaragdový dub
   const groundY = by - 2;
   const treeP = easeOut(p);
 
@@ -70,7 +70,7 @@ export function renderForestBloom(c, { p, prep, wt, cx, cy, by, w, h, cs, red, f
 }
 
 export function renderFruitTree(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-  // 🍎 Na ovoce: Holé jarní větve a prázdný špendlík -> Zelená koruna s 6 červenými jablky a zlatým mapovým špendlíkem
+  // Na ovoce: Holé jarní větve a prázdný špendlík -> Zelená koruna s 6 červenými jablky a zlatým mapovým špendlíkem
   const groundY = by - 2;
   const tx = cx - 10;
   const leafP = easeOut(subP(p, 0.02, 0.55));
@@ -134,7 +134,7 @@ export function renderFruitTree(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fra
 }
 
 export function renderButterflyLens(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-  // 🦋 iNaturalist: Kulatá přírodovědecká lupa nad složenou siluetou -> Zaostřený otakárek s prokreslenými křídly a ostruhami
+  // iNaturalist: Kulatá přírodovědecká lupa nad složenou siluetou -> Zaostřený otakárek s prokreslenými křídly a ostruhami
   const lensP = easeOut(p);
   const flap = lerp(0.24, 0.94 + Math.sin(wt * 3.4) * 0.08, lensP);
   const lx = cx - 4;
@@ -231,7 +231,7 @@ export function renderButterflyLens(c, { p, prep, wt, cx, cy, by, w, h, cs, red,
 }
 
 export function renderWaterSpring(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-  // 💧 eSTUDÁNKY: Lesní studánka pod šindelovou stříškou zanesená listím -> Křišťálový pramen, kruhy na vodě a kapradí
+  // eSTUDÁNKY: Lesní studánka pod šindelovou stříškou zanesená listím -> Křišťálový pramen, kruhy na vodě a kapradí
   const cleanP = easeOut(p);
   const spP = easeOut(subP(cleanP, 0.05, 0.94));
   const poolY = by - 13;
@@ -696,7 +696,7 @@ export function renderWaterSpring(c, { p, prep, wt, cx, cy, by, w, h, cs, red, f
 }
 
 export function renderCompostSprout(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-  // 🌱 Kompost Mapko: Kopeček živé hlíny se slupkami a semínkem -> Kořínky živin a vyrůstající zlatá slunečnice
+  // Kompost Mapko: Kopeček živé hlíny se slupkami a semínkem -> Kořínky živin a vyrůstající zlatá slunečnice
   const moundY = by + 1;
   const growP = easeOut(p);
 
@@ -779,7 +779,7 @@ export function renderCompostSprout(c, { p, prep, wt, cx, cy, by, w, h, cs, red,
 }
 
 export function renderEcoCleanup(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-  // 🧤 Trash Hero / Ukliďme Česko: Zřetelné odpadky na holé pěšině -> Čistá rozkvetlá louka s vlčími máky, chrpami a motýlkem
+  // Trash Hero / Ukliďme Česko: Zřetelné odpadky na holé pěšině -> Čistá rozkvetlá louka s vlčími máky, chrpami a motýlkem
   const groundY = by - 3;
   const trashFade = 1 - easeOut(subP(p, 0, 0.52));
   const bloomP = easeOut(subP(p, 0.12, 0.96));

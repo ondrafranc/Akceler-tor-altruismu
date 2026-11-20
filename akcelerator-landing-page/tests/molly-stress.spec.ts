@@ -413,3 +413,163 @@ test.describe('Adversarial Challenge: Walking Molly Stability & State Machine', 
     expect(pageErrors).toHaveLength(0);
   });
 });
+
+test.describe('Whisper Bubble Anchoring & Anti-Jump Stability', () => {
+  test('Molly 7: Whisper bubble stays strictly anchored to Molly without jumping or CLS across desktop, tablet, and mobile viewports', async ({
+    page
+  }) => {
+    test.setTimeout(90_000);
+    const viewports = [
+      { width: 1440, height: 900, label: 'desktop-1440x900' },
+      { width: 768, height: 1024, label: 'tablet-768x1024' },
+      { width: 1024, height: 768, label: 'tablet-1024x768' },
+      { width: 390, height: 844, label: 'mobile-390x844' },
+      { width: 375, height: 667, label: 'mobile-375x667' }
+    ];
+
+    for (const vp of viewports) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await page.goto('/');
+      await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 20_000 });
+      await page.evaluate(() => {
+        localStorage.clear();
+        sessionStorage.clear();
+      });
+      await page.reload();
+      await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 20_000 });
+      await page.evaluate(() => document.fonts.ready);
+
+      await page
+        .waitForFunction(
+          () => {
+            const actor = document.querySelector('.molly-roaming-actor');
+            return Boolean(
+              actor && (actor.classList.contains('is-docked') || actor.getAttribute('data-molly-behavior') !== 'WALK_ROAM')
+            );
+          },
+          null,
+          { timeout: 4500 }
+        )
+        .catch(() => {});
+      await page.evaluate(
+        () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+      );
+
+      const before = await page.evaluate(() => ({
+        heroCopyTop: Math.round(document.querySelector('.hero-copy')!.getBoundingClientRect().top),
+        cardTop: Math.round(document.querySelector('.instant-card')!.getBoundingClientRect().top),
+        scrollY: window.scrollY
+      }));
+
+      await page.locator('.molly-pelisek-dock .molly-dock-pet-btn').click();
+      const bubble = page.locator('.molly-whisper-bubble:not(.is-travelling), .molly-dock-whisper').first();
+      await expect(bubble, `${vp.label}: whisper visible`).toBeVisible({ timeout: 4000 });
+
+      const sampleGeom = async () =>
+        page.evaluate(() => {
+          const bEl = document.querySelector('.molly-whisper-bubble:not(.is-travelling), .molly-dock-whisper') as HTMLElement | null;
+          const aEl = document.querySelector('.molly-roaming-actor') as HTMLElement | null;
+          if (!bEl || !aEl) return null;
+          const b = bEl.getBoundingClientRect();
+          const ar = aEl.getBoundingClientRect();
+          const isDocked = aEl.classList.contains('is-docked');
+          const anchor = bEl.getAttribute('data-bubble-anchor') || '';
+          const isTravelling = bEl.classList.contains('is-travelling');
+          const catVisual = {
+            left: ar.left + ar.width * 0.14,
+            right: ar.right - ar.width * 0.14,
+            top: ar.top + ar.height * 0.12,
+            bottom: ar.bottom - 2
+          };
+          const catOverlap = isDocked
+            ? 0
+            : Math.round(
+                Math.max(0, Math.min(b.right, catVisual.right) - Math.max(b.left, catVisual.left)) *
+                  Math.max(0, Math.min(b.bottom, catVisual.bottom) - Math.max(b.top, catVisual.top))
+              );
+          const edgeDx = Math.round(Math.max(0, b.left - catVisual.right, catVisual.left - b.right));
+          const edgeDy = Math.round(Math.max(0, b.top - catVisual.bottom, catVisual.top - b.bottom));
+          const edgeDist = Math.round(Math.hypot(edgeDx, edgeDy));
+          return {
+            anchor,
+            isDocked,
+            isTravelling,
+            left: Math.round(b.left),
+            top: Math.round(b.top),
+            right: Math.round(b.right),
+            bottom: Math.round(b.bottom),
+            width: Math.round(b.width),
+            height: Math.round(b.height),
+            actorCenterX: Math.round((ar.left + ar.right) / 2),
+            catVisualTop: Math.round(catVisual.top),
+            catOverlap,
+            edgeDx,
+            edgeDy,
+            edgeDist,
+            heroCopyTop: Math.round(document.querySelector('.hero-copy')!.getBoundingClientRect().top),
+            cardTop: Math.round(document.querySelector('.instant-card')!.getBoundingClientRect().top),
+            scrollY: window.scrollY,
+            scrollWidth: document.documentElement.scrollWidth,
+            clientWidth: document.documentElement.clientWidth
+          };
+        });
+
+      const g0 = await sampleGeom();
+      expect(g0, `${vp.label}: geometry sampled`).not.toBeNull();
+      expect(['above', 'left', 'right', 'dock'], `${vp.label}: valid data-bubble-anchor`).toContain(g0!.anchor);
+      expect(g0!.heroCopyTop, `${vp.label}: CLS=0 heroCopyTop`).toBe(before.heroCopyTop);
+      expect(g0!.cardTop, `${vp.label}: CLS=0 cardTop`).toBe(before.cardTop);
+      expect(g0!.scrollY, `${vp.label}: zero scroll drift`).toBe(before.scrollY);
+      expect(g0!.scrollWidth, `${vp.label}: zero horizontal overflow`).toBeLessThanOrEqual(g0!.clientWidth);
+      expect(g0!.left, `${vp.label}: left >= 6`).toBeGreaterThanOrEqual(6);
+      expect(g0!.right, `${vp.label}: right <= vw - 6`).toBeLessThanOrEqual(vp.width - 6);
+      expect(g0!.top, `${vp.label}: top >= 60`).toBeGreaterThanOrEqual(60);
+      expect(g0!.bottom, `${vp.label}: bottom <= vh - 6`).toBeLessThanOrEqual(vp.height - 6);
+
+      if (!g0!.isDocked && g0!.anchor !== 'dock') {
+        expect(['above', 'left', 'right'], `${vp.label}: roaming anchor`).toContain(g0!.anchor);
+        expect(g0!.catOverlap, `${vp.label}: zero catVisual overlap`).toBe(0);
+        expect(g0!.edgeDx, `${vp.label}: edgeDx <= 32`).toBeLessThanOrEqual(32);
+        expect(g0!.edgeDy, `${vp.label}: edgeDy <= 48`).toBeLessThanOrEqual(48);
+        expect(g0!.edgeDist, `${vp.label}: edgeDist <= 52`).toBeLessThanOrEqual(52);
+        if (g0!.anchor === 'above') {
+          expect(g0!.bottom, `${vp.label}: above bubble clears ear tips`).toBeLessThanOrEqual(g0!.catVisualTop + 4);
+          const bubbleCenterX = (g0!.left + g0!.right) / 2;
+          expect(Math.abs(bubbleCenterX - g0!.actorCenterX), `${vp.label}: above bubble horizontally near Molly`).toBeLessThanOrEqual(
+            Math.max(g0!.width * 0.65, 110)
+          );
+        }
+      }
+
+      // Anti-jump stability check across 450ms while idle
+      const samples = [g0!];
+      for (let i = 0; i < 3; i++) {
+        await page.waitForTimeout(150);
+        const s = await sampleGeom();
+        if (s) samples.push(s);
+      }
+      const maxDeltaLeft = Math.max(...samples.map((s) => Math.abs(s.left - samples[0].left)));
+      const maxDeltaTop = Math.max(...samples.map((s) => Math.abs(s.top - samples[0].top)));
+      const maxDeltaW = Math.max(...samples.map((s) => Math.abs(s.width - samples[0].width)));
+      const maxDeltaH = Math.max(...samples.map((s) => Math.abs(s.height - samples[0].height)));
+      expect(maxDeltaLeft, `${vp.label}: anti-jump left delta <= 3`).toBeLessThanOrEqual(3);
+      expect(maxDeltaTop, `${vp.label}: anti-jump top delta <= 3`).toBeLessThanOrEqual(3);
+      expect(maxDeltaW, `${vp.label}: anti-jump width delta <= 2`).toBeLessThanOrEqual(2);
+      expect(maxDeltaH, `${vp.label}: anti-jump height delta <= 2`).toBeLessThanOrEqual(2);
+      expect(samples.every((s) => !s.isTravelling), `${vp.label}: no travelling blink`).toBe(true);
+
+      // Back-to-back whisper replacement check (stale bubbleW/bubbleH guard)
+      for (let r = 0; r < 2; r++) {
+        await page.locator('.molly-pelisek-dock .molly-dock-pet-btn').click();
+        await page.waitForTimeout(150);
+      }
+      const afterReplace = await sampleGeom();
+      expect(afterReplace, `${vp.label}: post-replace whisper visible`).not.toBeNull();
+      if (!afterReplace!.isDocked && afterReplace!.anchor !== 'dock') {
+        expect(afterReplace!.catOverlap, `${vp.label}: post-replace catVisual overlap === 0`).toBe(0);
+        expect(afterReplace!.edgeDx, `${vp.label}: post-replace edgeDx <= 32`).toBeLessThanOrEqual(32);
+        expect(afterReplace!.edgeDy, `${vp.label}: post-replace edgeDy <= 48`).toBeLessThanOrEqual(48);
+      }
+    }
+  });
+});

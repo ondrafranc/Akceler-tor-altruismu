@@ -299,10 +299,12 @@ test.describe('R2: Delayed Gratification (Molly Treat Economics)', () => {
     await expect(whisper).toBeVisible();
 
     const whisperText = await whisper.innerText();
-    // Warm Czech text check: contains comforting words
-    const warmWords = ['mrrr', 'předu', 'laskavost', 'radost', 'pomoc', 'hřeje', 'svět', 'kousek', 'klid', 'bříško', 'šetřím', 'dobrot', 'skutek', 'lehký', 'ahoj', 'sovo', 'čas'];
+    // Warm Czech text check: contains comforting calm words without tildes or Unicode emoji
+    const warmWords = ['mrrr', 'předu', 'laskavost', 'pomoc', 'pomůžeš', 'hřeje', 'svět', 'kousek', 'klid', 'šetřím', 'dobrot', 'skutek', 'skutku', 'pohlazení', 'děkuji', 'blízkost', 'pamlsek', 'tichounce'];
     const hasWarmTone = warmWords.some(w => whisperText.toLowerCase().includes(w));
     expect(hasWarmTone, `Molly whisper text should be warm and supportive. Got: "${whisperText}"`).toBe(true);
+    expect(whisperText).not.toContain('~');
+    expect(/\p{Extended_Pictographic}/u.test(whisperText)).toBe(false);
   });
 
   test('DG-3.2: Complete absence of punitive tone in Molly responses', async ({ page }) => {

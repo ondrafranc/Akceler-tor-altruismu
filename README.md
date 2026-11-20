@@ -30,7 +30,7 @@ Aplikace funguje **okamžitě bez jakýchkoliv externích API klíčů či datab
 git clone https://github.com/ondrafranc/Akceler-tor-altruismu.git
 cd Akceler-tor-altruismu
 
-# Nainstaluje závislosti v rootu i v aplikaci (vyžaduje Node 24)
+# Kořen nemá vlastní závislosti; postinstall nainstaluje aplikaci v akcelerator-landing-page/ (vyžaduje Node 24)
 npm install
 ```
 
@@ -50,7 +50,8 @@ Otevřete v prohlížeči **[http://localhost:5173](http://localhost:5173)**.
 ```text
 Akcelerátor altruismu/
 ├── package.json                               # Kořenové proxy skripty pro vývojáře
-├── AGENTS.md                                  # Hlavní severka, UX zásady a index pravidel
+├── AGENTS.md                                  # Severka, globální invarianty, příkazy a rozcestník pravidel
+├── CLAUDE.md                                  # Vstup pro Claude Code (importuje AGENTS.md)
 ├── README.md                                  # Přehled projektu, quickstart a reference
 ├── CONTRIBUTING.md                            # Průvodce přispěvatele (Svelte 5 Runes, testy)
 ├── DEPLOYMENT_INSTRUCTIONS.md                 # Produkční nasazení (Vercel + Supabase 0001/0002)
@@ -58,7 +59,7 @@ Akcelerátor altruismu/
 ├── user_journeys.md                           # Klíčové uživatelské cesty
 ├── CHANGELOG.md                               # Přehled milníků a změn
 ├── vercel.json                                # Kořenová Vercel konfigurace + cache hlavičky
-├── .agents/rules/                             # Modulární pravidla architektury, bezpečnosti a UI
+├── .claude/                                   # Pravidla oblastí (rules/), hooky, příkaz /ship a nastavení Claude Code
 ├── .devcontainer/                             # Devcontainer prostředí (Node.js 24 Bookworm)
 ├── .github/                                   # CI workflow (Node 24) a šablony PR / Issues
 ├── supabase/migrations/
@@ -101,7 +102,7 @@ Akcelerátor altruismu/
 │   │   │   ├── app/guided/+page.svelte        # Průvodce výběrem na míru během 60 sekund (WCAG 2.4.3 pořadí)
 │   │   │   ├── app/online/+page.svelte        # Filtrovatelný katalog samostatných karet online i lokálních mikro-akcí
 │   │   │   └── api/                           # Backend endpointy (/community-nearby, /feedback, /geocode, /nearby, /pulse, /submissions, /test-supabase)
-│   └── tests/                                 # Vitest jednotkové testy (17 souborů / 216 testů) a Playwright E2E (18 *.spec.ts / 324 testů)
+│   └── tests/                                 # Vitest jednotkové testy a invarianty (tests/unit/) a Playwright E2E (*.spec.ts)
 ```
 
 ### Hlavní trasy aplikace (Routes)
@@ -121,12 +122,14 @@ Akcelerátor altruismu/
 |---|---|---|
 | `npm run dev` | Spustí vývojový server na `localhost:5173` | Starts Vite local development server on port 5173 |
 | `npm run build` | Sestaví produkční verzi přes Vercel adaptér | Builds production bundle using `@sveltejs/adapter-vercel` |
-| `npm run check` | Provede striktní typovou kontrolu (`svelte-check`) | Runs strict TypeScript/JSDoc typechecking |
-| `npm run test:unit` | Spustí jednotkové testy (Vitest: `17` souborů, `216` testů) | Runs fast Vitest unit test suite (`17` files, `216` tests) |
+| `npm run check` | Provede typovou kontrolu (`svelte-check`), musí skončit s 0 chybami a 0 varováními | Runs `svelte-check` typechecking; must report 0 errors and 0 warnings |
+| `npm run test:unit` | Spustí jednotkové testy a kontrolu invariantů repozitáře (Vitest) | Runs Vitest unit tests and repository invariants |
 | `npm run test:api` | Spustí API integrační testy (`tests/api.spec.ts`) — zkratka z root `package.json` | Runs Playwright API tests (`tests/api.spec.ts`) via root `package.json` shorthand |
-| `npm test` | Spustí kompletní Playwright E2E sadu (`18` `*.spec.ts` / `325` testů) | Runs full Playwright end-to-end test suite (`18` specs / `325` tests) |
+| `npm test` | Spustí kompletní Playwright E2E sadu | Runs full Playwright end-to-end test suite |
 
-Aktuální stav migrace na Svelte 5: `23/31` `.svelte` souborů využívá Runes (`$state`, `$derived`, `$props()`, `$effect`), `2` soubory jsou bezstavový Svelte 5 (`src/routes/+error.svelte`, `src/lib/features/home/SanctuaryTeaser.svelte`) a `6` komponent zatím drží starší syntaxi Svelte 4. Pro spuštění konkrétní E2E specifikace (včetně API testů) z `akcelerator-landing-page/` používejte vždy `npm test -- <spec>` (např. `npm test -- tests/api.spec.ts` nebo z kořene `npm --prefix akcelerator-landing-page test -- tests/api.spec.ts`), nikoli holé `npx playwright test`.
+Nové a upravované komponenty používají Svelte 5 Runes; seznam zbývajících komponent se starší syntaxí hlídá `tests/unit/invariants.test.js` a smí se jen zkracovat. Konkrétní E2E specifikaci spustíte z `akcelerator-landing-page/` přes `npm test -- tests/<soubor>.spec.ts` (Playwright si sám spustí vývojový server).
+
+V editoru používejte TypeScript z pracovního prostoru (`akcelerator-landing-page/node_modules/typescript`). `jsconfig.json` má záměrně explicitní `"strict": false`; novější TypeScript přibalený v editoru by jinak hlásil chyby, které CI nevidí.
 
 ---
 
@@ -158,7 +161,7 @@ Podrobnosti k migracím `0001_initial_schema.sql` a `0002_rls_hardening.sql` i n
 
 ## Jak se zapojit / Contributing
 
-Před odesláním Pull Requestu si prosím přečtěte [CONTRIBUTING.md](CONTRIBUTING.md) a pravidla v [AGENTS.md](AGENTS.md) a `.agents/rules/`.
+Před odesláním Pull Requestu si prosím přečtěte [CONTRIBUTING.md](CONTRIBUTING.md) a pravidla v [AGENTS.md](AGENTS.md) a `.claude/rules/`.
 
 ---
 

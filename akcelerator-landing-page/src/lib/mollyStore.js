@@ -40,7 +40,7 @@ const DEFAULT_MOLLY_STATE = {
   lastTreat: null, // { icon, name, shortLabel, color, foodType, actionId, ts }
   petCount: 0,
   // Počet SKUTEČNÝCH skutků (dokončený krok / zapsaný skutek v Krajině dobra), za které Molly dostala pamlsek.
-  // Jen z nich se odemykají dárky — klepání do plátna a ✨ Impuls dávají pamlsky, ale ne dárky,
+  // Jen z nich se odemykají dárky — klepání do plátna a tlačítko Impuls dávají pamlsky, ale ne dárky,
   // jinak by šlo „naklikat“ hvězdičku za půl minuty a věta „Díky tvé pomoci…“ by nebyla pravdivá.
   giftDeeds: 0,
   whisper: null // { text, icon, ts }
@@ -90,7 +90,7 @@ function milestoneWhisperOr(prevTotal, nextTotal, fallback) {
   if (!m) return fallback;
   return {
     icon: m.icon,
-    text: `Mňau, podívej! Díky tvému dobrému skutku mám ${m.name}. Mám z něj velikou radost!`,
+    text: `Díky tvému dobrému skutku mě teď zdobí ${m.name}.`,
     ts: fallback.ts,
     milestone: m.key
   };
@@ -228,7 +228,7 @@ export function unlockMollyTreat(action, opts = {}) {
       earnedTreatQueue: nextQueue,
       whisper: {
         icon: treat.icon || 'fish',
-        text: `Mňau! Odemkla se dobrota za tvůj dobrý skutek: ${treat.name}. Můžeš mi ji dát!`,
+        text: `Za tvůj dobrý skutek tu na mě čeká ${treat.name}.`,
         ts,
         fromUnlock: true
       }
@@ -283,7 +283,7 @@ export function feedMolly(sourceOrAction = 'action', opts = {}) {
   if (currentAvailable <= 0) {
     const unearnedWhisper =
       opts?.unearnedWhisper ||
-      'Mrrr… bříško mám klidné a pamlsky si šetřím na oslavu dobrého skutku. Děkuji za pohlazení!';
+      'Mrrr… děkuji za pohlazení. Pamlsky si nechávám až za dobrý skutek.';
     petMolly(unearnedWhisper, { icon: 'paw', fromDock: opts?.fromDock });
     return { success: false, treat: null };
   }
@@ -294,6 +294,7 @@ export function feedMolly(sourceOrAction = 'action', opts = {}) {
   const treat = poppedTreat || meta?.mollyTreat || {
     icon: 'fish',
     name: 'lososová granulka',
+    nameAcc: 'lososovou granulku',
     shortLabel: 'Rybka pro Molly',
     color: '#f59e0b',
     foodType: 'salmon'
@@ -313,7 +314,7 @@ export function feedMolly(sourceOrAction = 'action', opts = {}) {
 
   const whisper = {
     icon: treat.icon || 'fish',
-    text: `Mňam! Děkuji za ${treat.name || 'dobrotu'}, moc mi chutná.`,
+    text: `Mrrr… děkuji za ${treat.nameAcc || treat.name || 'dobrotu'}, moc mi chutná.`,
     ts,
     fromDock: Boolean(opts?.fromDock),
     fromCelebration: source === 'celebration'
@@ -372,7 +373,7 @@ export function feedMollyFromAction(action, opts = {}) {
 }
 
 /**
- * Zaznamená jiskru / impuls z interaktivního plátna nebo tlačítka ✨ Impuls.
+ * Zaznamená jiskru / impuls z interaktivního plátna nebo tlačítka Impuls.
  * Spustí vizuální a zvukový vjem zvídavosti Molly, ale STRIKTNĚ NEZVYŠUJE počet pamlsků
  * ani dárků (delayed gratification — pamlsky se získávají jen skutečnými skutky).
  *
@@ -401,7 +402,7 @@ export function notifyMollySpark(action, opts = {}) {
 
   const whisper = {
     icon: 'sparkles',
-    text: 'Cítím tvoji jiskru! Každá myšlenka na pomoc zahřeje.',
+    text: 'I tichá myšlenka na pomoc umí zahřát.',
     ts
   };
 
@@ -501,8 +502,8 @@ export function toggleMollyPelisek() {
         icon: nextMode === 'docked' ? 'home' : 'paw',
         text:
           nextMode === 'docked'
-            ? 'Zachumlám se do pelíšku a budu tiše odpočívat.'
-            : 'Už jsem vzhůru a jdu tě s radostí doprovázet!',
+            ? 'Schoulím se do pelíšku a budu tiše odpočívat.'
+            : 'Jsem vzhůru a klidně tě tu doprovodím.',
         ts,
         fromToggle: true
       }
@@ -557,7 +558,7 @@ export function toggleMollyFollowMouse() {
       whisper: {
         icon: nextVal ? 'paw' : 'home',
         text: nextVal
-          ? 'Mňau! Půjdu s tebou a budu tě tiše doprovázet.'
+          ? 'Půjdu s tebou a budu tě tiše doprovázet.'
           : 'Zůstanu na svém klidném místě.',
         ts: Date.now(),
         fromToggle: true

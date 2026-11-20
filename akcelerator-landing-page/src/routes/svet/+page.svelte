@@ -511,11 +511,11 @@
   /** @type {Record<string, number>} */
   let hoverScales = {};
 
-  // Patronka Molly u jezera v Krajině dobra (nx = 0.24, ny = 0.72) a její mistička hojnosti (nx = 0.19, ny = 0.73)
+  // Patronka Molly u lesní tůně v Krajině dobra (nx = 0.24, ny = 0.72) a její mistička hojnosti (nx = 0.19, ny = 0.73)
   const MOLLY_SANCTUARY_POS = { x: 0.24, y: 0.72 };
   const MOLLY_BOWL_POS = { x: 0.19, y: 0.73 };
 
-  // Trajektorie břehu jezera: nx ≈ 0.20 až 0.44, ny ≈ 0.72 + (nx - 0.24) * 0.04
+  // Trajektorie břehu tůně: nx ≈ 0.20 až 0.44, ny ≈ 0.72 + (nx - 0.24) * 0.04
   function getLakeshoreY(nx) {
     return 0.72 + (nx - 0.24) * 0.04;
   }
@@ -525,7 +525,7 @@
   let mollyTargetX = 0.24;
   let mollyBehavior = "SIT_HOME";
   let mollyStateTimer = 1.6;
-  let mollyFacing = -1; // -1 = doleva k mističce / domů, 1 = doprava k jezeru
+  let mollyFacing = -1; // -1 = doleva k mističce / domů, 1 = doprava k tůni
   let mollyWalkCycle = 0;
 
   /** @type {Array<{ sx: number, sy: number, cx: number, cy: number, tx: number, ty: number, progress: number, color: string }>} */
@@ -562,10 +562,10 @@
         action: {
           id: "zvirata_utulek_online",
           element: "animals",
-          title: "Pamlsek pro patronku Molly u jezera",
+          title: "Pamlsek pro patronku Molly u lesní tůně",
         },
       });
-      petMolly("Mrrr… u lesní tůně v Krajině dobra je s tebou krásně!");
+      petMolly("Mrrr… u lesní tůně v Krajině dobra je s tebou klidně a hezky.");
       launchSanctuaryTreatArc(fromNx, fromNy, res?.treat?.color || "#fbbf24");
       mollyJoyTimer = 2.4;
       mollyBehavior = "EAT_TREAT";
@@ -989,7 +989,7 @@
       Math.min(0.88, (e.clientY - rect.top) / rect.height),
     );
 
-    // Přímé pohlazení / nakrmení patronky Molly na břehu jezera:
+    // Přímé pohlazení / nakrmení patronky Molly na břehu tůně:
     // Podporuje jak stálou domovskou zónu (0.24 * w, 0.72 * h) pro 100% testovací kompatibilitu,
     // tak dynamickou polohu Molly při procházce podél břehu
     const homePxX = MOLLY_SANCTUARY_POS.x * rect.width;
@@ -1943,7 +1943,7 @@
           }
           ctx.globalAlpha = 1;
 
-          // 12B. Sanctuary Molly — Stavový automat a animace chodící patronky po břehu jezera
+          // 12B. Sanctuary Molly — Stavový automat a animace chodící patronky po břehu tůně
           if (mollyJoyTimer > 0) {
             mollyBehavior = "EAT_TREAT";
             mollyJoyTimer = Math.max(0, mollyJoyTimer - 0.02 * k);
@@ -2113,7 +2113,7 @@
           ctx.fill();
           ctx.restore();
 
-          // Dynamický vodní odraz chodící Molly v hladině jezera
+          // Dynamický vodní odraz chodící Molly v hladině tůně
           ctx.save();
           ctx.globalCompositeOperation = "screen";
           const reflGlow = ctx.createRadialGradient(
@@ -2149,7 +2149,7 @@
           }
           ctx.restore();
 
-          // Mechový jezerní kámen / molo pod Molly a mističkou
+          // Mechový pobřežní kámen / molo pod Molly a mističkou
           ctx.save();
           const stoneGrad = ctx.createLinearGradient(
             bx - 18,
@@ -2476,7 +2476,7 @@
             ctx.fill();
           }
 
-          // Srdíčka radosti nad Molly u jezera
+          // Srdíčka radosti nad Molly u tůně
           for (let hi = mollyLakeHearts.length - 1; hi >= 0; hi--) {
             const lh = mollyLakeHearts[hi];
             lh.x += lh.vx * k;
@@ -2898,8 +2898,8 @@
               feedSanctuaryMolly(0.24, 0.72);
             }}
             title={$mollyState.availableTreats > 0
-              ? "Dát patronce Molly zasloužený pamlsek do mističky u jezera"
-              : "Pohladit patronku Molly u jezera"}
+              ? "Dát patronce Molly zasloužený pamlsek do mističky u tůně"
+              : "Pohladit patronku Molly u lesní tůně"}
             aria-label={$mollyState.availableTreats > 0
               ? "Dát patronce Molly pamlsek"
               : "Pohladit patronku Molly"}

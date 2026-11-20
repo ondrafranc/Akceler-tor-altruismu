@@ -11,7 +11,7 @@ Repozitář udržuje dva synchronizované konfigurační soubory pro Vercel podl
 - **Kořen repozitáře (`vercel.json`)** — používá se při nasazení z kořene (`Root Directory` ponecháno prázdné / `.`). Spouští `cd akcelerator-landing-page && npm ci && npm run build` a kopíruje `.vercel/output`.
 - **Aplikační adresář (`akcelerator-landing-page/vercel.json`)** — používá se, pokud je ve Vercel Project Settings nastaven **Root Directory: `akcelerator-landing-page`** (`framework: "sveltekit"`).
 
-Obě konfigurace musí mít shodné dlouhodobé `Cache-Control` hlavičky pro `/_app/immutable/*`, `/art/*`, `/fonts/*`, `/icon-*.png` a `/og-image-czech.(jpg|webp)`.
+Obě konfigurace musí mít shodné pole `headers` (bezpečnostní i `Cache-Control` hlavičky); shodu hlídá `tests/unit/invariants.test.js`. Jakmile je jisté, které nastavení Root Directory projekt ve Vercelu používá, druhý soubor lze odstranit.
 
 ### Nastavení projektu ve Vercelu
 1. **Node.js Version**: `24.x` (shodně s `akcelerator-landing-page/.nvmrc` a `runtime: 'nodejs24.x'` v `akcelerator-landing-page/svelte.config.js`).
@@ -36,13 +36,9 @@ Nastavte v **Vercel Project Settings -> Environment Variables**:
 | `PULSE_ALLOW_DEV_WRITES` | **V Production nenastavovat** | Pouze pro lokální testování zápisu do `pulse_events` (`1`) |
 
 ### Důležitá bezpečnostní hygiena
-- Legacy název proměnné `API Key` se v kódu již nepoužívá (`resolveSupabaseConfig()` v `src/lib/server/supabase.js`) — z Vercelu jej odstraňte, pokud tam zůstal ze starší konfigurace. Klienti `getServerSupabase()` a `getAdminSupabase()` se cachují přes SHA-256 `buildClientCacheKey(role, url, key)`.
+- Legacy název proměnné `API Key` se v kódu již nepoužívá (`resolveSupabaseConfig()` v `src/lib/server/supabase.js`) — z Vercelu jej odstraňte, pokud tam zůstal ze starší konfigurace.
 - `TEST_BYPASS_SECRET` a `PULSE_ALLOW_DEV_WRITES` musí v **Production** zůstat zcela nenastavené; `isAuthorizedTestBypass(request)` při `VERCEL_ENV === 'production'` bezpodmínečně vrací `false`.
-- `resolveClientKey(request, getClientAddress)` (`src/lib/security.js`) upřednostňuje `x-vercel-forwarded-for` (na Vercelu) a non-loopback `getClientAddress()` před hlavičkami `cf-connecting-ip` / `x-forwarded-for`.
-- `PATCH /api/submissions` vyhodnocuje constant-time `safeCompareTokens` na `x-moderator-secret` **před** rate-limitem `submissions-mod` a vrací `Cache-Control: no-store`.
-- `POST /api/pulse` validuje `actionId` proti 45 `MICRO_ACTIONS` a povoleným prefixům, ořezává `city` na `<= 60` code points a nepoužívá žádný `User-Agent` bypass.
-- `/api/geocode` vynucuje `MAX_QUEUE_WAIT_MS = 2500` a při přetečení vrací necachované `503` (`GEOCODE_QUEUE_OVERFLOW`, `Retry-After`) bez otrávení cache.
-- `src/hooks.server.js` automaticky přidává `Cache-Control: private, no-cache, no-store, must-revalidate` a `Pragma: no-cache` na SSR HTML odpovědi, aby Edge CDN nesdílel per-request CSP noncy mezi návštěvníky.
+- Chování endpointů, rate-limity, CSP a cache hlavičky popisuje `.claude/rules/api-security.md`; ověřují je `tests/security.spec.ts` a `tests/api.spec.ts`.
 
 ---
 

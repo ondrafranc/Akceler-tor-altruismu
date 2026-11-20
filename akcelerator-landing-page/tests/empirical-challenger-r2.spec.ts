@@ -257,7 +257,7 @@ test.describe('Empirical Challenger R2 — Delayed Gratification & Anti-Spam Imm
     const text = (await whisper.innerText()).toLowerCase();
 
     // Check for warm supportive tone
-    const expectedCzechTokens = ['mrrr', 'předu', 'mňau', 'pohlazení', 'bříško', 'skutek', 'dobrý', 'pomoc', 'laskavost'];
+    const expectedCzechTokens = ['mrrr', 'předu', 'pohlazení', 'skutek', 'skutku', 'dobrý', 'pomoc', 'pomůžeš', 'laskavost', 'děkuji', 'klid', 'pamlsek', 'blízkost'];
     const hasWarmTone = expectedCzechTokens.some(t => text.includes(t));
     expect(hasWarmTone, `Molly unearned whisper should be warm and supportive. Got: ${text}`).toBe(true);
 

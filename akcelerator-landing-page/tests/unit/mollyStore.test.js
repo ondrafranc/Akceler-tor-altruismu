@@ -13,6 +13,16 @@ import {
   MOLLY_FOLLOW_MOUSE_KEY,
   MOLLY_STORAGE_KEY
 } from '$lib/mollyStore.js';
+import {
+  MOLLY_TREAT_BY_FOOD,
+  MOLLY_MILESTONES,
+  MOLLY_ROUTE_GUIDES,
+  MOLLY_PET_WHISPERS,
+  MOLLY_UNEARNED_PET_WHISPERS,
+  pluralPamlsek,
+  describeNextMollyGift,
+  getMollyGreeting
+} from '$lib/mollyTypes.js';
 import { safeGetItem, safeSetItem } from '$lib/storage/index.js';
 
 describe('mollyStore Unit Tests (Milestone 3: Follow Mouse & State Transitions)', () => {
@@ -148,6 +158,134 @@ describe('mollyStore Unit Tests (Milestone 3: Follow Mouse & State Transitions)'
       expect(afterState.petCount).toBe(beforeCount + 1);
       expect(afterState.mood).toBe('purring');
       expect(afterState.whisper?.text).toBe('Laskavé pohlazení');
+    });
+  });
+
+  describe('M2 Molly Copy Quality, Czech Grammar & Tone Guardrails', () => {
+    it('MOLLY_TREAT_BY_FOOD defines accusative nameAcc and feedMolly uses it after "za"', () => {
+      for (const [foodKey, treat] of Object.entries(MOLLY_TREAT_BY_FOOD)) {
+        expect(treat.name.length, `${foodKey} has name`).toBeGreaterThan(0);
+        expect(treat.nameAcc?.length || 0, `${foodKey} has nameAcc`).toBeGreaterThan(0);
+
+        mollyState.update((s) => ({
+          ...s,
+          availableTreats: 1,
+          earnedTreatQueue: [{ ...treat }],
+          giftDeeds: 0
+        }));
+
+        const res = feedMolly('grammar_test');
+        expect(res.success).toBe(true);
+        const text = get(mollyState).whisper?.text || '';
+        expect(text.toLowerCase()).toContain('děkuji za');
+        expect(text).toContain(treat.nameAcc);
+        expect(text).not.toContain('za lososová granulka');
+        expect(text).not.toContain('za křupavá hvězdička');
+        expect(text).not.toContain('za teplé kočičí mlíčko v misce');
+      }
+    });
+
+    it('milestone whispers use grammatical nominative phrasing ("mě teď zdobí")', () => {
+      for (const m of MOLLY_MILESTONES) {
+        mollyState.update((s) => ({
+          ...s,
+          availableTreats: 1,
+          earnedTreatQueue: [{ ...MOLLY_TREAT_BY_FOOD.salmon }],
+          giftDeeds: m.at - 1
+        }));
+        feedMolly('milestone_test');
+        const text = get(mollyState).whisper?.text || '';
+        expect(text).toContain(m.name);
+        expect(text).toContain('mě teď zdobí');
+        expect(text).not.toContain(`mám ${m.name}`);
+      }
+    });
+
+    it('pluralPamlsek and describeNextMollyGift follow Czech declension and calm tone', () => {
+      expect(pluralPamlsek(1)).toBe('pamlsek');
+      expect(pluralPamlsek(2)).toBe('pamlsky');
+      expect(pluralPamlsek(4)).toBe('pamlsky');
+      expect(pluralPamlsek(5)).toBe('pamlsků');
+      expect(pluralPamlsek(0)).toBe('pamlsků');
+
+      const allDone = describeNextMollyGift(50);
+      expect(allDone).not.toContain('!');
+      expect(allDone.length).toBeGreaterThan(10);
+    });
+
+    it('all Molly copy has zero Unicode emoji, zero tildes, zero exclamation marks, and zero banned tokens', () => {
+      const collected = [];
+      collected.push(...MOLLY_PET_WHISPERS, ...MOLLY_UNEARNED_PET_WHISPERS);
+      for (const guide of Object.values(MOLLY_ROUTE_GUIDES)) {
+        collected.push(guide.hint, guide.nudge);
+      }
+      for (const treat of Object.values(MOLLY_TREAT_BY_FOOD)) {
+        collected.push(treat.name, treat.nameAcc || '', treat.shortLabel);
+      }
+      for (const m of MOLLY_MILESTONES) {
+        collected.push(m.name);
+      }
+      for (const h of [0, 7, 13, 20]) {
+        collected.push(getMollyGreeting(new Date(2026, 0, 1, h)));
+      }
+      collected.push(describeNextMollyGift(0), describeNextMollyGift(3), describeNextMollyGift(50));
+
+      // Runtime whispers
+      mollyState.update((s) => ({ ...s, availableTreats: 0, earnedTreatQueue: [], giftDeeds: 0 }));
+      feedMolly('runtime_0');
+      collected.push(get(mollyState).whisper?.text || '');
+      unlockMollyTreat({ id: 'runtime_unlock', title: 'Test' });
+      collected.push(get(mollyState).whisper?.text || '');
+      feedMolly('runtime_1');
+      collected.push(get(mollyState).whisper?.text || '');
+      notifyMollySpark({ id: 'runtime_spark' });
+      collected.push(get(mollyState).whisper?.text || '');
+      toggleMollyPelisek();
+      collected.push(get(mollyState).whisper?.text || '');
+      toggleMollyPelisek();
+      collected.push(get(mollyState).whisper?.text || '');
+      toggleMollyFollowMouse();
+      collected.push(get(mollyState).whisper?.text || '');
+      toggleMollyFollowMouse();
+      collected.push(get(mollyState).whisper?.text || '');
+
+      const banned = [
+        'malovaná',
+        'malovaný',
+        'skutečné skutky v česku',
+        'tiché útočiště',
+        'jezero',
+        'jezera',
+        'jezeru',
+        'jistý',
+        'mňamku',
+        'zamlsám',
+        'odemkla se dobrota',
+        '+1 xp',
+        'level'
+      ];
+
+      for (const s of collected) {
+        expect(s.length).toBeGreaterThan(0);
+        expect(/\p{Extended_Pictographic}/u.test(s), `Emoji found in: "${s}"`).toBe(false);
+        expect(s, `Tilde found in: "${s}"`).not.toContain('~');
+        expect(s, `Exclamation mark found in: "${s}"`).not.toContain('!');
+        const lower = s.toLowerCase();
+        for (const token of banned) {
+          expect(lower, `Banned token "${token}" in: "${s}"`).not.toContain(token);
+        }
+      }
+
+      const unearnedWarmRegex = /mrrr|předu|pohlazení|skutek|skutku|pomoc|pomůžeš|laskavost|klid|děkuji/i;
+      const petWarmRegex = /mrrr|předu|pohlazení|skutek|skutku|pomoc|pomůžeš|laskavost|klid|děkuji|tůně|den|svět|kousek/i;
+      for (const w of MOLLY_UNEARNED_PET_WHISPERS) {
+        expect(w, `Unearned whisper matches DG-3.1/EC-6 warm token: "${w}"`).toMatch(unearnedWarmRegex);
+        expect(w.length, `Whisper concise: "${w}"`).toBeLessThanOrEqual(95);
+      }
+      for (const w of MOLLY_PET_WHISPERS) {
+        expect(w, `Pet whisper matches warm token: "${w}"`).toMatch(petWarmRegex);
+        expect(w.length, `Whisper concise: "${w}"`).toBeLessThanOrEqual(95);
+      }
     });
   });
 });

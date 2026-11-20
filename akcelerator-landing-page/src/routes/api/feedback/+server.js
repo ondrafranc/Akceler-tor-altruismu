@@ -11,7 +11,21 @@ import {
 } from '$lib/security.js';
 
 /** @type {import('./$types').RequestHandler} */
-export async function GET() {
+export async function GET({ request, getClientAddress }) {
+  if (!isAuthorizedTestBypass(request)) {
+    const clientKey = resolveClientKey(request, getClientAddress);
+    const rl = checkRateLimit('feedback-get', clientKey, 30, 60_000);
+    if (!rl.allowed) {
+      return json(
+        { success: false, error: 'Příliš mnoho požadavků. Zkus to prosím za chvíli.' },
+        {
+          status: 429,
+          headers: { 'cache-control': 'no-store', 'retry-after': String(rl.retryAfterSec) }
+        }
+      );
+    }
+  }
+
   const supabase = getServerSupabase();
   if (!supabase) {
     return json(
@@ -49,7 +63,7 @@ export async function POST({ request, url, getClientAddress }) {
   if (!validateMutationOrigin(request, url)) {
     return json(
       { success: false, error: 'Nepovolený původ požadavku.' },
-      { status: 403 }
+      { status: 403, headers: { 'cache-control': 'no-store' } }
     );
   }
 
@@ -60,25 +74,34 @@ export async function POST({ request, url, getClientAddress }) {
     if (!rl.allowed) {
       return json(
         { success: false, error: 'Příliš mnoho zpráv v krátkém čase. Zkus to prosím za chvíli.' },
-        { status: 429, headers: { 'retry-after': String(rl.retryAfterSec) } }
+        {
+          status: 429,
+          headers: { 'cache-control': 'no-store', 'retry-after': String(rl.retryAfterSec) }
+        }
       );
     }
   }
 
   const parsedBody = await readJsonBodyBounded(request, 16_384);
   if (!parsedBody.ok) {
-    return json({ success: false, error: parsedBody.error }, { status: parsedBody.status });
+    return json(
+      { success: false, error: parsedBody.error },
+      { status: parsedBody.status, headers: { 'cache-control': 'no-store' } }
+    );
   }
   const body = parsedBody.data;
 
   const textValue = safeText(body.message ?? body.feedback_text ?? body.text);
   if (!textValue) {
-    return json({ success: false, error: 'Text zpětné vazby je povinný.' }, { status: 400 });
+    return json(
+      { success: false, error: 'Text zpětné vazby je povinný.' },
+      { status: 400, headers: { 'cache-control': 'no-store' } }
+    );
   }
   if (textValue.length > 1500) {
     return json(
       { success: false, error: 'Zpětná vazba může mít nejvýše 1 500 znaků.' },
-      { status: 400 }
+      { status: 400, headers: { 'cache-control': 'no-store' } }
     );
   }
 
@@ -86,7 +109,10 @@ export async function POST({ request, url, getClientAddress }) {
   if (body.rating !== undefined && body.rating !== null && body.rating !== '') {
     const parsed = Number(body.rating);
     if (!Number.isInteger(parsed) || parsed < 1 || parsed > 5) {
-      return json({ success: false, error: 'Hodnocení musí být celé číslo od 1 do 5.' }, { status: 400 });
+      return json(
+        { success: false, error: 'Hodnocení musí být celé číslo od 1 do 5.' },
+        { status: 400, headers: { 'cache-control': 'no-store' } }
+      );
     }
     ratingValue = parsed;
   }
@@ -108,7 +134,7 @@ export async function POST({ request, url, getClientAddress }) {
         success: false,
         error: 'Databázová služba není nakonfigurována. Zkus to prosím později.'
       },
-      { status: 503 }
+      { status: 503, headers: { 'cache-control': 'no-store' } }
     );
   }
 
@@ -136,23 +162,26 @@ export async function POST({ request, url, getClientAddress }) {
           success: false,
           error: 'Zpětnou vazbu se nepodařilo uložit do databáze. Zkus to prosím za chvíli.'
         },
-        { status: 503 }
+        { status: 503, headers: { 'cache-control': 'no-store' } }
       );
     }
 
-    return json({
-      success: true,
-      message: 'Zpětná vazba byla uložena.',
-      id,
-      data: [{ id, created_at: new Date().toISOString() }]
-    });
+    return json(
+      {
+        success: true,
+        message: 'Zpětná vazba byla uložena.',
+        id,
+        data: [{ id, created_at: new Date().toISOString() }]
+      },
+      { headers: { 'cache-control': 'no-store' } }
+    );
   } catch {
     return json(
       {
         success: false,
         error: 'Databázová služba momentálně neodpovídá. Zkus to prosím za chvíli.'
       },
-      { status: 503 }
+      { status: 503, headers: { 'cache-control': 'no-store' } }
     );
   }
 }

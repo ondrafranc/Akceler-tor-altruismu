@@ -46,20 +46,23 @@ export async function POST({ request, url, getClientAddress }) {
   if (!validateMutationOrigin(request, url)) {
     return json(
       { success: false, error: 'Nepovolený původ požadavku.' },
-      { status: 403 }
+      { status: 403, headers: { 'cache-control': 'no-store' } }
     );
   }
 
   const parsedBody = await readJsonBodyBounded(request, 24_576);
   if (!parsedBody.ok) {
-    return json({ success: false, error: parsedBody.error }, { status: parsedBody.status });
+    return json(
+      { success: false, error: parsedBody.error },
+      { status: parsedBody.status, headers: { 'cache-control': 'no-store' } }
+    );
   }
   const body = parsedBody.data;
 
   // Honeypot (bots)
   const hp = safeText(body.hp);
   if (hp) {
-    return json({ success: true }, { status: 200 });
+    return json({ success: true }, { status: 200, headers: { 'cache-control': 'no-store' } });
   }
 
   const clientKey = resolveClientKey(request, getClientAddress);
@@ -70,52 +73,79 @@ export async function POST({ request, url, getClientAddress }) {
     if (!rl.allowed) {
       return json(
         { success: false, error: 'Příliš mnoho odeslaných tipů v krátkém čase. Zkus to prosím za chvíli.' },
-        { status: 429, headers: { 'retry-after': String(rl.retryAfterSec) } }
+        {
+          status: 429,
+          headers: { 'cache-control': 'no-store', 'retry-after': String(rl.retryAfterSec) }
+        }
       );
     }
   }
 
   if (isSubmissionTooFast(body)) {
-    return json({ success: false, error: 'Formulář byl odeslán příliš rychle.' }, { status: 400 });
+    return json(
+      { success: false, error: 'Formulář byl odeslán příliš rychle.' },
+      { status: 400, headers: { 'cache-control': 'no-store' } }
+    );
   }
 
   const kind = safeText(body.kind) || 'org';
   if (!['org', 'event'].includes(kind)) {
-    return json({ success: false, error: 'Neplatný typ položky.' }, { status: 400 });
+    return json(
+      { success: false, error: 'Neplatný typ položky.' },
+      { status: 400, headers: { 'cache-control': 'no-store' } }
+    );
   }
 
   const name = safeText(body.name);
   if (!name || name.length < 2 || name.length > 120) {
-    return json({ success: false, error: 'Vyplň prosím název (2–120 znaků).' }, { status: 400 });
+    return json(
+      { success: false, error: 'Vyplň prosím název (2–120 znaků).' },
+      { status: 400, headers: { 'cache-control': 'no-store' } }
+    );
   }
 
   const rawCategory = safeText(body.category);
   if (rawCategory.length > 80) {
-    return json({ success: false, error: 'Kategorie může mít nejvýše 80 znaků.' }, { status: 400 });
+    return json(
+      { success: false, error: 'Kategorie může mít nejvýše 80 znaků.' },
+      { status: 400, headers: { 'cache-control': 'no-store' } }
+    );
   }
   const category = rawCategory || 'other';
 
   const rawDescription = safeText(body.description);
   if (rawDescription.length > 600) {
-    return json({ success: false, error: 'Popis může mít nejvýše 600 znaků.' }, { status: 400 });
+    return json(
+      { success: false, error: 'Popis může mít nejvýše 600 znaků.' },
+      { status: 400, headers: { 'cache-control': 'no-store' } }
+    );
   }
 
   const rawWebsite = safeText(body.website ?? body.url);
   const website = rawWebsite ? sanitizeHttpUrl(rawWebsite) : null;
   if (rawWebsite && !website) {
-    return json({ success: false, error: 'Zadej prosím platný webový odkaz (https://…).' }, { status: 400 });
+    return json(
+      { success: false, error: 'Zadej prosím platný webový odkaz (https://…).' },
+      { status: 400, headers: { 'cache-control': 'no-store' } }
+    );
   }
 
   const rawEmail = safeText(body.email);
   const email = rawEmail ? sanitizeEmail(rawEmail) : null;
   if (rawEmail && !email) {
-    return json({ success: false, error: 'Zadej prosím platný kontaktní e-mail.' }, { status: 400 });
+    return json(
+      { success: false, error: 'Zadej prosím platný kontaktní e-mail.' },
+      { status: 400, headers: { 'cache-control': 'no-store' } }
+    );
   }
 
   const rawPhone = safeText(body.phone);
   const phone = rawPhone ? sanitizePhone(rawPhone) : null;
   if (rawPhone && !phone) {
-    return json({ success: false, error: 'Zadej prosím platné telefonní číslo.' }, { status: 400 });
+    return json(
+      { success: false, error: 'Zadej prosím platné telefonní číslo.' },
+      { status: 400, headers: { 'cache-control': 'no-store' } }
+    );
   }
 
   const address_label = sliceCodePoints(safeText(body.address_label ?? body.address), 200) || null;
@@ -126,29 +156,47 @@ export async function POST({ request, url, getClientAddress }) {
   const lon = toFiniteNumber(body.lon);
 
   if (lat == null || lon == null) {
-    return json({ success: false, error: 'Vyber prosím město nebo polohu.' }, { status: 400 });
+    return json(
+      { success: false, error: 'Vyber prosím město nebo polohu.' },
+      { status: 400, headers: { 'cache-control': 'no-store' } }
+    );
   }
   if (!isCzLatLon(lat, lon)) {
-    return json({ success: false, error: 'Poloha musí být v České republice.' }, { status: 400 });
+    return json(
+      { success: false, error: 'Poloha musí být v České republice.' },
+      { status: 400, headers: { 'cache-control': 'no-store' } }
+    );
   }
 
   const rawEventUrl = safeText(body.event_url);
   const event_url = rawEventUrl ? sanitizeHttpUrl(rawEventUrl) : null;
   if (rawEventUrl && !event_url) {
-    return json({ success: false, error: 'Zadej prosím platný odkaz na akci (https://…).' }, { status: 400 });
+    return json(
+      { success: false, error: 'Zadej prosím platný odkaz na akci (https://…).' },
+      { status: 400, headers: { 'cache-control': 'no-store' } }
+    );
   }
 
   if (kind === 'event' && !event_url && !website) {
-    return json({ success: false, error: 'U akce prosím doplň odkaz na detail nebo přihlášení.' }, { status: 400 });
+    return json(
+      { success: false, error: 'U akce prosím doplň odkaz na detail nebo přihlášení.' },
+      { status: 400, headers: { 'cache-control': 'no-store' } }
+    );
   }
 
   const startRes = sanitizeOptionalIsoDate(body.event_start);
   const endRes = sanitizeOptionalIsoDate(body.event_end);
   if (!startRes.ok || !endRes.ok) {
-    return json({ success: false, error: 'Neplatný formát data nebo času akce.' }, { status: 400 });
+    return json(
+      { success: false, error: 'Neplatný formát data nebo času akce.' },
+      { status: 400, headers: { 'cache-control': 'no-store' } }
+    );
   }
   if (startRes.value && endRes.value && Date.parse(endRes.value) < Date.parse(startRes.value)) {
-    return json({ success: false, error: 'Konec akce nemůže být dříve než začátek.' }, { status: 400 });
+    return json(
+      { success: false, error: 'Konec akce nemůže být dříve než začátek.' },
+      { status: 400, headers: { 'cache-control': 'no-store' } }
+    );
   }
 
   const fullAddress = [address_label, postcode].filter(Boolean).join(', ') || city || null;
@@ -190,7 +238,7 @@ export async function POST({ request, url, getClientAddress }) {
         success: false,
         error: 'Databázová služba není nakonfigurována. Zkus to prosím později.'
       },
-      { status: 503 }
+      { status: 503, headers: { 'cache-control': 'no-store' } }
     );
   }
 
@@ -221,46 +269,49 @@ export async function POST({ request, url, getClientAddress }) {
           success: false,
           error: 'Tip se nepodařilo uložit do databáze. Zkus to prosím za chvíli.'
         },
-        { status: 503 }
+        { status: 503, headers: { 'cache-control': 'no-store' } }
       );
     }
 
     const nowIso = new Date().toISOString();
 
-    return json({
-      success: true,
-      id: submissionId,
-      status: 'pending',
-      fallback: false,
-      moderationNotice:
-        'Tvůj tip byl odeslán ke kontrole. Jakmile ověříme kontaktní údaje, zobrazí se na mapě všem. Na tomto zařízení už své místo vidíš s označením „Čeká na schválení“.',
-      item: {
+    return json(
+      {
+        success: true,
         id: submissionId,
-        kind,
-        name,
-        category,
-        description,
-        city: dbRow.city,
-        address_label: fullAddress,
-        website: website || effectiveUrl,
-        event_url,
-        event_start: startRes.value,
-        event_end: endRes.value,
-        email,
-        phone,
-        lat,
-        lon,
         status: 'pending',
-        created_at: nowIso
-      }
-    });
+        fallback: false,
+        moderationNotice:
+          'Tvůj tip byl odeslán ke kontrole. Jakmile ověříme kontaktní údaje, zobrazí se na mapě všem. Na tomto zařízení už své místo vidíš s označením „Čeká na schválení“.',
+        item: {
+          id: submissionId,
+          kind,
+          name,
+          category,
+          description,
+          city: dbRow.city,
+          address_label: fullAddress,
+          website: website || effectiveUrl,
+          event_url,
+          event_start: startRes.value,
+          event_end: endRes.value,
+          email,
+          phone,
+          lat,
+          lon,
+          status: 'pending',
+          created_at: nowIso
+        }
+      },
+      { headers: { 'cache-control': 'no-store' } }
+    );
   } catch {
     return json(
       {
         success: false,
         error: 'Databázová služba momentálně neodpovídá. Zkus to prosím za chvíli.'
       },
-      { status: 503 }
+      { status: 503, headers: { 'cache-control': 'no-store' } }
     );
   }
 }

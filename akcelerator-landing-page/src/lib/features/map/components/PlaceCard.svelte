@@ -136,7 +136,7 @@
   const tpl = $derived(p ? buildFirstContactTemplate(p) : null);
   const safePhone = $derived(sanitizePhone(p?.phone));
   const mapyPlaceUrl = $derived(
-    `https://mapy.cz/zakladni?x=${p?.lon}&y=${p?.lat}&z=17&q=${encodeURIComponent(p?.name || "")}`,
+    `https://mapy.cz/zakladni?x=${encodeURIComponent(String(p?.lon ?? ""))}&y=${encodeURIComponent(String(p?.lat ?? ""))}&z=17&q=${encodeURIComponent(p?.name || "")}`,
   );
   const showMapyQuick = $derived(Boolean(webUrl || !selfService));
   const showTemplateQuick = $derived(Boolean(webUrl && !selfService && tpl));

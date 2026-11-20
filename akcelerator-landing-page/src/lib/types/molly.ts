@@ -9,6 +9,7 @@ export type MollyFoodType = 'salmon' | 'milk' | 'tuna' | 'catnip' | 'cream' | 's
 export interface MollyTreat {
   icon: string;
   name: string;
+  nameAcc?: string;
   shortLabel: string;
   color: string;
   foodType: MollyFoodType;

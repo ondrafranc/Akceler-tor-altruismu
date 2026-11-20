@@ -60,7 +60,7 @@
   let deferTimer = null;
   let deferTries = 0;
   let lastSeenWhisperTs = 0;
-  // Na /svet bydlí Molly u jezera přímo v krajině — toulavá Molly se tam schová (žádné dvě Molly naráz)
+  // Na /svet bydlí Molly u lesní tůně přímo v krajině — toulavá Molly se tam schová (žádné dvě Molly naráz)
   const atHome = $derived(
     (page.url.pathname || '') === '/svet' || (page.url.pathname || '').startsWith('/svet/')
   );
@@ -116,6 +116,12 @@
   let dockAnchoredBubble = false;
   let bubbleTravelling = $state(false);
   let forceDockWhisper = $state(false);
+  let bubbleReady = $state(false);
+  /** @type {'above' | 'left' | 'right' | 'dock'} */
+  let bubbleAnchorSide = $state('above');
+  let lastBubbleTailX = '';
+  /** @type {{ ts: number, side: 'above' | 'left' | 'right' | 'dock', dx: number, dy: number, fixedRect: { l: number, t: number, r: number, b: number } | null } | null} */
+  let lockedBubbleAnchor = null;
 
   let unsubEvents = null;
   let unsubState = null;
@@ -133,6 +139,15 @@
   function showWhisperBubble(whisperObj, durationMs = 4200) {
     if (!whisperObj?.text) return;
     activeWhisper = whisperObj;
+    bubbleW = 0;
+    bubbleH = 0;
+    lastBubbleTransform = '';
+    lastBubbleTailX = '';
+    cachedWhisperRectKey = '';
+    cachedWhisperRect = null;
+    lockedBubbleAnchor = null;
+    bubbleReady = false;
+    bubbleAnchorSide = 'above';
     bubbleTravelling = Boolean(whisperObj.guide && !whisperObj.fromDock);
     if (whisperHideTimer) clearTimeout(whisperHideTimer);
     if (walkArriveSafetyTimer) clearTimeout(walkArriveSafetyTimer);
@@ -154,7 +169,11 @@
     dockAnchoredBubble = false;
     bubbleTravelling = false;
     forceDockWhisper = false;
+    bubbleReady = false;
+    bubbleAnchorSide = 'above';
+    lockedBubbleAnchor = null;
     lastBubbleTransform = '';
+    lastBubbleTailX = '';
     cachedWhisperRectKey = '';
     cachedWhisperRect = null;
   }
@@ -224,8 +243,8 @@
     const bub = defaultBubbleRectAt(x, ay, s, vw);
     if (!bub) return 0;
     let area = 0;
-    for (const o of collectObstacles(vw, vh, false)) {
-      area += overlapArea(bub, o);
+    for (const o of collectObstacles(vw, vh, true)) {
+      if (o.hard) area += overlapArea(bub, o);
     }
     return Math.max(area, directControlOverlapAt(x, ay));
   }
@@ -235,8 +254,9 @@
    * tlačítko, odkaz, pole formuláře nebo nadpis, najde 100% volné místo.
    */
   async function placeWhisperBubble() {
+    const scheduledTs = activeWhisper?.ts || 0;
     await svelteTick();
-    if (!activeWhisper || typeof window === 'undefined') return;
+    if (!activeWhisper || (activeWhisper.ts || 0) !== scheduledTs || typeof window === 'undefined') return;
     if (!bubbleEl) {
       if (activeWhisper.routePath) {
         markSessionList(HINTS_KEY, activeWhisper.routePath);
@@ -266,7 +286,7 @@
     if (activeWhisper.guide && !activeWhisper.fromDock && currentState.mode === 'roaming' && !atHome) {
       const spot = findBestSpot({ preferX: posX, withBubble: true });
       const bestPlaced = findBestWhisperRectWithCost(spot.x, spot.y, spot.scale || actorScale(vw), vw, vh);
-      if (vw <= 1024 ? bestPlaced.obsCost > 0 : hardBubbleOverlapAt(spot.x, spot.y) > 0 && bestPlaced.obsCost > 0) {
+      if (bestPlaced.obsCost > 0) {
         deferGuideWhisper(activeWhisper);
         return;
       }
@@ -281,21 +301,44 @@
       bubbleEl.classList.remove('is-travelling');
       if (whisperHideTimer) clearTimeout(whisperHideTimer);
       whisperHideTimer = setTimeout(hideWhisperBubble, pendingWhisperMs || 4800);
-      if (currentState.mode === 'roaming' && !atHome && !crowdedPark && activeWhisper.fromDock) {
-        const curRaw = scoreSpot(posX, posY, actorScale(vw), vw, collectObstacles(vw, vh, false), false);
-        if (curRaw > 0) {
-          relocateToFreeSpot(false);
+      if (currentState.mode === 'roaming' && !atHome && !crowdedPark) {
+        const curScale = actorScale(vw);
+        const curRaw = scoreSpot(posX, posY, curScale, vw, collectObstacles(vw, vh, false), false);
+        const curBubCost = findBestWhisperRectWithCost(posX, posY, curScale, vw, vh).obsCost;
+        if (curRaw > 0 || (curBubCost > 0 && !activeWhisper.fromToggle)) {
+          const spot = findBestSpot({ preferX: posX, withBubble: curBubCost > 0 });
+          if (spot.raw <= 0 && Math.hypot(spot.x - posX, spot.y - posY) <= 24) {
+            if (spot.scale) {
+              activeDesktopScale = spot.scale;
+              targetDesktopScale = spot.scale;
+            }
+            posX = spot.x;
+            posY = spot.y;
+            targetX = spot.x;
+            targetY = spot.y;
+            followTargetX = spot.x;
+            followTargetY = spot.y;
+            vx = 0;
+            vy = 0;
+            behavior = 'IDLE_SIT';
+            lastActorTransform = '';
+          } else {
+            relocateToFreeSpot(curBubCost > 0);
+          }
         }
       }
-      updateBubbleAnchorMode(posX, posY);
-      evaluateDockWhisperFallback(posX, posY);
+      updateBubbleAnchorMode(targetX, targetY);
+      evaluateDockWhisperFallback(targetX, targetY);
+      lockWhisperAnchor(targetX, targetY, actorScale(vw), vw, vh);
       lastBubbleTransform = '';
       applyActorTransform();
+      bubbleReady = true;
       return;
     }
 
     if ($isCompactDock && !activeWhisper.guide) {
-      const { obsCost } = findBestWhisperRectWithCost(posX, posY, actorScale(vw), vw, vh);
+      const curScale = actorScale(vw);
+      const { obsCost } = findBestWhisperRectWithCost(posX, posY, curScale, vw, vh);
       const inlineCelebrationVisible = Boolean(
         (activeWhisper.fromUnlock || activeWhisper.fromCelebration) &&
           document.querySelector('.in-situ-celebration')
@@ -304,14 +347,42 @@
         hideWhisperBubble();
         return;
       }
+      if (obsCost > 0 && currentState.mode === 'roaming' && !atHome && !crowdedPark && !activeWhisper.fromDock) {
+        const spot = findBestSpot({ preferX: posX, withBubble: true });
+        if (
+          spot.raw <= 0 &&
+          findBestWhisperRectWithCost(spot.x, spot.y, spot.scale || curScale, vw, vh).obsCost <= 0
+        ) {
+          if (Math.hypot(spot.x - posX, spot.y - posY) <= 24) {
+            if (spot.scale) {
+              activeDesktopScale = spot.scale;
+              targetDesktopScale = spot.scale;
+            }
+            posX = spot.x;
+            posY = spot.y;
+            targetX = spot.x;
+            targetY = spot.y;
+            followTargetX = spot.x;
+            followTargetY = spot.y;
+            vx = 0;
+            vy = 0;
+            behavior = 'IDLE_SIT';
+            lastActorTransform = '';
+          } else {
+            relocateToFreeSpot(true);
+          }
+        }
+      }
       bubbleTravelling = false;
       bubbleEl.classList.remove('is-travelling');
       if (whisperHideTimer) clearTimeout(whisperHideTimer);
       whisperHideTimer = setTimeout(hideWhisperBubble, pendingWhisperMs || 4200);
-      updateBubbleAnchorMode(posX, posY);
-      evaluateDockWhisperFallback(posX, posY);
+      updateBubbleAnchorMode(targetX, targetY);
+      evaluateDockWhisperFallback(targetX, targetY);
+      lockWhisperAnchor(targetX, targetY, actorScale(vw), vw, vh);
       lastBubbleTransform = '';
       applyActorTransform();
+      bubbleReady = true;
       return;
     }
 
@@ -320,6 +391,7 @@
       hurry = true;
       stepAside = true;
       bubbleTravelling = true;
+      bubbleReady = false;
       bubbleEl.classList.add('is-travelling');
       if (whisperHideTimer) clearTimeout(whisperHideTimer);
       if (walkArriveSafetyTimer) clearTimeout(walkArriveSafetyTimer);
@@ -333,6 +405,13 @@
       bubbleEl.classList.remove('is-travelling');
       if (whisperHideTimer) clearTimeout(whisperHideTimer);
       whisperHideTimer = setTimeout(hideWhisperBubble, pendingWhisperMs || 4200);
+      updateBubbleAnchorMode(targetX, targetY);
+      evaluateDockWhisperFallback(targetX, targetY);
+      lockWhisperAnchor(targetX, targetY, actorScale(vw), vw, vh);
+      lastBubbleTransform = '';
+      applyActorTransform();
+      bubbleReady = true;
+      return;
     }
     updateBubbleAnchorMode(targetX, targetY);
     evaluateDockWhisperFallback(targetX, targetY);
@@ -675,6 +754,21 @@
     return { minX: left, maxX: Math.max(left + 40, right) };
   }
 
+  function clampActorX(x, s, clientW) {
+    const halfDomW = LOGICAL_W * 0.5 * s;
+    const minSafeX = Math.ceil(halfDomW + 1.5);
+    const maxSafeX = Math.max(minSafeX, Math.floor(clientW - halfDomW - 1.5));
+    return Math.max(minSafeX, Math.min(maxSafeX, x));
+  }
+
+  function visualEarTop(y, s) {
+    return Math.round(y - 66 * s);
+  }
+
+  function aboveBubbleBottom(y, s, cat) {
+    return Math.min(visualEarTop(y, s) - 8, Math.floor(cat.t - 4));
+  }
+
   function catRectAt(x, y, s) {
     const halfW = LOGICAL_W * 0.5 * s + CAT_SAFETY_X;
     const fullH = LOGICAL_H * s + CAT_SAFETY_TOP;
@@ -684,9 +778,11 @@
   function defaultBubbleRectAt(x, y, s, vw) {
     if (!bubbleW || !bubbleH) return null;
     const clientW = clientViewportWidth(vw);
-    const left = Math.max(8, Math.min(clientW - 8 - bubbleW, Math.round(x - bubbleW / 2)));
-    const bottom = y - Math.round(LOGICAL_H * s) - 6;
-    const top = Math.max(64, bottom - bubbleH);
+    const cx = clampActorX(x, s, clientW);
+    const cat = catRectAt(cx, y, s);
+    const left = Math.max(8, Math.min(clientW - 8 - bubbleW, Math.round(cx - bubbleW / 2)));
+    const bottom = aboveBubbleBottom(y, s, cat);
+    const top = bottom - bubbleH;
     return { l: left, t: top, r: left + bubbleW, b: top + bubbleH };
   }
 
@@ -721,8 +817,16 @@
     return { l: left, t: top, r: right, b: top + bubbleH };
   }
 
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @param {number} s
+   * @param {number} vw
+   * @param {number} vh
+   * @returns {{ rect: { l: number, t: number, r: number, b: number } | null, obsCost: number, anchorSide: 'above' | 'left' | 'right' | 'dock' }}
+   */
   function findBestWhisperRectWithCost(x, y, s, vw, vh) {
-    if (!bubbleW || !bubbleH) return { rect: null, obsCost: 0 };
+    if (!bubbleW || !bubbleH) return { rect: null, obsCost: 0, anchorSide: 'above' };
     const metrics = ensureLayoutMetrics(vw, vh);
     const clientW = metrics.clientW || vw;
     const obstacles = collectObstacles(vw, vh, true);
@@ -732,17 +836,10 @@
         ? Math.max(60, Math.ceil(topNavBottom + (vw <= MOBILE_MAX_W ? 4 : 8)))
         : 64;
     const maxTop = Math.max(minTop, vh - bubbleH - 8);
-    const isParkedOrDock = Boolean(
-      activeWhisper?.fromDock ||
-      activeWhisper?.fromToggle ||
-      currentState.mode === 'docked' ||
-      atHome ||
-      crowdedPark
-    );
     const catVisible = currentState.mode === 'roaming' && !atHome && !crowdedPark;
-    const cat = catVisible ? catRectAt(x, y, s) : null;
+    const cx = clampActorX(x, s, clientW);
+    const cat = catVisible ? catRectAt(cx, y, s) : null;
     const maxBubbleLeft = Math.max(8, clientW - 8 - bubbleW);
-    const halfCatW = Math.round(LOGICAL_W * 0.5 * s);
 
     const calcFullObsCost = (rect) => {
       let obsCost = 0;
@@ -769,127 +866,126 @@
       if (c) ov += overlapArea(rect, { l: c.left - 4, t: c.top - 4, r: c.right + 4, b: c.bottom + 4 });
       const fb = metrics.feedback;
       if (fb) ov += overlapArea(rect, { l: fb.left - 4, t: fb.top - 4, r: fb.right + 4, b: fb.bottom + 4 });
+      if (rect.t < minTop) ov += (minTop - rect.t) * Math.max(1, rect.r - rect.l);
       return ov;
     };
 
-    // Compact viewports (mobile & tablet <= 1024px): strictly anchor either directly adjacent
-    // to Molly (beside her on her floor band or directly above her ears) OR directly beneath
-    // the header Molly dock — never floating disconnected in the middle of the viewport.
-    if (vw <= 1024) {
-      if (catVisible && cat) {
-        const clampX = (v) => Math.max(8, Math.min(maxBubbleLeft, Math.round(v)));
-        const bandMinY = Math.max(minTop, Math.floor(cat.t - bubbleH - 44));
-        const bandMaxY = maxTop;
-        const adjacentXs = Array.from(
-          new Set([
-            clampX(cat.l - 8 - bubbleW),
-            clampX(cat.r + 8),
-            clampX(x - bubbleW * 0.5),
-            clampX(cat.r - bubbleW),
-            clampX(cat.l),
-            maxBubbleLeft,
-            8
-          ])
-        );
-        /** @type {Set<number>} */
-        const adjacentYSet = new Set([
-          Math.max(bandMinY, Math.min(bandMaxY, Math.round(y - bubbleH))),
-          Math.max(bandMinY, Math.min(bandMaxY, Math.round(cat.t))),
-          Math.max(bandMinY, Math.min(bandMaxY, Math.floor(cat.t - bubbleH - 8))),
-          bandMaxY,
-          bandMinY
-        ]);
-        for (let ty = bandMaxY; ty >= bandMinY; ty -= 4) {
-          adjacentYSet.add(ty);
-        }
-        const adjacentYs = Array.from(adjacentYSet);
+    // When Molly is visibly roaming (all viewports, all whisper types), anchor strictly
+    // inside her adjacent ring (above ears, left, or right) — never floating to viewport edges.
+    if (catVisible && cat) {
+      const clampX = (v) => Math.max(8, Math.min(maxBubbleLeft, Math.round(v)));
+      const earTop = visualEarTop(y, s);
+      const aboveBottom = aboveBubbleBottom(y, s, cat);
+      const baseAboveTop = aboveBottom - bubbleH;
 
-        let bestAdj = null;
-        let bestAdjScore = Infinity;
-        let bestAdjObsCost = Infinity;
-        const catMidY = (cat.t + cat.b) * 0.5;
+      /** @type {Array<{ l: number, t: number, side: 'above' | 'left' | 'right' }>} */
+      const cands = [];
+      const seen = new Set();
+      const pushCand = (l, t, side) => {
+        const rl = Math.round(l);
+        const rt = Math.round(t);
+        if (rl < 8 || rl + bubbleW > clientW - 8 || rt < minTop || rt > maxTop) return;
+        const key = `${side}|${rl}|${rt}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        cands.push({ l: rl, t: rt, side });
+      };
 
-        for (const ty of adjacentYs) {
-          if (ty < minTop || ty > maxTop) continue;
-          for (const lx of adjacentXs) {
-            const rect = { l: lx, t: ty, r: lx + bubbleW, b: ty + bubbleH };
-            const obsCost = calcFullObsCost(rect);
-            const dist =
-              Math.hypot(lx + bubbleW * 0.5 - x, ty + bubbleH * 0.5 - catMidY) * 0.08;
-            const score = obsCost * 100 + dist;
-            if (score < bestAdjScore) {
-              bestAdjScore = score;
-              bestAdj = rect;
-              bestAdjObsCost = obsCost;
-            }
-          }
-        }
-
-        if (bestAdj && bestAdjObsCost <= 0) {
-          return { rect: bestAdj, obsCost: 0 };
-        }
-
-        // Expand local zero-collision search slightly upward within the same card/lower region
-        // (up to 195px above Molly) before ever falling back to overlapping readable paragraph text.
-        const expandedMinY = Math.max(minTop, Math.floor(cat.t - bubbleH - 195));
-        if (expandedMinY < bandMinY) {
-          let bestNearFree = null;
-          let bestNearScore = Infinity;
-          for (let ty = bandMinY - 2; ty >= expandedMinY; ty -= 4) {
-            if (ty < minTop || ty > maxTop) continue;
-            for (const lx of adjacentXs) {
-              const rect = { l: lx, t: ty, r: lx + bubbleW, b: ty + bubbleH };
-              if (calcFullObsCost(rect) > 0) continue;
-              const score = Math.abs(cat.t - rect.b) + Math.abs(lx + bubbleW * 0.5 - x) * 0.12;
-              if (score < bestNearScore) {
-                bestNearScore = score;
-                bestNearFree = rect;
-              }
-            }
-          }
-          if (bestNearFree) {
-            return { rect: bestNearFree, obsCost: 0 };
-          }
-        }
-
-        // Direct tap on Molly while scrolled over dense cards: keep speech bubble anchored
-        // cleanly right above Molly's head (or beside her) with zero cat/dock/crisis overlap.
-        if (!activeWhisper?.fromDock && !activeWhisper?.fromToggle && !activeWhisper?.guide) {
-          const aboveY = Math.max(minTop, Math.min(maxTop, Math.floor(cat.t - bubbleH - 8)));
-          const fallbackCands = [
-            { l: clampX(x - bubbleW * 0.5), t: aboveY },
-            { l: clampX(cat.r - bubbleW), t: aboveY },
-            { l: clampX(cat.l), t: aboveY },
-            { l: clampX(cat.l - 8 - bubbleW), t: Math.max(minTop, Math.min(maxTop, Math.round(y - bubbleH))) },
-            { l: clampX(cat.r + 8), t: Math.max(minTop, Math.min(maxTop, Math.round(y - bubbleH))) },
-            { l: maxBubbleLeft, t: aboveY },
-            { l: 8, t: aboveY }
-          ];
-          let bestLocal = null;
-          let bestLocalScore = Infinity;
-          let bestLocalObs = Infinity;
-          for (const c of fallbackCands) {
-            const rect = { l: c.l, t: c.t, r: c.l + bubbleW, b: c.t + bubbleH };
-            const prot = calcProtectedOverlap(rect);
-            const fullObs = calcFullObsCost(rect);
-            const dist = Math.hypot(rect.l + bubbleW * 0.5 - x, rect.b - cat.t) * 0.05;
-            const score = prot * 100000 + dist + (fullObs > 0 ? 1 : 0);
-            if (score < bestLocalScore) {
-              bestLocalScore = score;
-              bestLocal = rect;
-              bestLocalObs = fullObs;
-            }
-          }
-          if (bestLocal && calcProtectedOverlap(bestLocal) <= 0) {
-            return { rect: bestLocal, obsCost: bestLocalObs };
+      // 1. Above candidates (centered / right-aligned / left-aligned to Molly, tight <=24px upward nudge)
+      const aboveXs = [clampX(cx - bubbleW * 0.5), clampX(cat.r - bubbleW), clampX(cat.l)];
+      for (const dy of [0, 8, 16, 24]) {
+        const ty = baseAboveTop - dy;
+        if (ty >= minTop && ty + bubbleH <= cat.t - 2) {
+          for (const lx of aboveXs) {
+            pushCand(lx, ty, 'above');
           }
         }
       }
 
-      // Docked / sanctuary / parked compact whisper: zero-CLS fixed placement that strictly
-      // avoids h1/buttons/controls by preferring (A) above sanctuary pill on /svet,
-      // (B) directly beneath header .molly-pelisek-dock when free, (C) clean bottom toast band,
-      // or (D) nearest zero-obstacle pocket when Molly is not on the floor.
+      // 2. Side-adjacent Y positions along Molly's floor band
+      const sideYs = [
+        Math.max(minTop, Math.min(maxTop, Math.round(y - bubbleH - 2))),
+        Math.max(minTop, Math.min(maxTop, Math.round(earTop - bubbleH * 0.35))),
+        Math.max(minTop, Math.min(maxTop, Math.round(cat.t))),
+        Math.max(minTop, Math.min(maxTop, Math.round(y - bubbleH - 14))),
+        Math.max(minTop, Math.min(maxTop, Math.round(y - bubbleH - 26)))
+      ];
+
+      const leftLx = Math.round(cat.l - 10 - bubbleW);
+      if (leftLx >= 8) {
+        for (const ty of sideYs) {
+          pushCand(leftLx, ty, 'left');
+        }
+      }
+
+      const rightLx = Math.round(cat.r + 10);
+      if (rightLx + bubbleW <= clientW - 8) {
+        for (const ty of sideYs) {
+          pushCand(rightLx, ty, 'right');
+        }
+      }
+
+      if (cands.length === 0) {
+        const safeAboveTop = Math.max(minTop, Math.min(maxTop, baseAboveTop));
+        if (safeAboveTop + bubbleH <= cat.t - 2) {
+          pushCand(clampX(cx - bubbleW * 0.5), safeAboveTop, 'above');
+        } else if (cat.l - 6 - bubbleW >= 8) {
+          pushCand(8, sideYs[0], 'left');
+        } else if (cat.r + 6 + bubbleW <= clientW - 8) {
+          pushCand(maxBubbleLeft, sideYs[0], 'right');
+        } else {
+          pushCand(clampX(cx - bubbleW * 0.5), Math.max(minTop, Math.min(maxTop, Math.floor(cat.t - bubbleH - 4))), 'above');
+        }
+      }
+
+      const catCx = cx;
+      const catCy = (earTop + cat.b) * 0.5;
+      let best = null;
+      let bestScore = Infinity;
+      let bestObsCost = Infinity;
+      /** @type {'above' | 'left' | 'right'} */
+      let bestSide = 'above';
+
+      let bestProtected = null;
+      let bestProtScore = Infinity;
+      let bestProtObsCost = Infinity;
+      /** @type {'above' | 'left' | 'right'} */
+      let bestProtSide = 'above';
+
+      for (const c of cands) {
+        const rect = { l: c.l, t: c.t, r: c.l + bubbleW, b: c.t + bubbleH };
+        const obsCost = calcFullObsCost(rect);
+        const prot = calcProtectedOverlap(rect);
+        const bubCx = rect.l + bubbleW * 0.5;
+        const bubCy = rect.t + bubbleH * 0.5;
+        const distToMolly = Math.hypot(bubCx - catCx, bubCy - catCy);
+        const sideBias = c.side === 'above' ? 0 : 4;
+        const score = obsCost * 1000 + distToMolly + sideBias;
+        if (score < bestScore) {
+          bestScore = score;
+          best = rect;
+          bestObsCost = obsCost;
+          bestSide = c.side;
+        }
+        const protScore = prot * 100000 + obsCost * 10 + distToMolly + sideBias;
+        if (protScore < bestProtScore) {
+          bestProtScore = protScore;
+          bestProtected = rect;
+          bestProtObsCost = obsCost;
+          bestProtSide = c.side;
+        }
+      }
+
+      if (best && bestObsCost <= 0) {
+        return { rect: best, obsCost: 0, anchorSide: bestSide };
+      }
+      if (bestProtected) {
+        return { rect: bestProtected, obsCost: bestProtObsCost, anchorSide: bestProtSide };
+      }
+    }
+
+    // !catVisible (docked, /svet atHome, or crowdedPark)
+    if (vw <= 1024) {
       const d = metrics.dock;
       const centerX = Math.max(8, Math.min(maxBubbleLeft, Math.round((clientW - bubbleW) * 0.5)));
       const dockTop = Math.max(minTop, Math.min(maxTop, Math.ceil((d?.bottom || topNavBottom || 60) + 4)));
@@ -898,9 +994,10 @@
         : centerX;
       const dockXs = Array.from(new Set([dockPreferredX, centerX, maxBubbleLeft, 8]));
 
-      // (A) On /svet (atHome), anchor directly over the quiet lake above .molly-sanctuary-pill
+      // (A) On /svet (atHome), anchor directly above .molly-sanctuary-pill only when pill is in viewport
       const sp = atHome ? metrics.sanctuaryPill : null;
-      if (sp) {
+      const spVisible = Boolean(sp && sp.bottom > (topNavBottom || 56) + 8 && sp.top < vh - 8);
+      if (sp && spVisible) {
         const spLeft = Math.max(8, Math.min(maxBubbleLeft, Math.round(sp.left)));
         const spXs = Array.from(new Set([spLeft, centerX, maxBubbleLeft, 8]));
         const spBaseY = Math.max(minTop, Math.min(maxTop, Math.floor(sp.top - bubbleH - 8)));
@@ -909,7 +1006,7 @@
           for (const lx of spXs) {
             const rect = { l: lx, t: ty, r: lx + bubbleW, b: ty + bubbleH };
             if (calcFullObsCost(rect) <= 0) {
-              return { rect, obsCost: 0 };
+              return { rect, obsCost: 0, anchorSide: 'above' };
             }
           }
         }
@@ -919,7 +1016,7 @@
       for (const lx of dockXs) {
         const rect = { l: lx, t: dockTop, r: lx + bubbleW, b: dockTop + bubbleH };
         if (calcFullObsCost(rect) <= 0) {
-          return { rect, obsCost: 0 };
+          return { rect, obsCost: 0, anchorSide: 'dock' };
         }
       }
 
@@ -930,7 +1027,7 @@
         for (const lx of bottomXs) {
           const rect = { l: lx, t: ty, r: lx + bubbleW, b: ty + bubbleH };
           if (calcFullObsCost(rect) <= 0) {
-            return { rect, obsCost: 0 };
+            return { rect, obsCost: 0, anchorSide: 'above' };
           }
         }
       }
@@ -947,7 +1044,7 @@
         const aboveObs = Math.floor(o.t - bubbleH - 2);
         if (aboveObs >= minTop && aboveObs <= maxTop) pocketYSet.add(aboveObs);
       }
-      const preferAnchorY = atHome ? (sp ? Math.max(minTop, sp.top - bubbleH - 8) : maxTop) : dockTop;
+      const preferAnchorY = atHome ? (spVisible && sp ? Math.max(minTop, sp.top - bubbleH - 8) : maxTop) : dockTop;
       let bestFree = null;
       let bestFreeScore = Infinity;
       let bestPocketFallback = null;
@@ -977,7 +1074,7 @@
         }
       }
       if (bestFree) {
-        return { rect: bestFree, obsCost: 0 };
+        return { rect: bestFree, obsCost: 0, anchorSide: 'dock' };
       }
 
       // (E) Absolute fallback if viewport has zero obstacle-free band: pick lowest-overlap pocket
@@ -1011,78 +1108,117 @@
           bestDockObs = fullObs;
         }
       }
-      return { rect: bestDock, obsCost: bestDockObs };
+      return { rect: bestDock, obsCost: bestDockObs, anchorSide: 'dock' };
     }
 
-    const preferredY = catVisible
-      ? Math.max(minTop, Math.min(maxTop, y - Math.round(LOGICAL_H * s) - 8 - bubbleH))
-      : minTop;
-
-    const candXs = Array.from(
-      new Set([
-        Math.max(8, Math.min(maxBubbleLeft, Math.round(clientW - 10 - bubbleW))),
-        Math.max(8, Math.min(maxBubbleLeft, Math.round((clientW - bubbleW) * 0.5))),
-        Math.max(8, Math.min(maxBubbleLeft, Math.round(x - bubbleW * 0.5))),
-        Math.max(8, Math.min(maxBubbleLeft, Math.round(x + halfCatW + 10))),
-        Math.max(8, Math.min(maxBubbleLeft, Math.round(x - halfCatW - bubbleW - 10))),
-        8
-      ])
-    );
-
-    /** @type {Set<number>} */
-    const candYSet = new Set([minTop, maxTop, preferredY]);
-    for (let ty = minTop; ty <= maxTop; ty += 6) {
-      candYSet.add(ty);
-    }
-    for (const o of obstacles) {
-      const belowObs = Math.ceil(o.b + 2);
-      if (belowObs >= minTop && belowObs <= maxTop) candYSet.add(belowObs);
-      const aboveObs = Math.floor(o.t - bubbleH - 2);
-      if (aboveObs >= minTop && aboveObs <= maxTop) candYSet.add(aboveObs);
-    }
-    const candYs = Array.from(candYSet);
-
-    let best = null;
-    let bestScore = Infinity;
-    let bestObsCost = 0;
-
-    const evalCandidates = (xs) => {
-      for (const ty of candYs) {
-        if (ty < minTop || ty > maxTop) continue;
-        for (const lx of xs) {
-          const rect = { l: lx, t: ty, r: lx + bubbleW, b: ty + bubbleH };
-          const obsCost = calcFullObsCost(rect);
-          const distPref = isParkedOrDock ? (ty - minTop) * 0.05 : Math.abs(ty - preferredY) * 0.1;
-          const score = obsCost * 100 + distPref;
-          if (score < bestScore) {
-            bestScore = score;
-            best = rect;
-            bestObsCost = obsCost;
-          }
-        }
-      }
-    };
-
-    evalCandidates(candXs);
-
-    if (bestObsCost > 0) {
-      const scanXs = [];
-      for (let lx = 8; lx <= maxBubbleLeft; lx += 44) {
-        if (!candXs.includes(lx)) scanXs.push(lx);
-      }
-      if (scanXs.length > 0) evalCandidates(scanXs);
-    }
-
-    if (best) return { rect: best, obsCost: bestObsCost };
-    const fallbackLeft = Math.max(8, Math.min(maxBubbleLeft, Math.round(clientW - 10 - bubbleW)));
-    return {
-      rect: { l: fallbackLeft, t: minTop, r: fallbackLeft + bubbleW, b: minTop + bubbleH },
-      obsCost: 0
-    };
+    // Desktop !catVisible fallback (MollyDock renders .molly-dock-whisper when floating)
+    const d = metrics.dock;
+    const dockLeft = Math.max(8, Math.min(maxBubbleLeft, Math.round(d ? d.left : 14)));
+    const dockTop = Math.max(minTop, Math.min(maxTop, Math.round((d ? d.top : vh - 60) - 8 - bubbleH)));
+    const dockRectCand = { l: dockLeft, t: dockTop, r: dockLeft + bubbleW, b: dockTop + bubbleH };
+    return { rect: dockRectCand, obsCost: calcFullObsCost(dockRectCand), anchorSide: 'dock' };
   }
 
   function findBestWhisperRect(x, y, s, vw, vh) {
     return findBestWhisperRectWithCost(x, y, s, vw, vh).rect;
+  }
+
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @param {number} s
+   * @param {number} vw
+   * @param {number} vh
+   */
+  function lockWhisperAnchor(x, y, s, vw, vh) {
+    if (!activeWhisper || !bubbleW || !bubbleH) {
+      lockedBubbleAnchor = null;
+      return;
+    }
+    const metrics = ensureLayoutMetrics(vw, vh);
+    const clientW = metrics.clientW || vw;
+    const catVisible = currentState.mode === 'roaming' && !atHome && !crowdedPark;
+    if (dockAnchoredBubble) {
+      const dr = dockAnchoredBubbleRect(x, y, s, vw);
+      if (dr) {
+        lockedBubbleAnchor = {
+          ts: activeWhisper.ts || 0,
+          side: 'dock',
+          dx: 0,
+          dy: 0,
+          fixedRect: dr
+        };
+        bubbleAnchorSide = 'dock';
+        return;
+      }
+    }
+    const res = findBestWhisperRectWithCost(x, y, s, vw, vh);
+    if (res?.rect) {
+      const side = res.anchorSide || 'above';
+      bubbleAnchorSide = side;
+      if (catVisible) {
+        const drawX = clampActorX(x, s, clientW);
+        lockedBubbleAnchor = {
+          ts: activeWhisper.ts || 0,
+          side,
+          dx: Math.round(res.rect.l - drawX),
+          dy: Math.round(res.rect.t - y),
+          fixedRect: null
+        };
+      } else {
+        lockedBubbleAnchor = {
+          ts: activeWhisper.ts || 0,
+          side,
+          dx: 0,
+          dy: 0,
+          fixedRect: res.rect
+        };
+      }
+    }
+  }
+
+  /**
+   * Re-evaluates locked anchor after scroll/resize ONLY when stale or newly obstructed.
+   * Keeps already-open bubbles stable without jumping or blinking.
+   * @param {number} ax
+   * @param {number} ay
+   */
+  function refreshWhisperAnchorAfterLayout(ax, ay) {
+    if (!activeWhisper || !bubbleW || !bubbleH) return;
+    const { vw, vh } = viewportSize();
+    const s = actorScale(vw);
+    const metrics = ensureLayoutMetrics(vw, vh);
+    const clientW = metrics.clientW || vw;
+    const topNavBottom = metrics.topNavBottom;
+    const minTop = topNavBottom > 0 ? Math.max(60, Math.ceil(topNavBottom + (vw <= MOBILE_MAX_W ? 4 : 8))) : 64;
+    const maxTop = Math.max(minTop, vh - bubbleH - 8);
+    const catVisible = currentState.mode === 'roaming' && !atHome && !crowdedPark;
+    const activeTs = activeWhisper.ts || 0;
+
+    if (lockedBubbleAnchor && lockedBubbleAnchor.ts === activeTs) {
+      let curRect = lockedBubbleAnchor.fixedRect;
+      if (!curRect && catVisible) {
+        const drawX = clampActorX(ax, s, clientW);
+        curRect = {
+          l: Math.round(drawX + lockedBubbleAnchor.dx),
+          t: Math.round(ay + lockedBubbleAnchor.dy),
+          r: Math.round(drawX + lockedBubbleAnchor.dx) + bubbleW,
+          b: Math.round(ay + lockedBubbleAnchor.dy) + bubbleH
+        };
+      }
+      if (curRect) {
+        const inBounds =
+          curRect.l >= 8 && curRect.r <= clientW - 8 && curRect.t >= minTop && curRect.t <= maxTop;
+        const cat = catVisible ? catRectAt(clampActorX(ax, s, clientW), ay, s) : null;
+        const catHits = cat ? overlapArea(curRect, cat) > 0 : false;
+        const obsHits = rectOverlapWithObstaclesAndControls(curRect, vw, vh) > 0;
+        if (inBounds && !catHits && !obsHits) {
+          return;
+        }
+      }
+    }
+    lockWhisperAnchor(ax, ay, s, vw, vh);
+    lastBubbleTransform = '';
   }
 
   /**
@@ -1095,12 +1231,16 @@
       return;
     }
     const { vw, vh } = viewportSize();
-    const ay = Number.isFinite(anchorY) ? /** @type {number} */ (anchorY) : posY;
-    if (!activeWhisper.fromDock || !dockRect() || hardBubbleOverlapAt(anchorX, ay) <= 40) {
+    if (vw <= 1024) {
       dockAnchoredBubble = false;
       return;
     }
+    const ay = Number.isFinite(anchorY) ? /** @type {number} */ (anchorY) : posY;
     const s = actorScale(vw);
+    if (!activeWhisper.fromDock || !dockRect() || findBestWhisperRectWithCost(anchorX, ay, s, vw, vh).obsCost <= 0) {
+      dockAnchoredBubble = false;
+      return;
+    }
     const cand = dockAnchoredBubbleRect(anchorX, ay, s, vw);
     dockAnchoredBubble = Boolean(cand && rectOverlapWithObstaclesAndControls(cand, vw, vh) <= 0);
   }
@@ -1120,11 +1260,16 @@
     }
     const { vw, vh } = viewportSize();
     const ay = Number.isFinite(anchorY) ? /** @type {number} */ (anchorY) : posY;
-    if (vw <= 1024 || hardBubbleOverlapAt(anchorX, ay) <= 0) {
+    if (vw <= 1024) {
       forceDockWhisper = false;
       return;
     }
     const s = actorScale(vw);
+    const { obsCost } = findBestWhisperRectWithCost(anchorX, ay, s, vw, vh);
+    if (obsCost <= 0) {
+      forceDockWhisper = false;
+      return;
+    }
     const d = dockRect();
     const cat = catRectAt(anchorX, ay, s);
     if (d) {
@@ -1140,8 +1285,7 @@
         return;
       }
     }
-    const { obsCost } = findBestWhisperRectWithCost(anchorX, ay, s, vw, vh);
-    forceDockWhisper = obsCost > 0;
+    forceDockWhisper = true;
   }
 
   function getMemoizedWhisperRect(x, y, s, vw, vh) {
@@ -1168,10 +1312,13 @@
       }
       return getMemoizedWhisperRect(x, y, s, vw, vh);
     }
-    if (hardBubbleOverlapAt(x, y) > 0) {
+    const metrics = ensureLayoutMetrics(vw, vh);
+    const minTop = metrics.topNavBottom > 0 ? Math.max(60, Math.ceil(metrics.topNavBottom + 8)) : 64;
+    const def = defaultBubbleRectAt(x, y, s, vw);
+    if (!def || def.t < minTop || hardBubbleOverlapAt(x, y) > 0) {
       return getMemoizedWhisperRect(x, y, s, vw, vh);
     }
-    return defaultBubbleRectAt(x, y, s, vw);
+    return def;
   }
 
   /**
@@ -1328,7 +1475,7 @@
         heading: isProminentHeading,
         text: isSoftText
       });
-      if (!(vw <= 1024 && isEmptyWrapperCard)) {
+      if (!isEmptyWrapperCard) {
         bubbleObstacles.push({
           l: boxLeft - bubPad,
           t: visTop - bubPad,
@@ -1491,7 +1638,35 @@
    */
   function scoreSpotBreakdown(x, y, s, vw, obstacles, withBubble) {
     const cat = catRectAt(x, y, s);
-    const bub = withBubble ? defaultBubbleRectAt(x, y, s, vw) : null;
+    /** @type {Array<{ l: number, t: number, r: number, b: number }>} */
+    const candBubbles = [];
+    if (withBubble && bubbleW > 0 && bubbleH > 0) {
+      const { vh } = viewportSize();
+      const metrics = ensureLayoutMetrics(vw, vh);
+      const clientW = metrics.clientW || clientViewportWidth(vw);
+      const minTop = metrics.topNavBottom > 0 ? Math.max(60, Math.ceil(metrics.topNavBottom + (vw <= MOBILE_MAX_W ? 4 : 8))) : 64;
+      const maxTop = Math.max(minTop, vh - bubbleH - 8);
+      const maxBubbleLeft = Math.max(8, clientW - 8 - bubbleW);
+      const cx = clampActorX(x, s, clientW);
+      const aboveTop = aboveBubbleBottom(y, s, cat) - bubbleH;
+      if (aboveTop >= minTop && aboveTop <= maxTop) {
+        const ax = Math.max(8, Math.min(maxBubbleLeft, Math.round(cx - bubbleW * 0.5)));
+        candBubbles.push({ l: ax, t: aboveTop, r: ax + bubbleW, b: aboveTop + bubbleH });
+      }
+      const sideY = Math.max(minTop, Math.min(maxTop, Math.round(y - bubbleH - 2)));
+      const leftLx = Math.round(cat.l - 10 - bubbleW);
+      if (leftLx >= 8) {
+        candBubbles.push({ l: leftLx, t: sideY, r: leftLx + bubbleW, b: sideY + bubbleH });
+      }
+      const rightLx = Math.round(cat.r + 10);
+      if (rightLx + bubbleW <= clientW - 8) {
+        candBubbles.push({ l: rightLx, t: sideY, r: rightLx + bubbleW, b: sideY + bubbleH });
+      }
+      if (candBubbles.length === 0) {
+        const def = defaultBubbleRectAt(x, y, s, vw);
+        if (def) candBubbles.push(def);
+      }
+    }
     const catArea = Math.max(1, LOGICAL_W * LOGICAL_H * s * s);
     let hard = 0;
     let headingArea = 0;
@@ -1510,16 +1685,30 @@
           softCardArea += cArea;
         }
       }
-      if (bub) {
-        const bArea = overlapArea(bub, o);
-        if (bArea > 0) {
-          if (o.hard) {
-            hard += bArea * o.w * 1.2;
-          } else {
-            softTextArea += bArea * 0.35;
+    }
+    if (candBubbles.length > 0) {
+      let bestBubHard = Infinity;
+      let bestBubSoft = Infinity;
+      for (const bub of candBubbles) {
+        let bHard = 0;
+        let bSoft = 0;
+        for (const o of obstacles) {
+          const bArea = overlapArea(bub, o);
+          if (bArea > 0) {
+            if (o.hard || o.heading || o.text) {
+              bHard += bArea * o.w * 1.2;
+            } else {
+              bSoft += bArea * 0.35;
+            }
           }
         }
+        if (bHard * 150 + bSoft < bestBubHard * 150 + bestBubSoft) {
+          bestBubHard = bHard;
+          bestBubSoft = bSoft;
+        }
       }
+      hard += bestBubHard;
+      softTextArea += bestBubSoft;
     }
     const headingRatio = Math.min(2, headingArea / catArea);
     const headingCost = headingArea > 0 ? 4500 + headingRatio * 2500 : 0;
@@ -1914,14 +2103,15 @@
   function snapMollyToFreeSpot() {
     if (typeof window === 'undefined' || currentState.mode !== 'roaming' || atHome) return;
     const { vw } = viewportSize();
-    const spot = findBestSpot({ preferX: posX, withBubble: false });
+    const withBub = Boolean(activeWhisper && bubbleW);
+    const spot = findBestSpot({ preferX: posX, withBubble: withBub });
     if (spot.raw > 0 && vw <= 1024) {
       crowdedPark = true;
       lastActorTransform = '';
       if (activeWhisper && bubbleW) {
         updateBubbleAnchorMode(posX, posY);
         evaluateDockWhisperFallback(posX, posY);
-        lastBubbleTransform = '';
+        refreshWhisperAnchorAfterLayout(posX, posY);
       }
       applyActorTransform();
       return;
@@ -1946,6 +2136,7 @@
     if (activeWhisper && bubbleW) {
       updateBubbleAnchorMode(posX, posY);
       evaluateDockWhisperFallback(posX, posY);
+      lockWhisperAnchor(posX, posY, actorScale(vw), vw, viewportSize().vh);
       lastBubbleTransform = '';
     }
     applyActorTransform();
@@ -2048,11 +2239,15 @@
 
     // Pokud na současném místě nepřekrývá žádný ovládací prvek, nadpis ani výrazný text, v klidu zůstane
     const curPosBd = walking ? scoreSpotBreakdown(posX, posY, s, vw, obstacles, false) : hereBd;
+    const curBubbleBd = withBubble ? scoreSpotBreakdown(baseX, baseY, s, vw, obstacles, true) : hereBd;
+    const bubbleBlockedHere =
+      withBubble && (curBubbleBd.hard > 0 || findBestWhisperRectWithCost(baseX, baseY, s, vw, vh).obsCost > 0);
     const deepScrolledCompact = vw <= 1024 && typeof window !== 'undefined' && window.scrollY > 220;
     const insideCompactBand =
       vw > 1024 || baseY - LOGICAL_H * s >= (deepScrolledCompact ? vh * 0.34 : vh - 168);
     const currentIsClean =
       insideCompactBand &&
+      !bubbleBlockedHere &&
       hereBd.hard <= 0 &&
       curPosBd.hard <= 0 &&
       hereBd.headingArea <= 0 &&
@@ -2080,6 +2275,7 @@
     }
     if (
       insideCompactBand &&
+      !bubbleBlockedHere &&
       fitsAtSpotScale &&
       spot.raw >= hereBd.hard &&
       hereBd.headingArea <= 0 &&
@@ -2109,7 +2305,7 @@
 
     const blockedDirectPathOnCompact =
       vw <= 1024 &&
-      (hereBd.hard > 0 || curPosBd.hard > 0 || hereBd.headingArea > 0 || !insideCompactBand) &&
+      (hereBd.hard > 0 || curPosBd.hard > 0 || hereBd.headingArea > 0 || !insideCompactBand || bubbleBlockedHere) &&
       !isStraightPathClear(posX, posY, targetX, targetY, spotScale, vw, obstacles);
 
     if (prefersReducedMotion() || blockedDirectPathOnCompact) {
@@ -2173,9 +2369,13 @@
       }
       bubbleTravelling = false;
       bubbleEl?.classList.remove('is-travelling');
+      const { vw, vh } = viewportSize();
       updateBubbleAnchorMode(posX, posY);
       evaluateDockWhisperFallback(posX, posY);
+      lockWhisperAnchor(posX, posY, actorScale(vw), vw, vh);
       lastBubbleTransform = '';
+      applyActorTransform();
+      bubbleReady = true;
       if (activeWhisper && pendingWhisperMs > 0) {
         if (whisperHideTimer) clearTimeout(whisperHideTimer);
         whisperHideTimer = setTimeout(hideWhisperBubble, pendingWhisperMs);
@@ -2363,6 +2563,7 @@
       if (activeWhisper && bubbleW) {
         updateBubbleAnchorMode(targetX, targetY);
         evaluateDockWhisperFallback(targetX, targetY);
+        refreshWhisperAnchorAfterLayout(targetX, targetY);
       }
       applyActorTransform();
     }, 60);
@@ -2378,16 +2579,13 @@
       lastActorBehavior = behavior;
       actorEl.dataset.mollyBehavior = behavior;
     }
-    const vw = window.innerWidth || 1280;
+    const { vw, vh } = viewportSize();
     const s = actorScale(vw);
     const safeCw =
       layoutMetricsCache.vw === vw && layoutMetricsCache.clientW > 0
         ? layoutMetricsCache.clientW
         : vw;
-    const halfDomW = LOGICAL_W * 0.5 * s;
-    const minSafeX = Math.ceil(halfDomW + 1.5);
-    const maxSafeX = Math.max(minSafeX, Math.floor(safeCw - halfDomW - 1.5));
-    const drawX = Math.max(minSafeX, Math.min(maxSafeX, posX));
+    const drawX = clampActorX(posX, s, safeCw);
     const tf = `translate3d(${(drawX - LOGICAL_W * 0.5).toFixed(1)}px, ${(posY - LOGICAL_H).toFixed(1)}px, 0)${
       s !== 1 ? ` scale(${s.toFixed(3)})` : ''
     }`;
@@ -2396,12 +2594,59 @@
       actorEl.style.transform = tf;
     }
     if (bubbleEl && bubbleW) {
-      const r = bubbleRectAt(posX, posY, s, vw);
+      let r = null;
+      const activeTs = activeWhisper?.ts || 0;
+      const catVisible = currentState.mode === 'roaming' && !atHome && !crowdedPark;
+      if (lockedBubbleAnchor && lockedBubbleAnchor.ts === activeTs) {
+        if (catVisible && lockedBubbleAnchor.fixedRect === null) {
+          const metrics = ensureLayoutMetrics(vw, vh);
+          const minTop =
+            metrics.topNavBottom > 0
+              ? Math.max(60, Math.ceil(metrics.topNavBottom + (vw <= MOBILE_MAX_W ? 4 : 8)))
+              : 64;
+          const maxTop = Math.max(minTop, vh - bubbleH - 8);
+          const maxLeft = Math.max(8, safeCw - 8 - bubbleW);
+          const candL = Math.max(8, Math.min(maxLeft, Math.round(drawX + lockedBubbleAnchor.dx)));
+          const candT = Math.max(minTop, Math.min(maxTop, Math.round(posY + lockedBubbleAnchor.dy)));
+          const cand = { l: candL, t: candT, r: candL + bubbleW, b: candT + bubbleH };
+          const cat = catRectAt(drawX, posY, s);
+          if (overlapArea(cand, cat) <= 0) {
+            r = cand;
+          } else {
+            const res = findBestWhisperRectWithCost(drawX, posY, s, vw, vh);
+            r = res.rect || cand;
+            if (res.anchorSide && res.anchorSide !== bubbleAnchorSide) {
+              bubbleEl.dataset.bubbleAnchor = res.anchorSide;
+            }
+          }
+        } else if (lockedBubbleAnchor.fixedRect) {
+          r = lockedBubbleAnchor.fixedRect;
+        }
+      }
+      if (!r) {
+        r = bubbleRectAt(drawX, posY, s, vw);
+      }
       if (r) {
         const btf = `translate3d(${Math.round(r.l)}px, ${Math.round(r.t)}px, 0)`;
         if (btf !== lastBubbleTransform) {
           lastBubbleTransform = btf;
           bubbleEl.style.transform = btf;
+        }
+        const side = bubbleEl.dataset.bubbleAnchor || bubbleAnchorSide;
+        if (side === 'above' || side === 'dock') {
+          const metrics = ensureLayoutMetrics(vw, vh);
+          let tailTargetX = drawX;
+          if (side === 'above' && !catVisible && atHome && metrics.sanctuaryPill) {
+            tailTargetX = metrics.sanctuaryPill.left + metrics.sanctuaryPill.width * 0.5;
+          } else if (side === 'dock' && metrics.dock) {
+            tailTargetX = metrics.dock.left + metrics.dock.width * 0.5;
+          }
+          const tailPx = Math.max(16, Math.min(Math.max(16, bubbleW - 16), Math.round(tailTargetX - r.l)));
+          const nextTail = `${tailPx}px`;
+          if (nextTail !== lastBubbleTailX) {
+            lastBubbleTailX = nextTail;
+            bubbleEl.style.setProperty('--bubble-tail-x', nextTail);
+          }
         }
       }
     }
@@ -2430,14 +2675,24 @@
     relocateTimer = setTimeout(() => {
       relocateTimer = null;
       measureLayoutAndObstacles();
+      const prevTargetX = targetX;
+      const prevTargetY = targetY;
       const moving = relocateToFreeSpot(Boolean(activeWhisper && bubbleW));
+      const relocatedFar = moving && Math.hypot(targetX - prevTargetX, targetY - prevTargetY) > 18;
       if (activeWhisper && bubbleW) {
         updateBubbleAnchorMode(targetX, targetY);
         evaluateDockWhisperFallback(targetX, targetY);
-        lastBubbleTransform = '';
+        if (relocatedFar || !lockedBubbleAnchor || lockedBubbleAnchor.ts !== (activeWhisper.ts || 0)) {
+          const { vw, vh } = viewportSize();
+          lockWhisperAnchor(targetX, targetY, actorScale(vw), vw, vh);
+          lastBubbleTransform = '';
+        } else {
+          refreshWhisperAnchorAfterLayout(targetX, targetY);
+        }
         applyActorTransform();
       }
-      if (moving && Math.hypot(targetX - posX, targetY - posY) > 18 && bubbleEl && !activeWhisper?.fromDock) {
+      // Already-visible whispers (`bubbleReady === true`) must NEVER blink out via .is-travelling on scroll
+      if (!bubbleReady && moving && Math.hypot(targetX - posX, targetY - posY) > 18 && bubbleEl && !activeWhisper?.fromDock) {
         bubbleTravelling = true;
         bubbleEl.classList.add('is-travelling');
         if (walkArriveSafetyTimer) clearTimeout(walkArriveSafetyTimer);
@@ -2645,7 +2900,7 @@
       if (activeWhisper && bubbleW) {
         updateBubbleAnchorMode(targetX, targetY);
         evaluateDockWhisperFallback(targetX, targetY);
-        lastBubbleTransform = '';
+        refreshWhisperAnchorAfterLayout(targetX, targetY);
         applyActorTransform();
       }
     }, delayMs);
@@ -2844,8 +3099,9 @@
     }
     const { vw, vh } = viewportSize();
     const s = actorScale(vw);
+    const withBub = Boolean(activeWhisper && bubbleW);
     const curBd = !crowdedPark
-      ? scoreSpotBreakdown(posX, posY, s, vw, collectObstacles(vw, vh, false), false)
+      ? scoreSpotBreakdown(posX, posY, s, vw, collectObstacles(vw, vh, false), withBub)
       : { hard: Infinity, headingArea: Infinity };
     if (crowdedPark || curBd.hard > 0 || curBd.headingArea > 0) {
       snapMollyToFreeSpot();
@@ -3157,7 +3413,7 @@
         renderCatFrame(nowSec);
       }
 
-      // H4: Pause RAF loop when docked / parked / u jezera (/svet) / reduced-motion with no active transient animation
+      // H4: Pause RAF loop when docked / parked / u lesní tůně (/svet) / reduced-motion with no active transient animation
       if ((currentState.mode === 'docked' || reduced || atHome || crowdedPark) && !hasActiveTransient) {
         rafId = 0;
         return;
@@ -3202,7 +3458,7 @@
           if (activeWhisper && bubbleW) {
             updateBubbleAnchorMode(targetX, targetY);
             evaluateDockWhisperFallback(targetX, targetY);
-            lastBubbleTransform = '';
+            refreshWhisperAnchorAfterLayout(targetX, targetY);
             applyActorTransform();
           }
         });
@@ -3294,6 +3550,7 @@
           if (activeWhisper && bubbleW) {
             updateBubbleAnchorMode(targetX, targetY);
             evaluateDockWhisperFallback(targetX, targetY);
+            refreshWhisperAnchorAfterLayout(targetX, targetY);
           }
           applyActorTransform();
         });
@@ -3362,7 +3619,7 @@
               if (activeWhisper && bubbleW) {
                 updateBubbleAnchorMode(targetX, targetY);
                 evaluateDockWhisperFallback(targetX, targetY);
-                lastBubbleTransform = '';
+                refreshWhisperAnchorAfterLayout(targetX, targetY);
                 applyActorTransform();
               }
             }, 25);
@@ -3476,11 +3733,11 @@
       spawnHeartBurst(6);
       playMollyMeow();
       ensureLoopRunning();
-      mollyWhisper('Už jsem vzhůru a jdu tě s radostí doprovázet!', 'paw', { fromDock: true });
+      mollyWhisper('Jsem vzhůru a klidně tě tu doprovodím.', 'paw', { fromDock: true });
       return;
     }
     playMollyPurr(0.8, 0.6);
-    mollyWhisper('Tady je těsno — popojeď kousek.', 'home', {
+    mollyWhisper('Tady je zrovna těsno. O kousek níž bude víc místa.', 'home', {
       fromDock: true,
       fromAutoPark: true
     });
@@ -3543,7 +3800,9 @@
     <div
       bind:this={bubbleEl}
       class="molly-whisper-bubble"
+      class:is-ready={bubbleReady}
       class:is-travelling={bubbleTravelling}
+      data-bubble-anchor={bubbleAnchorSide}
       role="status"
     >
       <span class="molly-whisper-inner">
@@ -3639,9 +3898,52 @@
   }
 
   /* Molly ještě jde na volné místo — bublina počká a objeví se až na místě */
+  .molly-whisper-bubble:not(.is-ready),
   .molly-whisper-bubble:global(.is-travelling) {
     opacity: 0;
     animation: none;
+  }
+
+  .molly-whisper-bubble::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: var(--bg-surface, #ffffff);
+    transform: rotate(45deg);
+    pointer-events: none;
+  }
+
+  .molly-whisper-bubble[data-bubble-anchor='above']::after {
+    bottom: -5px;
+    left: var(--bubble-tail-x, 50%);
+    margin-left: -4px;
+    border-right: 1px solid var(--border-strong, #c2cec5);
+    border-bottom: 1px solid var(--border-strong, #c2cec5);
+  }
+
+  .molly-whisper-bubble[data-bubble-anchor='left']::after {
+    right: -5px;
+    top: 50%;
+    margin-top: -4px;
+    border-top: 1px solid var(--border-strong, #c2cec5);
+    border-right: 1px solid var(--border-strong, #c2cec5);
+  }
+
+  .molly-whisper-bubble[data-bubble-anchor='right']::after {
+    left: -5px;
+    top: 50%;
+    margin-top: -4px;
+    border-bottom: 1px solid var(--border-strong, #c2cec5);
+    border-left: 1px solid var(--border-strong, #c2cec5);
+  }
+
+  .molly-whisper-bubble[data-bubble-anchor='dock']::after {
+    top: -5px;
+    left: var(--bubble-tail-x, 50%);
+    margin-left: -4px;
+    border-top: 1px solid var(--border-strong, #c2cec5);
+    border-left: 1px solid var(--border-strong, #c2cec5);
   }
 
   .molly-whisper-inner {

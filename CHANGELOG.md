@@ -1,6 +1,16 @@
 # Changelog
 
-## [Unreleased] — Bezpečnost API, North Star na `/`, podstránky a sjednocení pravidel
+## [Unreleased] — Úklid agentních pravidel a vývojářské infrastruktury
+
+- `AGENTS.md` zkrácen na severku, globální invarianty, příkazy a rozcestník; `CLAUDE.md` ho importuje. Pravidla oblastí přesunuta z `.agents/rules/` do path-scoped souborů `.claude/rules/` (`architecture`, `api-security`, `ui-core`, `home-and-deed-stage`, `molly`, `subpages`) bez pixelových hodnot, počtů a historie.
+- Povinná plošná synchronizace dokumentace po každém běhu nahrazena pravidlem, že dokumentace nepopisuje stav kódu; strojově ověřitelná pravidla hlídá nový `tests/unit/invariants.test.js`.
+- Přidány hooky Claude Code (`Stop`: `check` + `test:unit` po změnách, `SessionStart`: kontrola prostředí), zákaz čtení `.env*` a úprav existujících migrací, ruční příkaz `/ship`, projektový `.mcp.json` pro Svelte MCP a `.gitattributes` (LF).
+- `jsconfig.json` má explicitní `"strict": false`, aby editor s novějším TypeScriptem hlásil totéž co CI.
+- CI nově pouští Playwright specifikace `api.spec.ts` a `security.spec.ts`.
+- Odstraněna emoji z komentářů scén a ze `static/offline.html`; z devcontaineru odebrána rozšíření pro nepoužívané nástroje.
+- Z README, CONTRIBUTING, DEPLOYMENT a šablony PR odstraněny zastaralé počty testů a duplikované popisy interního chování.
+
+## [Starší nevydané změny] — Bezpečnost API, North Star na `/`, podstránky a sjednocení pravidel
 
 ### Bezpečnost, API hardening a databázová vrstva (M1–M2)
 - Přidána bezpečnostní migrace `supabase/migrations/0002_rls_hardening.sql`: sloupce `event_start`/`event_end`, sloupcový `SELECT` na `community_submissions` bez `ip_hash`, délkové a geografické `CHECK` limity pro ČR, zpřísnění RLS pro `feedback` (`status = 'new'`) a 24h okno pro `pulse_events`.

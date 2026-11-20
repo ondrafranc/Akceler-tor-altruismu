@@ -194,7 +194,7 @@ export function renderKibble(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame,
 }
 
 export function renderShelterCare(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-    // 🐾 Donio útulky: Chladný přístřešek se schoulenou kočičkou -> Zářící zlatá střecha bezpečí a plná miska
+    // Donio útulky: Chladný přístřešek se schoulenou kočičkou -> Zářící zlatá střecha bezpečí a plná miska
     const roofPeakY = cy - 26;
     const eaveY = cy - 4;
     const bowlX = cx + 18;
@@ -529,7 +529,7 @@ export function renderWildlifeRescue(c, { p, prep, wt, cx, by, red }) {
 }
 
 export function renderBirdsGlass(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-    // 🐦 Bezpečná skla pro ptáky: Zrcadlící neoznačené sklo a ohrožený let -> UV ochranný rastr a bezpečný oblouk nad sklem
+    // Bezpečná skla pro ptáky: Zrcadlící neoznačené sklo a ohrožený let -> UV ochranný rastr a bezpečný oblouk nad sklem
     const paneX = cx - 4;
     const paneY = cy - 18;
     const paneW = 78;
@@ -597,7 +597,7 @@ export function renderBirdsGlass(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fr
 }
 
 export function renderBirdsSong(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
-    // 🎶 Nářečí strnadů: Tichý strnad na větvi -> Zpívající zlatý strnad a harmonický spektrogram „di-di-di-dééé“
+    // Nářečí strnadů: Tichý strnad na větvi -> Zpívající zlatý strnad a harmonický spektrogram „di-di-di-dééé“
     const twigY = by - 8;
     const songP = easeOut(p);
 

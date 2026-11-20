@@ -13,6 +13,18 @@ import {
 const CACHE = new Map();
 /** @type {Map<string, Promise<unknown>>} */
 const INFLIGHT = new Map();
+const PUBLIC_CACHE_CONTROL = 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800';
+
+/**
+ * Returns `no-store` for degraded/fallback responses so CDN edges never cache them for 24h.
+ * @param {unknown} data
+ * @returns {string}
+ */
+function geocodeCacheControl(data) {
+  return data && typeof data === 'object' && /** @type {{ fallback?: boolean }} */ (data).fallback
+    ? 'no-store'
+    : PUBLIC_CACHE_CONTROL;
+}
 
 const LOCAL_CZECH_TOWNS = [
   ...CZECH_CITIES.map((c) => ({ label: `${c.name}, Česko`, lat: c.lat, lon: c.lon, type: 'city' })),
@@ -209,7 +221,7 @@ export async function GET({ url, request, getClientAddress }) {
   if (cached && cached.expiresAt > now) {
     return json(cached.data, {
       headers: {
-        'cache-control': 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800'
+        'cache-control': geocodeCacheControl(cached.data)
       }
     });
   }
@@ -227,7 +239,7 @@ export async function GET({ url, request, getClientAddress }) {
       setBoundedCache(CACHE, key, fastPayload, 24 * 60 * 60 * 1000, 300);
       return json(fastPayload, {
         headers: {
-          'cache-control': 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800'
+          'cache-control': PUBLIC_CACHE_CONTROL
         }
       });
     }
@@ -238,7 +250,7 @@ export async function GET({ url, request, getClientAddress }) {
       const data = await INFLIGHT.get(key);
       return json(data, {
         headers: {
-          'cache-control': 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800'
+          'cache-control': geocodeCacheControl(data)
         }
       });
     } catch (err) {
@@ -261,7 +273,8 @@ export async function GET({ url, request, getClientAddress }) {
 
   const p = fetchNominatim(q, limit)
     .then((data) => {
-      setBoundedCache(CACHE, key, data, 24 * 60 * 60 * 1000, 300);
+      const ttlMs = data?.fallback ? 10 * 60 * 1000 : 24 * 60 * 60 * 1000;
+      setBoundedCache(CACHE, key, data, ttlMs, 300);
       return data;
     })
     .catch((err) => {
@@ -284,7 +297,7 @@ export async function GET({ url, request, getClientAddress }) {
     const data = await p;
     return json(data, {
       headers: {
-        'cache-control': 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800'
+        'cache-control': geocodeCacheControl(data)
       }
     });
   } catch (err) {

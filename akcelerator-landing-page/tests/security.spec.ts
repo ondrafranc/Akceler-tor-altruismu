@@ -57,6 +57,96 @@ test('root sets strict security headers without unsafe-eval', async ({ request, 
   expect(h['cache-control']).not.toContain('s-maxage');
 });
 
+test('CSP emits a fresh per-request script nonce across sequential GET / responses', async ({ request, baseURL }) => {
+  const r1 = await request.get(baseURL! + '/');
+  const r2 = await request.get(baseURL! + '/');
+  expect(r1.status()).toBe(200);
+  expect(r2.status()).toBe(200);
+  const n1 = r1.headers()['content-security-policy']?.match(/script-src[^;]*'nonce-([^']+)'/)?.[1];
+  const n2 = r2.headers()['content-security-policy']?.match(/script-src[^;]*'nonce-([^']+)'/)?.[1];
+  expect(n1).toBeTruthy();
+  expect(n2).toBeTruthy();
+  expect(n1).not.toBe(n2);
+});
+
+test('SSR HTML responses do not leak private env var names or ip_hash', async ({ request, baseURL }) => {
+  const forbidden = [
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'SUPABASE_SECRET_KEY',
+    'SUPABASE_JWT_SECRET',
+    'IP_HASH_SALT',
+    'MODERATOR_SECRET',
+    'TEST_BYPASS_SECRET',
+    'POSTGRES_PASSWORD',
+    'ip_hash'
+  ];
+  for (const route of ['/', '/near', '/submit', '/svet']) {
+    const res = await request.get(baseURL! + route);
+    expect(res.status()).toBe(200);
+    const html = await res.text();
+    for (const token of forbidden) {
+      expect(html, `Route ${route} HTML must not contain ${token}`).not.toContain(token);
+    }
+  }
+});
+
+test('/near escapes XSS payloads and strips javascript: URLs from AA_MY_PENDING_SUBMISSIONS_KEY', async ({ page }) => {
+  let dialogTriggered = false;
+  page.on('dialog', async (d) => {
+    dialogTriggered = true;
+    await d.dismiss();
+  });
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.addInitScript(() => {
+    (window as unknown as { __aaXssFired?: boolean }).__aaXssFired = false;
+    const payload = [
+      {
+        id: 'xss-test-1',
+        kind: 'org',
+        name: 'Test <img src=x onerror="window.__aaXssFired=true">',
+        category: 'Komunita',
+        description: 'Popis <svg onload="window.__aaXssFired=true">',
+        address_label: 'Praha <script>window.__aaXssFired=true</script>',
+        website: 'javascript:alert(1)',
+        lat: 50.0755,
+        lon: 14.4378,
+        status: 'pending',
+        pendingModeration: true
+      }
+    ];
+    window.localStorage.setItem('aa_my_pending_submissions_v1', JSON.stringify(payload));
+  });
+
+  await page.goto('/near?place=xss-test-1');
+  const card = page.locator('#place-card-xss-test-1');
+  await expect(card).toBeVisible({ timeout: 10000 });
+  await expect(card.locator('.pc-title')).toContainText('<img src=x onerror=');
+  await expect(card.locator('img[src="x"], svg[onload], script')).toHaveCount(0);
+  await expect(card.locator('a[href^="javascript:"]')).toHaveCount(0);
+
+  const popup = page.locator('.leaflet-popup-content');
+  await expect(popup).toBeVisible({ timeout: 10000 });
+  await expect(popup).toContainText('<img src=x onerror=');
+  await expect(popup.locator('img[src="x"], svg[onload], script')).toHaveCount(0);
+  await expect(popup.locator('a[href^="javascript:"]')).toHaveCount(0);
+
+  expect(dialogTriggered).toBe(false);
+  expect(await page.evaluate(() => (window as unknown as { __aaXssFired?: boolean }).__aaXssFired)).toBe(false);
+});
+
+test('HEAD / emits private no-store Cache-Control and Pragma no-cache headers', async ({ request, baseURL }) => {
+  const res = await request.head(baseURL! + '/');
+  expect(res.status()).toBe(200);
+  const h = res.headers();
+  expect(h['cache-control']).toContain('private');
+  expect(h['cache-control']).toContain('no-store');
+  expect(h['cache-control']).not.toContain('s-maxage');
+  expect(h['pragma']).toBe('no-cache');
+  expect(h['x-content-type-options']).toBe('nosniff');
+  expect(h['x-frame-options']).toBe('DENY');
+});
+
 test('all core routes return 200, render Krajina dobra navigation, and contain zero cringe/meta copy', async ({ page }) => {
   for (const route of ['/', '/app', '/app/guided', '/app/online', '/near', '/submit', '/svet']) {
     const res = await page.goto(route);

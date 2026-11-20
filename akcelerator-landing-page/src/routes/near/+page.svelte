@@ -1796,7 +1796,7 @@
               </a>
             {/if}
             <a
-              href={`https://mapy.cz/zakladni?x=${activePlaceObj.lon}&y=${activePlaceObj.lat}&z=17&q=${encodeURIComponent(activePlaceObj.name)}`}
+              href={`https://mapy.cz/zakladni?x=${encodeURIComponent(String(activePlaceObj.lon ?? ''))}&y=${encodeURIComponent(String(activePlaceObj.lat ?? ''))}&z=17&q=${encodeURIComponent(activePlaceObj.name || '')}`}
               target="_blank"
               rel="noopener noreferrer"
               class={activeWeb ? 'near-btn ghost' : 'near-btn primary'}

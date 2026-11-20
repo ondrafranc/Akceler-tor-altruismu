@@ -7,7 +7,7 @@ Děkujeme, že pomáháte rozvíjet Akcelerátor altruismu. Tento průvodce shrn
 ## Filozofie produktu a hlavní severka
 
 Hlavní severka produktu zní: **„Pomáhat pomáhat – a udělat pomáhání tak snadné jako masturbovat.“**
-Detailní pravidla jsou rozdělena v [AGENTS.md](AGENTS.md) a v adresáři `.agents/rules/`. Každá změna musí ctít:
+Globální pravidla jsou v [AGENTS.md](AGENTS.md), pravidla jednotlivých oblastí v `.claude/rules/`. Každá změna musí ctít:
 
 1. **Okamžitost a krása (*Daylight Editorial*)**: Žádné stěny filtrů, uvítací plakáty ani morální kázání nad hlavní kartou na `/`.
 2. **Ultra-nízké tření**: Žádné registrace ani hold-to-confirm smyčky — jeden konkrétní krok jedním kliknutím.
@@ -28,7 +28,7 @@ Detailní pravidla jsou rozdělena v [AGENTS.md](AGENTS.md) a v adresáři `.age
 git clone https://github.com/ondrafranc/Akceler-tor-altruismu.git
 cd Akceler-tor-altruismu
 
-# Nainstaluje závislosti v rootu i v akcelerator-landing-page/
+# Kořen nemá vlastní závislosti; postinstall nainstaluje akcelerator-landing-page/
 npm install
 
 # Spustí vývojový server na http://localhost:5173
@@ -47,7 +47,7 @@ Databázové migrace a bezpečnostní nastavení jsou popsány v [DEPLOYMENT_INS
 
 ### Politika Svelte 5 Runes
 - Veškeré **nové a refaktorované** `.svelte` komponenty musí používat **Svelte 5 Runes** (`$state`, `$derived`, `$props()`, `$effect`).
-- Aktuální pokrytí v `src/`: `23/31` `.svelte` souborů používá Runes, `2` bezstavové Svelte 5 soubory (`src/routes/+error.svelte`, `src/lib/features/home/SanctuaryTeaser.svelte` s `onclick=`) a `6` zbývajících komponent se starší syntaxí Svelte 4 (`SmallWinCelebration.svelte`, `PortalsDrawer.svelte`, `QuickStartSection.svelte`, `DeedInspectorModal.svelte`, `ProgressDashboard.svelte`, `src/routes/app/+page.svelte`) se migruje postupně při své úpravě — do nově psaných nebo refaktorovaných souborů staré vzory nepřidávejte.
+- Zbývající komponenty se starší syntaxí Svelte 4 se migrují při své úpravě. Jejich seznam hlídá `tests/unit/invariants.test.js` a smí se jen zkracovat — do upravovaných souborů staré vzory nepřidávejte.
 
 ### Příklad typované Runes komponenty (`"checkJs": true`)
 ```svelte
@@ -71,6 +71,8 @@ Databázové migrace a bezpečnostní nastavení jsou popsány v [DEPLOYMENT_INS
 - Veškeré čtení/zápis do `localStorage` / `sessionStorage` musí používat konstanty z `src/lib/storage/keys.ts` a adaptér `src/lib/storage/index.ts`.
 - Nové ikony přidejte do `src/lib/icons/lucideIcons.js` a `src/lib/icons/iconRegistry.js` — `vite.config.js` si je do `optimizeDeps.include` načítá automaticky.
 - Nevytvářejte duplicitní katalogy karet ani přechodové forwarder moduly.
+- Pravidlo, které lze ověřit strojově, patří do `tests/unit/invariants.test.js`, ne do textu.
+- V editoru používejte TypeScript z pracovního prostoru; `jsconfig.json` má záměrně explicitní `"strict": false`.
 
 ---
 
@@ -92,13 +94,13 @@ Z kořene repozitáře nebo z `akcelerator-landing-page/` ověřte:
 # 1. Typová kontrola (musí projít s 0 chybami a 0 varováními)
 npm run check
 
-# 2. Jednotkové testy (Vitest — 17 souborů: 16 *.test.js + 1 toolchain.test.ts, 216 testů)
+# 2. Jednotkové testy a invarianty repozitáře (Vitest)
 npm run test:unit
 
 # 3. Produkční sestavení aplikace
 npm run build
 
-# 4. E2E testy Playwright (18 *.spec.ts souborů / 325 testů; uvnitř akcelerator-landing-page/ vždy přes npm test -- <spec>)
+# 4. E2E testy Playwright — specifikace, kterých se změna týká (viz tabulka v .claude/skills/ship/SKILL.md)
 cd akcelerator-landing-page
 npm test -- tests/api.spec.ts
 ```
@@ -110,4 +112,4 @@ npm test -- tests/api.spec.ts
 - [ ] V UI, datech ani dokumentaci nejsou žádné nativní Unicode emoji.
 - [ ] Ověřeno na desktopu i úzkém mobilu (`360×800` / `375×667`, dotykové plochy `>= 44×44 px`, formulářová pole `>= 16 px`).
 - [ ] Žádné tajné klíče ani `.env` soubory nejsou zahrnuty v commitu.
-- [ ] Relevantní dokumentace a [CHANGELOG.md](CHANGELOG.md) jsou aktualizované.
+- [ ] Změna chování je zapsaná v [CHANGELOG.md](CHANGELOG.md); pravidla v `AGENTS.md` a `.claude/rules/` se mění jen při změně invariantu (žádné počty, pixelové hodnoty ani historie).
