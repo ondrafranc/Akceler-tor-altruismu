@@ -37,7 +37,9 @@ jobs:
         run: npm run build
 
   e2e-smoke:
-    runs-on: ubuntu-latest
+    # Pinned: the pinned Playwright version has no browser build for newer Ubuntu images.
+    # Move back to ubuntu-latest when @playwright/test is upgraded.
+    runs-on: ubuntu-24.04
     needs: validate
     defaults:
       run:
