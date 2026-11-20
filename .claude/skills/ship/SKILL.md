@@ -30,6 +30,8 @@ Spusť `npm test -- <specifikace>` pro sjednocení řádků, které odpovídají
 | `+layout.svelte`, `czech-theme.css`, `src/components/**` mimo Molly | `e2e-requirements.spec.ts`, `desktop-polish.spec.ts`, `mobile-tablet-polish.spec.ts` |
 | jen dokumentace, pravidla nebo konfigurace agentů | žádné E2E |
 
+`api.spec.ts` potřebuje živou Supabase z `.env.local` (bez ní vrací zápisové endpointy `503`), proto neběží v CI a tato brána je jeho jediná kontrola.
+
 Před velkým vydáním nebo na výslovnou žádost pusť celou sadu: `npm test`.
 
 ## 4. Kontrola obsahu změn

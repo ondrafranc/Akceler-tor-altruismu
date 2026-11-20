@@ -61,9 +61,10 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      # Runs without Supabase secrets: the app falls back to local curated data.
-      - name: API and security E2E (playwright)
-        run: npm test -- tests/api.spec.ts tests/security.spec.ts
+      # No Supabase secrets in CI. tests/api.spec.ts needs a live database
+      # (it expects 200 from write endpoints), so it runs locally via /ship only.
+      - name: Security E2E (playwright)
+        run: npm test -- tests/security.spec.ts
 
       - name: Upload Playwright artifacts on failure
         if: failure()
