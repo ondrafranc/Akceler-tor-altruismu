@@ -4,20 +4,14 @@ Aplikace **Akcelerátor altruismu** je postavená na **SvelteKitu 2 + Svelte 5**
 
 ---
 
-## 1. Nasazení na Vercel (Dual `vercel.json` parita)
+## 1. Nasazení na Vercel
 
-Repozitář udržuje dva synchronizované konfigurační soubory pro Vercel podle toho, odkud projekt nasazujete:
-
-- **Kořen repozitáře (`vercel.json`)** — používá se při nasazení z kořene (`Root Directory` ponecháno prázdné / `.`). Spouští `cd akcelerator-landing-page && npm ci && npm run build` a kopíruje `.vercel/output`.
-- **Aplikační adresář (`akcelerator-landing-page/vercel.json`)** — používá se, pokud je ve Vercel Project Settings nastaven **Root Directory: `akcelerator-landing-page`** (`framework: "sveltekit"`).
-
-Obě konfigurace musí mít shodné pole `headers` (bezpečnostní i `Cache-Control` hlavičky); shodu hlídá `tests/unit/invariants.test.js`. Jakmile je jisté, které nastavení Root Directory projekt ve Vercelu používá, druhý soubor lze odstranit.
+Projekt ve Vercelu má nastaveno **Root Directory: `akcelerator-landing-page`**. Jedinou konfigurací je proto `akcelerator-landing-page/vercel.json` (`framework: "sveltekit"`, bezpečnostní a `Cache-Control` hlavičky pro statické soubory). Soubor `vercel.json` v kořeni repozitáře by Vercel ignoroval; jeho nepřítomnost hlídá `tests/unit/invariants.test.js`.
 
 ### Nastavení projektu ve Vercelu
-1. **Node.js Version**: `24.x` (shodně s `akcelerator-landing-page/.nvmrc` a `runtime: 'nodejs24.x'` v `akcelerator-landing-page/svelte.config.js`).
-2. **Build & Output**:
-   - Při Root Directory `akcelerator-landing-page`: Framework `SvelteKit`, Build Command `npm run build`, Install Command `npm install`.
-   - Při Root Directory `.`: Build Command z kořenového `vercel.json`.
+1. **Root Directory**: `akcelerator-landing-page`.
+2. **Node.js Version**: `24.x` (shodně s `akcelerator-landing-page/.nvmrc` a `runtime: 'nodejs24.x'` v `akcelerator-landing-page/svelte.config.js`).
+3. **Build & Output**: Framework `SvelteKit`, Build Command `npm run build`, Install Command `npm install` (převzato z `vercel.json`).
 
 ---
 

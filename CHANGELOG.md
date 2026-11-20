@@ -8,6 +8,7 @@
 - `jsconfig.json` má explicitní `"strict": false`, aby editor s novějším TypeScriptem hlásil totéž co CI.
 - CI nově pouští Playwright specifikaci `security.spec.ts` (job `e2e-smoke`, bez Supabase klíčů). `api.spec.ts` vyžaduje živou databázi a zůstává lokální kontrolou v `/ship`.
 - Odstraněna emoji z komentářů scén a ze `static/offline.html`; z devcontaineru odebrána rozšíření pro nepoužívané nástroje.
+- Odstraněn kořenový `vercel.json`: projekt ve Vercelu používá Root Directory `akcelerator-landing-page`, takže platí jen `akcelerator-landing-page/vercel.json`.
 - Z README, CONTRIBUTING, DEPLOYMENT a šablony PR odstraněny zastaralé počty testů a duplikované popisy interního chování.
 
 ## [Starší nevydané změny] — Bezpečnost API, North Star na `/`, podstránky a sjednocení pravidel

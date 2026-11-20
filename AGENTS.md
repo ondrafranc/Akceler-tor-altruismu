@@ -17,8 +17,8 @@ Atmosféra webu staví na pocitu **„klidného útočiště“** — návratu t
 
 ## 3. Repozitář a příkazy
 - **Aplikace žije v `akcelerator-landing-page/`** (SvelteKit 2, Svelte 5, adaptér Vercel, Supabase jen na serveru). Všechny příkazy spouštěj tam.
-- **Kořen je jen obal:** `package.json` s proxy skripty (žádné závislosti, žádný lockfile), `supabase/migrations/`, dokumentace a druhý `vercel.json`. V kořeni nic neinstaluj ani nespouštěj Vite; kořenové `node_modules/` nebo `.svelte-kit/` jsou omylem vzniklé artefakty a patří smazat.
-- **Dva `vercel.json`** (kořen a aplikace) existují kvůli dvěma možným nastavením Root Directory ve Vercelu. Hlavičky v nich musí být shodné; hlídá to test.
+- **Kořen je jen obal:** `package.json` s proxy skripty (žádné závislosti, žádný lockfile), `supabase/migrations/` a dokumentace. V kořeni nic neinstaluj ani nespouštěj Vite; kořenové `node_modules/` nebo `.svelte-kit/` jsou omylem vzniklé artefakty a patří smazat.
+- **Vercel** nasazuje s Root Directory `akcelerator-landing-page`; jediná konfigurace je `akcelerator-landing-page/vercel.json`. V kořeni žádný `vercel.json` nevytvářej, Vercel by ho ignoroval.
 - **Node 24** je cílový runtime (`.nvmrc`, `nodejs24.x`, CI). Pole `engines` do `package.json` nepřidávej.
 - **TypeScript:** projekt používá vlastní verzi z `node_modules` a `jsconfig.json` má záměrně explicitní `"strict": false`. Editor s přibaleným novějším TypeScriptem jinak hlásí chyby, které CI nevidí.
 

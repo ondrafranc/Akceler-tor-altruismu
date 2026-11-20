@@ -58,7 +58,6 @@ Akcelerátor altruismu/
 ├── CONCEPT_V2.md                              # Produktový koncept a principy zážitku
 ├── user_journeys.md                           # Klíčové uživatelské cesty
 ├── CHANGELOG.md                               # Přehled milníků a změn
-├── vercel.json                                # Kořenová Vercel konfigurace + cache hlavičky
 ├── .claude/                                   # Pravidla oblastí (rules/), hooky, příkaz /ship a nastavení Claude Code
 ├── .devcontainer/                             # Devcontainer prostředí (Node.js 24 Bookworm)
 ├── .github/                                   # CI workflow (Node 24) a šablony PR / Issues
@@ -69,7 +68,7 @@ Akcelerátor altruismu/
     ├── .nvmrc                                 # Verze Node.js (24)
     ├── svelte.config.js                       # Vercel adaptér (nodejs24.x) a CSP noncy
     ├── vite.config.js                         # Vite konfigurace a auto-registrace ikon
-    ├── vercel.json                            # Vercel konfigurace pro root directory aplikace
+    ├── vercel.json                            # Jediná Vercel konfigurace (Root Directory projektu = akcelerator-landing-page)
     ├── static/                                # Statické assety (art/sanctuary-{dawn,twilight}.{jpg,webp,-800.webp}, og-image-czech.jpg)
     ├── src/
     │   ├── hooks.server.js                    # Bezpečnostní hlavičky + Cache-Control pro CSP noncy

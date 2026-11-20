@@ -8,7 +8,7 @@ paths:
   - "akcelerator-landing-page/svelte.config.js"
   - "akcelerator-landing-page/tests/**/*security*"
   - "akcelerator-landing-page/tests/api.spec.ts"
-  - "**/vercel.json"
+  - "akcelerator-landing-page/vercel.json"
   - "supabase/**"
 ---
 
@@ -40,7 +40,7 @@ Ověření: `npm test -- tests/security.spec.ts tests/api.spec.ts` a unit testy 
 ## CSP a hlavičky
 - `svelte.config.js` používá `csp.mode: 'auto'` (nonce na každý požadavek). Proto `hooks.server.js` vrací na SSR HTML (`GET` i `HEAD`) `Cache-Control: private, no-cache, no-store, must-revalidate` a `Pragma: no-cache`. Veřejné `s-maxage` na HTML by sdílelo jeden nonce mezi uživateli.
 - Nový externí zdroj (skript, dlaždice, API) vyžaduje úpravu CSP direktiv; nepřidávej domény, které kód nepoužívá.
-- Statické bezpečnostní a cache hlavičky jsou v obou `vercel.json` a musí být shodné.
+- Statické bezpečnostní a cache hlavičky jsou v `akcelerator-landing-page/vercel.json` (jediná Vercel konfigurace; Root Directory projektu je `akcelerator-landing-page`).
 
 ## Proměnné prostředí
 - Šablona je `akcelerator-landing-page/.env.example`. Novou proměnnou přidej tam a do `DEPLOYMENT_INSTRUCTIONS.md`.

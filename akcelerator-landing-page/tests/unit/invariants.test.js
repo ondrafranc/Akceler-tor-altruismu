@@ -184,10 +184,13 @@ describe('Toolchain and deployment invariants', () => {
     expect(read(path.join(APP, 'svelte.config.js'))).toMatch(/mode:\s*'auto'/);
   });
 
-  it('keeps both vercel.json files serving identical headers', () => {
-    const rootCfg = JSON.parse(read(path.join(REPO, 'vercel.json')));
+  it('has a single Vercel config inside the app directory', () => {
+    // The Vercel project uses Root Directory = akcelerator-landing-page, so a
+    // root-level vercel.json would be silently ignored and drift.
+    expect(fs.existsSync(path.join(REPO, 'vercel.json'))).toBe(false);
     const appCfg = JSON.parse(read(path.join(APP, 'vercel.json')));
-    expect(rootCfg.headers).toEqual(appCfg.headers);
+    expect(appCfg.framework).toBe('sveltekit');
+    expect(Array.isArray(appCfg.headers)).toBe(true);
   });
 
   it('never caches SSR HTML publicly (shared CSP nonce risk)', () => {
