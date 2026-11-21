@@ -2258,16 +2258,17 @@ test.describe('Home entry tour: one calm walk through the energy tabs', () => {
     const stage = (page: Page) => page.locator('.instant-card .deed-stage');
 
     await Promise.all([
-      // Without a tour both show up early: the lure after its shortened delay, the whisper on its own.
+      // Without a tour both show up while a tour would still be running: the lure after its shortened
+      // delay, the whisper on its own.
       withFreshHome(
         browser,
         { viewport: DESKTOP, init: { fn: eagerLure, arg: `${remap}|${AA_HOME_ENTRY_TOUR_SEEN_KEY}` } },
         async (page) => {
           await expect(stage(page), 'the shortened delay bites').toHaveAttribute('data-preview-lure', 'idle', {
-            timeout: ENTRY_TOUR_INITIAL_PAUSE_MS - 300
+            timeout: EAGER_LURE_MS + ENTRY_TOUR_STEP_MS
           });
           await expect(page.locator('.molly-whisper-bubble .whisper-text')).toContainText(MOLLY_HOME_HINT, {
-            timeout: ENTRY_TOUR_INITIAL_PAUSE_MS
+            timeout: ENTRY_TOUR_DURATION_MS - EAGER_LURE_MS
           });
           expect(await readTabLog(page)).toEqual([]);
         }

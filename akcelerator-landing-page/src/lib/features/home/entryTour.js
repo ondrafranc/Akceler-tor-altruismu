@@ -32,11 +32,11 @@
  * nepotkají, ať jsou jejich prodlevy jakékoli.
  */
 
-/** Klid po vstupu, než se cokoli pohne: dost na přečtení nadpisu, názvu karty a hlavního tlačítka. */
-export const ENTRY_TOUR_INITIAL_PAUSE_MS = 3500;
+/** Klid po vstupu, než se cokoli pohne: stránka se stihne usadit a návštěvník zachytit nadpis a kartu. */
+export const ENTRY_TOUR_INITIAL_PAUSE_MS = 1500;
 
 /** Jak dlouho zůstává každý režim na očích: dost na jeho větu v hero, název karty a text tlačítka. */
-export const ENTRY_TOUR_STEP_MS = 3500;
+export const ENTRY_TOUR_STEP_MS = 2800;
 
 /**
  * Chvíle po kroku, kdy návštěvník novou kartu ještě nestihl ani zaznamenat. Sáhne-li v ní po kartě,

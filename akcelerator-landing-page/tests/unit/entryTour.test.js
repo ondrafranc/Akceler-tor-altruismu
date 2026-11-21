@@ -102,8 +102,8 @@ describe('entryTour: tempo and sequence', () => {
     expect([...ENTRY_TOUR_STEPS]).toEqual(['focus', 'walk', 'people', 'couch']);
   });
 
-  it('keeps a calm tempo: neither value is slideshow-fast', () => {
-    expect(ENTRY_TOUR_INITIAL_PAUSE_MS).toBeGreaterThanOrEqual(2500);
+  it('keeps a calm tempo: the page settles before the first move and no step is slideshow-fast', () => {
+    expect(ENTRY_TOUR_INITIAL_PAUSE_MS).toBeGreaterThanOrEqual(1500);
     expect(ENTRY_TOUR_STEP_MS).toBeGreaterThanOrEqual(2500);
   });
 
