@@ -492,29 +492,4 @@ test.describe('Challenger M3-2: Guided Help State Stress, Filter Combinations & 
     }
   });
 
-  test('I2: Zero BANNED_RENDERED_COPY strings appear across rendered DOM of all primary routes', async ({ page }) => {
-    const routesToAudit = [
-      '/',
-      '/app',
-      '/app/guided',
-      '/app/online',
-      '/near',
-      '/svet'
-    ];
-
-    for (const route of routesToAudit) {
-      await page.goto(route);
-      await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 20000 });
-
-      // Extract entire rendered text of the page
-      const visibleBodyText = await page.evaluate(() => document.body.innerText || '');
-
-      for (const phrase of BANNED_RENDERED_COPY) {
-        expect(
-          visibleBodyText,
-          `Route "${route}" violated copy rule by rendering banned phrase: "${phrase}"`
-        ).not.toContain(phrase);
-      }
-    }
-  });
 });

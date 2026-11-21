@@ -57,23 +57,24 @@ const FORBIDDEN_RGBS = [
 ];
 
 test.describe('Desktop Experience Polish Regressions (R1-R5)', () => {
-  test('R1: Molly stays continuously visible and roaming across desktop scroll heights on / without overlap', async ({ page }) => {
-    test.setTimeout(90_000);
+  const R1_VIEWPORTS = [
+    { width: 1280, height: 800 },
+    { width: 1265, height: 800 },
+    { width: 1200, height: 800 },
+    { width: 1440, height: 900 },
+    { width: 1920, height: 1080 }
+  ];
+  const R1_SCROLL_STOPS = [0, 80, 150, 220, 300, 380, 430, 550, 700, 1100, 1600];
 
-    const viewports = [
-      { width: 1280, height: 800 },
-      { width: 1265, height: 800 },
-      { width: 1200, height: 800 },
-      { width: 1440, height: 900 },
-      { width: 1920, height: 1080 }
-    ];
-    const scrollStops = [0, 80, 150, 220, 300, 380, 430, 550, 700, 1100, 1600];
-
-    for (const vp of viewports) {
+  // One test per viewport: they run side by side instead of one after another.
+  for (const vp of R1_VIEWPORTS) {
+    test(`R1 (${vp.width}x${vp.height}): Molly stays continuously visible and roaming across desktop scroll heights on / without overlap`, async ({
+      page
+    }) => {
       await page.setViewportSize(vp);
       await gotoHydrated(page, '/');
 
-      for (const y of scrollStops) {
+      for (const y of R1_SCROLL_STOPS) {
         await page.evaluate((top) => window.scrollTo({ top, behavior: 'instant' as ScrollBehavior }), y);
         await page.waitForTimeout(240);
 
@@ -189,9 +190,10 @@ test.describe('Desktop Experience Polish Regressions (R1-R5)', () => {
         }
         expect(settled!.overlaps, `${vp.width}x${vp.height} y=${y} overlaps`).toEqual([]);
       }
-    }
+    });
+  }
 
-    // Explicit Pelisek dock toggle still parks and wakes Molly on desktop
+  test('R1 dock toggle: the Pelisek dock still parks and wakes Molly on desktop', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await gotoHydrated(page, '/');
     const toggleBtn = page.locator('.molly-dock-toggle-btn');
@@ -678,6 +680,18 @@ test.describe('Desktop Experience Polish Regressions (R1-R5)', () => {
     await auditPaletteAndContrast('/svet dawn', false);
     await page.locator('.atmo-btn', { hasText: 'Hvězdná noc' }).click();
     await expect(page.locator('img.art-layer.twilight')).toBeAttached();
+    // The night colours fade in: measure them only after the image has loaded and every transition has ended.
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const img = document.querySelector<HTMLImageElement>('img.art-layer.twilight');
+          return Boolean(img?.complete && img.naturalWidth > 0);
+        })
+      )
+      .toBe(true);
+    await expect
+      .poll(() => page.evaluate(() => document.getAnimations().filter((a) => a instanceof CSSTransition).length))
+      .toBe(0);
     await auditPaletteAndContrast('/svet night', false);
 
     // 6. /submit (plus triggered client-side .banner.error without network requests)
@@ -1672,19 +1686,41 @@ test.describe('Home entry tour: one calm walk through the energy tabs', () => {
       }
     ];
 
-    await inBatches(cases, 5, (spec) =>
-      withFreshHome(browser, spec, async (page) => {
-        expect((await readHomeState(page)).seen, `${spec.name}: tour was armed`).toBe('1');
-        await spec.act(page);
-        await page.waitForTimeout(NO_TOUR_WAIT_MS);
-        const after = await readHomeState(page);
-        expect(await readTabLog(page), `${spec.name}: no tab change`).toEqual([]);
-        expect(after.selected, spec.name).toEqual([0]);
-        expect(after.claim, spec.name).toBe(TOUR_MODES[0].claim);
-        expect(after.indicatorLive, `${spec.name}: announcements are back on`).toBe('polite');
-        expect(after.deckState, `${spec.name}: stopping saves nothing`).toBeNull();
-      })
-    );
+    // On a loaded machine the scripted interaction may get its turn only after the pause is over. Such an
+    // attempt says nothing about the pause, so the case is run again in a fresh session.
+    await inBatches(cases, 5, async (spec) => {
+      for (let tries = 0; tries < 3; tries++) {
+        let landedInPause = false;
+        await withFreshHome(
+          browser,
+          {
+            ...spec,
+            prepare: async (page) => {
+              await installTourStartProbe(page);
+              await spec.prepare?.(page);
+            }
+          },
+          async (page) => {
+            expect((await readHomeState(page)).seen, `${spec.name}: tour was armed`).toBe('1');
+            await spec.act(page);
+            const sinceStart = await page.evaluate(
+              () => performance.now() - ((window as ProbeWindow).__aaTourStartAt ?? Number.NaN)
+            );
+            if (!(sinceStart < ENTRY_TOUR_INITIAL_PAUSE_MS - TIMER_EARLY_SLACK_MS)) return;
+            landedInPause = true;
+            await page.waitForTimeout(NO_TOUR_WAIT_MS);
+            const after = await readHomeState(page);
+            expect(await readTabLog(page), `${spec.name}: no tab change`).toEqual([]);
+            expect(after.selected, spec.name).toEqual([0]);
+            expect(after.claim, spec.name).toBe(TOUR_MODES[0].claim);
+            expect(after.indicatorLive, `${spec.name}: announcements are back on`).toBe('polite');
+            expect(after.deckState, `${spec.name}: stopping saves nothing`).toBeNull();
+          }
+        );
+        if (landedInPause) return;
+      }
+      throw new Error(`${spec.name}: the interaction never landed inside the initial pause`);
+    });
   });
 
   test('ET6: stopped mid-tour it stays on what is showing and never fires a late step', async ({ browser }) => {
@@ -1951,15 +1987,19 @@ test.describe('Home entry tour: one calm walk through the energy tabs', () => {
       const [noTour, finished, stopped, abandoned, subpageOnly] = await Promise.all([
         // Reference: the same page on which the tour never started.
         visit(true, async ({ page }) => {
-          const atEntry: Counts = await readCounts(page);
           await page.waitForTimeout(NO_TOUR_WAIT_MS);
           expect(await readTabLog(page)).toEqual([]);
-          return { atEntry, atEnd: (await readCounts(page)) as Counts };
+          return { atEnd: (await readCounts(page)) as Counts };
         }),
-        // The tour runs to its end.
+        // The tour runs to its end. Its listeners are counted after the first step: by then every other
+        // part of the page has registered its own, which some do a moment after hydration.
         visit(false, async ({ page }) => {
+          await waitForTourStep(page, TOUR_ORDER[0], true);
           const during: Counts = await readCounts(page);
-          expect(await readTabLog(page), 'the listeners were counted while the tour was still waiting').toEqual([]);
+          expect(
+            (await readTabLog(page)).length,
+            'the listeners were counted while the tour was still running'
+          ).toBeLessThan(TOUR_ORDER.length);
           for (const [step, tabIndex] of TOUR_ORDER.entries()) await waitForTourStep(page, tabIndex, step === 0);
           await expect(page.locator('.deck-indicator')).toHaveAttribute('aria-live', 'polite');
           await waitForLateClickGuard(page);
@@ -1986,10 +2026,10 @@ test.describe('Home entry tour: one calm walk through the energy tabs', () => {
         })
       ]);
 
-      // While it runs, the tour adds exactly its own listeners to those of the same page without a tour.
+      // While it runs, the tour adds exactly its own listeners to those the same page keeps once it is over.
       for (const type of WATCHED) {
         expect(finished.during[type], `${type} listeners while the tour runs`).toBe(
-          noTour.atEntry[type] + TOUR_LISTENERS[type]
+          finished.atEnd[type] + TOUR_LISTENERS[type]
         );
       }
       expect(finished.atEnd, 'finished tour vs. no tour').toEqual(noTour.atEnd);

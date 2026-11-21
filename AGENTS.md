@@ -28,9 +28,18 @@ Atmosféra webu staví na pocitu **„klidného útočiště“** — návratu t
 | Typová kontrola, musí být 0 chyb a 0 varování | `npm run check` |
 | Unit testy a invarianty | `npm run test:unit` |
 | Produkční build | `npm run build` |
-| E2E (Playwright, sám si spustí dev server) | `npm test -- tests/<soubor>.spec.ts` |
+| **Ověření změny jedním příkazem:** typy, unit testy a jen ty E2E, které změna potřebuje | `npm run verify` |
+| Totéž bez E2E (rychlá kontrola během práce) | `npm run verify:fast` |
+| Totéž s celou E2E sadou (před commitem, dělá ji `/ship`) | `npm run verify:full` |
+| Které E2E změna potřebuje (jen výpis) | `npm run test:affected:list` |
+| Jedna E2E specifikace | `npm test -- tests/<soubor>.spec.ts` |
+| Jeden E2E test podle názvu | `npm test -- tests/<soubor>.spec.ts -g "<část názvu>"` |
 
-Během běhu Playwrightu nepouštěj `npm run check` ani `npm run build`: `svelte-kit sync` přepíše generované soubory, Vite znovu načte otevřené stránky a testy spadnou jen kvůli tomu.
+Výchozí postup je `npm run verify`: úspěšný krok vypíše jeden řádek, neúspěšný konec svého výstupu. Které specifikace patří ke kterým souborům, určuje `tests/support/affected-rules.mjs`; nová specifikace se tam musí zapsat (hlídá to `tests/unit/affected.test.js`). Přepínače za `--` přes `npm run` v PowerShellu neprojdou, proto mají varianty vlastní skripty.
+
+E2E běží proti produkčnímu buildu na vlastním portu, ne proti `npm run dev`. Build i server si Playwright obstará sám (`tests/support/serve-build.mjs`) a build přeskočí, dokud se zdrojáky nezměnily; běžící vývojový server nechává být. Testy téhož souboru běží souběžně, takže každý test musí obstát sám, bez stavu z jiného testu. Výstup je úsporný: úspěšný test je jeden znak, podrobnosti jen u selhání. Test označený v souhrnu jako `flaky` prošel až na druhý pokus a zaslouží si pozornost. Při ladění jednoho testu proti vývojovému serveru nastav `PLAYWRIGHT_BASE_URL=http://localhost:5173`.
+
+Během běhu Playwrightu nepouštěj `npm run build`: přepsal by build, který testy právě používají.
 
 Úklid dočasného `git worktree` na Windows: pokud má junction na `node_modules`, nejdřív ji odpoj (`cmd /c rmdir "<worktree>\akcelerator-landing-page\node_modules"`), ověř, že cesta neexistuje, a teprve pak `git worktree remove --force`. Jinak se smažou sdílené závislosti.
 
@@ -50,8 +59,8 @@ Mimo test platí vždy:
 - Bez výslovného pokynu necommituj a nepushuj.
 
 ## 5. Kdy je práce hotová
-1. `npm run check` hlásí 0 chyb a 0 varování, `npm run test:unit` je zelený.
-2. Prošly E2E specifikace, kterých se změna týká. UI změna je ověřená na desktopu i úzkém mobilu.
+1. `npm run verify` prošel: 0 chyb a 0 varování typové kontroly, zelené unit testy a E2E specifikace, kterých se změna týká.
+2. UI změna je ověřená na desktopu i úzkém mobilu.
 3. Dokumentace odpovídá kódu, ale **nepopisuje jeho stav**: do pravidel nepiš počty testů ani souborů, pixelové hodnoty ani historii změn. Pravidlo uprav jen tehdy, když se mění invariant. Co se změnilo, patří do `CHANGELOG.md`; konkrétní hodnoty patří do CSS a testů.
 4. Pravidlo, které jde ověřit strojově, přidej do `invariants.test.js` nebo do E2E, ne do textu.
 

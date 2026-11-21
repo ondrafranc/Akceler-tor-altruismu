@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
 
+// These tests share one server-side rate-limit budget and write to a live database: keep them in order.
+test.describe.configure({ mode: 'default' });
+
 test('test-supabase API responds 200 JSON on GET and POST', async ({ request, baseURL }) => {
   const res = await request.get(baseURL! + '/api/test-supabase');
   expect(res.status()).toBe(200);

@@ -1,5 +1,20 @@
 # Changelog
 
+## [Unreleased] — Rychlejší a spolehlivější E2E testy
+
+- Playwright běží proti produkčnímu buildu na vlastním portu místo vývojového serveru (`tests/support/serve-build.mjs`): build se znovu sestaví jen po změně zdrojáků, každý běh začíná s prázdnými limity požadavků a běžící `npm run dev` zůstává nedotčený. Jiný server lze zvolit přes `PLAYWRIGHT_BASE_URL`.
+- Testy jednoho souboru běží souběžně (`fullyParallel`); `api.spec.ts` zůstává v pořadí, protože sdílí limit požadavků a zapisuje do živé databáze. Video a trace se už nenahrávají pro každý test, service worker je v testech blokovaný, výstup je úsporný (reportér `dot`) a jeden opakovaný pokus označí nestabilní test jako `flaky`.
+- Oprava: návštěvníkovi, který přišel na `/` odkazem z odscrollované podstránky, se vstupní prohlídka občas hned zastavila. Prohlížeč během návratu stránky nahoru dorovnává pozici i směrem dolů a prohlídka to brala jako scroll uživatele.
+- Testy závislé na načasování přestaly záviset na rychlosti stroje: ET5 opakuje pokus, který se do úvodní pauzy nevešel, ET8 počítá posluchače až po prvním kroku prohlídky, R2 měří noční kontrast na `/svet` až po doběhnutí přechodů, T3-10 kliká přímo na pin mapy, PD-1.5 čeká na hydrataci. Test šeptandy čekající na Molly už nevyžaduje, aby se odměnová šeptanda ukázala i tehdy, kdy by jen opakovala oslavu v kartě.
+- Nové příkazy `npm run verify`, `verify:fast`, `verify:full` a `test:affected`: ověří změnu jedním příkazem a z E2E pustí jen specifikace, které změna potřebuje. Mapování souborů na specifikace je v kódu (`tests/support/affected-rules.mjs`) a hlídá ho `tests/unit/affected.test.js`; `/ship` už vlastní tabulku nemá.
+- Z E2E sady odešlo dvanáct testů bez vlastní ochranné hodnoty: deset duplicit novějších testů (`challenger-m3-1` 1.1, 3.1 pro šířky do 390 px a 3.2.5, `challenger-m3-2` I2, `empirical-challenger-r2` EC-2, EC-3 a EC-6), test, který nic neověřoval (`tier5-mobile-stress` 4.2), a T4-2, který jen ukládal snímky obrazovky. R1 je rozdělený na jeden test pro každý viewport.
+- Tři soubory pojmenované podle milníků (`challenger-recheck-boundary.spec.ts`, `empirical-challenger-r2.spec.ts`, `challenger-m3-1.spec.ts`) se rozpustily do specifikací podle oblasti: testy hlavičky a šuplíku navigace jsou v `ui-rebuild-acceptance.spec.ts`, ekonomika pamlsků Molly a mobilní rozpočty, dotykové cíle a přetečení v `delayed-gratification-and-declutter.spec.ts`. Přesunuté testy se jmenují podle toho, co chrání.
+- Oprava: vstup na `/` s kotvou v adrese (například `/#dnesni-skutek`) mohl vstupní prohlídku označit za zhlédnutou dřív, než stránka ke kotvě odscrollovala, takže ji návštěvník v té relaci už neviděl. Adresa s kotvou se teď bere jako odscrollovaná stránka.
+- Dva E2E testy pozdravu Molly (`e2e-requirements` F9-4 a F9-B1) počítaly pozdrav samy a aplikace se nedotkly; nahradil je unit test skutečné funkce `getMollyGreeting` (`tests/unit/mollyGreeting.test.js`).
+- Testovací server má port odvozený od složky checkoutu, takže testy mohou běžet souběžně ve více `git worktree`.
+- `CLAUDE.md`: ověřuje se příkazem `npm run verify`; Superpowers jen u větších úkolů, subagenti střídmě, `svelte-autofixer` jen u změn týkajících se Svelte samotného.
+- CI: joby běží souběžně, novější běh téže větve ruší starší a prohlížeč pro Playwright se bere z cache.
+
 ## [Unreleased] — Vstupní prohlídka režimů na `/`
 
 - Na zařízení s myší stránka `/` po chvíli klidu jednou projde čtyři záložky energie (`couch` -> `focus` -> `walk` -> `people`) a vrátí se na výchozí `couch`. S každým krokem se mění kurzíva `.hero-serif` i scéna `.deed-stage` na kartě. Tempo je klidné: 1,5 s po vstupu a 2,8 s na krok (`ENTRY_TOUR_INITIAL_PAUSE_MS`, `ENTRY_TOUR_STEP_MS`). Po dobu prohlídky karta sama nepobízí náhledem scény (nový prop `idleLure` na `SwipeDeck` a `ActionCard`) a Molly drží uvítací tip i dovedení k hlavnímu tlačítku (`holdMollyGuide` / `releaseMollyGuide` v `mollyStore.js`); obojí se vrací po skončení, takže se pohyby nepotkají bez ohledu na prodlevy jednotlivých komponent.

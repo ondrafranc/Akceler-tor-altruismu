@@ -10,6 +10,10 @@
     "check": "npm --prefix akcelerator-landing-page run check",
     "test": "npm --prefix akcelerator-landing-page test",
     "test:unit": "npm --prefix akcelerator-landing-page run test:unit",
+    "test:affected": "npm --prefix akcelerator-landing-page run test:affected",
+    "verify": "npm --prefix akcelerator-landing-page run verify",
+    "verify:fast": "npm --prefix akcelerator-landing-page run verify:fast",
+    "verify:full": "npm --prefix akcelerator-landing-page run verify:full",
     "test:api": "npm --prefix akcelerator-landing-page test -- tests/api.spec.ts"
   }
 }

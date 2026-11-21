@@ -125,14 +125,12 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
     await expect(page.locator('canvas.sanctuary-canvas')).toHaveAttribute('data-sanctuary-molly', 'ready');
 
     // Wait until Molly initiates walking patrol along lakeshore (nx > 0.245)
-    console.log('[T5-1] Awaiting Molly WALK_PATROL entry...');
     await page.waitForFunction(() => {
       const g = (window as any).__t5Telemetry;
       if (!g || !g.mollyPositions || g.mollyPositions.length === 0) return false;
       const latest = g.mollyPositions[g.mollyPositions.length - 1];
       return latest && latest.x > 0.245;
     }, { timeout: 14000 }).catch(() => {
-      console.log('[T5-1] Molly walking cycle delayed; proceeding with resize storm across current position.');
     });
 
     // 20 rapid violent viewport resizes across extreme aspect ratios
@@ -220,7 +218,6 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
     await page.goto('/svet');
     await expect(page.locator('canvas.sanctuary-canvas')).toHaveAttribute('data-sanctuary-molly', 'ready');
 
-    console.log('[T5-2] Sampling 15 seconds of continuous patrol cycles...');
     // Sample frames across 15 seconds (allows multiple state transitions)
     const sampleDurationMs = 15000;
     const startTime = Date.now();
@@ -231,7 +228,6 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
       await page.waitForTimeout(1000);
       if (!feedTriggered && Date.now() - startTime > 7000) {
         feedTriggered = true;
-        console.log('[T5-2] Injecting feed action mid-patrol to stress EAT_TREAT transition...');
         const viewport = page.locator('.sanctuary-viewport');
         const vpBox = (await viewport.boundingBox())!;
         await viewport.click({ position: { x: Math.round(vpBox.width * 0.24), y: Math.round(vpBox.height * 0.72) } });
@@ -247,14 +243,12 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
     expect(telemetry.frames.length).toBeGreaterThan(250);
     const avgDt = telemetry.frames.reduce((a: number, b: number) => a + b, 0) / telemetry.frames.length;
     const fps = 1000 / avgDt;
-    console.log(`[T5-2] Sustained FPS: ${fps.toFixed(1)} over ${telemetry.frames.length} frames`);
     expect(fps).toBeGreaterThan(35);
 
     // Trajectory analysis: verify Molly moved away from home base and returned or ate
     const xCoordinates = telemetry.mollyPositions.map((p: any) => p.x);
     const minX = Math.min(...xCoordinates);
     const maxX = Math.max(...xCoordinates);
-    console.log(`[T5-2] Patrol X Range observed: [${minX.toFixed(3)}, ${maxX.toFixed(3)}]`);
 
     // Verify Molly was at home (<= 0.25) and moved right along patrol (>= 0.28)
     expect(minX).toBeLessThanOrEqual(0.25);
@@ -268,7 +262,6 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
 
     // Memory / object bounds check: verify canvas draw calls per frame are bounded
     const avgDrawCallsPerFrame = telemetry.drawCalls / telemetry.frames.length;
-    console.log(`[T5-2] Average draw calls per frame: ${avgDrawCallsPerFrame.toFixed(1)}`);
     // A single frame should draw between 20 and 300 primitive arcs/paths (zero unbounded particle leak)
     expect(avgDrawCallsPerFrame).toBeLessThan(350);
 
@@ -305,14 +298,12 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
     const initialTreats = Number(await companion.getAttribute('data-molly-treats') || '0');
 
     // 2. Wait for Molly to patrol toward lakeshore (nx >= 0.32)
-    console.log('[T5-3] Waiting for Molly to reach lakeshore patrol path (nx >= 0.32)...');
     await page.waitForFunction(() => {
       const g = (window as any).__t5Telemetry;
       if (!g || !g.mollyPositions || g.mollyPositions.length === 0) return false;
       const latest = g.mollyPositions[g.mollyPositions.length - 1];
       return latest && latest.x >= 0.32;
     }, { timeout: 14000 }).catch(() => {
-      console.log('[T5-3] Molly pacing leisurely; proceeding with boundary assertions.');
     });
 
     const boundaryMollyPos = await page.evaluate(() => {
@@ -326,11 +317,9 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
       const homePxX = Math.round(0.24 * w);
       const homePxY = Math.round(0.72 * h);
       const distBetween = Math.hypot(curPxX - homePxX, curPxY - homePxY);
-      console.log(`[T5-3] Molly is at (${curPxX}, ${curPxY}), home base is at (${homePxX}, ${homePxY}), separation: ${distBetween.toFixed(1)}px`);
       expect(distBetween, 'Molly patrol position should be separated from home base by > 60px').toBeGreaterThan(60);
 
       // A. Pet at home base while Molly is patrolling away
-      console.log('[T5-3] Sub-test A: Clicking home base (0.24w, 0.72h) while Molly is patrolling away...');
       await viewport.click({ position: { x: homePxX, y: homePxY } });
       await page.waitForTimeout(400);
 
@@ -354,7 +343,6 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
       const clickTargetX = Math.round((latestMollyPos2?.x || 0.32) * w);
       const clickTargetY = Math.round((latestMollyPos2?.y || 0.72) * h);
 
-      console.log(`[T5-3] Sub-test B: Clicking directly on dynamic Molly actor at (${clickTargetX}, ${clickTargetY})...`);
       await viewport.click({ position: { x: clickTargetX, y: clickTargetY } });
       await page.waitForTimeout(400);
 
@@ -365,7 +353,6 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
       await page.waitForTimeout(1000);
 
       // C. Boundary evasion: Clicking an existing deed light at (0.79w, 0.18h) far outside 48px radius selects the deed without feeding Molly
-      console.log('[T5-3] Sub-test C: Clicking deed light at (0.79w, 0.18h) outside 48px radius...');
       await viewport.click({ position: { x: Math.round(0.79 * w), y: Math.round(0.18 * h) } });
       await page.waitForTimeout(300);
 
@@ -397,7 +384,6 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
     }
 
     // Open deed detail modal via random deed button
-    console.log('[T5-3] Sub-test D: Testing modal occlusion priority...');
     const randomBtn = page.locator('.explore-deed-btn');
     await randomBtn.click();
     await page.waitForTimeout(300);
@@ -461,7 +447,6 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
     const nightBtn = hud.locator('button', { hasText: 'Hvězdná noc' });
     const soundBtn = hud.locator('.sound-btn');
 
-    console.log('[T5-4] Hammering audio & atmosphere switches while comets & ripples are actively rendering...');
     for (let i = 0; i < 14; i++) {
       // Toggle atmosphere
       if (i % 2 === 0) {
@@ -519,7 +504,6 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
     await expect(randomDeedBtn).toBeVisible();
 
     // Rapidly trigger random deed 12 times
-    console.log('[T5-5] Rapidly cycling through random inspiring deeds...');
     for (let i = 0; i < 12; i++) {
       await randomDeedBtn.click();
       await page.waitForTimeout(60);

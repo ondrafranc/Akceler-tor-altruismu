@@ -203,8 +203,14 @@
     return entryTour ? entryTour.claim() : null;
   }
 
-  /** @returns {() => void} */
-  function attachEntryTourGuards() {
+  /** Nejdelší doba, po kterou může dojíždět návrat stránky nahoru po přechodu z podstránky. */
+  const ARRIVAL_SCROLL_MS = 1200;
+
+  /**
+   * @param {boolean} arrivesScrolled Stránka po přechodu uvnitř aplikace teprve sama vyjíždí nahoru.
+   * @returns {() => void}
+   */
+  function attachEntryTourGuards(arrivesScrolled) {
     const motionQuery = window.matchMedia(ENTRY_TOUR_REDUCED_MOTION_QUERY);
     const viewportQuery = window.matchMedia(ENTRY_TOUR_VIEWPORT_QUERY);
     const card = instantCardEl;
@@ -229,10 +235,19 @@
       }
     };
     // Zastaví jen scroll směrem od začátku stránky. Dojezd plynulého návratu nahoru,
-    // kterým SvelteKit končí přechod z odscrollované podstránky, prohlídku neruší.
+    // kterým SvelteKit končí přechod z odscrollované podstránky, prohlídku neruší. Během něj se
+    // stránka ještě skládá a prohlížeč pozici sám dorovnává i směrem dolů; to není scroll uživatele.
     let lastScrollY = window.scrollY;
+    let arrivingUntil = arrivesScrolled && lastScrollY > 0 ? performance.now() + ARRIVAL_SCROLL_MS : 0;
     const stopOnScroll = () => {
       const y = window.scrollY;
+      if (arrivingUntil) {
+        if (y > 0 && performance.now() < arrivingUntil) {
+          lastScrollY = y;
+          return;
+        }
+        arrivingUntil = 0;
+      }
       if (y > lastScrollY) entryTour?.stop("scroll");
       lastScrollY = y;
     };
@@ -293,7 +308,7 @@
       clearTimer: (handle) => window.clearTimeout(handle),
       onStart: () => {
         safeSetItem(AA_HOME_ENTRY_TOUR_SEEN_KEY, "1", "session");
-        detachEntryTourGuards = attachEntryTourGuards();
+        detachEntryTourGuards = attachEntryTourGuards(scrollResetsToTop);
         const card = instantCardEl;
         card?.addEventListener("click", handleCardClickCapture, true);
         detachSettleGuard = () => card?.removeEventListener("click", handleCardClickCapture, true);
@@ -336,7 +351,8 @@
         awaitingPartnerReturn ||
         Boolean(pinnedActionId),
       documentHidden: document.hidden,
-      scrolled: !scrollResetsToTop && window.scrollY > 0,
+      // Vstup s kotvou v adrese k ní teprve odscrolluje; pozice může být v tuhle chvíli ještě nahoře.
+      scrolled: (!scrollResetsToTop && window.scrollY > 0) || window.location.hash.length > 1,
       alreadySeen: safeGetItem(AA_HOME_ENTRY_TOUR_SEEN_KEY, "session") === "1",
     });
   }

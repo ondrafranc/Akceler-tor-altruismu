@@ -64,6 +64,16 @@ async function gotoHydrated(page: Page, path: string) {
   await page.waitForTimeout(250);
 }
 
+/** Strict check with no tolerance: the document is not wider than its viewport. */
+function fitsViewportWidth(page: Page) {
+  return page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+}
+
+const TOUCH_TARGET_VIEWPORTS = [
+  ...MOBILE_VIEWPORTS,
+  { width: 360, height: 800, label: '360x800 (Standard Android viewport)' }
+];
+
 test.describe('R2: Delayed Gratification (Molly Treat Economics)', () => {
 
   test.beforeEach(async ({ page }) => {
@@ -171,6 +181,32 @@ test.describe('R2: Delayed Gratification (Molly Treat Economics)', () => {
 
     const treatsAfterSpam = Number((await companion.getAttribute('data-molly-treats')) || '0');
     expect(treatsAfterSpam, 'Rapid petting clicks must not award treats').toBe(initialTreats);
+  });
+
+  test('Molly treats: a 50-click petting storm leaves available treats at 0 and stores only the pet count', async ({ page }) => {
+    const companion = page.locator('.molly-companion-layer');
+    await expect(companion).toBeAttached();
+    expect(Number((await companion.getAttribute('data-molly-treats')) || '0')).toBe(0);
+    expect(Number((await companion.getAttribute('data-molly-available-treats')) || '0')).toBe(0);
+
+    const petBtn = page.locator('.molly-pelisek-dock .molly-dock-pet-btn');
+    await expect(petBtn).toBeVisible();
+    for (let i = 0; i < 50; i++) {
+      await petBtn.click({ delay: 10 });
+    }
+    await page.waitForTimeout(500);
+
+    expect(
+      Number((await companion.getAttribute('data-molly-available-treats')) || '0'),
+      'Petting must never unlock an unearned treat'
+    ).toBe(0);
+
+    const storageRaw = await page.evaluate(() => localStorage.getItem('aa_molly_companion_v1'));
+    expect(storageRaw).not.toBeNull();
+    const parsed = JSON.parse(storageRaw!);
+    expect(parsed.treatsFedTotal).toBe(0);
+    expect(parsed.availableTreats).toBe(0);
+    expect(parsed.petCount).toBeGreaterThanOrEqual(50);
   });
 
   // =========================================================================
@@ -282,6 +318,78 @@ test.describe('R2: Delayed Gratification (Molly Treat Economics)', () => {
 
     const availableAfterCatalog = Number((await companion.getAttribute('data-molly-available-treats')) || '0');
     expect(availableAfterCatalog, 'Completing an online catalog action must unlock an earned treat').toBeGreaterThanOrEqual(initialAvailable + 1);
+  });
+
+  test('Molly treats: one finished deed unlocks exactly one treat, and it cannot be spent twice', async ({ page }) => {
+    const companion = page.locator('.molly-companion-layer');
+
+    const doneBtn = page.locator('.instant-card .btn-studio-done');
+    await expect(doneBtn).toHaveCount(0);
+    await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
+    await expect(doneBtn).toBeVisible();
+    await doneBtn.click();
+    await page.waitForTimeout(500);
+
+    expect(Number((await companion.getAttribute('data-molly-available-treats')) || '0')).toBe(1);
+    expect(Number((await companion.getAttribute('data-molly-treats')) || '0')).toBe(0);
+
+    await gotoHydrated(page, '/svet');
+    const pill = page.locator('.molly-sanctuary-pill');
+    await pill.click();
+    await page.waitForTimeout(500);
+
+    expect(
+      Number((await companion.getAttribute('data-molly-treats')) || '0'),
+      'Feeding the earned treat must increment treats by exactly 1'
+    ).toBe(1);
+    expect(
+      Number((await companion.getAttribute('data-molly-available-treats')) || '0'),
+      'Feeding the earned treat must bring available treats back to 0'
+    ).toBe(0);
+
+    for (let i = 0; i < 10; i++) {
+      await pill.click();
+    }
+    await page.waitForTimeout(500);
+
+    expect(
+      Number((await companion.getAttribute('data-molly-treats')) || '0'),
+      'Treats must stay at 1 once the earned treat is spent'
+    ).toBe(1);
+  });
+
+  test('Molly treats: two deeds on /svet accumulate two treats that are spent one click at a time', async ({ page }) => {
+    await gotoHydrated(page, '/svet');
+    const companion = page.locator('.molly-companion-layer');
+    const readTreats = async () => ({
+      fed: Number((await companion.getAttribute('data-molly-treats')) || '0'),
+      available: Number((await companion.getAttribute('data-molly-available-treats')) || '0')
+    });
+
+    const deedInput = page.locator('#ritual-deed-input');
+    const submitBtn = page.locator('.ritual-bar button[type="submit"]');
+    await expect(deedInput).toBeVisible();
+    await deedInput.fill('První skutek: darování teplého oblečení');
+    await submitBtn.click();
+    await page.waitForTimeout(500);
+    await deedInput.fill('Druhý skutek: pomoc sousedce s nákupem');
+    await submitBtn.click();
+    await page.waitForTimeout(500);
+
+    expect((await readTreats()).available, 'Two submitted deeds should unlock 2 available treats').toBe(2);
+
+    const pill = page.locator('.molly-sanctuary-pill');
+    await pill.click();
+    await page.waitForTimeout(400);
+    expect(await readTreats()).toEqual({ fed: 1, available: 1 });
+
+    await pill.click();
+    await page.waitForTimeout(400);
+    expect(await readTreats()).toEqual({ fed: 2, available: 0 });
+
+    await pill.click();
+    await page.waitForTimeout(400);
+    expect(await readTreats()).toEqual({ fed: 2, available: 0 });
   });
 
   // =========================================================================
@@ -424,7 +532,8 @@ test.describe('R1: Progressive Disclosure & UI Declutter', () => {
   test('PD-1.5: Verification info and share/report buttons are hidden by default and render inline without vertical stacking inside open details.how-toggle across mobile & desktop', async ({ page }) => {
     for (const vp of [{ width: 320, height: 568 }, { width: 360, height: 800 }, { width: 375, height: 667 }, { width: 1280, height: 800 }]) {
       await page.setViewportSize(vp);
-      await page.goto('/');
+      // The click below must come after hydration, which resets the details element.
+      await gotoHydrated(page, '/');
       await page.evaluate(() => document.fonts.ready);
 
       const howToggle = page.locator('.instant-card details.how-toggle');
@@ -507,6 +616,95 @@ test.describe('R1: Progressive Disclosure & UI Declutter', () => {
     }
   });
 
+  test('Home 360x660: card title stays above the fold and the primary CTA stays reachable while cycling ideas and on deep-linked actions', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 660 });
+    await gotoHydrated(page, '/');
+
+    const cycleBtn = page.locator('.instant-card .cycle-btn');
+    const primaryCta = page.locator('.instant-card .btn-studio-primary');
+    const titleLoc = page.locator('.instant-card .action-title');
+
+    for (let cycle = 1; cycle <= 10; cycle++) {
+      await cycleBtn.click();
+      await page.waitForTimeout(60);
+      const titleBox = await titleLoc.boundingBox();
+      const ctaBox = await primaryCta.boundingBox();
+      expect(titleBox).not.toBeNull();
+      expect(ctaBox).not.toBeNull();
+      expect(titleBox!.y + titleBox!.height, `Cycle ${cycle} title must be above fold`).toBeLessThan(650);
+      expect(ctaBox!.height, `Cycle ${cycle} CTA height >= 44px`).toBeGreaterThanOrEqual(44);
+      expect(ctaBox!.x + ctaBox!.width, `Cycle ${cycle} CTA within 360px`).toBeLessThanOrEqual(360);
+    }
+
+    // Actions with the longest titles and descriptions in the catalogue, plus ordinary ones.
+    const stressActions = [
+      'daruj_vlasy',
+      'chodci_sobe',
+      'freerice_ryze',
+      'wikipedie_cz',
+      'click-and-feed',
+      'doucovani_deti'
+    ];
+
+    for (const actionId of stressActions) {
+      await gotoHydrated(page, `/?action=${actionId}`);
+      await expect(primaryCta).toBeVisible();
+      const titleBox = await titleLoc.boundingBox();
+      const ctaBox = await primaryCta.boundingBox();
+      expect(titleBox).not.toBeNull();
+      expect(ctaBox, `CTA bounding box for ?action=${actionId} should exist`).not.toBeNull();
+      expect(titleBox!.y + titleBox!.height, `Action ${actionId} title must be above fold`).toBeLessThan(650);
+      expect(ctaBox!.height, `Action ${actionId} CTA height >= 44px`).toBeGreaterThanOrEqual(44);
+      expect(ctaBox!.x + ctaBox!.width, `Action ${actionId} CTA within 360px`).toBeLessThanOrEqual(360);
+    }
+  });
+
+  test('Home: energy tabs are at least 44px tall on every mobile viewport', async ({ page }) => {
+    for (const vp of TOUCH_TARGET_VIEWPORTS) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await gotoHydrated(page, '/');
+
+      const tabs = page.locator('.instant-card .energy-tab');
+      await expect(tabs).toHaveCount(4);
+
+      for (let i = 0; i < 4; i++) {
+        const tab = tabs.nth(i);
+        const box = await tab.boundingBox();
+        expect(box, `Tab ${i} on ${vp.label} boundingBox`).not.toBeNull();
+        const offsetHeight = await tab.evaluate((el) => (el as HTMLElement).offsetHeight);
+        expect(box!.height, `Energy tab #${i} on ${vp.label} height (${box!.height}px) must be >= 44px`).toBeGreaterThanOrEqual(44);
+        expect(offsetHeight, `Energy tab #${i} on ${vp.label} offsetHeight (${offsetHeight}px) must be >= 44px`).toBeGreaterThanOrEqual(44);
+      }
+    }
+  });
+
+  test('Home 320px: opening details, switching energy modes and opening the crisis panel never widen the page', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 600 });
+    await gotoHydrated(page, '/');
+
+    const detailsToggle = page.locator('.instant-card details.how-toggle summary');
+    if (await detailsToggle.isVisible()) {
+      await detailsToggle.click();
+      await page.waitForTimeout(100);
+      expect(await fitsViewportWidth(page), 'Drawer open must not cause overflow').toBe(true);
+    }
+
+    const tabs = page.locator('.instant-card .energy-tab');
+    for (let i = 0; i < 4; i++) {
+      await tabs.nth(i).click();
+      await page.waitForTimeout(60);
+      expect(await fitsViewportWidth(page), `Mode ${i} must not cause overflow`).toBe(true);
+    }
+
+    const crisisBtn = page.locator('.footer-calm-actions .fc-crisis');
+    if (await crisisBtn.isVisible()) {
+      await crisisBtn.click();
+      await page.waitForTimeout(100);
+      expect(await fitsViewportWidth(page), 'Crisis panel open must not cause overflow').toBe(true);
+      await page.locator('.crisis-panel .close-btn').click();
+    }
+  });
+
   // =========================================================================
   // PD-2: Guided Wizard (/app/guided) Progressive Flow
   // =========================================================================
@@ -558,6 +756,34 @@ test.describe('R1: Progressive Disclosure & UI Declutter', () => {
     }
   });
 
+  test('Guided 320px and 375px: parameter drawer, parameter chips and the methodology table never widen the page', async ({ page }) => {
+    for (const width of [320, 375]) {
+      await page.setViewportSize({ width, height: 700 });
+      await gotoHydrated(page, '/app/guided');
+
+      expect(await fitsViewportWidth(page), `/app/guided at ${width}px initial state`).toBe(true);
+
+      const drawerSummary = page.locator('.adaptive-params-drawer summary');
+      if (await drawerSummary.isVisible()) {
+        await drawerSummary.click();
+        await page.waitForTimeout(100);
+        expect(await fitsViewportWidth(page), `/app/guided at ${width}px with drawer open`).toBe(true);
+
+        const chip = page.locator('details.adaptive-params-drawer .ap-pills button').first();
+        await expect(chip).toBeVisible();
+        await chip.click();
+        await page.waitForTimeout(60);
+        expect(await fitsViewportWidth(page), `/app/guided at ${width}px after chip click`).toBe(true);
+      }
+
+      const methTableWrap = page.locator('.methodology-table-wrap, .meth-table-wrap');
+      if (await methTableWrap.isVisible()) {
+        const wrapOverflow = await methTableWrap.evaluate((el) => window.getComputedStyle(el).overflowX);
+        expect(['auto', 'scroll'].includes(wrapOverflow)).toBe(true);
+      }
+    }
+  });
+
   // =========================================================================
   // PD-3: Online Catalog (/app/online) Declutter
   // =========================================================================
@@ -583,6 +809,76 @@ test.describe('R1: Progressive Disclosure & UI Declutter', () => {
       await page.goto('/app/online');
       await checkZeroHorizontalOverflow(page, `online-catalog-${vp.label}`);
     }
+  });
+
+  test('Online catalog 360x800: first card primary CTA ends above 740px by default and under each category chip', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 800 });
+    await gotoHydrated(page, '/app/online');
+
+    const firstOnlineCta = page.locator('.grid .card .cta.primary').first();
+    await expect(firstOnlineCta).toBeVisible();
+
+    const ctaBox = await firstOnlineCta.boundingBox();
+    expect(ctaBox).not.toBeNull();
+    const bottomY = ctaBox!.y + ctaBox!.height;
+    expect(bottomY, `Default online CTA bottom (${bottomY.toFixed(2)}px) must be < 740px`).toBeLessThan(740);
+
+    const chips = page.locator('.filter-toolbar .filter-chip');
+    const chipCount = await chips.count();
+    for (let c = 0; c < Math.min(chipCount, 4); c++) {
+      await chips.nth(c).click();
+      await page.waitForTimeout(100);
+
+      const activeCta = page.locator('.grid .card .cta.primary').first();
+      if (await activeCta.isVisible()) {
+        const box = await activeCta.boundingBox();
+        if (box) {
+          expect(box.y + box.height, `Chip #${c} first CTA bottom must be < 740px`).toBeLessThan(740);
+        }
+      }
+    }
+  });
+
+  test('Online catalog: card CTAs are at least 44px tall on every mobile viewport', async ({ page }) => {
+    for (const vp of TOUCH_TARGET_VIEWPORTS) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await gotoHydrated(page, '/app/online');
+
+      const ctas = page.locator('.grid .card .cta');
+      const count = await ctas.count();
+      expect(count).toBeGreaterThan(0);
+
+      // First four CTAs, primary and secondary alike.
+      for (let i = 0; i < Math.min(count, 4); i++) {
+        const cta = ctas.nth(i);
+        await expect(cta).toBeVisible();
+        const box = await cta.boundingBox();
+        expect(box, `CTA #${i} bounding box on ${vp.label}`).not.toBeNull();
+        const offsetHeight = await cta.evaluate((el) => (el as HTMLElement).offsetHeight);
+        expect(box!.height, `/app/online CTA #${i} on ${vp.label} height (${box!.height}px) must be >= 44px`).toBeGreaterThanOrEqual(44);
+        expect(offsetHeight, `/app/online CTA #${i} on ${vp.label} offsetHeight (${offsetHeight}px) must be >= 44px`).toBeGreaterThanOrEqual(44);
+      }
+    }
+  });
+
+  test('Online catalog 320px: scrolling the filter toolbar to its end and back never widens the page', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 600 });
+    await gotoHydrated(page, '/app/online');
+
+    const toolbar = page.locator('.filter-toolbar');
+    await expect(toolbar).toBeVisible();
+
+    await toolbar.evaluate((el) => {
+      el.scrollLeft = el.scrollWidth;
+    });
+    await page.waitForTimeout(100);
+    expect(await fitsViewportWidth(page), '/app/online after filter toolbar scroll to end').toBe(true);
+
+    await toolbar.evaluate((el) => {
+      el.scrollLeft = 0;
+    });
+    await page.waitForTimeout(100);
+    expect(await fitsViewportWidth(page), '/app/online after filter toolbar scroll to start').toBe(true);
   });
 
   // =========================================================================
@@ -629,6 +925,101 @@ test.describe('R1: Progressive Disclosure & UI Declutter', () => {
     }
   });
 
+  test('Near 360x800: first place card starts above 520px across city jumps and radius pills', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 800 });
+    await gotoHydrated(page, '/near');
+
+    const firstPlace = page.locator('.place-card').first();
+    await expect(firstPlace).toBeVisible();
+
+    const placeBox = await firstPlace.boundingBox();
+    expect(placeBox).not.toBeNull();
+    expect(placeBox!.y, `First place card y (${placeBox!.y.toFixed(2)}px) must be < 520px`).toBeLessThan(520);
+
+    const filtersDrawer = page.locator('details.near-filters-drawer');
+    const filtersSummary = filtersDrawer.locator('> summary.near-filters-summary');
+    const toggleDrawer = async (wantOpen: boolean) => {
+      if (await filtersSummary.isVisible()) {
+        const isOpen = await filtersDrawer.evaluate((el) => (el as HTMLDetailsElement).open);
+        if (isOpen !== wantOpen) {
+          await filtersSummary.click();
+          if (wantOpen) {
+            await expect(filtersDrawer).toHaveAttribute('open', '');
+          } else {
+            await expect(filtersDrawer).not.toHaveAttribute('open', '');
+          }
+        }
+      }
+    };
+
+    await toggleDrawer(true);
+    const citySelect = page.locator('#near-city-jump');
+    await expect(citySelect).toBeVisible();
+    for (const city of ['praha', 'brno', 'ostrava']) {
+      await toggleDrawer(true);
+      await citySelect.selectOption(city);
+      await page.waitForTimeout(100);
+      await toggleDrawer(false);
+      const cardBox = await page.locator('.place-card').first().boundingBox();
+      expect(cardBox).not.toBeNull();
+      expect(cardBox!.y, `City ${city} first place card y (${cardBox!.y.toFixed(2)}px) must be < 520px`).toBeLessThan(520);
+    }
+
+    // Radius pills on Praha, where the short radii have dense coverage; the nearest-place banner may take 60px more.
+    await toggleDrawer(true);
+    await citySelect.selectOption('praha');
+    await page.waitForTimeout(100);
+    const radiusPills = page.locator('.radius-pill');
+    const pillCount = await radiusPills.count();
+    expect(pillCount).toBeGreaterThanOrEqual(3);
+    for (let p = 0; p < Math.min(pillCount, 3); p++) {
+      await toggleDrawer(true);
+      await radiusPills.nth(p).click();
+      await page.waitForTimeout(100);
+      await toggleDrawer(false);
+      const hasSmartBanner = await page.locator('.smart-nearest-banner').isVisible();
+      const cardBox = await page.locator('.place-card').first().boundingBox();
+      expect(cardBox).not.toBeNull();
+      expect(cardBox!.y).toBeLessThan(hasSmartBanner ? 580 : 520);
+    }
+  });
+
+  test('Near: List and Map tabs are at least 44px tall on every mobile viewport', async ({ page }) => {
+    for (const vp of TOUCH_TARGET_VIEWPORTS) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await gotoHydrated(page, '/near');
+
+      const mobileTabs = page.locator('.mobile-tabs button');
+      await expect(mobileTabs).toHaveCount(2);
+
+      for (let i = 0; i < 2; i++) {
+        const btn = mobileTabs.nth(i);
+        await expect(btn).toBeVisible();
+        const box = await btn.boundingBox();
+        expect(box, `Mobile tab #${i} bounding box on ${vp.label}`).not.toBeNull();
+        const offsetHeight = await btn.evaluate((el) => (el as HTMLElement).offsetHeight);
+        expect(box!.height, `/near mobile-tab #${i} on ${vp.label} height (${box!.height}px) must be >= 44px`).toBeGreaterThanOrEqual(44);
+        expect(offsetHeight, `/near mobile-tab #${i} on ${vp.label} offsetHeight (${offsetHeight}px) must be >= 44px`).toBeGreaterThanOrEqual(44);
+      }
+    }
+  });
+
+  test('Near 320px: switching between List and Map never widens the page', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 600 });
+    await gotoHydrated(page, '/near');
+
+    const mobileTabs = page.locator('.mobile-tabs button');
+    await expect(mobileTabs).toHaveCount(2);
+
+    await mobileTabs.nth(1).click();
+    await page.waitForTimeout(200);
+    expect(await fitsViewportWidth(page), '/near in Map view at 320px must not overflow').toBe(true);
+
+    await mobileTabs.nth(0).click();
+    await page.waitForTimeout(150);
+    expect(await fitsViewportWidth(page), '/near in List view at 320px must not overflow').toBe(true);
+  });
+
   // =========================================================================
   // PD-5: Krajina Dobra (/svet) Sanctuary & Desktop Integrity
   // =========================================================================
@@ -669,6 +1060,46 @@ test.describe('R1: Progressive Disclosure & UI Declutter', () => {
       await checkZeroHorizontalOverflow(page, `route-${route}-360x800`);
     }
   });
+
+  for (const vp of [{ width: 412, height: 915 }, { width: 430, height: 932 }]) {
+    test(`Key routes at ${vp.width}px: document and body never exceed the viewport width`, async ({ page }) => {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+
+      for (const route of ['/', '/app/guided', '/app/online', '/near', '/svet']) {
+        await gotoHydrated(page, route);
+
+        const metrics = await page.evaluate(() => {
+          const docEl = document.documentElement;
+          const scrollWidth = docEl.scrollWidth;
+          const clientWidth = docEl.clientWidth;
+
+          let offendingSelector = '';
+          if (scrollWidth > clientWidth) {
+            for (const el of Array.from(document.querySelectorAll('*'))) {
+              const rect = el.getBoundingClientRect();
+              if (rect.right > clientWidth + 1.5) {
+                offendingSelector = `${el.tagName.toLowerCase()}.${Array.from(el.classList).join('.')} (right: ${rect.right}px)`;
+                break;
+              }
+            }
+          }
+
+          return {
+            scrollWidth,
+            clientWidth,
+            bodyScrollWidth: document.body ? document.body.scrollWidth : 0,
+            offendingSelector
+          };
+        });
+
+        expect(
+          metrics.scrollWidth,
+          `Route ${route} at ${vp.width}px has horizontal overflow: scrollWidth (${metrics.scrollWidth}) > clientWidth (${metrics.clientWidth}). Offender: ${metrics.offendingSelector}`
+        ).toBeLessThanOrEqual(metrics.clientWidth);
+        expect(metrics.bodyScrollWidth, `Route ${route} at ${vp.width}px: body is wider than the viewport`).toBeLessThanOrEqual(metrics.clientWidth);
+      }
+    });
+  }
 
   test('PD-5.5: Krajina dobra (/svet) uses crisp SVG paws on dark pills, compact inline guide pill, and zero Molly dock overlap on 1280x800 & 375x667', async ({ page }) => {
     // 1. Desktop 1280x800 checks

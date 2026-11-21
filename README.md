@@ -126,7 +126,7 @@ Akcelerátor altruismu/
 | `npm run test:api` | Spustí API integrační testy (`tests/api.spec.ts`) — zkratka z root `package.json` | Runs Playwright API tests (`tests/api.spec.ts`) via root `package.json` shorthand |
 | `npm test` | Spustí kompletní Playwright E2E sadu | Runs full Playwright end-to-end test suite |
 
-Nové a upravované komponenty používají Svelte 5 Runes; seznam zbývajících komponent se starší syntaxí hlídá `tests/unit/invariants.test.js` a smí se jen zkracovat. Konkrétní E2E specifikaci spustíte z `akcelerator-landing-page/` přes `npm test -- tests/<soubor>.spec.ts` (Playwright si sám spustí vývojový server).
+Nové a upravované komponenty používají Svelte 5 Runes; seznam zbývajících komponent se starší syntaxí hlídá `tests/unit/invariants.test.js` a smí se jen zkracovat. Konkrétní E2E specifikaci spustíte z `akcelerator-landing-page/` přes `npm test -- tests/<soubor>.spec.ts` (Playwright si sám sestaví produkční build a spustí ho na vlastním portu; vývojový server k tomu nepotřebuje).
 
 V editoru používejte TypeScript z pracovního prostoru (`akcelerator-landing-page/node_modules/typescript`). `jsconfig.json` má explicitní `"strict": true` a kontroluje i JS soubory; typy se v nich píší přes JSDoc.
 

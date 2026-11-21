@@ -200,7 +200,6 @@ test.describe('Challenger M1-2: Responsiveness, Visual Stability & Sensory Engin
         };
       });
 
-      console.log(`[Viewport ${vp}px] navDetails:`, JSON.stringify(navDetails));
       expect(navDetails.hasDocHScroll).toBe(false);
       expect(navDetails.brandDockOverlap).toBe(false);
       expect(navDetails.brandToggleOverlap).toBe(false);
@@ -405,7 +404,6 @@ test.describe('Challenger M1-2: Responsiveness, Visual Stability & Sensory Engin
         };
       }, vp);
 
-      console.log(`[${vp}px Desktop Nav State]:`, JSON.stringify(desktopState));
       expect(desktopState.hasDocHScroll).toBe(false);
       expect(desktopState.flexWrap).toBe('nowrap');
       expect(desktopState.linksOverflowing).toBe(false);

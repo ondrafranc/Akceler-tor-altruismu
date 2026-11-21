@@ -12,6 +12,11 @@
     "test": "playwright test",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
+    "test:affected": "node tests/support/affected.mjs",
+    "test:affected:list": "node tests/support/affected.mjs --list",
+    "verify": "node tests/support/verify.mjs",
+    "verify:fast": "node tests/support/verify.mjs --no-e2e",
+    "verify:full": "node tests/support/verify.mjs --full",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },

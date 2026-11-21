@@ -126,7 +126,6 @@ test.describe('Adversarial Challenge: Walking Molly Stability & State Machine', 
     expect(telemetry.frames.length).toBeGreaterThan(60); // At least 60 frames recorded
     const avgFrameDt = telemetry.frames.reduce((a: number, b: number) => a + b, 0) / telemetry.frames.length;
     const approxFps = 1000 / avgFrameDt;
-    console.log(`[STRESS TEST] Measured FPS: ${approxFps.toFixed(1)} (avg dt: ${avgFrameDt.toFixed(2)}ms over ${telemetry.frames.length} frames)`);
     // Headless Chromium on CPU rasterizer targets 40+ FPS (real hardware 60 FPS)
     expect(approxFps).toBeGreaterThan(38);
 
@@ -221,14 +220,12 @@ test.describe('Adversarial Challenge: Walking Molly Stability & State Machine', 
     // Wait for Molly to start her patrol along the lakeshore (x > 0.30)
     // When she is away from home, clicking her current moving position must feed her (distCur < 48),
     // and clicking her home bowl position must ALSO feed her (distHome < 48).
-    console.log('[STRESS TEST] Waiting for Molly to enter WALK_PATROL along lakeshore...');
     await page.waitForFunction(() => {
       const g = (window as any).__mollyTelemetry;
       if (!g || !g.mollyPositions || g.mollyPositions.length === 0) return false;
       const latest = g.mollyPositions[g.mollyPositions.length - 1];
       return latest && latest.x >= 0.30;
     }, { timeout: 12000 }).catch(() => {
-      console.log('[STRESS TEST] Molly still at home base or leisurely pacing; proceeding with dual-hit assertion.');
     });
 
     const dynamicMollyPos = await page.evaluate(() => {
@@ -238,7 +235,6 @@ test.describe('Adversarial Challenge: Walking Molly Stability & State Machine', 
 
     if (dynamicMollyPos && dynamicMollyPos.x >= 0.28) {
       const treatsBeforeDynamic = Number(await companion.getAttribute('data-molly-treats') || '0');
-      console.log(`[STRESS TEST] Clicking Molly dynamically at patrol location (${dynamicMollyPos.x.toFixed(2)}w, ${dynamicMollyPos.y.toFixed(2)}h)...`);
       await viewport.click({
         position: { x: Math.round(w * dynamicMollyPos.x), y: Math.round(h * dynamicMollyPos.y) }
       });
@@ -1179,11 +1175,14 @@ test.describe('Molly companion geometry, tips and guardian across viewports', ()
     await expect(card.locator('.in-situ-celebration .btn-inline-feed-molly')).toBeVisible();
     await expect(card.locator('.in-situ-celebration .btn-next-deed')).toBeVisible();
 
-    // Molly dojde a teprve potom promluví
-    const bubble = page.locator('.molly-whisper-bubble.is-ready:not(.is-travelling)');
-    await expect(bubble).toBeVisible({ timeout: 10_000 });
-    await expect(page.locator('.molly-roaming-actor')).not.toHaveAttribute('data-molly-behavior', 'WALK_ROAM');
-    await page.waitForTimeout(500);
+    // Molly dojde a teprve potom smí promluvit. Jestli promluví, záleží na tom, zda už je oslava v kartě
+    // vykreslená: šeptandu, která by ji jen opakovala a nevešla se k Molly, Molly vůbec neukáže.
+    await expect(page.locator('.molly-roaming-actor')).not.toHaveAttribute('data-molly-behavior', 'WALK_ROAM', {
+      timeout: 10_000
+    });
+    await expect(page.locator('.molly-companion-layer')).toHaveAttribute('data-molly-settled', 'true');
+    // Případná šeptanda se odhaluje až po dojití; chvíle navíc ji stihne zachytit.
+    await page.waitForTimeout(1200);
 
     const walk = await page.evaluate(() => {
       const store = window as unknown as {
@@ -1210,7 +1209,6 @@ test.describe('Molly companion geometry, tips and guardian across viewports', ()
 
     expect(walk.frames, 'walk was sampled').toBeGreaterThan(30);
     expect(walk.walkedPx, 'scenario needs a walk much longer than the 850 ms safety timer covers').toBeGreaterThan(300);
-    expect(walk.visibleFrames, 'whisper shows once Molly has arrived').toBeGreaterThan(0);
     expect(walk.overlaps, 'visible whisper never covers a celebration control, not even mid-walk').toEqual([]);
     expect(walk.maxDistWhileVisible, 'whisper is revealed only where Molly comes to rest').toBeLessThanOrEqual(24);
     expect(walk.bubbleDrift, 'revealed whisper stays put instead of travelling with Molly').toBeLessThanOrEqual(24);

@@ -13,27 +13,15 @@ Zrcadlí `.github/workflows/ci.yml`. Když se změní CI, změň i tento soubor.
 - `node -v`: pokud hlavní verze není 24, upozorni na to ve výsledku (neblokuje).
 - `git status --short` a `git diff --stat`: zapiš si seznam změněných souborů pro kroky 3 a 4.
 
-## 2. Brány CI (v tomto pořadí)
-1. `npm run check` — 0 chyb a 0 varování.
-2. `npm run test:unit` — vše zelené (obsahuje `invariants.test.js`).
-3. `npm run build` — bez chyb.
+## 2. Brány CI
+Spusť `npm run verify:full`. Projde po řadě typovou kontrolu (0 chyb a 0 varování), unit testy (včetně `invariants.test.js`) a celou E2E sadu; ta si sama sestaví produkční build, takže selže i na chybě buildu. Zastaví se na první chybě.
 
-## 3. E2E podle změněných souborů
-Spusť `npm test -- <specifikace>` pro sjednocení řádků, které odpovídají změnám, plus specifikace z argumentu `$ARGUMENTS`.
+## 3. E2E
+Celou sadu už pustil krok 2. Které specifikace změna potřebuje, určuje `tests/support/affected-rules.mjs` (jediný zdroj pravdy; `npm run test:affected:list` je vypíše). Specifikace z argumentu `$ARGUMENTS` pusť navíc přes `npm test -- tests/<soubor>.spec.ts`, jen pokud je chceš zopakovat samostatně.
 
-| Změněno | Specifikace v `tests/` |
-|---|---|
-| `src/routes/api/**`, `src/lib/server/**`, `security.js`, `validation.js`, `hooks.server.js`, `svelte.config.js`, `vercel.json` | `security.spec.ts`, `api.spec.ts` |
-| `MollyCompanion`, `MollyDock`, `mollyStore.js`, `mollyTypes.js`, `src/lib/molly/**` | `molly-stress.spec.ts`, `mobile-tablet-polish.spec.ts`, `desktop-polish.spec.ts` |
-| `src/routes/+page.svelte`, `features/home/**`, `features/actions/**`, `src/lib/sensory/**` | `ui-rebuild-acceptance.spec.ts`, `desktop-polish.spec.ts`, `mobile-tablet-polish.spec.ts`, `delayed-gratification-and-declutter.spec.ts` |
-| `/near`, `/svet`, `/app/**`, `/submit`, `features/map/**`, `features/sanctuary/**` | `e2e-requirements.spec.ts`, `m4-regressions.spec.ts` |
-| `+layout.svelte`, `czech-theme.css`, `src/components/**` mimo Molly | `e2e-requirements.spec.ts`, `desktop-polish.spec.ts`, `mobile-tablet-polish.spec.ts` |
-| jen dokumentace, pravidla nebo konfigurace agentů | žádné E2E |
+Test označený v souhrnu jako `flaky` prošel až na druhý pokus: uveď ho ve výsledku jménem.
 
 `api.spec.ts` potřebuje živou Supabase z `.env.local` (bez ní vrací zápisové endpointy `503`), proto neběží v CI a tato brána je jeho jediná kontrola.
-
-Před velkým vydáním nebo na výslovnou žádost pusť celou sadu: `npm test`.
-
 ## 4. Kontrola obsahu změn
 - V diffu nejsou tajné klíče ani soubory `.env*` (kromě `.env.example`).
 - Změna chování je zapsaná v `CHANGELOG.md` pod `[Unreleased]`.

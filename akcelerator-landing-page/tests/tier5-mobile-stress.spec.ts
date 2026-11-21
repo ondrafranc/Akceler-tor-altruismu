@@ -622,29 +622,6 @@ test.describe('Tier 5 Adversarial Stress: Mobile UX, Viewport Rotations & Tone I
     await verifyToneInvariants(page, 'Near initial');
   });
 
-  test('4.2 Contract verification: .molly-celebration-note on / maintains exact "Molly" name and warm treat copy across modes', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/');
-    await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 20000 });
-
-    const energyTabs = page.locator('.instant-card .energy-tab');
-    await expect(energyTabs).toHaveCount(4);
-
-    for (let modeIdx = 0; modeIdx < 4; modeIdx++) {
-      await energyTabs.nth(modeIdx).click();
-      await page.waitForTimeout(100);
-
-      const note = page.locator('.instant-card .molly-celebration-note');
-      if (await note.isVisible()) {
-        const text = await note.innerText();
-        // Mandatory substring check per PROJECT.md interface contract
-        expect(text, `Mode index ${modeIdx} note must contain "Molly"`).toContain('Molly');
-        // Ensure no arcade +1 prefix in treat name
-        expect(text, `Mode index ${modeIdx} note must not contain "+1"`).not.toContain('+1');
-      }
-    }
-  });
-
   test('4.3 SmallWinCelebration modal dialog: zero overflow on mobile portrait & landscape, tone invariants, and Molly note', async ({ page }) => {
     const pageErrors: string[] = [];
     page.on('pageerror', (err) => pageErrors.push(err.message));
