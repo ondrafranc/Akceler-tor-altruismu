@@ -18,9 +18,97 @@ const Sensory = {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const srcDir = path.resolve(__dirname, '../../src');
 
+/** @typedef {import('$lib/types/sensory.js').ImpactCanvasElement} ImpactCanvasElement */
+
+/**
+ * One call recorded by the mock 2D context: the method name, its arguments and the context state
+ * read at call time.
+ * @typedef {(
+ *   { op: 'save' | 'restore' | 'beginPath' | 'closePath' | 'clip' }
+ *   | { op: 'scale', sx: number, sy: number }
+ *   | { op: 'translate', tx: number, ty: number }
+ *   | { op: 'rotate', rad: number }
+ *   | { op: 'setTransform', args: number[] }
+ *   | { op: 'clearRect' | 'rect', x: number, y: number, w: number, h: number }
+ *   | { op: 'fillRect', x: number, y: number, w: number, h: number, fillStyle: string }
+ *   | { op: 'strokeRect', x: number, y: number, w: number, h: number, strokeStyle: string }
+ *   | { op: 'moveTo', x: number, y: number }
+ *   | { op: 'lineTo', x: number, y: number, strokeStyle: string }
+ *   | { op: 'quadraticCurveTo', cpx: number, cpy: number, x: number, y: number }
+ *   | { op: 'bezierCurveTo', cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number }
+ *   | { op: 'arc', x: number, y: number, r: number, s: number, e: number, ccw: boolean | undefined, fillStyle: string }
+ *   | { op: 'ellipse', x: number, y: number, rx: number, ry: number, rot: number, s: number, e: number }
+ *   | { op: 'roundRect', x: number, y: number, w: number, h: number, r: number }
+ *   | { op: 'fill', fillStyle: string, alpha: number }
+ *   | { op: 'stroke', strokeStyle: string, lineWidth: number, alpha: number }
+ *   | { op: 'setLineDash', d: number[] }
+ *   | { op: 'fillText' | 'strokeText', text: string, x: number, y: number }
+ * )} CanvasOp
+ */
+
+/**
+ * The part of the 2D context the scenes use, as the mock implements it.
+ * @typedef {{
+ *   fillStyle: string,
+ *   strokeStyle: string,
+ *   lineWidth: number,
+ *   lineCap: string,
+ *   lineJoin: string,
+ *   globalAlpha: number,
+ *   globalCompositeOperation: string,
+ *   shadowColor: string,
+ *   shadowBlur: number,
+ *   font: string,
+ *   textAlign: string,
+ *   textBaseline: string,
+ *   save: () => void,
+ *   restore: () => void,
+ *   scale: (sx: number, sy: number) => void,
+ *   translate: (tx: number, ty: number) => void,
+ *   rotate: (rad: number) => void,
+ *   setTransform: (...args: number[]) => void,
+ *   clearRect: (x: number, y: number, w: number, h: number) => void,
+ *   fillRect: (x: number, y: number, w: number, h: number) => void,
+ *   strokeRect: (x: number, y: number, w: number, h: number) => void,
+ *   beginPath: () => void,
+ *   closePath: () => void,
+ *   moveTo: (x: number, y: number) => void,
+ *   lineTo: (x: number, y: number) => void,
+ *   quadraticCurveTo: (cpx: number, cpy: number, x: number, y: number) => void,
+ *   bezierCurveTo: (cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number) => void,
+ *   arc: (x: number, y: number, r: number, s: number, e: number, ccw?: boolean) => void,
+ *   ellipse: (x: number, y: number, rx: number, ry: number, rot: number, s: number, e: number) => void,
+ *   rect: (x: number, y: number, w: number, h: number) => void,
+ *   roundRect: (x: number, y: number, w: number, h: number, r: number) => void,
+ *   fill: () => void,
+ *   stroke: () => void,
+ *   clip: () => void,
+ *   setLineDash: (d: number[]) => void,
+ *   fillText: (text: string, x: number, y: number) => void,
+ *   strokeText: (text: string, x: number, y: number) => void,
+ *   createLinearGradient: () => { addColorStop: () => void },
+ *   createRadialGradient: () => { addColorStop: () => void }
+ * }} MockContext2D
+ */
+
+/** @typedef {(event: { clientX: number, clientY: number }) => void} MockPointerListener */
+
+/**
+ * Members of the mock canvas that a real canvas element does not have.
+ * @typedef {{
+ *   ops: CanvasOp[],
+ *   attrs: Map<string, string>,
+ *   listeners: Map<string, MockPointerListener>,
+ *   readonly getContextCalls: number
+ * }} MockCanvasExtras
+ */
+
 function createMockCanvas(width = 380, height = 86, initialClasses = ['preview-diorama-canvas']) {
+  /** @type {CanvasOp[]} */
   const ops = [];
+  /** @type {Map<string, string>} */
   const attrs = new Map();
+  /** @type {Map<string, MockPointerListener>} */
   const listeners = new Map();
   const classes = new Set(initialClasses);
 
@@ -28,6 +116,7 @@ function createMockCanvas(width = 380, height = 86, initialClasses = ['preview-d
     addColorStop: () => { }
   };
 
+  /** @type {MockContext2D} */
   const ctx = {
     fillStyle: '#000',
     strokeStyle: '#000',
@@ -89,7 +178,7 @@ function createMockCanvas(width = 380, height = 86, initialClasses = ['preview-d
 
   let getContextCalls = 0;
 
-  return {
+  return /** @type {ImpactCanvasElement & MockCanvasExtras} */ (/** @type {unknown} */ ({
     width,
     height,
     isConnected: true,
@@ -100,7 +189,7 @@ function createMockCanvas(width = 380, height = 86, initialClasses = ['preview-d
     get getContextCalls() {
       return getContextCalls;
     },
-    getContext(type) {
+    getContext(/** @type {string} */ type) {
       if (type !== '2d') return null;
       getContextCalls++;
       return ctx;
@@ -108,39 +197,43 @@ function createMockCanvas(width = 380, height = 86, initialClasses = ['preview-d
     getBoundingClientRect() {
       return { left: 0, top: 0, width, height };
     },
-    setAttribute(k, v) {
+    setAttribute(/** @type {string} */ k, /** @type {string} */ v) {
       attrs.set(k, String(v));
     },
-    getAttribute(k) {
+    getAttribute(/** @type {string} */ k) {
       return attrs.has(k) ? attrs.get(k) : null;
     },
-    hasAttribute(k) {
+    hasAttribute(/** @type {string} */ k) {
       return attrs.has(k);
     },
-    removeAttribute(k) {
+    removeAttribute(/** @type {string} */ k) {
       attrs.delete(k);
     },
     classList: {
-      add: (...tokens) => tokens.forEach((t) => classes.add(t)),
-      remove: (...tokens) => tokens.forEach((t) => classes.delete(t)),
-      contains: (t) => classes.has(t),
+      add: (/** @type {string[]} */ ...tokens) => tokens.forEach((t) => classes.add(t)),
+      remove: (/** @type {string[]} */ ...tokens) => tokens.forEach((t) => classes.delete(t)),
+      contains: (/** @type {string} */ t) => classes.has(t),
       toArray: () => [...classes]
     },
-    addEventListener(type, fn) {
+    addEventListener(/** @type {string} */ type, /** @type {MockPointerListener} */ fn) {
       listeners.set(type, fn);
     },
-    removeEventListener(type) {
+    removeEventListener(/** @type {string} */ type) {
       listeners.delete(type);
     }
-  };
+  }));
 }
 
 describe('Poetic 2-Phase Deed Transformations & Preview Diorama', () => {
+  /** @type {{ id: number, cb: FrameRequestCallback }[]} */
   let rafQueue = [];
   let nextRafId = 1;
   let mockNow = 0;
+  /** @type {typeof globalThis.requestAnimationFrame} */
   let prevRaf;
+  /** @type {typeof globalThis.cancelAnimationFrame} */
   let prevCaf;
+  /** @type {typeof globalThis.window | undefined} */
   let prevWindow;
 
   function stepFrames(count = 1, dtMs = 16.667) {
@@ -176,7 +269,7 @@ describe('Poetic 2-Phase Deed Transformations & Preview Diorama', () => {
     globalThis.requestAnimationFrame = prevRaf;
     globalThis.cancelAnimationFrame = prevCaf;
     if (prevWindow === undefined) {
-      delete globalThis.window;
+      delete /** @type {{ window?: typeof globalThis.window }} */ (globalThis).window;
     } else {
       globalThis.window = prevWindow;
     }
@@ -251,6 +344,7 @@ describe('Poetic 2-Phase Deed Transformations & Preview Diorama', () => {
   it('climax: true animates s_barvou_ven from unsplit white beam (p = 0) into full 6-color rainbow dispersion (p = 1) and replays on triggerCanvasBurst', () => {
     const sBarvou = MICRO_ACTIONS.find((a) => a.id === 's_barvou_ven');
     const cv = createMockCanvas(320, 118);
+    /** @type {{ val: number, formatted: string }[]} */
     const reportedMetrics = [];
 
     const actionHandle = Sensory.impactCanvas(cv, {
@@ -387,7 +481,7 @@ describe('Poetic 2-Phase Deed Transformations & Preview Diorama', () => {
     // Under prefers-reduced-motion, teased never schedules any rAF loop
     globalThis.window = /** @type {Window & typeof globalThis} */ (/** @type {unknown} */ ({
       devicePixelRatio: 1,
-      matchMedia: (q) => ({ matches: q.includes('prefers-reduced-motion') }),
+      matchMedia: (/** @type {string} */ q) => ({ matches: q.includes('prefers-reduced-motion') }),
       addEventListener: () => {}
     }));
     const redCv = createMockCanvas(380, 92);
@@ -413,7 +507,7 @@ describe('Poetic 2-Phase Deed Transformations & Preview Diorama', () => {
   it('snaps climax directly to p = 1 on frame 0 without scheduling rAF when prefers-reduced-motion is active', () => {
     globalThis.window = /** @type {Window & typeof globalThis} */ (/** @type {unknown} */ ({
       devicePixelRatio: 1,
-      matchMedia: (q) => ({ matches: q.includes('prefers-reduced-motion') }),
+      matchMedia: (/** @type {string} */ q) => ({ matches: q.includes('prefers-reduced-motion') }),
       addEventListener: () => { }
     }));
 
@@ -501,7 +595,7 @@ describe('Poetic 2-Phase Deed Transformations & Preview Diorama', () => {
     expect(rafQueue.length).toBe(0);
 
     // Tapping the completed celebration canvas ("Dotkni se pro jiskru") replays 0 -> 1 from unsplit beam!
-    const onDown = cv.listeners.get('pointerdown');
+    const onDown = /** @type {MockPointerListener} */ (cv.listeners.get('pointerdown'));
     expect(typeof onDown).toBe('function');
     cv.ops.length = 0;
     onDown({ clientX: 160, clientY: 60 });
@@ -519,6 +613,7 @@ describe('Poetic 2-Phase Deed Transformations & Preview Diorama', () => {
   });
 
   it('upgrades water_spring, blood_drop, and cosmos_science with balanced save/restore, delayed gratification, and full climax details', () => {
+    /** @param {CanvasOp[]} ops */
     const assertSaveRestoreBalanced = (ops) => {
       const saves = ops.filter((o) => o.op === 'save').length;
       const restores = ops.filter((o) => o.op === 'restore').length;
@@ -573,7 +668,7 @@ describe('Poetic 2-Phase Deed Transformations & Preview Diorama', () => {
     // Climax at p = 1 (via reduced-motion instant settle)
     globalThis.window = /** @type {Window & typeof globalThis} */ (/** @type {unknown} */ ({
       devicePixelRatio: 1,
-      matchMedia: (q) => ({ matches: q.includes('prefers-reduced-motion') }),
+      matchMedia: (/** @type {string} */ q) => ({ matches: q.includes('prefers-reduced-motion') }),
       addEventListener: () => { }
     }));
 
@@ -669,6 +764,7 @@ describe('Poetic 2-Phase Deed Transformations & Preview Diorama', () => {
     expect(spec.staticMetric).toBe(true);
     expect(spec.format(34)).toBe('34 stanic v pohotovosti');
 
+    /** @param {CanvasOp[]} ops */
     const assertSaveRestoreBalanced = (ops) => {
       const saves = ops.filter((o) => o.op === 'save').length;
       const restores = ops.filter((o) => o.op === 'restore').length;
@@ -703,6 +799,7 @@ describe('Poetic 2-Phase Deed Transformations & Preview Diorama', () => {
     }
 
     // 2. Started state (climax: false): reports full 34 stations immediately (never stuck at 22)
+    /** @type {{ val: number, formatted: string }[]} */
     const startedMetrics = [];
     const startedCv = createMockCanvas(320, 118, ['impact-payoff-canvas']);
     const startedHandle = Sensory.impactCanvas(startedCv, {
@@ -722,7 +819,7 @@ describe('Poetic 2-Phase Deed Transformations & Preview Diorama', () => {
     // 3. Climax state (p = 1 via reduced motion): uncurled hedgehog with paws, separate eye/nose subpaths, bird, and rescue heart
     globalThis.window = /** @type {Window & typeof globalThis} */ (/** @type {unknown} */ ({
       devicePixelRatio: 1,
-      matchMedia: (q) => ({ matches: q.includes('prefers-reduced-motion') }),
+      matchMedia: (/** @type {string} */ q) => ({ matches: q.includes('prefers-reduced-motion') }),
       addEventListener: () => {}
     }));
 

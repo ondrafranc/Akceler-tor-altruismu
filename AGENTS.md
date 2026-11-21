@@ -20,7 +20,7 @@ Atmosféra webu staví na pocitu **„klidného útočiště“** — návratu t
 - **Kořen je jen obal:** `package.json` s proxy skripty (žádné závislosti, žádný lockfile), `supabase/migrations/` a dokumentace. V kořeni nic neinstaluj ani nespouštěj Vite; kořenové `node_modules/` nebo `.svelte-kit/` jsou omylem vzniklé artefakty a patří smazat.
 - **Vercel** nasazuje s Root Directory `akcelerator-landing-page`; jediná konfigurace je `akcelerator-landing-page/vercel.json`. V kořeni žádný `vercel.json` nevytvářej, Vercel by ho ignoroval.
 - **Node 24** je cílový runtime (`.nvmrc`, `nodejs24.x`, CI). Pole `engines` do `package.json` nepřidávej.
-- **TypeScript:** projekt používá vlastní verzi z `node_modules` a `jsconfig.json` má záměrně explicitní `"strict": false`. Editor s přibaleným novějším TypeScriptem jinak hlásí chyby, které CI nevidí.
+- **TypeScript:** `jsconfig.json` má explicitní `"strict": true` a platí i pro JS soubory (`checkJs`); typy se píší přes JSDoc. Projekt používá vlastní verzi TypeScriptu z `node_modules`.
 
 | Účel | Příkaz (v `akcelerator-landing-page/`) |
 |---|---|
@@ -29,6 +29,8 @@ Atmosféra webu staví na pocitu **„klidného útočiště“** — návratu t
 | Unit testy a invarianty | `npm run test:unit` |
 | Produkční build | `npm run build` |
 | E2E (Playwright, sám si spustí dev server) | `npm test -- tests/<soubor>.spec.ts` |
+
+Během běhu Playwrightu nepouštěj `npm run check` ani `npm run build`: `svelte-kit sync` přepíše generované soubory, Vite znovu načte otevřené stránky a testy spadnou jen kvůli tomu.
 
 Úklid dočasného `git worktree` na Windows: pokud má junction na `node_modules`, nejdřív ji odpoj (`cmd /c rmdir "<worktree>\akcelerator-landing-page\node_modules"`), ověř, že cesta neexistuje, a teprve pak `git worktree remove --force`. Jinak se smažou sdílené závislosti.
 

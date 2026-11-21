@@ -6,8 +6,15 @@
 
 import { cleanTitle } from './utils.js';
 
+/**
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {string} text
+ * @param {number} maxWidth
+ * @returns {string[]}
+ */
 function wrapCanvasText(ctx, text, maxWidth) {
   const words = String(text || '').split(/\s+/).filter(Boolean);
+  /** @type {string[]} */
   const lines = [];
   let current = '';
 
@@ -24,6 +31,14 @@ function wrapCanvasText(ctx, text, maxWidth) {
   return lines;
 }
 
+/**
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x
+ * @param {number} y
+ * @param {number} w
+ * @param {number} h
+ * @param {number} r
+ */
 function roundRectPath(ctx, x, y, w, h, r) {
   const rad = Math.min(r, w / 2, h / 2);
   ctx.beginPath();
@@ -35,6 +50,10 @@ function roundRectPath(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+/**
+ * @param {string} src
+ * @returns {Promise<HTMLImageElement | null>}
+ */
 function loadImageSafe(src) {
   return new Promise((resolve) => {
     if (typeof Image === 'undefined') return resolve(null);
@@ -444,7 +463,9 @@ export async function renderStoryCardPng(opts = {}) {
   ctx.font = '600 22px "Plus Jakarta Sans", system-ui, sans-serif';
   ctx.fillText('45 ověřených tipů z domova • Živá mapa pomoci ve všech 14 krajích ČR', 540, 1794);
 
-  const blob = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'));
+  const blob = await /** @type {Promise<Blob | null>} */ (
+    new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'))
+  );
   const objectUrl =
     blob && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function'
       ? URL.createObjectURL(blob)

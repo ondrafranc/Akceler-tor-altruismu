@@ -68,7 +68,7 @@ export function getPlaceActionHint(place) {
 
 /**
  * Vytvoří přirozenou, nezávaznou šablonu prvního kontaktu (e-mail / zpráva) pro místo na mapě.
- * @param {{ name?: string, kind?: string, subcategory?: string, description?: string, email?: string } | null | undefined} place
+ * @param {{ name?: string, kind?: string, subcategory?: string | null, description?: string | null, email?: string | null } | null | undefined} place
  * @param {string} [userName]
  * @param {string} [userContact]
  * @returns {{ subject: string, body: string, mailtoUrl: string | null }}

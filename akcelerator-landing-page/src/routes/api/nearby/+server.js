@@ -30,7 +30,7 @@ export async function GET({ url, request, getClientAddress }) {
 
   const payload = await getNearbyPlaces({
     lat,
-    lon,
+    lon: /** @type {number} */ (lon),
     radiusM: radius,
     kinds: kindsRaw
   });

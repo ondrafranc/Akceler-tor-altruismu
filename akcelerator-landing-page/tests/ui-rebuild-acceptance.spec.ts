@@ -2944,7 +2944,7 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
             const y0 = Math.max(0, Math.floor(rect.y * scaleY));
             const w = Math.max(1, Math.min(img.width - x0, Math.ceil(rect.width * scaleX)));
             const h = Math.max(1, Math.min(img.height - y0, Math.ceil(rect.height * scaleY)));
-            const data = ctx.getImageData(x0, y0, w, h).data;
+            const data = ctx!.getImageData(x0, y0, w, h).data;
             let minRatio = Infinity;
             for (let i = 0; i < data.length; i += 16) {
               const bg = { r: data[i], g: data[i + 1], b: data[i + 2] };

@@ -11,7 +11,7 @@
    * Shared bridge between MollyCompanion and MollyDock so only a single dock instance is mounted at a time.
    * @type {import('svelte/store').Writable<{
    *   pendingTip: { icon?: string, text: string } | null,
-   *   activeWhisper: { icon?: string, text: string, ts?: number, guide?: boolean, fromDock?: boolean, fromAutoPark?: boolean, fromPet?: boolean, fromToggle?: boolean, fromUnlock?: boolean, fromCelebration?: boolean } | null,
+   *   activeWhisper: import('$lib/types').MollyWhisper | null,
    *   hasFinePointer: boolean,
    *   atHome: boolean,
    *   isParked: boolean,

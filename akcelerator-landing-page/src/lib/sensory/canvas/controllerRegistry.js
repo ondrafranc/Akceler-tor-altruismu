@@ -5,8 +5,13 @@
 
 import { resolveActionEffectSpec } from '../catalog/catalogResolver.js';
 
+/** @type {Set<import('../../types/sensory.js').ImpactCanvasController>} */
 export const activeControllers = new Set();
 
+/**
+ * @param {import('../../types/sensory.js').CanvasBurstTarget | null} [actionOrCanvas=null]
+ * @param {boolean} [superBurst=true]
+ */
 export function triggerCanvasBurst(actionOrCanvas = null, superBurst = true) {
   const isBool = typeof superBurst === 'boolean';
   const sb = isBool ? superBurst : true;

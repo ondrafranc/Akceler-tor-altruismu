@@ -57,6 +57,40 @@
     drawLanternWaterReflection,
   } from "$lib/features/sanctuary/services/sanctuaryLakeRenderer.js";
 
+  /** @typedef {import('$lib/types/deed').MicroAction} MicroAction */
+  /** @typedef {import('$lib/types/progress').LightType} LightType */
+
+  /**
+   * @typedef {{
+   *   actionId: string,
+   *   element: string,
+   *   x: number,
+   *   y: number,
+   *   zone: 'sky' | 'water',
+   *   lightType: LightType
+   * }} DeedSeed
+   */
+
+  /**
+   * @typedef {{
+   *   uid: string,
+   *   id: string,
+   *   title: string,
+   *   element: string,
+   *   fromUrlFallback?: boolean
+   * }} PlantableSeed
+   */
+
+  /**
+   * @typedef {{
+   *   x: number,
+   *   y: number,
+   *   lightType?: LightType
+   * }} LightPlacement
+   */
+
+  /** @typedef {import('$lib/types/progress').QuickDeed} QuickDeed */
+
   /** @type {Record<string, typeof SANCTUARY_ELEMENTS[0]>} */
   const ELEMENT_MAP = Object.fromEntries(
     SANCTUARY_ELEMENTS.map((e) => [e.key, e]),
@@ -74,6 +108,7 @@
 
   // 8 living deed lights seeded across the sky & lake — each linked to a real Czech micro-action
   // 3 semantic light types: lantern (Osobní skutek), star (Inspirace), wave (Pomoc druhému)
+  /** @type {DeedSeed[]} */
   const INSPIRING_DEED_SEEDS = [
     {
       actionId: "zvirata_utulek_online",
@@ -146,8 +181,13 @@
   let ritualInput = $state("");
   let gentleToast = $state("");
   let gentleToastPaw = $state(false);
+  /** @type {ReturnType<typeof setTimeout> | null} */
   let toastTimer = null;
 
+  /**
+   * @param {string} msg
+   * @param {boolean} [withPaw]
+   */
   function showGentleToast(msg, withPaw = false) {
     gentleToast = msg;
     gentleToastPaw = withPaw;
@@ -184,7 +224,8 @@
    */
   function playChime(type) {
     if (!soundEnabled) return;
-    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    const pick = (/** @type {number[]} */ arr) =>
+      arr[Math.floor(Math.random() * arr.length)];
     if (type === "hover") {
       playSanctuaryChime(
         pick([880, 987.77, 1046.5, 1174.66, 1318.51]),
@@ -231,12 +272,17 @@
   let proofIndex = $state(0);
   const currentProof = $derived(HOPE_PROOFS[proofIndex % HOPE_PROOFS.length]);
 
+  /** @type {Record<string, string>} */
   const ACTION_ALIASES = {
     "click-and-feed": "zvirata_utulek_online",
     click_and_feed: "zvirata_utulek_online",
     mapswipe: "missing_maps",
   };
 
+  /**
+   * @param {string} rawSeed
+   * @returns {MicroAction | null}
+   */
   function resolveActionFromSeed(rawSeed) {
     if (!rawSeed) return null;
     const cleaned = String(rawSeed).trim();
@@ -267,6 +313,10 @@
     }
   });
 
+  /**
+   * @param {string} raw
+   * @returns {string}
+   */
   function humanizeSeedFallback(raw) {
     const trimmed = cleanTitle(raw);
     if (!trimmed || /^(true|false|\d+|step|seed|custom)$/i.test(trimmed)) {
@@ -326,6 +376,10 @@
     new Set(($completedSteps || []).map((s) => s.id)),
   );
 
+  /**
+   * @param {PlantableSeed | null} seed
+   * @param {LightPlacement} pos
+   */
   function plantActiveSeed(seed, pos) {
     if (!seed) return;
     urlSeedPlanted = true;
@@ -345,6 +399,11 @@
     }
   }
 
+  /**
+   * @param {number} index
+   * @param {string} elementKey
+   * @returns {{ x: number, y: number, zone: 'water' | 'sky', lightType?: LightType }}
+   */
   function deterministicPos(index, elementKey) {
     const golden = (index * 0.61803398875 + 0.17) % 1;
     const x = 0.14 + golden * 0.72;
@@ -369,35 +428,38 @@
   }
 
   const seededDeedLights = $derived(
-    INSPIRING_DEED_SEEDS.filter(
-      (seed) => !completedActionIds.has(seed.actionId),
-    )
-      .map((seed) => {
-        const action = ACTION_BY_ID[seed.actionId];
-        if (!action) return null;
-        return {
-          uid: `seed-${seed.actionId}`,
-          actionId: seed.actionId,
-          action,
-          title: action.title,
-          note: "",
-          concreteImpact:
-            action.concreteImpact || action.whyItMatters || action.desc,
-          orgName: action.org || "",
-          minutes: action.timeMinutes || 0,
-          url: action.url || "",
-          element: seed.element,
-          x: seed.x,
-          y: seed.y,
-          zone: resolveSanctuaryZone(seed.zone, seed.y),
-          lightType:
-            seed.lightType || (seed.zone === "sky" ? "star" : "lantern"),
-          isMine: false,
-        };
-      })
-      .filter(Boolean),
+    /** @type {LightItem[]} */ (
+      INSPIRING_DEED_SEEDS.filter(
+        (seed) => !completedActionIds.has(seed.actionId),
+      )
+        .map(/** @returns {LightItem | null} */ (seed) => {
+          const action = ACTION_BY_ID[seed.actionId];
+          if (!action) return null;
+          return {
+            uid: `seed-${seed.actionId}`,
+            actionId: seed.actionId,
+            action,
+            title: action.title,
+            note: "",
+            concreteImpact:
+              action.concreteImpact || action.whyItMatters || action.desc,
+            orgName: action.org || "",
+            minutes: action.timeMinutes || 0,
+            url: action.url || "",
+            element: seed.element,
+            x: seed.x,
+            y: seed.y,
+            zone: resolveSanctuaryZone(seed.zone, seed.y),
+            lightType:
+              seed.lightType || (seed.zone === "sky" ? "star" : "lantern"),
+            isMine: false,
+          };
+        })
+        .filter(Boolean)
+    ),
   );
 
+  /** @type {LightItem[]} */
   const userLights = $derived([
     ...($completedSteps || [])
       .filter((s) => !s.awaitingPlant || s.plantedPos)
@@ -457,25 +519,7 @@
   const activeLights = $derived([...seededDeedLights, ...userLights]);
   const myDeedsCount = $derived(userLights.length);
 
-  /**
-   * @typedef {{
-   *   uid?: string,
-   *   actionId?: string,
-   *   title?: string,
-   *   note?: string,
-   *   concreteImpact?: string,
-   *   orgName?: string,
-   *   minutes?: number,
-   *   url?: string,
-   *   element?: string,
-   *   x: number,
-   *   y: number,
-   *   zone?: 'sky' | 'water',
-   *   lightType?: string,
-   *   isMine?: boolean,
-   *   [key: string]: unknown
-   * }} LightItem
-   */
+  /** @typedef {import('$lib/types/progress').SanctuaryLight} LightItem */
 
   /** @type {LightItem | null} */
   let selectedLight = $state(null);
@@ -516,6 +560,10 @@
   const MOLLY_BOWL_POS = { x: 0.19, y: 0.73 };
 
   // Trajektorie břehu tůně: nx ≈ 0.20 až 0.44, ny ≈ 0.72 + (nx - 0.24) * 0.04
+  /**
+   * @param {number} nx
+   * @returns {number}
+   */
   function getLakeshoreY(nx) {
     return 0.72 + (nx - 0.24) * 0.04;
   }
@@ -620,6 +668,9 @@
     }
   }
 
+  /**
+   * @param {boolean} isInhale
+   */
   function spawnBreathWave(isInhale) {
     targetBreathScale = isInhale ? 1.32 : 0.82;
     waterRipples.push({
@@ -645,6 +696,11 @@
 
   /**
    * Full cinematic bloom + comet/lantern ceremony
+   * @param {number} nx
+   * @param {number} ny
+   * @param {string} [color]
+   * @param {boolean} [isWater]
+   * @param {boolean} [withLaunchArc]
    */
   function triggerLightBloom(
     nx,
@@ -681,6 +737,13 @@
     detonateBloomAt(nx, ny, color, isWater, withLaunchArc ? 0.55 : 1);
   }
 
+  /**
+   * @param {number} nx
+   * @param {number} ny
+   * @param {string} [color]
+   * @param {boolean} [isWater]
+   * @param {number} [intensity]
+   */
   function detonateBloomAt(
     nx,
     ny,
@@ -809,6 +872,9 @@
     playChime(next.zone === "water" ? "water" : "sky");
   }
 
+  /**
+   * @param {LightItem | null} light
+   */
   function markDeedLightDone(light) {
     if (!light) return;
     const semanticType =
@@ -854,6 +920,9 @@
     );
   }
 
+  /**
+   * @param {QuickDeed} deed
+   */
   function addQuickOfflineDeed(deed) {
     const isWater =
       ritualMode === "water" ||
@@ -891,6 +960,13 @@
     );
   }
 
+  /**
+   * @param {number} nx
+   * @param {number} ny
+   * @param {number} widthOrAspect
+   * @param {number} [height]
+   * @returns {LightItem | null}
+   */
   function findClosestLight(nx, ny, widthOrAspect, height) {
     let width = widthOrAspect;
     let h = height;
@@ -917,6 +993,9 @@
     return closest;
   }
 
+  /**
+   * @param {PointerEvent} e
+   */
   function handlePointerMove(e) {
     if (!stageWrapEl) return;
     const rect = stageWrapEl.getBoundingClientRect();
@@ -977,6 +1056,9 @@
     hoveredLight = null;
   }
 
+  /**
+   * @param {MouseEvent} e
+   */
   function handleStageClick(e) {
     if (!stageWrapEl) return;
     const rect = stageWrapEl.getBoundingClientRect();
@@ -1180,6 +1262,11 @@
     let lastTreatsAttr = "";
 
     // Předrenderované sprity světlušek: 1× gradient místo 54 nových gradientů v každém snímku
+    /**
+     * @param {string} inner
+     * @param {string} mid
+     * @returns {HTMLCanvasElement}
+     */
     function makeGlowSprite(inner, mid) {
       const size = 64;
       const sprite = document.createElement("canvas");
@@ -1264,6 +1351,14 @@
       window.addEventListener("hashchange", handleHashScroll);
     }
 
+    /**
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {number} sx
+     * @param {number} sy
+     * @param {number} outerR
+     * @param {number} innerR
+     * @param {number} [rot]
+     */
     function drawStarSpikes(ctx, sx, sy, outerR, innerR, rot = 0) {
       ctx.save();
       ctx.translate(sx, sy);
@@ -1282,6 +1377,9 @@
       ctx.restore();
     }
 
+    /**
+     * @param {number} nowMs
+     */
     function render(nowMs) {
       const workStart = performance.now();
       const t = nowMs * 0.001;

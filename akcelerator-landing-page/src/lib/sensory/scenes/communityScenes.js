@@ -2,6 +2,8 @@
  * Procedural Canvas 2D scene renderers for community, solidarity, and civic care.
  */
 
+/** @typedef {import('../../types/sensory.js').SceneRenderer} SceneRenderer */
+
 import { clamp01, subP, lerp, easeOut } from '../graphics/math.js';
 import {
   drawGlow,
@@ -14,6 +16,7 @@ import {
   drawFlower
 } from '../graphics/primitives.js';
 
+/** @type {SceneRenderer} */
 export function renderPrismSupport(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // S barvou ven: Broušený skleněný hranol rozkládající soustředěný bílý paprsek do 6barevného spektra
   const rainbow = ['#fb7185', '#fb923c', '#facc15', '#34d399', '#38bdf8', '#c084fc'];
@@ -139,6 +142,7 @@ export function renderPrismSupport(c, { p, prep, wt, cx, cy, by, w, h, cs, red, 
   }
 }
 
+/** @type {SceneRenderer} */
 export function renderSatelliteMap(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // Missing Maps / Lékaři bez hranic: Topografický terén s nezmapovanými obrysy -> Satelitní radar mapující budovy a cesty
   const leftX = cx - spanX + 8;
@@ -239,6 +243,7 @@ export function renderSatelliteMap(c, { p, prep, wt, cx, cy, by, w, h, cs, red, 
   c.restore();
 }
 
+/** @type {SceneRenderer} */
 export function renderDoveAppeal(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // Amnesty apel: Chladné mříže vězení -> Zlatý tah podpisu rozestupující mříže a vzlétající holubice s ratolestí
   const openP = easeOut(subP(p, 0.1, 0.85));
@@ -337,6 +342,7 @@ export function renderDoveAppeal(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fr
   }
 }
 
+/** @type {SceneRenderer} */
 export function renderSeniorLetter(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // Dopis seniorovi: Zavřená šedá obálka v šeru -> Otevírající se klopa, vysouvající se vřelý dopis a srdce
   const envW = 58;
@@ -419,6 +425,7 @@ export function renderSeniorLetter(c, { p, prep, wt, cx, cy, by, w, h, cs, red, 
   }
 }
 
+/** @type {SceneRenderer} */
 export function renderOwlShield(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // Moudrá Sovička: Telefon obklopený podvodnými vykřičníky -> Ochranná křídla sovy ve tvaru štítu a zelená fajfka
   const shP = easeOut(p);
@@ -491,6 +498,7 @@ export function renderOwlShield(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fra
   }
 }
 
+/** @type {SceneRenderer} */
 export function renderMemoryWave(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // Paměť národa: Tiché archivní cívky s prověšeným páskem -> Otáčející se zlaté cívky a živá hlasová vlna
   const playP = easeOut(p);
@@ -544,6 +552,7 @@ export function renderMemoryWave(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fr
   }
 }
 
+/** @type {SceneRenderer} */
 export function renderBookBooth(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // Knihobudka: Zavřená pouliční skříňka s 1 osamělou knihou -> Otevřená dvířka, plné police barevných knih a hvězdy příběhů
   const cabW = 46;
@@ -608,6 +617,7 @@ export function renderBookBooth(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fra
   }
 }
 
+/** @type {SceneRenderer} */
 export function renderParcelShare(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // Nevyhazujto: Dva zhasnuté sousední domky a krabice v koutě -> Rozsvícená okna a balíček letící obloukem k sousedovi
   const hY = by - 4;
@@ -669,6 +679,7 @@ export function renderParcelShare(c, { p, prep, wt, cx, cy, by, w, h, cs, red, f
   }
 }
 
+/** @type {SceneRenderer} */
 export function renderPhoneRecycle(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // Remobil: Prasklý odložený mobil -> Recyklační proud mědi a zlata měnící se v charitativní minci a lístek
   const phX = cx - 28;
@@ -736,6 +747,7 @@ export function renderPhoneRecycle(c, { p, prep, wt, cx, cy, by, w, h, cs, red, 
   }
 }
 
+/** @type {SceneRenderer} */
 export function renderCampfireGroup(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // Hnutí Brontosaurus: Nezapálené dříví v kamenném kruhu pod tmavými smrky -> Plápolající táborák ozařující les a jiskry
   const fireY = by - 5;
@@ -801,6 +813,7 @@ export function renderCampfireGroup(c, { p, prep, wt, cx, cy, by, w, h, cs, red,
   }
 }
 
+/** @type {SceneRenderer} */
 export function renderGlobeBridge(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // INEX-SDA: Planeta s oddělenými břehy -> Visutý světelný most propojující kontinenty a barevné lucerny
   const brP = easeOut(p);
@@ -849,6 +862,7 @@ export function renderGlobeBridge(c, { p, prep, wt, cx, cy, by, w, h, cs, red, f
   }
 }
 
+/** @type {SceneRenderer} */
 export function renderWheelsMotion(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // Kola pro Afriku: Zaprášené nehybné kolo ve stínu -> Roztočená kola jedoucí za vycházejícím sluncem ke škole
   const rideP = easeOut(p);
@@ -921,6 +935,7 @@ export function renderWheelsMotion(c, { p, prep, wt, cx, cy, by, w, h, cs, red, 
   c.stroke();
 }
 
+/** @type {SceneRenderer} */
 export function renderSafeCrosswalk(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // Chodci sobě: Vozíček/kočárek zastavený před ostrým obrubníkem -> Sklopená smaragdová rampa a plynulý přejezd přes zebru
   const streetY = by - 5;
@@ -1029,6 +1044,7 @@ export function renderSafeCrosswalk(c, { p, prep, wt, cx, cy, by, w, h, cs, red,
   }
 }
 
+/** @type {SceneRenderer} */
 export function renderKineticSteps(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // EPP Pomáhej pohybem: Klidná dráha a vybitá kapsle -> Kinetické kroky nabíjející baterii pomoci na 100 %
   const kinP = easeOut(p);
@@ -1081,6 +1097,7 @@ export function renderKineticSteps(c, { p, prep, wt, cx, cy, by, w, h, cs, red, 
   }
 }
 
+/** @type {SceneRenderer} */
 export function renderShoeboxGift(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // Krabice od bot: Zavřená převázaná krabice -> Rozvázaná stuha, nadzdvižené víko a kužel kouzelných hvězd
   const boxW = 46;
@@ -1135,6 +1152,7 @@ export function renderShoeboxGift(c, { p, prep, wt, cx, cy, by, w, h, cs, red, f
   c.restore();
 }
 
+/** @type {SceneRenderer} */
 export function renderAngelWings(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // Dobrý anděl: Vychýlené váhy nejistoty se složenými křídly -> 100% dar vyrovnávající váhy a 3vrstvá opeřená andělská křídla
   const angP = easeOut(p);
@@ -1228,6 +1246,7 @@ export function renderAngelWings(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fr
   drawHeart(c, cx, cy - 4, 4.8 + angP * 2.4, angP > 0.25 ? '#fb7185' : '#fde047');
 }
 
+/** @type {SceneRenderer} */
 export function renderCharityCare(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // Charita ČR: Zhasnuté 4tabulkové venkovské okénko -> Medově rozsvícený domov pod ochrannou střechou se srdcem péče
   const winW = 38;
@@ -1269,6 +1288,7 @@ export function renderCharityCare(c, { p, prep, wt, cx, cy, by, w, h, cs, red, f
   }
 }
 
+/** @type {SceneRenderer} */
 export function renderSolidarityBridge(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // Znesnáze21 / Dobrovolnictví: Rozlomený nedokončený oblouk mezi dvěma břehy -> Světelný most spojující dva lidi
   const brP = easeOut(p);

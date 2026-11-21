@@ -12,22 +12,37 @@ import {
 
 export { ACTION_EFFECT_CATALOG, VOLUNTEER_EFFECT_SPEC, MODE_LOOKUP };
 
-/** @type {((action: unknown, opts?: unknown) => unknown) | null} */
+/**
+ * @typedef {import('../../types/sensory.js').ActionEffectSpec} ActionEffectSpec
+ * @typedef {import('../../types/sensory.js').EffectActionInput} EffectActionInput
+ * @typedef {import('../../types/sensory.js').ResolvedActionEffectMeta} ResolvedActionEffectMeta
+ * @typedef {(...args: Parameters<typeof import('../../mollyStore.js').notifyMollySpark>) => unknown} MollySparkNotifier
+ */
+
+/** @type {MollySparkNotifier | null} */
 export let mollySparkNotifier = null;
 
 /**
  * Registers the Molly spark callback without creating a circular top-level import (M13 / AUDIT #3).
- * @param {(action: unknown, opts?: unknown) => unknown} fn
+ * @param {MollySparkNotifier} fn
  */
 export function registerMollyNotifier(fn) {
   mollySparkNotifier = typeof fn === 'function' ? fn : null;
 }
 
+/**
+ * @param {EffectActionInput} a
+ * @returns {boolean}
+ */
 export const isAnimalAction = (a) =>
   /zvirata_utulek_online|donio_utulky|click[-_]and[-_]feed|utulek|útulk|misk/i.test(
     `${a?.id || ''} ${a?.category || ''} ${a?.kind || ''} ${a?.subcategory || ''} ${a?.title || ''} ${a?.name || ''}`
   );
 
+/**
+ * @param {EffectActionInput} action
+ * @returns {ActionEffectSpec}
+ */
 export function resolveActionEffectSpec(action) {
   if (!action) return ACTION_EFFECT_CATALOG.zvirata_utulek_online;
   if (typeof action === 'string') {
@@ -68,6 +83,12 @@ export function resolveActionEffectSpec(action) {
   return ACTION_EFFECT_CATALOG.charita_dar;
 }
 
+/**
+ * @param {EffectActionInput} action
+ * @param {number | null} [currentVal]
+ * @param {{ isReturnStrip?: boolean }} [opts]
+ * @returns {ResolvedActionEffectMeta}
+ */
 export function getActionEffectMeta(action, currentVal, opts = {}) {
   const spec = resolveActionEffectSpec(action);
   const val =

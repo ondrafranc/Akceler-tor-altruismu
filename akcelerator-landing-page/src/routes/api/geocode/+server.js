@@ -9,6 +9,9 @@ import {
   resolveClientKey
 } from '$lib/security.js';
 
+/** @typedef {import('$lib/types').GeocodePlaceItem} GeocodePlaceItem */
+/** @typedef {{ results: Array<GeocodePlaceItem>, fallback?: boolean }} GeocodePayload */
+
 /** @type {Map<string, { expiresAt: number, data: unknown }>} */
 const CACHE = new Map();
 /** @type {Map<string, Promise<unknown>>} */
@@ -77,6 +80,10 @@ const LOCAL_CZECH_TOWNS = [
   { label: 'Blansko, Jihomoravský kraj, Česko', lat: 49.3631, lon: 16.6445, type: 'city' }
 ];
 
+/**
+ * @param {string | null | undefined} str
+ * @returns {string}
+ */
 function stripDiacritics(str) {
   return String(str || '')
     .normalize('NFD')
@@ -84,6 +91,11 @@ function stripDiacritics(str) {
     .toLowerCase();
 }
 
+/**
+ * @param {string} q
+ * @param {number} [limit=5]
+ * @returns {Array<GeocodePlaceItem>}
+ */
 function searchLocalTowns(q, limit = 5) {
   const normQ = stripDiacritics(q).trim();
   if (!normQ) return [];
@@ -132,6 +144,11 @@ async function scheduleNominatimRequest(minIntervalMs = 1100) {
   }
 }
 
+/**
+ * @param {string} q
+ * @param {number} limit
+ * @returns {Promise<GeocodePayload>}
+ */
 async function fetchNominatim(q, limit) {
   await scheduleNominatimRequest();
 

@@ -66,6 +66,7 @@ describe('M2 #1: PATCH /api/submissions auth-before-ratelimit', () => {
     const badSecrets = ['', 'short', 'x'.repeat(128), 'wrong-secret'];
     for (let i = 0; i < 16; i++) {
       const secret = badSecrets[i % badSecrets.length];
+      /** @type {Record<string, string>} */
       const headers = secret ? { 'x-moderator-secret': secret } : {};
       const res = await submissionsPatch(
         /** @type {*} */ ({
@@ -639,6 +640,10 @@ describe('M2 #4c: /api/geocode queue wait cap & dead state removal', () => {
       })
     );
 
+    /**
+     * @param {string} q
+     * @param {string} ip
+     */
     const makeReq = (q, ip) => {
       const url = new URL(`http://localhost/api/geocode?q=${encodeURIComponent(q)}&limit=3`);
       return geocodeGet(

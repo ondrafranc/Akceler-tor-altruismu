@@ -15,7 +15,7 @@ test.describe('Empirical Challenger R2 — Delayed Gratification & Anti-Spam Imm
   test.beforeEach(async ({ page }) => {
     const origGoto = page.goto.bind(page);
     page.goto = async (url, options) => {
-      let res;
+      let res!: Awaited<ReturnType<typeof origGoto>>;
       for (let attempt = 1; attempt <= 7; attempt++) {
         try {
           res = await origGoto(url, options);

@@ -2,9 +2,37 @@
  * Canonical User Progress and Sanctuary Type Definitions.
  */
 
-import type { SanctuaryElement } from './deed.js';
+import type { MicroAction, SanctuaryElement } from './deed.js';
 
 export type LightType = 'lantern' | 'star' | 'wave';
+
+/** One light on the `/svet` scene: a seeded catalog deed or the visitor's own record. */
+export interface SanctuaryLight {
+  uid: string;
+  actionId: string;
+  action: MicroAction | null;
+  title: string;
+  note: string;
+  concreteImpact: string;
+  orgName: string;
+  minutes: number;
+  url: string;
+  element: string;
+  x: number;
+  y: number;
+  zone: 'sky' | 'water';
+  lightType: LightType;
+  isMine: boolean;
+}
+
+/** A one-tap offline deed offered by the `RitualBar`. */
+export interface QuickDeed {
+  icon?: string;
+  label: string;
+  title: string;
+  element: string;
+  lightType: LightType;
+}
 
 export interface PlantedPosition {
   x: number;

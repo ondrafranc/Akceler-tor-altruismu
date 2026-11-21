@@ -4,6 +4,7 @@
   import {
     mollyState,
     mollyEvents,
+    mollyGuideHold,
     petMolly,
     feedMolly,
     mollyWhisper
@@ -20,6 +21,13 @@
   import { drawMollyCat as renderProceduralMollyCat } from '$lib/molly/mollyCatRenderer.js';
   import AppIcon from '$lib/components/AppIcon.svelte';
   import MollyDock, { isCompactDock, mollyDockBridge, normalizeMollyIcon } from './MollyDock.svelte';
+
+  /**
+   * @typedef {import('$lib/types').MollyWhisper} MollyWhisper
+   * @typedef {import('$lib/types').MollyState} MollyState
+   * @typedef {ReturnType<typeof setTimeout> | null} TimerHandle
+   * @typedef {{ l: number, t: number, r: number, b: number }} BoxRect
+   */
 
   /** @type {HTMLCanvasElement | null} */
   let catCanvas = $state(null);
@@ -52,11 +60,13 @@
   let stepAside = false;
   let urgentStepAside = false;
   let pendingWhisperMs = 0;
+  /** @type {TimerHandle} */
   let relocateTimer = null;
   // Nevyžádaný tip (průvodce), pro který teď není volné místo: zkusíme to znovu, a když ani pak
   // ne, uloží se do pelíšku jako nevtíravý indikátor — ukáže se až na klepnutí (nic nezakryje sám od sebe).
   /** @type {{ icon?: string, text: string } | null} */
   let pendingTip = $state(null);
+  /** @type {TimerHandle} */
   let deferTimer = null;
   let deferTries = 0;
   let lastSeenWhisperTs = 0;
@@ -101,19 +111,29 @@
   let lastPointerMoveTs = 0;
 
   // Ambient firefly & heart particles around Molly
+  /** @type {{ x: number, y: number, vx: number, vy: number, phase: number, alpha: number } | null} */
   let firefly = null; // { x, y, vx, vy, phase, alpha }
+  /** @type {Array<{ x: number, y: number, vx: number, vy: number, scale: number, alpha: number, color: string }>} */
   let hearts = []; // { x, y, vy, scale, alpha, color }
+  /** @type {{ x0: number, y0: number, cx: number, cy: number, x1: number, y1: number, p: number, follow: boolean, icon: import('$lib/icons/iconRegistry.js').IconKey, color: string, name: string } | null} */
   let flyingTreat = null; // { x0, y0, cx, cy, x1, y1, p, icon, color, name }
   /** @type {{ icon: string, color: string, x0: number, y0: number } | null} */
   let flyingTreatView = $state(null); // { icon, color } — jediná reaktivní část letící dobroty
   let lastTreatTransform = '';
 
   // Whisper bubble visibility
-  /** @type {{ icon?: string, text: string, ts?: number, guide?: boolean, fromDock?: boolean, fromAutoPark?: boolean, fromPet?: boolean, fromToggle?: boolean, fromUnlock?: boolean, fromCelebration?: boolean, routePath?: string } | null} */
+  /** @type {MollyWhisper | null} */
   let activeWhisper = $state(null);
+  /** @type {TimerHandle} */
   let whisperHideTimer = null;
+  /** @type {TimerHandle} */
   let walkArriveSafetyTimer = null;
   let dockAnchoredBubble = false;
+  // Nová šeptanda čeká na placeWhisperBubble. Do té doby ji žádné jiné přeměření nezměří,
+  // takže o místě pro ni (nebo o jejím potlačení) rozhodne jako první právě placeWhisperBubble.
+  let bubblePlacementPending = false;
+  // Kdy naposledy místo Molly promluvila oslava v kartě (potlačená odměnová šeptanda).
+  let celebrationSpokeTs = 0;
   let bubbleTravelling = $state(false);
   let forceDockWhisper = $state(false);
   let bubbleReady = $state(false);
@@ -123,8 +143,13 @@
   /** @type {{ ts: number, side: 'above' | 'left' | 'right' | 'dock', dx: number, dy: number, fixedRect: { l: number, t: number, r: number, b: number } | null } | null} */
   let lockedBubbleAnchor = null;
 
+  /** @type {import('svelte/store').Unsubscriber | null} */
   let unsubEvents = null;
+  /** @type {import('svelte/store').Unsubscriber | null} */
   let unsubState = null;
+  /** @type {import('svelte/store').Unsubscriber | null} */
+  let unsubGuideHold = null;
+  /** @type {Pick<MollyState, 'mode' | 'mood' | 'treatsFedTotal' | 'treatsFedToday' | 'availableTreats' | 'lastTreat' | 'petCount' | 'whisper'>} */
   let currentState = {
     mode: 'roaming',
     mood: 'curious',
@@ -136,6 +161,10 @@
     whisper: null
   };
 
+  /**
+   * @param {MollyWhisper | null | undefined} whisperObj
+   * @param {number} [durationMs]
+   */
   function showWhisperBubble(whisperObj, durationMs = 4200) {
     if (!whisperObj?.text) return;
     activeWhisper = whisperObj;
@@ -155,6 +184,7 @@
     dockAnchoredBubble = false;
     forceDockWhisper = false;
     whisperHideTimer = setTimeout(hideWhisperBubble, durationMs);
+    bubblePlacementPending = true;
     placeWhisperBubble();
   }
 
@@ -164,6 +194,7 @@
     whisperHideTimer = null;
     walkArriveSafetyTimer = null;
     activeWhisper = null;
+    bubblePlacementPending = false;
     bubbleW = 0;
     bubbleH = 0;
     dockAnchoredBubble = false;
@@ -184,7 +215,10 @@
     deferTries = 0;
   }
 
-  /** Tip průvodce teď nemá kam — zkusíme ho ukázat znovu (obsah se mezitím mohl posunout). */
+  /**
+   * Tip průvodce teď nemá kam — zkusíme ho ukázat znovu (obsah se mezitím mohl posunout).
+   * @param {MollyWhisper} w
+   */
   function deferGuideWhisper(w) {
     hideWhisperBubble();
     if (deferTimer) clearTimeout(deferTimer);
@@ -250,6 +284,15 @@
   }
 
   /**
+   * Odměnová šeptanda (pamlsek čeká, díky za pamlsek) opakuje to, co už říká oslava přímo v kartě.
+   * Volá se jen z placeWhisperBubble, nikdy z rAF smyčky.
+   * @param {MollyWhisper} w
+   */
+  function repeatsInlineCelebration(w) {
+    return Boolean((w.fromUnlock || w.fromCelebration) && document.querySelector('.in-situ-celebration'));
+  }
+
+  /**
    * Po vykreslení bubliny změří její velikost a když by bublina nebo Molly zakrývaly
    * tlačítko, odkaz, pole formuláře nebo nadpis, najde 100% volné místo.
    */
@@ -257,6 +300,7 @@
     const scheduledTs = activeWhisper?.ts || 0;
     await svelteTick();
     if (!activeWhisper || (activeWhisper.ts || 0) !== scheduledTs || typeof window === 'undefined') return;
+    bubblePlacementPending = false;
     if (!bubbleEl) {
       if (activeWhisper.routePath) {
         markSessionList(HINTS_KEY, activeWhisper.routePath);
@@ -339,11 +383,7 @@
     if ($isCompactDock && !activeWhisper.guide) {
       const curScale = actorScale(vw);
       const { obsCost } = findBestWhisperRectWithCost(posX, posY, curScale, vw, vh);
-      const inlineCelebrationVisible = Boolean(
-        (activeWhisper.fromUnlock || activeWhisper.fromCelebration) &&
-          document.querySelector('.in-situ-celebration')
-      );
-      if (obsCost > 0 && inlineCelebrationVisible) {
+      if (obsCost > 0 && repeatsInlineCelebration(activeWhisper)) {
         hideWhisperBubble();
         return;
       }
@@ -386,6 +426,17 @@
       return;
     }
 
+    // Desktop: stejné pravidlo jako na úzké obrazovce. Kvůli šeptandě, která jen opakuje oslavu
+    // v kartě, Molly nikam neodchází; když se bublina nevejde tam, kde Molly je, neukáže se.
+    if (currentState.mode === 'roaming' && !atHome && !crowdedPark && repeatsInlineCelebration(activeWhisper)) {
+      const rest = mollyRestPoint();
+      if (bubbleBlockedAt(rest.x, rest.y, actorScale(vw), vw, vh)) {
+        celebrationSpokeTs = Date.now();
+        hideWhisperBubble();
+        return;
+      }
+    }
+
     const moving = relocateToFreeSpot(true);
     if (moving && Math.hypot(targetX - posX, targetY - posY) > 18) {
       hurry = true;
@@ -394,12 +445,7 @@
       bubbleReady = false;
       bubbleEl.classList.add('is-travelling');
       if (whisperHideTimer) clearTimeout(whisperHideTimer);
-      if (walkArriveSafetyTimer) clearTimeout(walkArriveSafetyTimer);
-      walkArriveSafetyTimer = setTimeout(() => {
-        walkArriveSafetyTimer = null;
-        onArrived();
-        applyActorTransform();
-      }, 850);
+      armWalkArriveSafety();
     } else {
       bubbleTravelling = false;
       bubbleEl.classList.remove('is-travelling');
@@ -436,6 +482,7 @@
     }
   }
 
+  /** @param {import('$lib/types/molly.js').MollyTreat | null | undefined} treat */
   function launchViewportTreatToMolly(treat) {
     if (typeof window === 'undefined') return;
     const vw = window.innerWidth || 1280;
@@ -607,6 +654,13 @@
     cachedWhisperRect = null;
   }
 
+  /** Přeměří bublinu, kterou už placeWhisperBubble umístil; nově ohlášenou šeptandu nepředbíhá. */
+  function refreshBubbleSize() {
+    if (!bubbleEl || bubblePlacementPending) return;
+    bubbleW = bubbleEl.offsetWidth;
+    bubbleH = bubbleEl.offsetHeight;
+  }
+
   /**
    * Měření překážek a metrik layoutu VÝHRADNĚ mimo requestAnimationFrame smyčku.
    * Spouští se pouze v debouncovaných listenerech na resize, scroll a změnu trasy.
@@ -661,10 +715,7 @@
     }
 
     layoutMetricsCache = { ts: now, vw, vh, clientW, groundY, topNavBottom, dock, crisis, feedback, sanctuaryPill };
-    if (bubbleEl) {
-      bubbleW = bubbleEl.offsetWidth;
-      bubbleH = bubbleEl.offsetHeight;
-    }
+    refreshBubbleSize();
     const measured = measureObstaclesPair(vw, vh);
     cachedObstacles = measured.catObstacles;
     cachedFullObstacles = measured.bubbleObstacles;
@@ -710,7 +761,11 @@
     return { ...layoutMetricsCache, vw, vh, clientW: clientViewportWidth(vw), groundY };
   }
 
-  /** Svislá „chodníková“ linie u spodního okraje obrazovky. */
+  /**
+   * Svislá „chodníková“ linie u spodního okraje obrazovky.
+   * @param {number} vw
+   * @param {number} vh
+   */
   function groundLine(vw, vh) {
     return ensureLayoutMetrics(vw, vh).groundY;
   }
@@ -754,6 +809,11 @@
     return { minX: left, maxX: Math.max(left + 40, right) };
   }
 
+  /**
+   * @param {number} x
+   * @param {number} s
+   * @param {number} clientW
+   */
   function clampActorX(x, s, clientW) {
     const halfDomW = LOGICAL_W * 0.5 * s;
     const minSafeX = Math.ceil(halfDomW + 1.5);
@@ -761,20 +821,42 @@
     return Math.max(minSafeX, Math.min(maxSafeX, x));
   }
 
+  /**
+   * @param {number} y
+   * @param {number} s
+   */
   function visualEarTop(y, s) {
     return Math.round(y - 66 * s);
   }
 
+  /**
+   * @param {number} y
+   * @param {number} s
+   * @param {BoxRect} cat
+   */
   function aboveBubbleBottom(y, s, cat) {
     return Math.min(visualEarTop(y, s) - 8, Math.floor(cat.t - 4));
   }
 
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @param {number} s
+   * @returns {BoxRect}
+   */
   function catRectAt(x, y, s) {
     const halfW = LOGICAL_W * 0.5 * s + CAT_SAFETY_X;
     const fullH = LOGICAL_H * s + CAT_SAFETY_TOP;
     return { l: x - halfW, t: y - fullH, r: x + halfW, b: y + CAT_SAFETY_BOTTOM };
   }
 
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @param {number} s
+   * @param {number} vw
+   * @returns {BoxRect | null}
+   */
   function defaultBubbleRectAt(x, y, s, vw) {
     if (!bubbleW || !bubbleH) return null;
     const clientW = clientViewportWidth(vw);
@@ -786,6 +868,11 @@
     return { l: left, t: top, r: left + bubbleW, b: top + bubbleH };
   }
 
+  /**
+   * @param {BoxRect | null} rect
+   * @param {number} vw
+   * @param {number} vh
+   */
   function rectOverlapWithObstaclesAndControls(rect, vw, vh) {
     if (!rect) return 0;
     let area = 0;
@@ -798,6 +885,13 @@
     return area;
   }
 
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @param {number} s
+   * @param {number} vw
+   * @returns {BoxRect | null}
+   */
   function dockAnchoredBubbleRect(x, y, s, vw) {
     const d = dockRect();
     if (!d || d.top < 96) return null;
@@ -841,7 +935,7 @@
     const cat = catVisible ? catRectAt(cx, y, s) : null;
     const maxBubbleLeft = Math.max(8, clientW - 8 - bubbleW);
 
-    const calcFullObsCost = (rect) => {
+    const calcFullObsCost = (/** @type {BoxRect} */ rect) => {
       let obsCost = 0;
       for (const o of obstacles) {
         const area = overlapArea(rect, o);
@@ -857,7 +951,7 @@
       return obsCost;
     };
 
-    const calcProtectedOverlap = (rect) => {
+    const calcProtectedOverlap = (/** @type {BoxRect} */ rect) => {
       let ov = 0;
       if (cat) ov += overlapArea(rect, cat);
       const d = metrics.dock;
@@ -873,7 +967,7 @@
     // When Molly is visibly roaming (all viewports, all whisper types), anchor strictly
     // inside her adjacent ring (above ears, left, or right) — never floating to viewport edges.
     if (catVisible && cat) {
-      const clampX = (v) => Math.max(8, Math.min(maxBubbleLeft, Math.round(v)));
+      const clampX = (/** @type {number} */ v) => Math.max(8, Math.min(maxBubbleLeft, Math.round(v)));
       const earTop = visualEarTop(y, s);
       const aboveBottom = aboveBubbleBottom(y, s, cat);
       const baseAboveTop = aboveBottom - bubbleH;
@@ -881,6 +975,11 @@
       /** @type {Array<{ l: number, t: number, side: 'above' | 'left' | 'right' }>} */
       const cands = [];
       const seen = new Set();
+      /**
+       * @param {number} l
+       * @param {number} t
+       * @param {'above' | 'left' | 'right'} side
+       */
       const pushCand = (l, t, side) => {
         const rl = Math.round(l);
         const rt = Math.round(t);
@@ -1119,6 +1218,13 @@
     return { rect: dockRectCand, obsCost: calcFullObsCost(dockRectCand), anchorSide: 'dock' };
   }
 
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @param {number} s
+   * @param {number} vw
+   * @param {number} vh
+   */
   function findBestWhisperRect(x, y, s, vw, vh) {
     return findBestWhisperRectWithCost(x, y, s, vw, vh).rect;
   }
@@ -1288,6 +1394,13 @@
     forceDockWhisper = true;
   }
 
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @param {number} s
+   * @param {number} vw
+   * @param {number} vh
+   */
   function getMemoizedWhisperRect(x, y, s, vw, vh) {
     const key = `${Math.round(x)}|${Math.round(y)}|${s}|${vw}|${vh}|${bubbleW}|${bubbleH}|${layoutMetricsCache.ts}|${currentState.mode}|${atHome ? 1 : 0}|${crowdedPark ? 1 : 0}|${activeWhisper?.fromDock ? 1 : 0}|${activeWhisper?.ts || 0}`;
     if (key === cachedWhisperRectKey && cachedWhisperRect) {
@@ -1299,6 +1412,12 @@
     return rect;
   }
 
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @param {number} s
+   * @param {number} vw
+   */
   function bubbleRectAt(x, y, s, vw) {
     if (!bubbleW || !bubbleH) return null;
     const { vh } = viewportSize();
@@ -1608,6 +1727,10 @@
     return fullViewport ? cachedFullObstacles : cachedObstacles;
   }
 
+  /**
+   * @param {number} anchorX
+   * @param {number} anchorY
+   */
   function findBestBubbleRect(anchorX, anchorY) {
     const { vw } = viewportSize();
     const s = actorScale(vw);
@@ -1620,6 +1743,10 @@
     return ensureLayoutMetrics(vw, vh).crisis;
   }
 
+  /**
+   * @param {BoxRect} a
+   * @param {BoxRect} b
+   */
   function overlapArea(a, b) {
     const w = Math.min(a.r, b.r) - Math.max(a.l, b.l);
     const h = Math.min(a.b, b.b) - Math.max(a.t, b.t);
@@ -2102,9 +2229,21 @@
    */
   function snapMollyToFreeSpot() {
     if (typeof window === 'undefined' || currentState.mode !== 'roaming' || atHome) return;
-    const { vw } = viewportSize();
+    const { vw, vh } = viewportSize();
     const withBub = Boolean(activeWhisper && bubbleW);
-    const spot = findBestSpot({ preferX: posX, withBubble: withBub });
+    // Stejné pravidlo jako v relocateToFreeSpot: o místě i o auto-parku rozhoduje kočka sama.
+    // Místo hledané i pro bublinu se použije jen tehdy, když je čisté pro obě a na desktopu
+    // nezvedá Molly z podlahové linie. Jinak kočka zůstane a bublina si najde ukotvení sama.
+    let spot = findBestSpot({ preferX: posX, withBubble: false });
+    if (withBub) {
+      const bubbleSpot = findBestSpot({ preferX: posX, withBubble: true });
+      const gY = groundLine(vw, vh);
+      const catOnGround = spot.raw <= 0 && Math.abs(spot.y - gY) <= 18;
+      const bubbleKeepsGround = !catOnGround || vw <= 1024 || Math.abs(bubbleSpot.y - gY) <= 18;
+      if (bubbleSpot.raw <= 0 && bubbleKeepsGround) {
+        spot = bubbleSpot;
+      }
+    }
     if (spot.raw > 0 && vw <= 1024) {
       crowdedPark = true;
       lastActorTransform = '';
@@ -2145,6 +2284,28 @@
     }
   }
 
+  /** Místo, kde Molly sedí, nebo kam právě dochází. */
+  function mollyRestPoint() {
+    const walking =
+      behavior === 'WALK_ROAM' && Math.hypot(targetX - posX, targetY - posY) > 3 && !prefersReducedMotion();
+    return { walking, x: walking ? targetX : posX, y: walking ? targetY : posY };
+  }
+
+  /**
+   * Zakryla by bublina něco, kdyby Molly zůstala na (x, y)? Počítá jen s předměřenými překážkami.
+   * @param {number} x
+   * @param {number} y
+   * @param {number} s
+   * @param {number} vw
+   * @param {number} vh
+   */
+  function bubbleBlockedAt(x, y, s, vw, vh) {
+    return (
+      scoreSpot(x, y, s, vw, collectObstacles(vw, vh, false), true) > 0 ||
+      findBestWhisperRectWithCost(x, y, s, vw, vh).obsCost > 0
+    );
+  }
+
   /**
    * Když Molly (a případně bublina) po doscrollování nebo změně obsahu zakrývá tlačítko či text,
    * plynule popojde o pár kroků vedle po stejné podlahové linii `groundLine` — nikdy neteleportuje.
@@ -2156,10 +2317,7 @@
     const { vw, vh } = viewportSize();
     const s = actorScale(vw);
     const obstacles = collectObstacles(vw, vh, false);
-    const walking =
-      behavior === 'WALK_ROAM' && Math.hypot(targetX - posX, targetY - posY) > 3 && !prefersReducedMotion();
-    const baseX = walking ? targetX : posX;
-    const baseY = walking ? targetY : posY;
+    const { walking, x: baseX, y: baseY } = mollyRestPoint();
     const gY = groundLine(vw, vh);
     const curOnFloor = Math.abs(baseY - gY) <= 18;
     const hereBd = !crowdedPark
@@ -2239,9 +2397,7 @@
 
     // Pokud na současném místě nepřekrývá žádný ovládací prvek, nadpis ani výrazný text, v klidu zůstane
     const curPosBd = walking ? scoreSpotBreakdown(posX, posY, s, vw, obstacles, false) : hereBd;
-    const curBubbleBd = withBubble ? scoreSpotBreakdown(baseX, baseY, s, vw, obstacles, true) : hereBd;
-    const bubbleBlockedHere =
-      withBubble && (curBubbleBd.hard > 0 || findBestWhisperRectWithCost(baseX, baseY, s, vw, vh).obsCost > 0);
+    const bubbleBlockedHere = withBubble && bubbleBlockedAt(baseX, baseY, s, vw, vh);
     const deepScrolledCompact = vw <= 1024 && typeof window !== 'undefined' && window.scrollY > 220;
     const insideCompactBand =
       vw > 1024 || baseY - LOGICAL_H * s >= (deepScrolledCompact ? vh * 0.34 : vh - 168);
@@ -2341,7 +2497,47 @@
     return true;
   }
 
-  /** Molly došla na místo — teprve teď ukáže bublinu (s plným časem na přečtení). */
+  /**
+   * Pojistka pro bublinu, která čeká, až Molly dojde. Dokud Molly opravdu jde, bublina zůstává
+   * schovaná: odhalená za chůze by s ní jela přes obsah pod kartou. Kdyby se chůze zastavila
+   * jinak než dojitím (smyčka neběží), Molly zůstane stát a promluví tam, kde je.
+   */
+  function armWalkArriveSafety() {
+    if (walkArriveSafetyTimer) clearTimeout(walkArriveSafetyTimer);
+    const fromX = posX;
+    const fromY = posY;
+    walkArriveSafetyTimer = setTimeout(() => {
+      walkArriveSafetyTimer = null;
+      const walking =
+        behavior === 'WALK_ROAM' &&
+        currentState.mode === 'roaming' &&
+        !atHome &&
+        !crowdedPark &&
+        Math.hypot(targetX - posX, targetY - posY) > 3;
+      if (walking) {
+        // Na skryté záložce smyčka stojí; Molly dojde a promluví, až se člověk vrátí.
+        if (document.hidden || Math.hypot(posX - fromX, posY - fromY) > 1) {
+          armWalkArriveSafety();
+          return;
+        }
+        targetX = posX;
+        targetY = posY;
+        followTargetX = posX;
+        followTargetY = posY;
+        vx = 0;
+        vy = 0;
+        behavior = 'IDLE_SIT';
+        behaviorTimer = 4.0 + Math.random() * 2.5;
+      }
+      onArrived();
+      applyActorTransform();
+    }, 850);
+  }
+
+  /**
+   * Molly došla na místo — teprve teď ukáže bublinu (s plným časem na přečtení).
+   * Volá se, jen když Molly stojí (nebo není vidět), nikdy uprostřed chůze.
+   */
   function onArrived() {
     hurry = false;
     stepAside = false;
@@ -2509,6 +2705,7 @@
     }
   }
 
+  /** @type {TimerHandle} */
   let resizeTimer = null;
   function handleWindowResize() {
     if (typeof window === 'undefined') return;
@@ -2530,20 +2727,15 @@
     targetX = Math.max(minX, Math.min(maxX, targetX));
     posY = Math.max(minFloorY, Math.min(maxFloorY, posY));
     targetY = Math.max(minFloorY, Math.min(maxFloorY, targetY));
-    if (bubbleEl) {
-      bubbleW = bubbleEl.offsetWidth;
-      bubbleH = bubbleEl.offsetHeight;
-    }
+    refreshBubbleSize();
     lastBubbleTransform = '';
     applyActorTransform();
     if (resizeTimer) clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
       resizeTimer = null;
+      syncPlacementSettled();
       measureLayoutAndObstacles();
-      if (bubbleEl) {
-        bubbleW = bubbleEl.offsetWidth;
-        bubbleH = bubbleEl.offsetHeight;
-      }
+      refreshBubbleSize();
       const vs = viewportSize();
       const range = roamRange(vs.vw);
       const floorY = groundLine(vs.vw, vs.vh);
@@ -2567,6 +2759,7 @@
       }
       applyActorTransform();
     }, 60);
+    syncPlacementSettled();
   }
 
   /**
@@ -2674,6 +2867,7 @@
     if (relocateTimer) clearTimeout(relocateTimer);
     relocateTimer = setTimeout(() => {
       relocateTimer = null;
+      syncPlacementSettled();
       measureLayoutAndObstacles();
       const prevTargetX = targetX;
       const prevTargetY = targetY;
@@ -2695,16 +2889,13 @@
       if (!bubbleReady && moving && Math.hypot(targetX - posX, targetY - posY) > 18 && bubbleEl && !activeWhisper?.fromDock) {
         bubbleTravelling = true;
         bubbleEl.classList.add('is-travelling');
-        if (walkArriveSafetyTimer) clearTimeout(walkArriveSafetyTimer);
-        walkArriveSafetyTimer = setTimeout(() => {
-          walkArriveSafetyTimer = null;
-          onArrived();
-          applyActorTransform();
-        }, 850);
+        armWalkArriveSafety();
       }
     }, 95);
+    syncPlacementSettled();
   }
 
+  /** @param {PointerEvent} e */
   function handleWindowPointerMove(e) {
     pointerX = e.clientX;
     pointerY = e.clientY;
@@ -2738,7 +2929,7 @@
         now - lastAvoidTriggerTs > 950 &&
         (behavior !== 'WALK_ROAM' || Math.abs(targetX - pointerX) < 110)
       ) {
-        const el = e.target;
+        const el = /** @type {Element} */ (e.target);
         const hoveredAnchor =
           el && typeof el.closest === 'function' ? el.closest('a[href]') : null;
         const onEmptyBlockCardSurface = Boolean(
@@ -2767,13 +2958,14 @@
   let pendingPetTap = null;
   let suppressBlockCardClickUntil = 0;
 
+  /** @param {PointerEvent} e */
   function handleWindowPointerDown(e) {
     lastInteractionTs = Date.now();
     pendingPetTap = null;
     if (e.button && e.button !== 0) return;
     if (currentState.mode !== 'roaming' || atHome || crowdedPark) return;
 
-    const el = e.target;
+    const el = /** @type {Element} */ (e.target);
     let onBlockCardLink = false;
     if (el && typeof el.closest === 'function') {
       // Native clicks inside .molly-pelisek-dock / bubliny obsluhují jejich vlastní tlačítka
@@ -2818,6 +3010,7 @@
     }
   }
 
+  /** @param {PointerEvent} e */
   function handleWindowPointerUp(e) {
     if (!pendingPetTap) return;
     const tap = pendingPetTap;
@@ -2836,6 +3029,7 @@
     pendingPetTap = null;
   }
 
+  /** @param {MouseEvent} e */
   function handleWindowClickCapture(e) {
     if (Date.now() <= suppressBlockCardClickUntil) {
       suppressBlockCardClickUntil = 0;
@@ -2873,27 +3067,52 @@
     ensureLoopRunning();
   }
 
+  /** @type {(() => void) | null} */
   let handleVisibilityChange = null;
+  /** @type {MediaQueryList | null} */
   let compactDockMql = null;
+  /** @type {((ev: MediaQueryListEvent) => void) | null} */
   let onCompactDockChange = null;
+  /** @type {MediaQueryList | null} */
   let pointerFineMql = null;
+  /** @type {((ev: MediaQueryListEvent) => void) | null} */
   let onPointerFineChange = null;
+  /** @type {TimerHandle} */
   let settleTimer1 = null;
+  /** @type {TimerHandle} */
   let settleTimer2 = null;
+  /** @type {TimerHandle} */
   let layoutChangeTimer = null;
+  /** @type {TimerHandle} */
   let postAnimationTimer = null;
+  /** @type {ResizeObserver | null} */
   let mainResizeObserver = null;
+  /** @type {TimerHandle} */
+  let routeSnapTimer = null;
+  // `data-molly-settled`: žádné odložené přeměření ani usazení polohy Molly už nečeká.
+  // E2E testy na něj čekají místo pevných prodlev.
+  let placementSettled = $state(false);
+
+  function syncPlacementSettled() {
+    placementSettled = !(
+      routeSnapTimer ||
+      settleTimer1 ||
+      settleTimer2 ||
+      layoutChangeTimer ||
+      postAnimationTimer ||
+      resizeTimer ||
+      relocateTimer
+    );
+  }
 
   function schedulePostAnimationRemeasure(delayMs = 320) {
     if (postAnimationTimer) clearTimeout(postAnimationTimer);
     postAnimationTimer = setTimeout(() => {
       postAnimationTimer = null;
+      syncPlacementSettled();
       if (!mounted || atHome) return;
       measureLayoutAndObstacles();
-      if (bubbleEl) {
-        bubbleW = bubbleEl.offsetWidth;
-        bubbleH = bubbleEl.offsetHeight;
-      }
+      refreshBubbleSize();
       if (currentState.mode === 'roaming') {
         relocateToFreeSpot(Boolean(activeWhisper && bubbleW));
       }
@@ -2904,6 +3123,7 @@
         applyActorTransform();
       }
     }, delayMs);
+    syncPlacementSettled();
   }
 
   // ===================== Molly jako průvodkyně (směrování) =====================
@@ -2915,12 +3135,22 @@
   const NUDGE_IDLE_MS = 16000;
   let lastInteractionTs = Date.now();
   let currentPath = '';
+  /** @type {TimerHandle} */
   let hintTimer = null;
+  /** @type {TimerHandle} */
   let nudgeTimer = null;
+  /** @type {TimerHandle} */
   let glowTimer = null;
+  /** @type {Element | null} */
   let glowEl = null;
   let unsubPage = null;
+  // Stránka právě sama něco předvádí (vstupní prohlídka na `/`): průvodcovské šeptandy počkají.
+  let guideHeld = false;
 
+  /**
+   * @param {typeof HINTS_KEY | typeof NUDGES_KEY} key
+   * @returns {string[]}
+   */
   function readSessionList(key) {
     try {
       const raw = safeGetItem(key, 'session');
@@ -2931,6 +3161,10 @@
     }
   }
 
+  /**
+   * @param {typeof HINTS_KEY | typeof NUDGES_KEY} key
+   * @param {string} value
+   */
   function markSessionList(key, value) {
     const list = readSessionList(key);
     if (!list.includes(value)) {
@@ -2939,6 +3173,7 @@
     }
   }
 
+  /** @param {string} path */
   function resolveGuide(path) {
     if (MOLLY_ROUTE_GUIDES[path]) return MOLLY_ROUTE_GUIDES[path];
     const trimmed = path.replace(/\/+$/, '') || '/';
@@ -2949,12 +3184,18 @@
     return Boolean(document.querySelector('[aria-modal="true"], dialog[open]'));
   }
 
+  /** @param {number} ms */
   function whisperRecentlyShown(ms) {
+    // Čerstvá je i odměna, kterou místo bubliny řekla oslava v kartě.
+    if (Date.now() - celebrationSpokeTs < ms) return true;
     return Boolean(activeWhisper && Date.now() - (activeWhisper.ts || 0) < ms);
   }
 
+  /** @param {string} path */
   function scheduleRouteHint(path) {
     if (hintTimer) clearTimeout(hintTimer);
+    hintTimer = null;
+    if (guideHeld) return;
     const guide = resolveGuide(path);
     if (!guide) return;
     if (readSessionList(HINTS_KEY).includes(path)) return;
@@ -2992,6 +3233,8 @@
 
   function scheduleIdleNudge() {
     if (nudgeTimer) clearTimeout(nudgeTimer);
+    nudgeTimer = null;
+    if (guideHeld) return;
     const path = currentPath;
     const guide = resolveGuide(path);
     if (!guide || readSessionList(NUDGES_KEY).includes(path)) return;
@@ -3030,6 +3273,11 @@
     nudgeTimer = setTimeout(check, NUDGE_IDLE_MS);
   }
 
+  /**
+   * @param {Element} el
+   * @param {DOMRect} rect
+   * @param {(typeof MOLLY_ROUTE_GUIDES)[string]} guide
+   */
   function guideMollyTo(el, rect, guide) {
     const ctaCx = rect.left + rect.width * 0.5;
     const ctaCy = rect.top + rect.height * 0.5;
@@ -3090,6 +3338,25 @@
     lastInteractionTs = Date.now();
   }
 
+  /** @param {{ held: boolean, dropNudge: boolean }} hold */
+  function applyGuideHold(hold) {
+    if (hold.held === guideHeld) return;
+    guideHeld = hold.held;
+    if (guideHeld) {
+      if (hintTimer) clearTimeout(hintTimer);
+      hintTimer = null;
+      if (nudgeTimer) clearTimeout(nudgeTimer);
+      nudgeTimer = null;
+      return;
+    }
+    // Klid se počítá až od chvíle, kdy stránka domluvila.
+    lastInteractionTs = Date.now();
+    if (!currentPath) return;
+    if (hold.dropNudge) markSessionList(NUDGES_KEY, currentPath);
+    scheduleRouteHint(currentPath);
+    scheduleIdleNudge();
+  }
+
   function settleInitialPlacementIfNeeded() {
     if (!mounted || atHome || typeof window === 'undefined') return;
     measureLayoutAndObstacles();
@@ -3099,9 +3366,10 @@
     }
     const { vw, vh } = viewportSize();
     const s = actorScale(vw);
-    const withBub = Boolean(activeWhisper && bubbleW);
+    // Usazení posuzuje jen kočku. Rozsvícenou šeptandu už umístil placeWhisperBubble; kdyby se tu
+    // započítala znovu, kočka i bublina by uprostřed šeptandy přeskočily.
     const curBd = !crowdedPark
-      ? scoreSpotBreakdown(posX, posY, s, vw, collectObstacles(vw, vh, false), withBub)
+      ? scoreSpotBreakdown(posX, posY, s, vw, collectObstacles(vw, vh, false), false)
       : { hard: Infinity, headingArea: Infinity };
     if (crowdedPark || curBd.hard > 0 || curBd.headingArea > 0) {
       snapMollyToFreeSpot();
@@ -3113,14 +3381,18 @@
     if (settleTimer2) clearTimeout(settleTimer2);
     settleTimer1 = setTimeout(() => {
       settleTimer1 = null;
+      syncPlacementSettled();
       settleInitialPlacementIfNeeded();
     }, 110);
     settleTimer2 = setTimeout(() => {
       settleTimer2 = null;
+      syncPlacementSettled();
       settleInitialPlacementIfNeeded();
     }, 310);
+    syncPlacementSettled();
   }
 
+  /** @param {string} path */
   function handleRouteChange(path) {
     if (!path || path === currentPath) return;
     currentPath = path;
@@ -3132,12 +3404,15 @@
     pendingTip = null;
     const pathAtHome = path === '/svet' || path.startsWith('/svet/');
     if (!pathAtHome && typeof window !== 'undefined') {
-      setTimeout(() => {
+      if (routeSnapTimer) clearTimeout(routeSnapTimer);
+      routeSnapTimer = setTimeout(() => {
+        routeSnapTimer = null;
         measureLayoutAndObstacles();
         snapMollyToFreeSpot();
         scheduleLayoutSettleSnap();
         ensureLoopRunning();
       }, 50);
+      syncPlacementSettled();
     }
     scheduleRouteHint(path);
     scheduleIdleNudge();
@@ -3170,6 +3445,7 @@
     let lastTime = performance.now();
     const reduced = prefersReducedMotion();
 
+    /** @param {number} nowSec */
     const renderCatFrame = (nowSec) => {
       if (!catCanvas) return;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -3208,6 +3484,7 @@
       }
     };
 
+    /** @param {number} now */
     const tick = (now) => {
       if (typeof document !== 'undefined' && document.hidden) {
         rafId = 0;
@@ -3468,6 +3745,8 @@
       ensureLoopRunning();
     });
 
+    unsubGuideHold = mollyGuideHold.subscribe(applyGuideHold);
+
     unsubEvents = mollyEvents.subscribe((ev) => {
       if (!ev) return;
       if (ev.type === 'feed') {
@@ -3523,10 +3802,7 @@
         svelteTick().then(() => {
           if (!mounted) return;
           measureLayoutAndObstacles();
-          if (bubbleEl) {
-            bubbleW = bubbleEl.offsetWidth;
-            bubbleH = bubbleEl.offsetHeight;
-          }
+          refreshBubbleSize();
           const vs = viewportSize();
           targetDesktopScale = baseActorScale(vs.vw);
           if (crowdedPark || activeDesktopScale <= 0) {
@@ -3607,12 +3883,10 @@
             if (layoutChangeTimer) clearTimeout(layoutChangeTimer);
             layoutChangeTimer = setTimeout(() => {
               layoutChangeTimer = null;
+              syncPlacementSettled();
               if (!mounted || atHome) return;
               measureLayoutAndObstacles();
-              if (bubbleEl) {
-                bubbleW = bubbleEl.offsetWidth;
-                bubbleH = bubbleEl.offsetHeight;
-              }
+              refreshBubbleSize();
               if (currentState.mode === 'roaming') {
                 relocateToFreeSpot(Boolean(activeWhisper && bubbleW));
               }
@@ -3658,6 +3932,7 @@
     if (hintTimer) clearTimeout(hintTimer);
     if (nudgeTimer) clearTimeout(nudgeTimer);
     if (deferTimer) clearTimeout(deferTimer);
+    if (routeSnapTimer) clearTimeout(routeSnapTimer);
     if (settleTimer1) clearTimeout(settleTimer1);
     if (settleTimer2) clearTimeout(settleTimer2);
     if (layoutChangeTimer) clearTimeout(layoutChangeTimer);
@@ -3669,6 +3944,7 @@
     if (typeof document !== 'undefined') clearGuideGlow();
     unsubEvents?.();
     unsubState?.();
+    unsubGuideHold?.();
     if (typeof window !== 'undefined') {
       window.removeEventListener('pointermove', handleWindowPointerMove);
       window.removeEventListener('pointerdown', handleWindowPointerDown);
@@ -3777,6 +4053,7 @@
   data-molly-available-treats={$mollyState.availableTreats}
   data-molly-gift-deeds={$mollyState.giftDeeds || 0}
   data-molly-home={atHome ? 'lake' : undefined}
+  data-molly-settled={placementSettled ? 'true' : 'false'}
 >
   <div class="sr-only" aria-live="polite" aria-atomic="true">
     {activeWhisper ? activeWhisper.text : ''}
@@ -3796,7 +4073,7 @@
   {/if}
 
   <!-- Šeptanda: samostatná vrstva (nezmenšuje se s kočkou), polohu zapisuje mimo rAF -->
-  {#if roamingWhisper}
+  {#if roamingWhisper && activeWhisper}
     <div
       bind:this={bubbleEl}
       class="molly-whisper-bubble"

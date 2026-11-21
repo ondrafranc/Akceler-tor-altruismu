@@ -1217,6 +1217,10 @@ const SPECIFIC_ACTION_META = {
   }
 };
 
+/**
+ * @param {import('../types').MicroAction} action
+ * @returns {import('../types').RecipientMacro}
+ */
 function deriveRecipientMacro(action) {
   if (action.element === 'animals' || action.values?.includes('animals')) return 'animals';
   if (action.element === 'nature' || (action.values?.includes('environment') && !action.values?.includes('poverty') && !action.values?.includes('children'))) {
@@ -1225,6 +1229,10 @@ function deriveRecipientMacro(action) {
   return 'people';
 }
 
+/**
+ * @param {import('../types').MicroAction} action
+ * @returns {string}
+ */
 function deriveCategory(action) {
   if (action.values?.includes('animals')) return 'animals';
   if (action.values?.includes('environment')) return 'nature';
@@ -1233,6 +1241,11 @@ function deriveCategory(action) {
   return 'people';
 }
 
+/**
+ * @param {import('../types').MicroAction} action
+ * @param {import('../types').EvidenceTier} evidenceTier
+ * @returns {import('../types').ImpactChain}
+ */
 function buildDefaultImpactChain(action, evidenceTier) {
   if (action.cost === 'donation') {
     return {

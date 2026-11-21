@@ -2,6 +2,8 @@
  * Procedural Canvas 2D scene renderers for food, hunger relief, and zero waste.
  */
 
+/** @typedef {import('../../types/sensory.js').SceneRenderer} SceneRenderer */
+
 import { clamp01, subP, lerp, easeOut } from '../graphics/math.js';
 import {
   drawGlow,
@@ -14,6 +16,7 @@ import {
   drawFlower
 } from '../graphics/primitives.js';
 
+/** @type {SceneRenderer} */
 export function renderRice(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
     // Freerice: Vzpřímené bledé stéblo a prázdná miska OSN -> Zlatý klas sklánějící se k misce plné rýže
     const bowlX = cx + 22;
@@ -108,6 +111,7 @@ export function renderRice(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, g
     }
 }
 
+/** @type {SceneRenderer} */
 export function renderFoodBank(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
     // Potravinová banka: Prázdný dvoupatrový regál -> Police zaplňující se bedýnkami, konzervami a chlebem
     const rx = cx - 42;
@@ -168,6 +172,7 @@ export function renderFoodBank(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fram
     }
 }
 
+/** @type {SceneRenderer} */
 export function renderSoupLantern(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
     // Naděje: Zhasnutá pouliční lampa v chladném dešti -> Hřejivý kužel lucerny a napařená polévka pod střechou
     const lampX = cx - 36;
@@ -239,6 +244,7 @@ export function renderSoupLantern(c, { p, prep, wt, cx, cy, by, w, h, cs, red, f
     }
 }
 
+/** @type {SceneRenderer} */
 export function renderZeroWastePot(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
     // Zachraň jídlo: Křivá mrkev s natí, rajče a bylinka vedle studeného hrnce -> Oblouk do měděného hrnce a voňavá večeře
     const potY = by - 4;
@@ -249,6 +255,11 @@ export function renderZeroWastePot(c, { p, prep, wt, cx, cy, by, w, h, cs, red, 
 
     // Rozpoznatelná „nedokonalá" zelenina na lince skákající obloukem do hrnce
     if (inP < 0.98) {
+      /**
+       * @param {number} sx
+       * @param {number} sy
+       * @param {number} peakOff
+       */
       const arcPos = (sx, sy, peakOff) => {
         const u = inP;
         return {
@@ -374,6 +385,7 @@ export function renderZeroWastePot(c, { p, prep, wt, cx, cy, by, w, h, cs, red, 
     }
 }
 
+/** @type {SceneRenderer} */
 export function renderBakerySave(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
     // Nesnězeno: Hodiny před zavíračkou a složený sáček -> Zachráněný kraftový sáček s křupavou bagetou a croissantem
     const clkX = cx - 44;

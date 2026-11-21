@@ -68,6 +68,12 @@ import {
   renderSolidarityBridge
 } from './communityScenes.js';
 
+/**
+ * @typedef {import('../../types/sensory.js').SceneRenderContext} SceneRenderContext
+ * @typedef {import('../../types/sensory.js').SceneRendererRegistry} SceneRendererRegistry
+ */
+
+/** @type {SceneRendererRegistry} */
 const SCENE_RENDERERS = {
   forest_bloom: renderForestBloom,
   fruit_tree: renderFruitTree,
@@ -121,6 +127,22 @@ const SCENE_RENDERERS = {
   solidarity_bridge: renderSolidarityBridge
 };
 
+/**
+ * @param {CanvasRenderingContext2D} c
+ * @param {string} mode
+ * @param {number} rawP
+ * @param {number} t
+ * @param {number} cx
+ * @param {number} cy
+ * @param {number} by
+ * @param {number} w
+ * @param {number} h
+ * @param {string[]} cs
+ * @param {boolean} red
+ * @param {number} frame
+ * @param {number} gx
+ * @param {number} py
+ */
 export function drawPoeticDeedScene(c, mode, rawP, t, cx, cy, by, w, h, cs, red, frame, gx, py) {
   c.save();
   const safeRawP = Number.isFinite(rawP) ? rawP : 0;
@@ -128,6 +150,7 @@ export function drawPoeticDeedScene(c, mode, rawP, t, cx, cy, by, w, h, cs, red,
   const spanX = Math.min(126, w * 0.43);
   const prep = clamp01(safeRawP / 0.25);
   const p = safeRawP <= 0.15 ? 0 : subP(safeRawP, 0.16, 1.0);
+  /** @type {SceneRenderContext} */
   const ctx = { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX, rawP: safeRawP, t };
 
   const renderer = SCENE_RENDERERS[mode] || renderSolidarityBridge;

@@ -137,6 +137,7 @@ const PULSE_TEMPLATES = [
   }
 ];
 
+/** @type {Record<string, string>} */
 const CITY_LOCATIVES = {
   praha: 'v Praze',
   brno: 'v Brně',
@@ -182,6 +183,10 @@ function normalizeSlot(rawSlot) {
   return Number.isSafeInteger(absInt) ? absInt : Math.floor(Date.now() / 15000);
 }
 
+/**
+ * @param {unknown} cityRaw
+ * @returns {{ cleanCityName: string, loc: string }}
+ */
 function resolveCityLocative(cityRaw) {
   const sanitized = sanitizeCityInput(cityRaw);
   const cleaned = (sanitized.ok && sanitized.value ? sanitized.value : '')
@@ -213,7 +218,8 @@ function resolveCityLocative(cityRaw) {
 
 /**
  * Builds an honest inspirational tip when no live event is in the database (H12 / AUDIT #20).
- * @param {number} rawSlot
+ * @param {unknown} [rawSlot]
+ * @returns {import('$lib/types/api').PulseEventItem}
  */
 function buildInspirationPayload(rawSlot = Math.floor(Date.now() / 15000)) {
   const slot = normalizeSlot(rawSlot);
@@ -235,6 +241,7 @@ function buildInspirationPayload(rawSlot = Math.floor(Date.now() / 15000)) {
 
 /**
  * Queries real anonymous pulse_events from Supabase (cached for 15s).
+ * @param {string | null} rawSlot
  */
 async function resolvePulsePayload(rawSlot) {
   const now = Date.now();

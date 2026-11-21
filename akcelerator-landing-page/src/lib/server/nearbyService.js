@@ -19,8 +19,12 @@ import {
   setBoundedCache
 } from '$lib/security.js';
 
-/** In-memory LRU-like cache for queries */
+/**
+ * In-memory LRU-like cache for queries
+ * @type {Map<string, { expiresAt: number, data: NearbyPlacesPayload }>}
+ */
 const PLACES_CACHE = new Map();
+/** @type {Map<string, { expiresAt: number, data: NearbyCommunityPayload }>} */
 const COMMUNITY_CACHE = new Map();
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
@@ -30,7 +34,11 @@ const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
  *   kind: string,
  *   name: string,
  *   category?: string,
+ *   subcategory?: string | null,
  *   description?: string | null,
+ *   quickMission?: string | null,
+ *   helpWays?: string[] | null,
+ *   visitMode?: string | null,
  *   city?: string | null,
  *   address_label?: string | null,
  *   address?: string | null,
@@ -44,12 +52,68 @@ const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
  *   status?: string,
  *   event_start?: string | null,
  *   event_end?: string | null,
+ *   curated?: boolean,
+ *   sourceType?: string | null,
+ *   pendingModeration?: boolean,
+ *   verifiedAt?: string | null,
  *   distanceKm: number,
  *   distance_m?: number,
  *   [key: string]: unknown
  * }} NearbyPlace
  */
 
+/**
+ * @typedef {{
+ *   id: string,
+ *   kind?: string | null,
+ *   name: string,
+ *   category?: string | null,
+ *   description?: string | null,
+ *   city?: string | null,
+ *   address_label?: string | null,
+ *   address?: string | null,
+ *   lat: number,
+ *   lon: number,
+ *   website?: string | null,
+ *   url?: string | null,
+ *   event_url?: string | null,
+ *   contact?: string | null,
+ *   email?: string | null,
+ *   phone?: string | null,
+ *   status?: string | null,
+ *   event_start?: string | null,
+ *   event_end?: string | null
+ * }} CommunityRecordSource
+ */
+
+/**
+ * @typedef {{
+ *   items: Array<NearbyPlace>,
+ *   lat: number,
+ *   lon: number,
+ *   radius_m: number,
+ *   fallback: boolean
+ * }} NearbyCommunityPayload
+ */
+
+/**
+ * @typedef {{
+ *   places: Array<NearbyPlace>,
+ *   items: Array<NearbyPlace>,
+ *   radius_m: number,
+ *   lat: number,
+ *   lon: number,
+ *   fallback: boolean,
+ *   expandedToNearest: boolean
+ * }} NearbyPlacesPayload
+ */
+
+/**
+ * @param {unknown} contactRaw
+ * @param {unknown} emailRaw
+ * @param {unknown} phoneRaw
+ * @returns {{ email: string | null, phone: string | null }}
+ */
 function extractContactParts(contactRaw, emailRaw, phoneRaw) {
   let email = emailRaw ? sanitizeEmail(emailRaw) : null;
   let phone = phoneRaw ? sanitizePhone(phoneRaw) : null;
@@ -63,6 +127,11 @@ function extractContactParts(contactRaw, emailRaw, phoneRaw) {
   return { email, phone };
 }
 
+/**
+ * @param {CommunityRecordSource} r
+ * @param {number} dKm
+ * @returns {NearbyPlace}
+ */
 function sanitizeCommunityRecord(r, dKm) {
   const rawWebsite = r.website || r.url || null;
   const website = rawWebsite ? sanitizeHttpUrl(rawWebsite) : null;
@@ -117,7 +186,7 @@ export function getLocalCommunityNearby(lat, lon, radiusM) {
 /**
  * Queries community submissions (Supabase with fallback to local seed).
  * @param {{ lat: number, lon: number, radiusM?: number }} params
- * @returns {Promise<{ items: Array<NearbyPlace>, lat: number, lon: number, radius_m: number, fallback: boolean }>}
+ * @returns {Promise<NearbyCommunityPayload>}
  */
 export async function getNearbyCommunityItems({ lat, lon, radiusM = 5000 }) {
   const radius = clamp(radiusM, 250, 25_000);
@@ -149,7 +218,7 @@ export async function getNearbyCommunityItems({ lat, lon, radiusM = 5000 }) {
         .limit(150);
 
       const primaryRes = await withTimeout(primaryQuery, 2200, 'Supabase community query timeout');
-      let data = /** @type {Array<Record<string, unknown>> | null} */ (primaryRes.data);
+      let data = /** @type {Array<CommunityRecordSource> | null} */ (primaryRes.data);
       let error = primaryRes.error;
 
       if (
@@ -169,7 +238,7 @@ export async function getNearbyCommunityItems({ lat, lon, radiusM = 5000 }) {
           .limit(150);
 
         const fallbackRes = await withTimeout(fallbackQuery, 2200, 'Supabase community fallback query timeout');
-        data = /** @type {Array<Record<string, unknown>> | null} */ (fallbackRes.data);
+        data = /** @type {Array<CommunityRecordSource> | null} */ (fallbackRes.data);
         error = fallbackRes.error;
       }
 
@@ -214,15 +283,7 @@ export async function getNearbyCommunityItems({ lat, lon, radiusM = 5000 }) {
  *   radiusM?: number,
  *   kinds?: string[]
  * }} params
- * @returns {Promise<{
- *   places: Array<NearbyPlace>,
- *   items: Array<NearbyPlace>,
- *   radius_m: number,
- *   lat: number,
- *   lon: number,
- *   fallback: boolean,
- *   expandedToNearest: boolean
- * }>}
+ * @returns {Promise<NearbyPlacesPayload>}
  */
 export async function getNearbyPlaces({
   lat,

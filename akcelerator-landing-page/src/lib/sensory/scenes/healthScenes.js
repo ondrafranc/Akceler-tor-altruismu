@@ -2,6 +2,8 @@
  * Procedural Canvas 2D scene renderers for health, blood, and vital support.
  */
 
+/** @typedef {import('../../types/sensory.js').SceneRenderer} SceneRenderer */
+
 import { clamp01, subP, lerp, easeOut } from '../graphics/math.js';
 import {
   drawGlow,
@@ -14,6 +16,7 @@ import {
   drawFlower
 } from '../graphics/primitives.js';
 
+/** @type {SceneRenderer} */
 export function renderBloodDrop(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
     // Darování krve: 3D rubínová kapka vlevo a 3 tichá srdce vpravo -> 3 pulsující EKG linie života rozsvěcující 3 hřejivá srdce
     const dropX = cx - 58;
@@ -33,6 +36,11 @@ export function renderBloodDrop(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fra
       c.closePath();
     };
 
+    /**
+     * @param {number} u
+     * @param {number} qrsCenter
+     * @param {number} amp
+     */
     const ecgWaveOffset = (u, qrsCenter, amp) => {
       const loc = (u - (qrsCenter - 0.14)) / 0.28;
       if (loc < 0 || loc > 1) return 0;
@@ -47,6 +55,10 @@ export function renderBloodDrop(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fra
       return 0;
     };
 
+    /**
+     * @param {number} qrsCenter
+     * @param {number} maxU
+     */
     const buildLaneUs = (qrsCenter, maxU) => {
       const baseSteps = 44;
       const us = [];
@@ -63,6 +75,12 @@ export function renderBloodDrop(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fra
       return us;
     };
 
+    /**
+     * @param {(typeof lanes)[number]} ln
+     * @param {number} u
+     * @param {number} amp
+     * @param {number} [sxOverride]
+     */
     const sampleLanePoint = (ln, u, amp, sxOverride) => {
       const sx = sxOverride ?? dropX + 11.5;
       const sy = dropY + ln.syOff;
@@ -217,6 +235,7 @@ export function renderBloodDrop(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fra
     c.restore();
 }
 
+/** @type {SceneRenderer} */
 export function renderDnaHelix(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
     // Registr kostní dřeně: Dva oddělené nespojené řetězce -> 100% molekulární shoda a sepnutá dvoušroubovice
     const rungs = 15;
@@ -271,6 +290,7 @@ export function renderDnaHelix(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fram
     }
 }
 
+/** @type {SceneRenderer} */
 export function renderHairSilk(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
     // Daruj vlasy: Svázaný cop vlevo -> Hedvábné zlatavě růžové prameny splývající do květinové koruny
     const leftX = cx - 64;
@@ -312,6 +332,7 @@ export function renderHairSilk(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fram
     }
 }
 
+/** @type {SceneRenderer} */
 export function renderEcgRescue(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
     // Aplikace Záchranka: Slabá křivka a zhasnuté AED -> Živý PQRST srdeční tep a GPS maják AED
     const leftX = cx - spanX + 10;
@@ -385,6 +406,7 @@ export function renderEcgRescue(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fra
     drawHeart(c, aedX, ecgY - 4, 5.5, aedP > 0.1 ? '#fde047' : '#94a3b8');
 }
 
+/** @type {SceneRenderer} */
 export function renderMindWave(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
     // Nevypusť duši: Chaotické zašmodrchané klubko myšlenek -> Plynulé rozpletení do klidné harmonické vlny
     const untangle = easeOut(p);
@@ -441,6 +463,7 @@ export function renderMindWave(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fram
     }
 }
 
+/** @type {SceneRenderer} */
 export function renderBreathLotus(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
     // Opatruj.se: Zavřené poupě na klidné hladině -> Rozkvetlý 7lístkový lotos s dechovými kruhy
     const baseL = by - 8;

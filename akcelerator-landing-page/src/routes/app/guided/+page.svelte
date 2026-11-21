@@ -47,6 +47,19 @@
   import AppIcon from "$lib/components/AppIcon.svelte";
   import PageHeader from "$lib/components/PageHeader.svelte";
 
+  /** @typedef {import('$lib/types').MicroAction} MicroAction */
+  /** @typedef {(typeof CURATED_FALLBACK_PLACES)[number]} CuratedPlace */
+  /**
+   * @typedef {object} GuidedTarget
+   * @property {string} id
+   * @property {string} [title]
+   * @property {string} [name]
+   * @property {string} [category]
+   * @property {string} [kind]
+   * @property {string} [subcategory]
+   * @property {string[]} [values]
+   */
+
   const SITUATIONS = [
     {
       id: "couch",
@@ -107,13 +120,14 @@
   let rotationSeed = $state(0);
   let lastShownActionId = "";
   let excludePrevId = $state("");
-  let openTemplateId = $state(null);
-  let copiedTemplateId = $state(null);
+  let openTemplateId = $state(/** @type {string | null} */ (null));
+  let copiedTemplateId = $state(/** @type {string | null} */ (null));
   let planFlash = $state(false);
   let localDrawerOpen = $state(false);
   let soundMuted = $state(false);
-  let guidedReturnAction = $state(null);
+  let guidedReturnAction = $state(/** @type {GuidedTarget | null} */ (null));
   let guidedReturnMetric = $state(0);
+  /** @type {GuidedTarget | null} */
   let awaitingGuidedAction = null;
   let guidedLeaveTimestamp = 0;
   let copiedDirectLink = $state(false);
@@ -134,6 +148,7 @@
   /** @type {'any' | 'A' | 'B' | 'C'} */
   let evidenceTier = $state("any");
 
+  /** @param {string | undefined} tier */
   function evidenceTierLabel(tier) {
     if (tier === "A") return "Přímý měřitelný účinek";
     if (tier === "C") return "Komunitní smysl";
@@ -231,6 +246,7 @@
     `/near?lat=${activeCity.lat}&lon=${activeCity.lon}&r=10&kinds=${encodeURIComponent(targetMapKinds.join(","))}`,
   );
 
+  /** @param {string} id */
   function selectSituation(id) {
     if (activeSituationId === id) {
       cycleRecommendation();
@@ -246,6 +262,7 @@
     trackFunnel("recommendation_shown", { surface: "guided", situation: id });
   }
 
+  /** @param {string} key */
   function toggleTopic(key) {
     excludePrevId = lastShownActionId;
     if (key === "all") {
@@ -265,6 +282,10 @@
     });
   }
 
+  /**
+   * @param {() => void} updateFn
+   * @param {string} [filterName]
+   */
   function applyAdaptiveFilter(updateFn, filterName = "param") {
     excludePrevId = "";
     rotationSeed = 0;
@@ -292,6 +313,7 @@
     });
   }
 
+  /** @param {MicroAction} altAction */
   function promoteAlternative(altAction) {
     excludePrevId = "";
     const idx = recommendations.findIndex((r) => r.id === altAction.id);
@@ -328,6 +350,7 @@
     } catch {}
   }
 
+  /** @param {CuratedPlace} place */
   async function copyTemplate(place) {
     try {
       const tpl = buildFirstContactTemplate(place);
@@ -339,11 +362,13 @@
     } catch {}
   }
 
+  /** @param {string} id */
   function isDone(id) {
     return ($completedSteps || []).some((s) => s.id === id);
   }
 
   onMount(() => {
+    /** @type {ReturnType<typeof setTimeout> | null} */
     let guidedReturnTimer = null;
     soundMuted = isSoundMuted();
     try {
@@ -458,6 +483,10 @@
     trackEvent("aa_sound_toggle", { surface: "guided", muted: soundMuted });
   }
 
+  /**
+   * @param {GuidedTarget | null | undefined} action
+   * @param {string} [surfaceLabel]
+   */
   function handleStartGuidedAction(action, surfaceLabel = "guided_best") {
     if (!action) return;
     awaitingGuidedAction = action;
@@ -471,6 +500,7 @@
     });
   }
 
+  /** @param {MicroAction | null | undefined} action */
   async function shareGuidedDirectLink(action) {
     if (!action || typeof window === "undefined") return;
     const directUrl = `${window.location.origin}/?action=${encodeURIComponent(action.id)}`;
@@ -541,7 +571,7 @@
             use:impactCanvas={{
               action: guidedReturnAction,
               climax: true,
-              onWeightUpdate: (v) => (guidedReturnMetric = v),
+              onWeightUpdate: (/** @type {number} */ v) => (guidedReturnMetric = v),
             }}
           ></canvas>
           <div class="return-dopamine-actions">

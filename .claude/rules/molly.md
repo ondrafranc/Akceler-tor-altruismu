@@ -19,6 +19,8 @@ Ověření: `tests/molly-stress.spec.ts`, `tests/mobile-tablet-polish.spec.ts`, 
 - Seznam překážek je selektor v `MollyCompanion.svelte`. Nový typ obsahu, přes který Molly leze, přidej tam.
 - Měření překážek probíhá mimo `requestAnimationFrame`. Smyčka `tick()` neobsahuje žádné DOM dotazy.
 - Souřadnice Molly zůstávají uvnitř šířky viewportu.
+- O místě Molly a o auto-parku rozhoduje jen kočka sama, nikdy rozsvícená bublina. Bublina se přizpůsobí kočce, ne naopak.
+- `.molly-companion-layer` nese `data-molly-settled`. Test, který měří klidový stav, čeká na `"true"` místo pevné prodlevy.
 - Na `<= 1024 px` hledá místo nejdřív v přízemním pásmu obrazovky. Do pelíšku se sama uklidí (auto-park) jen když opravdu není volné místo. Na desktopu se auto-park nepoužívá.
 - Při auto-parku ukazuje `MollyDock` pravdivý stav (`aria-pressed="true"`, popisek `V pelíšku`) a kliknutí ji probudí.
 - Pohlazení je ťuknutí bez posunu; scrollovací tah pohlazením není. Pohlazení na ploše blokového odkazu nespustí navigaci.
@@ -29,6 +31,7 @@ Ověření: `tests/molly-stress.spec.ts`, `tests/mobile-tablet-polish.spec.ts`, 
 - Bubliny žijí mimo tok dokumentu (`position: fixed`) a nezpůsobují layoutový posun.
 - Když je Molly v pelíšku nebo u tůně, bublina si hledá místo bez překryvu nadpisů, kickerů a tlačítek.
 - Duplicitní odměnová šeptanda se potlačí, pokud je vidět oslava přímo v kartě.
+- Průvodcovské šeptandy (tip stránky a dovedení k hlavnímu tlačítku) smí stránka podržet přes `holdMollyGuide()` a musí je zase uvolnit (`releaseMollyGuide()`); klid se pak počítá od uvolnění. Používá to vstupní prohlídka na `/`.
 
 ## Texty Molly
 - Jeden klidný hlas „klidného útočiště“: vřelý, krátký, bez nátlaku, bez robotických pokynů.

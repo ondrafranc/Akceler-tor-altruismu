@@ -111,6 +111,7 @@
     }
   }
 
+  /** @param {KeyboardEvent} e */
   function handleKeydown(e) {
     if (e.key === "Escape" && $activeCelebration) {
       closeCelebration();
@@ -161,7 +162,7 @@
             use:impactCanvas={{
               action: $activeCelebration,
               climax: true,
-              onProgress: (v) => {
+              onProgress: (/** @type {number} */ v) => {
                 impactMetricValue = v;
               },
             }}

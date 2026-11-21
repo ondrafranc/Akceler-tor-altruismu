@@ -1,5 +1,35 @@
 /**
+ * @typedef {{
+ *   id: string,
+ *   name: string,
+ *   lat: number,
+ *   lon: number,
+ *   kind: string,
+ *   subcategory: string,
+ *   website: string,
+ *   address: string,
+ *   phone?: string,
+ *   email?: string,
+ *   description: string,
+ *   quickMission: string,
+ *   helpWays?: string[],
+ *   visitMode?: string,
+ *   verifiedAt?: string
+ * }} CuratedPlaceSeed
+ */
+
+/**
+ * @typedef {CuratedPlaceSeed & {
+ *   verifiedAt: string,
+ *   sourceType: string,
+ *   helpWays: string[],
+ *   visitMode: string
+ * }} CuratedPlace
+ */
+
+/**
  * Kurátorovaná záložní místa napříč ČR pro okamžité zobrazení bez čekání na síť.
+ * @type {Array<CuratedPlace>}
  */
 export const CURATED_FALLBACK_PLACES = [
   {
@@ -1188,7 +1218,7 @@ export const CURATED_FALLBACK_PLACES = [
     helpWays: ['material_dropoff', 'regular_volunteering'],
     visitMode: 'opening_hours'
   }
-].map((p) => ({
+].map((/** @type {CuratedPlaceSeed} */ p) => ({
   ...p,
   verifiedAt: p.verifiedAt || '11/2026',
   sourceType: 'verified_org',

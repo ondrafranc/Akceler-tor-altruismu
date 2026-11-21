@@ -32,6 +32,10 @@ function sliceCodePoints(str, maxCodePoints) {
   return Array.from(str).slice(0, maxCodePoints).join('');
 }
 
+/**
+ * @param {unknown} raw
+ * @returns {{ ok: boolean, value: string | null }}
+ */
 function sanitizeOptionalIsoDate(raw) {
   const s = safeText(raw);
   if (!s) return { ok: true, value: null };

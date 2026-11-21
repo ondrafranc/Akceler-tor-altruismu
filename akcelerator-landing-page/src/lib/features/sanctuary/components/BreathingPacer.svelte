@@ -63,8 +63,12 @@
   let breathPhase = $state("idle"); // 'idle' | 'inhale' | 'hold' | 'exhale' | 'done'
   let breathPhaseSecLeft = $state(0);
   let breathSecondsLeft = $state(60);
+  /** @type {ReturnType<typeof setInterval> | null} */
   let breathInterval = null;
 
+  /**
+   * @param {'breath_in' | 'breath_out'} type
+   */
   function playChime(type) {
     if (isSoundMuted()) return;
     if (type === "breath_in" || type === "breath_out") {

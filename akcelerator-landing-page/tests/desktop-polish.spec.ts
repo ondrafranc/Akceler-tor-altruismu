@@ -1,4 +1,18 @@
-import { test, expect, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { test, expect, type Browser, type Page } from '@playwright/test';
+import {
+  ENTRY_TOUR_INITIAL_PAUSE_MS,
+  ENTRY_TOUR_STEP_MS,
+  ENTRY_TOUR_SETTLE_MS,
+  ENTRY_TOUR_DURATION_MS
+} from '../src/lib/features/home/entryTour.js';
+import {
+  AA_HOME_DECK_STATE_KEY,
+  AA_HOME_ENTRY_TOUR_SEEN_KEY,
+  AA_FUNNEL_COUNTS_KEY,
+  AA_DONE_FOR_TODAY_PREFIX
+} from '../src/lib/storage/keys.js';
 
 async function gotoHydrated(page: Page, url: string) {
   await page.goto(url);
@@ -963,5 +977,1324 @@ test.describe('Desktop Experience Polish Regressions (R1-R5)', () => {
     await gotoHydrated(page, '/');
     await expect(page.locator('.instant-card .action-card')).toHaveCount(1);
     await expect(page.locator('.instant-card .action-card.directory-card')).toHaveCount(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Entry tour on "/": after a calm pause the page walks once through the four
+// energy tabs and comes to rest on the first one.
+// ---------------------------------------------------------------------------
+
+type Viewport = { width: number; height: number };
+type TabChange = { t: number; index: number };
+type ShiftRecord = { value: number; startTime: number; hadRecentInput: boolean };
+type LayoutShiftEntry = PerformanceEntry & { value: number; hadRecentInput: boolean };
+type StageLog = { lure: string[]; stageModes: string[]; mollyMiniReady: boolean };
+type IndicatorChange = { live: string | null; liveChanged: boolean };
+type Whisper = { t: number; text: string };
+type ProbeWindow = Window & {
+  __aaTabLog?: TabChange[];
+  __aaShifts?: ShiftRecord[];
+  __aaShiftObserver?: PerformanceObserver;
+  __aaStageLog?: StageLog;
+  __aaListeners?: Record<string, number>;
+  __aaTourStartAt?: number;
+  __aaIndicatorLog?: IndicatorChange[];
+  __aaWhispers?: Whisper[];
+  __aaReachAt?: number;
+};
+
+const TOUR_MODES = [
+  { index: 0, claim: 'Stačí 2 minuty dnes.' },
+  { index: 1, claim: 'Stačí 15 minut dnes.' },
+  { index: 2, claim: 'Stačí krátká procházka dnes.' },
+  { index: 3, claim: 'Stačí jeden krok s ostatními.' }
+] as const;
+const TOUR_ORDER = [1, 2, 3, 0] as const;
+
+/** How much later than scheduled a step may show up on a loaded test machine. */
+const TOUR_STEP_SLACK_MS = 2500;
+/** A timer may fire a hair early against the page clock. */
+const TIMER_EARLY_SLACK_MS = 20;
+/** How much the rendering of one step may take longer than that of the next. */
+const RENDER_JITTER_SLACK_MS = 400;
+/** Long enough for the first step to have happened, had the tour been running. */
+const NO_TOUR_WAIT_MS = ENTRY_TOUR_INITIAL_PAUSE_MS + Math.round(ENTRY_TOUR_STEP_MS / 2);
+/** Long enough for the next step to have happened, had the tour not been stopped. */
+const NO_NEXT_STEP_WAIT_MS = ENTRY_TOUR_STEP_MS + Math.round(ENTRY_TOUR_STEP_MS / 2);
+
+const DESKTOP: Viewport = { width: 1440, height: 900 };
+const TABLET_LANDSCAPE: Viewport = { width: 1024, height: 768 };
+
+const STOP_CONTROL_NAME = 'Zastavit automatickou ukázku';
+const MOLLY_HOME_HINT = 'Vyber si, kolik máš dnes času';
+
+function todayClosedKey(): string {
+  const now = new Date();
+  const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  return `${AA_DONE_FOR_TODAY_PREFIX}${day}`;
+}
+
+/** Records every change of the selected energy tab, with the time it happened. */
+async function watchTabs(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const w = window as ProbeWindow;
+    const log: TabChange[] = [];
+    w.__aaTabLog = log;
+    const tablist = document.querySelector('.energy-tabs');
+    if (!tablist) throw new Error('energy tabs not found');
+    const selectedIndex = () =>
+      Array.from(tablist.querySelectorAll('[role="tab"]')).findIndex(
+        (tab) => tab.getAttribute('aria-selected') === 'true'
+      );
+    let last = selectedIndex();
+    new MutationObserver(() => {
+      const next = selectedIndex();
+      if (next !== last) {
+        last = next;
+        log.push({ t: performance.now(), index: next });
+      }
+    }).observe(tablist, { subtree: true, attributes: true, attributeFilter: ['aria-selected'] });
+  });
+}
+
+async function readTabLog(page: Page): Promise<TabChange[]> {
+  return page.evaluate(() => (window as ProbeWindow).__aaTabLog ?? []);
+}
+
+/** Resolves with the next change of the selected tab, as soon as the page has rendered it. */
+async function waitForNextTabChange(page: Page): Promise<{ t: number; index: number; ctaHref: string | null }> {
+  return page.evaluate(
+    () =>
+      new Promise<{ t: number; index: number; ctaHref: string | null }>((resolve) => {
+        const tablist = document.querySelector('.energy-tabs');
+        if (!tablist) throw new Error('energy tabs not found');
+        const observer = new MutationObserver(() => {
+          observer.disconnect();
+          resolve({
+            t: performance.now(),
+            index: Array.from(tablist.querySelectorAll('[role="tab"]')).findIndex(
+              (tab) => tab.getAttribute('aria-selected') === 'true'
+            ),
+            ctaHref: document.querySelector('.instant-card .btn-studio-primary')?.getAttribute('href') ?? null
+          });
+        });
+        observer.observe(tablist, { subtree: true, attributes: true, attributeFilter: ['aria-selected'] });
+      })
+  );
+}
+
+/** Records the moment the tour starts: it marks itself as seen right before it schedules its first step. */
+async function installTourStartProbe(page: Page): Promise<void> {
+  await page.addInitScript((seenKey) => {
+    const w = window as ProbeWindow;
+    const setItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (this: Storage, key: string, value: string) {
+      if (key === seenKey && w.__aaTourStartAt === undefined) w.__aaTourStartAt = performance.now();
+      return setItem.call(this, key, value);
+    };
+  }, AA_HOME_ENTRY_TOUR_SEEN_KEY);
+}
+
+/**
+ * Records every change of the card counter's text together with its aria-live state. A change is silent
+ * for assistive technology only if the region is off and was not switched in the same rendering pass.
+ */
+async function watchIndicator(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const w = window as ProbeWindow;
+    const log: IndicatorChange[] = [];
+    w.__aaIndicatorLog = log;
+    const indicator = document.querySelector('.deck-indicator');
+    if (!indicator) throw new Error('deck indicator not found');
+    new MutationObserver((records) => {
+      if (!records.some((record) => record.type !== 'attributes')) return;
+      log.push({
+        live: indicator.getAttribute('aria-live'),
+        liveChanged: records.some((record) => record.type === 'attributes')
+      });
+    }).observe(indicator, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ['aria-live']
+    });
+  });
+}
+
+async function readIndicatorLog(page: Page): Promise<IndicatorChange[]> {
+  return page.evaluate(() => (window as ProbeWindow).__aaIndicatorLog ?? []);
+}
+
+/** Records every whisper Molly shows, with the time it appeared. */
+async function watchWhispers(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const w = window as ProbeWindow;
+    const seen: Whisper[] = [];
+    w.__aaWhispers = seen;
+    const note = () => {
+      const text = document.querySelector('.molly-whisper-bubble .whisper-text')?.textContent?.trim();
+      if (text && seen[seen.length - 1]?.text !== text) seen.push({ t: performance.now(), text });
+    };
+    note();
+    new MutationObserver(note).observe(document.body, { subtree: true, childList: true, characterData: true });
+  });
+}
+
+async function readWhispers(page: Page): Promise<Whisper[]> {
+  return page.evaluate(() => (window as ProbeWindow).__aaWhispers ?? []);
+}
+
+/** Collects layout-shift entries for the whole life of the document. */
+async function installShiftProbe(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const w = window as ProbeWindow;
+    const shifts: ShiftRecord[] = [];
+    w.__aaShifts = shifts;
+    const observer = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries() as LayoutShiftEntry[]) {
+        shifts.push({ value: entry.value, startTime: entry.startTime, hadRecentInput: entry.hadRecentInput });
+      }
+    });
+    observer.observe({ type: 'layout-shift', buffered: true });
+    w.__aaShiftObserver = observer;
+  });
+}
+
+async function readShiftsSince(page: Page, since: number): Promise<ShiftRecord[]> {
+  return page.evaluate((from) => {
+    const w = window as ProbeWindow;
+    const shifts = w.__aaShifts ?? [];
+    for (const entry of (w.__aaShiftObserver?.takeRecords() ?? []) as LayoutShiftEntry[]) {
+      shifts.push({ value: entry.value, startTime: entry.startTime, hadRecentInput: entry.hadRecentInput });
+    }
+    return shifts.filter((shift) => shift.startTime >= from);
+  }, since);
+}
+
+/** Records every lure state and stage mode the card's scene passes through. */
+async function watchStage(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const w = window as ProbeWindow;
+    const log: StageLog = { lure: [], stageModes: [], mollyMiniReady: false };
+    w.__aaStageLog = log;
+    const card = document.querySelector('.instant-card');
+    if (!card) throw new Error('instant card not found');
+    const note = () => {
+      const stage = card.querySelector('.deed-stage');
+      const lure = stage?.getAttribute('data-preview-lure');
+      const mode = stage?.getAttribute('data-stage-mode');
+      if (lure && !log.lure.includes(lure)) log.lure.push(lure);
+      if (mode && !log.stageModes.includes(mode)) log.stageModes.push(mode);
+      if (document.querySelector('[data-molly-mini="ready"]')) log.mollyMiniReady = true;
+    };
+    note();
+    new MutationObserver(note).observe(card, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['data-preview-lure', 'data-stage-mode', 'data-molly-mini']
+    });
+  });
+}
+
+async function readHomeState(page: Page) {
+  return page.evaluate(
+    ({ deckKey, seenKey, funnelKey }) => {
+      const tabs = Array.from(document.querySelectorAll('.energy-tabs [role="tab"]'));
+      const stage = document.querySelector('.instant-card .deed-stage');
+      const cta = document.querySelector('.instant-card .btn-studio-primary');
+      const ctaRect = cta?.getBoundingClientRect();
+      const stageRect = stage?.getBoundingClientRect();
+      return {
+        selected: tabs
+          .map((tab, index) => (tab.getAttribute('aria-selected') === 'true' ? index : -1))
+          .filter((index) => index >= 0),
+        claim: document.querySelector('.hero-serif')?.textContent?.trim() ?? '',
+        title: document.querySelector('.instant-card .action-title')?.textContent?.trim() ?? '',
+        indicator: document.querySelector('.deck-step-text')?.textContent?.trim() ?? '',
+        indicatorLive: document.querySelector('.deck-indicator')?.getAttribute('aria-live') ?? null,
+        scene: stage?.getAttribute('data-scene') ?? null,
+        lure: stage?.getAttribute('data-preview-lure') ?? null,
+        stageMode: stage?.getAttribute('data-stage-mode') ?? null,
+        activeTag: document.activeElement?.tagName ?? null,
+        deckState: sessionStorage.getItem(deckKey),
+        seen: sessionStorage.getItem(seenKey),
+        funnel: localStorage.getItem(funnelKey),
+        ctaTop: ctaRect ? ctaRect.top : null,
+        ctaBottom: ctaRect ? ctaRect.bottom : null,
+        stageTop: stageRect ? stageRect.top : null,
+        stageHeight: stageRect ? stageRect.height : null,
+        scrollY: window.scrollY
+      };
+    },
+    { deckKey: AA_HOME_DECK_STATE_KEY, seenKey: AA_HOME_ENTRY_TOUR_SEEN_KEY, funnelKey: AA_FUNNEL_COUNTS_KEY }
+  );
+}
+
+type HomeCase = {
+  viewport: Viewport;
+  url?: string;
+  hasTouch?: boolean;
+  reducedMotion?: boolean;
+  /** Runs before any page script on every navigation. */
+  init?: { fn: (arg: string) => void; arg: string };
+  /** Runs in the still empty tab, before "/" is opened. */
+  prepare?: (page: Page) => Promise<void>;
+};
+
+/** Opens "/" in a context of its own, so each case starts as a fresh browser session. */
+async function withFreshHome(
+  browser: Browser,
+  spec: HomeCase,
+  body: (page: Page) => Promise<void>
+): Promise<void> {
+  const context = await browser.newContext({
+    viewport: spec.viewport,
+    hasTouch: spec.hasTouch ?? false,
+    reducedMotion: spec.reducedMotion ? 'reduce' : 'no-preference'
+  });
+  try {
+    const page = await context.newPage();
+    if (spec.init) await page.addInitScript(spec.init.fn, spec.init.arg);
+    if (spec.prepare) await spec.prepare(page);
+    await gotoHydrated(page, spec.url ?? '/');
+    await watchTabs(page);
+    await body(page);
+  } finally {
+    await context.close();
+  }
+}
+
+/** Waits until the tour has moved to the given tab. */
+async function waitForTourStep(page: Page, tabIndex: number, isFirst: boolean): Promise<void> {
+  await expect(page.locator('.energy-tabs [role="tab"]').nth(tabIndex)).toHaveAttribute('aria-selected', 'true', {
+    timeout: (isFirst ? ENTRY_TOUR_INITIAL_PAUSE_MS : ENTRY_TOUR_STEP_MS) + TOUR_STEP_SLACK_MS
+  });
+}
+
+/** Waits for a step and lets it settle, so that what follows is a considered choice of the card now showing. */
+async function waitForSettledTourStep(page: Page, tabIndex: number, isFirst: boolean): Promise<void> {
+  await waitForTourStep(page, tabIndex, isFirst);
+  await page.waitForTimeout(ENTRY_TOUR_SETTLE_MS);
+}
+
+/**
+ * Runs a timing-sensitive case in fresh sessions until the scripted reach lands inside the settle window
+ * of a step. The attempt returns false when it came too late to say anything.
+ */
+async function withReachInSettleWindow(
+  browser: Browser,
+  spec: HomeCase,
+  attempt: (page: Page) => Promise<boolean>
+): Promise<void> {
+  for (let tries = 0; tries < 3; tries++) {
+    let landed = false;
+    await withFreshHome(browser, spec, async (page) => {
+      landed = await attempt(page);
+    });
+    if (landed) return;
+  }
+  throw new Error('the scripted reach never landed inside the settle window');
+}
+
+/** Runs the cases a few at a time, so that each page gets its turn well inside the initial pause. */
+async function inBatches<T>(items: T[], size: number, run: (item: T) => Promise<void>): Promise<void> {
+  for (let i = 0; i < items.length; i += size) {
+    await Promise.all(items.slice(i, i + size).map(run));
+  }
+}
+
+test.describe('Home entry tour: one calm walk through the energy tabs', () => {
+  for (const vp of [DESKTOP, TABLET_LANDSCAPE, { width: 920, height: 650 }]) {
+    test(`ET1 (${vp.width}x${vp.height}): visits all four modes once, rests on the first, shifts nothing and stays passive`, async ({
+      page
+    }) => {
+      test.setTimeout(90_000);
+      const pageErrors: string[] = [];
+      page.on('pageerror', (err) => pageErrors.push(err.message));
+
+      await page.setViewportSize(vp);
+      await installShiftProbe(page);
+      await installTourStartProbe(page);
+      await gotoHydrated(page, '/');
+      await page.evaluate(() => document.fonts.ready);
+      const tourWindowStart = await page.evaluate(() => performance.now());
+      await watchTabs(page);
+      await watchStage(page);
+      await watchIndicator(page);
+      await watchWhispers(page);
+
+      const entry = await readHomeState(page);
+      expect(entry.selected, 'entry is on the first tab').toEqual([0]);
+      expect(entry.claim).toBe(TOUR_MODES[0].claim);
+      expect(entry.indicator).toMatch(/^1\s*\/\s*\d+/);
+      expect(entry.deckState, 'fresh entry has no saved deck state').toBeNull();
+      expect(entry.seen, 'the tour is marked as seen as soon as it starts').toBe('1');
+      expect(entry.ctaTop).not.toBeNull();
+      expect(entry.stageTop).not.toBeNull();
+      await expect(page.getByRole('button', { name: STOP_CONTROL_NAME }), 'a running tour can be stopped by name').toHaveCount(1);
+
+      const scenes: Array<string | null> = [entry.scene];
+      const titles: string[] = [entry.title];
+      for (const [step, tabIndex] of TOUR_ORDER.entries()) {
+        await waitForTourStep(page, tabIndex, step === 0);
+        const isRest = step === TOUR_ORDER.length - 1;
+        await expect(page.locator('.hero-serif')).toHaveText(TOUR_MODES[tabIndex].claim);
+
+        const shown = await readHomeState(page);
+        const label = `${vp.width}x${vp.height} step ${step + 1} (tab ${tabIndex})`;
+        expect(shown.selected, `${label}: exactly one tab selected`).toEqual([tabIndex]);
+        expect(shown.indicator, `${label}: the mode's first card`).toMatch(/^1\s*\/\s*\d+/);
+        expect(shown.stageMode, `${label}: scene stays a preview`).toBe('preview');
+        expect(shown.lure, `${label}: remounted card starts at rest`).toBe('rest');
+        expect(shown.deckState, `${label}: deck state is not persisted`).toBeNull();
+        expect(shown.funnel, `${label}: no funnel event recorded`).toBeNull();
+        expect(shown.activeTag, `${label}: focus was not moved`).toBe('BODY');
+        expect(shown.scrollY, `${label}: page was not scrolled`).toBe(0);
+        // The card is re-created on every step, so the layout-shift probe below cannot see it move.
+        expect(shown.stageTop, `${label}: scene stays where it was`).toBe(entry.stageTop);
+        expect(shown.stageHeight, `${label}: scene keeps its height`).toBe(entry.stageHeight);
+        expect(shown.ctaTop, `${label}: primary CTA stays where it was`).toBe(entry.ctaTop);
+        expect(shown.ctaBottom!, `${label}: primary CTA stays above the fold`).toBeLessThanOrEqual(vp.height);
+        if (!isRest) {
+          expect(shown.indicatorLive, `${label}: passive step is not announced`).toBe('off');
+          scenes.push(shown.scene);
+          titles.push(shown.title);
+        } else {
+          expect(shown.scene, `${label}: rest shows the entry scene again`).toBe(entry.scene);
+          expect(shown.title, `${label}: rest shows the entry card again`).toBe(entry.title);
+        }
+      }
+
+      expect(new Set(scenes).size, `four different scenes: ${scenes.join(', ')}`).toBe(4);
+      expect(new Set(titles).size, 'four different cards').toBe(4);
+
+      // Tempo as seen in the page: nothing before the initial pause, then one step per interval.
+      const tabLog = await readTabLog(page);
+      expect(tabLog.map((change) => change.index)).toEqual([...TOUR_ORDER]);
+      // The pause counts from the start of the tour, not from the start of navigation.
+      const tourStartAt = await page.evaluate(() => (window as ProbeWindow).__aaTourStartAt);
+      expect(tourStartAt, 'the tour start was observed').toBeDefined();
+      const firstStepAfter = tabLog[0].t - tourStartAt!;
+      expect(firstStepAfter, 'first step, counted from the tour start').toBeGreaterThanOrEqual(
+        ENTRY_TOUR_INITIAL_PAUSE_MS - TIMER_EARLY_SLACK_MS
+      );
+      expect(firstStepAfter, 'first step, counted from the tour start').toBeLessThanOrEqual(
+        ENTRY_TOUR_INITIAL_PAUSE_MS + TOUR_STEP_SLACK_MS
+      );
+      // A logged time is the timer plus the rendering of that step, so one gap can fall short by the
+      // difference between two renderings.
+      for (let i = 1; i < tabLog.length; i++) {
+        const gap = tabLog[i].t - tabLog[i - 1].t;
+        expect(gap, `gap before step ${i + 1}`).toBeGreaterThanOrEqual(ENTRY_TOUR_STEP_MS - RENDER_JITTER_SLACK_MS);
+        expect(gap, `gap before step ${i + 1}`).toBeLessThanOrEqual(ENTRY_TOUR_STEP_MS + TOUR_STEP_SLACK_MS);
+      }
+      expect(tabLog[tabLog.length - 1].t - tabLog[0].t).toBeGreaterThanOrEqual(
+        ENTRY_TOUR_DURATION_MS - ENTRY_TOUR_INITIAL_PAUSE_MS - RENDER_JITTER_SLACK_MS
+      );
+
+      // Every step, the return to rest included, changed the counter while it was silent.
+      const indicatorLog = await readIndicatorLog(page);
+      expect(indicatorLog.length, 'the counter text did change during the tour').toBeGreaterThan(0);
+      for (const [i, change] of indicatorLog.entries()) {
+        expect(change, `counter change ${i + 1} is not announced`).toEqual({ live: 'off', liveChanged: false });
+      }
+
+      // Molly kept her guiding whispers to herself until the tour was over.
+      const tourEndedAt = tabLog[tabLog.length - 1].t + ENTRY_TOUR_SETTLE_MS;
+      expect(
+        (await readWhispers(page)).filter((whisper) => whisper.t <= tourEndedAt),
+        'no whisper while the tour was moving'
+      ).toEqual([]);
+
+      // Zero layout shift from before the first step until after the last one.
+      const shifts = await readShiftsSince(page, tourWindowStart);
+      expect(shifts, `${vp.width}x${vp.height}: layout shifts during the tour`).toEqual([]);
+      expect(shifts.reduce((sum, shift) => sum + shift.value, 0)).toBe(0);
+
+      // At rest the page is exactly a fresh entry again, with the primary CTA above the fold.
+      const rest = await readHomeState(page);
+      expect(rest.selected).toEqual([0]);
+      expect(rest.claim).toBe(TOUR_MODES[0].claim);
+      expect(rest.deckState).toBeNull();
+      expect(rest.funnel).toBeNull();
+      expect(rest.ctaTop).not.toBeNull();
+      expect(rest.ctaTop!).toBeGreaterThanOrEqual(0);
+      expect(rest.ctaBottom!, 'primary CTA stays above the fold').toBeLessThanOrEqual(vp.height);
+      await expect(page.locator('.deck-indicator')).toHaveAttribute('aria-live', 'polite');
+      await expect(page.locator('.tour-stop'), 'the stop control goes with the tour').toHaveCount(0);
+
+      // The preview never primed, teased or played out while the tour was moving.
+      const stageDuringTour = await page.evaluate(() => (window as ProbeWindow).__aaStageLog);
+      expect(stageDuringTour?.lure).toEqual(['rest']);
+      expect(stageDuringTour?.stageModes).toEqual(['preview']);
+      expect(stageDuringTour?.mollyMiniReady).toBe(false);
+
+      // Afterwards the card's own idle lure works as before, and the tour never comes back.
+      await expect(page.locator('.instant-card .deed-stage')).toHaveAttribute('data-preview-lure', 'idle', {
+        timeout: ENTRY_TOUR_STEP_MS + 6000
+      });
+      expect(await page.locator('[data-molly-mini="ready"]').count()).toBe(0);
+      expect((await readTabLog(page)).length, 'no further step after the tour came to rest').toBe(TOUR_ORDER.length);
+      expect((await readHomeState(page)).deckState).toBeNull();
+      expect(pageErrors).toEqual([]);
+    });
+  }
+
+  test('ET2: never runs on a phone or a tablet, upright or on its side, nor in a narrow or low window', async ({
+    browser
+  }) => {
+    test.setTimeout(60_000);
+    const devices: Array<{ viewport: Viewport; hasTouch?: boolean }> = [
+      { viewport: { width: 390, height: 844 } },
+      { viewport: { width: 375, height: 667 } },
+      { viewport: { width: 768, height: 1024 } },
+      // A phone on its side is wide enough for the side-by-side layout, but far too low.
+      { viewport: { width: 932, height: 430 }, hasTouch: true },
+      // A tablet on its side has the side-by-side layout, but no mouse to stop the tour with.
+      { viewport: TABLET_LANDSCAPE, hasTouch: true },
+      // A large tablet held upright is wider than the desktop breakpoint.
+      { viewport: { width: 1032, height: 1376 }, hasTouch: true }
+    ];
+    await Promise.all([
+      ...devices.map(({ viewport, hasTouch }) =>
+        withFreshHome(browser, { viewport, hasTouch }, async (page) => {
+          const label = `${viewport.width}x${viewport.height}`;
+          const before = await readHomeState(page);
+          const mobileClaim = await page.locator('.hero-mobile-claim').textContent();
+          await page.waitForTimeout(NO_TOUR_WAIT_MS);
+          const after = await readHomeState(page);
+          expect(await readTabLog(page), `${label}: no tab change`).toEqual([]);
+          expect(after.selected, label).toEqual([0]);
+          expect(after.claim, label).toBe(TOUR_MODES[0].claim);
+          expect(after.title, label).toBe(before.title);
+          expect(await page.locator('.hero-mobile-claim').textContent(), label).toBe(mobileClaim);
+          expect(after.indicatorLive, label).toBe('polite');
+          expect(after.seen, `${label}: a tour that never started is not marked as seen`).toBeNull();
+          expect(after.deckState, label).toBeNull();
+          await expect(page.locator('.tour-stop'), `${label}: nothing to stop`).toHaveCount(0);
+        })
+      ),
+      // The same upright shape with a mouse is a desktop window, and that one does get the tour.
+      withFreshHome(browser, { viewport: { width: 1032, height: 1376 } }, async (page) => {
+        expect((await readHomeState(page)).seen, 'upright desktop window: tour was armed').toBe('1');
+        await waitForTourStep(page, 1, true);
+      })
+    ]);
+  });
+
+  test('ET3: does not start with reduced motion, a deep link, restored deck state, a closed day, a hidden tab or a scrolled page', async ({
+    browser
+  }) => {
+    test.setTimeout(60_000);
+    const cases: Array<HomeCase & { name: string; expectTab?: number; closedDay?: boolean }> = [
+      { name: 'reduced motion', viewport: DESKTOP, reducedMotion: true, expectTab: 0 },
+      { name: '?action= deep link', viewport: DESKTOP, url: '/?action=missing_maps', expectTab: 1 },
+      { name: '#action= deep link', viewport: DESKTOP, url: '/#action=knihobudka_kniha', expectTab: 2 },
+      { name: '?intent= deep link', viewport: DESKTOP, url: '/?intent=people', expectTab: 3 },
+      {
+        name: 'restored deck state',
+        viewport: DESKTOP,
+        expectTab: 1,
+        init: {
+          fn: (key) => {
+            sessionStorage.setItem(
+              key,
+              JSON.stringify({ energyMode: 'focus', actionId: '', index: 0, excludeQuickId: '', usePersonalValues: false })
+            );
+          },
+          arg: AA_HOME_DECK_STATE_KEY
+        }
+      },
+      {
+        name: 'closed day',
+        viewport: DESKTOP,
+        expectTab: 0,
+        closedDay: true,
+        init: { fn: (key) => localStorage.setItem(key, '1'), arg: todayClosedKey() }
+      },
+      {
+        name: 'hidden tab',
+        viewport: DESKTOP,
+        expectTab: 0,
+        init: {
+          fn: () => {
+            Object.defineProperty(Document.prototype, 'hidden', { configurable: true, get: () => true });
+            Object.defineProperty(Document.prototype, 'visibilityState', { configurable: true, get: () => 'hidden' });
+          },
+          arg: ''
+        }
+      },
+      { name: 'scrolled page', viewport: DESKTOP, url: '/#dnesni-skutek', expectTab: 0 }
+    ];
+
+    await Promise.all(
+      cases.map((spec) =>
+        withFreshHome(browser, spec, async (page) => {
+          if (spec.name === 'scrolled page') {
+            expect((await readHomeState(page)).scrollY, 'entry lands scrolled to the anchor').toBeGreaterThan(0);
+          }
+          if (spec.closedDay) {
+            await expect(page.locator('.session-closed-card')).toContainText('Pro dnešek máš hotovo');
+          }
+          await page.waitForTimeout(NO_TOUR_WAIT_MS);
+          const after = await readHomeState(page);
+          expect(await readTabLog(page), `${spec.name}: no tab change`).toEqual([]);
+          expect(after.selected, spec.name).toEqual([spec.expectTab ?? 0]);
+          expect(after.seen, `${spec.name}: not marked as seen`).toBeNull();
+        })
+      )
+    );
+  });
+
+  test('ET4: runs at most once per browser session, also for a visitor who arrives from a scrolled subpage', async ({
+    page
+  }) => {
+    test.setTimeout(90_000);
+    await page.setViewportSize(DESKTOP);
+
+    // Arriving by an in-app link from a scrolled subpage is a real entry: the tour runs.
+    await gotoHydrated(page, '/app/online');
+    await page.evaluate(() => window.scrollTo({ top: 700, behavior: 'instant' as ScrollBehavior }));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(300);
+    await page.locator('.nav-capsule a.brand').click();
+    await expect(page.locator('.instant-card .action-title')).toBeVisible();
+    await watchTabs(page);
+    await waitForTourStep(page, 1, true);
+    expect((await readHomeState(page)).seen).toBe('1');
+
+    // Leaving in the middle and coming back does not replay it.
+    await page.locator('.nav-capsule a[href="/app/online"]').first().click();
+    await expect(page).toHaveURL(/\/app\/online$/);
+    await page.locator('.nav-capsule a.brand').click();
+    await expect(page.locator('.instant-card .action-title')).toBeVisible();
+    await watchTabs(page);
+    await page.waitForTimeout(NO_TOUR_WAIT_MS);
+    expect(await readTabLog(page), 'no replay after returning to /').toEqual([]);
+    expect((await readHomeState(page)).selected).toEqual([0]);
+
+    // Neither does a reload in the same session.
+    await page.reload();
+    await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 20000 });
+    await watchTabs(page);
+    await page.waitForTimeout(NO_TOUR_WAIT_MS);
+    const afterReload = await readHomeState(page);
+    expect(await readTabLog(page), 'no replay after reload').toEqual([]);
+    expect(afterReload.selected).toEqual([0]);
+    expect(afterReload.deckState).toBeNull();
+  });
+
+  test('ET5: any interaction during the initial pause cancels the tour before it moves', async ({ browser }) => {
+    test.setTimeout(60_000);
+    const cases: Array<HomeCase & { name: string; act: (page: Page) => Promise<void> }> = [
+      {
+        name: 'pointer enters the card',
+        viewport: DESKTOP,
+        act: async (page) => {
+          await page.locator('.instant-card .action-title').hover();
+        }
+      },
+      {
+        // No pointer event tells the page about a pointer that was there before it loaded.
+        name: 'pointer already rests on the card when the page loads',
+        viewport: DESKTOP,
+        prepare: async (page) => {
+          await page.mouse.move(1040, 300);
+        },
+        act: async (page) => {
+          expect(await page.locator('.instant-card').evaluate((card) => card.matches(':hover'))).toBe(true);
+        }
+      },
+      {
+        name: 'pointer enters the tabs',
+        viewport: DESKTOP,
+        act: async (page) => {
+          await page.locator('.energy-tabs [role="tab"]').nth(3).hover();
+        }
+      },
+      {
+        name: 'pointer down on empty hero space',
+        viewport: DESKTOP,
+        act: async (page) => {
+          await page.mouse.click(40, 700);
+        }
+      },
+      {
+        name: 'key down',
+        viewport: DESKTOP,
+        act: async (page) => {
+          await page.keyboard.press('Shift');
+        }
+      },
+      {
+        name: 'wheel',
+        viewport: DESKTOP,
+        // Upwards at the very top: nothing can scroll, so only the wheel listener can stop the tour.
+        act: async (page) => {
+          await page.mouse.move(700, 450);
+          await page.mouse.wheel(0, -120);
+          expect((await readHomeState(page)).scrollY, 'the wheel scrolled nothing').toBe(0);
+        }
+      },
+      {
+        name: 'scripted scroll',
+        viewport: DESKTOP,
+        act: async (page) => {
+          await page.evaluate(() => window.scrollTo({ top: 260, behavior: 'instant' as ScrollBehavior }));
+        }
+      },
+      {
+        name: 'focus moves into the hero',
+        viewport: DESKTOP,
+        act: async (page) => {
+          await page.locator('.hero-copy a.hero-btn').first().focus();
+        }
+      },
+      {
+        name: 'focus moves into the card',
+        viewport: DESKTOP,
+        act: async (page) => {
+          await page.locator('.instant-card .btn-studio-primary').focus();
+        }
+      },
+      {
+        // A laptop with a touchscreen is a mouse device whose visitor may still use a finger. The context
+        // cannot have both, so the touch is dispatched: only the tour's own touchstart listener can see it.
+        name: 'touch on a touchscreen laptop',
+        viewport: DESKTOP,
+        act: async (page) => {
+          await page.evaluate(() => {
+            document.body.dispatchEvent(new Event('touchstart', { bubbles: true }));
+          });
+        }
+      }
+    ];
+
+    await inBatches(cases, 5, (spec) =>
+      withFreshHome(browser, spec, async (page) => {
+        expect((await readHomeState(page)).seen, `${spec.name}: tour was armed`).toBe('1');
+        await spec.act(page);
+        await page.waitForTimeout(NO_TOUR_WAIT_MS);
+        const after = await readHomeState(page);
+        expect(await readTabLog(page), `${spec.name}: no tab change`).toEqual([]);
+        expect(after.selected, spec.name).toEqual([0]);
+        expect(after.claim, spec.name).toBe(TOUR_MODES[0].claim);
+        expect(after.indicatorLive, `${spec.name}: announcements are back on`).toBe('polite');
+        expect(after.deckState, `${spec.name}: stopping saves nothing`).toBeNull();
+      })
+    );
+  });
+
+  test('ET6: stopped mid-tour it stays on what is showing and never fires a late step', async ({ browser }) => {
+    test.setTimeout(90_000);
+    const cases: Array<{ name: string; act: (page: Page) => Promise<void> }> = [
+      {
+        name: 'key down',
+        act: async (page) => {
+          await page.keyboard.press('Shift');
+        }
+      },
+      {
+        name: 'tab becomes hidden',
+        act: async (page) => {
+          await page.evaluate(() => {
+            Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+            Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+            document.dispatchEvent(new Event('visibilitychange'));
+          });
+        }
+      },
+      {
+        name: 'media changes to reduced motion',
+        act: async (page) => {
+          await page.emulateMedia({ reducedMotion: 'reduce' });
+        }
+      },
+      {
+        name: 'viewport becomes a phone',
+        act: async (page) => {
+          await page.setViewportSize({ width: 390, height: 844 });
+        }
+      },
+      {
+        name: 'viewport becomes a portrait tablet',
+        act: async (page) => {
+          await page.setViewportSize({ width: 768, height: 1024 });
+        }
+      }
+    ];
+
+    await Promise.all(
+      cases.map((spec) =>
+        withFreshHome(browser, { viewport: DESKTOP }, async (page) => {
+          await waitForTourStep(page, 1, true);
+          await spec.act(page);
+          await page.waitForTimeout(NO_NEXT_STEP_WAIT_MS);
+          const after = await readHomeState(page);
+          expect((await readTabLog(page)).map((change) => change.index), `${spec.name}: only the first step`).toEqual([1]);
+          expect(after.selected, spec.name).toEqual([1]);
+          expect(after.indicatorLive, spec.name).toBe('polite');
+          expect(after.deckState, `${spec.name}: stopping saves nothing`).toBeNull();
+          expect(after.funnel, `${spec.name}: stopping records nothing`).toBeNull();
+        })
+      )
+    );
+  });
+
+  test('ET7: never overrides what the visitor chose in the deck', async ({ browser }) => {
+    test.setTimeout(90_000);
+    const tabsOf = (page: Page) => page.locator('.energy-tabs [role="tab"]');
+    const savedMode = async (page: Page) => {
+      const raw = (await readHomeState(page)).deckState;
+      return raw ? (JSON.parse(raw) as { energyMode?: string; index?: number }) : null;
+    };
+
+    await Promise.all([
+      // A different tab than the one the tour is showing.
+      withFreshHome(browser, { viewport: DESKTOP }, async (page) => {
+        await waitForSettledTourStep(page, 1, true);
+        await tabsOf(page).nth(3).click();
+        await expect(tabsOf(page).nth(3)).toHaveAttribute('aria-selected', 'true');
+        await page.waitForTimeout(NO_NEXT_STEP_WAIT_MS);
+        expect((await readHomeState(page)).selected).toEqual([3]);
+        expect((await readTabLog(page)).map((change) => change.index)).toEqual([1, 3]);
+        expect((await savedMode(page))?.energyMode).toBe('people');
+        await expect(page.locator('.hero-serif')).toHaveText(TOUR_MODES[3].claim);
+      }),
+
+      // The very tab the tour is showing: the visitor keeps this card, it is not skipped.
+      withFreshHome(browser, { viewport: DESKTOP }, async (page) => {
+        await waitForTourStep(page, 1, true);
+        await waitForSettledTourStep(page, 2, false);
+        const shown = await readHomeState(page);
+        await tabsOf(page).nth(2).click();
+        await page.waitForTimeout(NO_NEXT_STEP_WAIT_MS);
+        const after = await readHomeState(page);
+        expect(after.selected).toEqual([2]);
+        expect(after.title, 'the card the visitor clicked on is kept').toBe(shown.title);
+        expect(after.indicator).toMatch(/^1\s*\/\s*\d+/);
+        expect((await savedMode(page))?.energyMode).toBe('walk');
+        // From now on the active tab behaves as always: another click offers the next tip.
+        await tabsOf(page).nth(2).click();
+        await expect(page.locator('.deck-step-text')).toHaveText(/^2\s*\/\s*\d+/);
+      }),
+
+      // The first tab during the initial pause behaves exactly as without a tour.
+      withFreshHome(browser, { viewport: DESKTOP }, async (page) => {
+        await tabsOf(page).nth(0).click();
+        await expect(page.locator('.deck-step-text')).toHaveText(/^2\s*\/\s*\d+/);
+        await page.waitForTimeout(NO_TOUR_WAIT_MS);
+        expect((await readHomeState(page)).selected).toEqual([0]);
+        await expect(page.locator('.deck-step-text')).toHaveText(/^2\s*\/\s*\d+/);
+      }),
+
+      // Next card while the tour is on another mode.
+      withFreshHome(browser, { viewport: DESKTOP }, async (page) => {
+        await waitForSettledTourStep(page, 1, true);
+        await page.locator('.deck-nav-next').click();
+        await expect(page.locator('.deck-step-text')).toHaveText(/^2\s*\/\s*\d+/);
+        await page.waitForTimeout(NO_NEXT_STEP_WAIT_MS);
+        expect((await readHomeState(page)).selected).toEqual([1]);
+        await expect(page.locator('.deck-step-text')).toHaveText(/^2\s*\/\s*\d+/);
+        const saved = await savedMode(page);
+        expect(saved?.energyMode).toBe('focus');
+        expect(saved?.index).toBe(1);
+      }),
+
+      // Starting the deed the tour happens to be showing.
+      withFreshHome(browser, { viewport: DESKTOP }, async (page) => {
+        await page.context().route(/^https?:\/\/(?!localhost)/, (route) => route.abort());
+        await waitForSettledTourStep(page, 1, true);
+        const shown = await readHomeState(page);
+        const popupPromise = page.waitForEvent('popup', { timeout: 5000 }).catch(() => null);
+        await page.locator('.instant-card .btn-studio-primary').click();
+        const popup = await popupPromise;
+        await popup?.close();
+        await page.waitForTimeout(NO_NEXT_STEP_WAIT_MS);
+        const after = await readHomeState(page);
+        expect(after.selected).toEqual([1]);
+        expect(after.title).toBe(shown.title);
+        expect(after.stageMode, 'the started deed left the preview').not.toBe('preview');
+        expect((await savedMode(page))?.energyMode).toBe('focus');
+      }),
+
+      // A deep link arriving while the tour is running.
+      withFreshHome(browser, { viewport: DESKTOP }, async (page) => {
+        await waitForTourStep(page, 1, true);
+        await page.evaluate(() => {
+          window.location.hash = '#action=knihobudka_kniha';
+        });
+        await expect(tabsOf(page).nth(2)).toHaveAttribute('aria-selected', 'true');
+        const linked = await readHomeState(page);
+        await page.waitForTimeout(NO_NEXT_STEP_WAIT_MS);
+        const after = await readHomeState(page);
+        expect(after.selected).toEqual([2]);
+        expect(after.title).toBe(linked.title);
+        expect((await readTabLog(page)).map((change) => change.index)).toEqual([1, 2]);
+      })
+    ]);
+  });
+
+  test('ET8: leaves no listeners behind once it is over, stopped or abandoned by navigating away', async ({ browser }) => {
+    test.setTimeout(90_000);
+    // What the running tour listens to, on top of everything else on the page.
+    const TOUR_LISTENERS: Record<string, number> = {
+      pointerdown: 1,
+      keydown: 1,
+      wheel: 1,
+      touchstart: 1,
+      scroll: 1,
+      visibilitychange: 1,
+      focusin: 1,
+      pointerenter: 1,
+      click: 1,
+      change: 2
+    };
+    const WATCHED = Object.keys(TOUR_LISTENERS);
+
+    // Counts listeners currently registered on the global targets the tour listens on.
+    const listenerProbe = () => {
+      const w = window as ProbeWindow;
+      const counts: Record<string, number> = {};
+      w.__aaListeners = counts;
+      const registry = new WeakMap<EventTarget, Map<string, Set<unknown>>>();
+      const isTracked = (target: EventTarget) =>
+        target === window ||
+        target === document ||
+        (typeof MediaQueryList !== 'undefined' && target instanceof MediaQueryList) ||
+        (target instanceof Element && target.matches('.instant-card, .hero-copy'));
+      const keyOf = (type: string, options?: boolean | AddEventListenerOptions | EventListenerOptions) =>
+        `${type}|${typeof options === 'boolean' ? options : Boolean(options?.capture)}`;
+      const add = EventTarget.prototype.addEventListener;
+      const remove = EventTarget.prototype.removeEventListener;
+      EventTarget.prototype.addEventListener = function (
+        this: EventTarget,
+        type: string,
+        listener: EventListenerOrEventListenerObject | null,
+        options?: boolean | AddEventListenerOptions
+      ) {
+        if (listener && isTracked(this)) {
+          let byKey = registry.get(this);
+          if (!byKey) {
+            byKey = new Map();
+            registry.set(this, byKey);
+          }
+          const key = keyOf(type, options);
+          let set = byKey.get(key);
+          if (!set) {
+            set = new Set();
+            byKey.set(key, set);
+          }
+          if (!set.has(listener)) {
+            set.add(listener);
+            counts[type] = (counts[type] ?? 0) + 1;
+          }
+        }
+        return add.call(this, type, listener, options);
+      };
+      EventTarget.prototype.removeEventListener = function (
+        this: EventTarget,
+        type: string,
+        listener: EventListenerOrEventListenerObject | null,
+        options?: boolean | EventListenerOptions
+      ) {
+        if (listener && isTracked(this)) {
+          const set = registry.get(this)?.get(keyOf(type, options));
+          if (set?.delete(listener)) counts[type] = (counts[type] ?? 0) - 1;
+        }
+        return remove.call(this, type, listener, options);
+      };
+    };
+
+    const readCounts = async (page: Page) => {
+      const counts = await page.evaluate(() => (window as ProbeWindow).__aaListeners ?? {});
+      return Object.fromEntries(WATCHED.map((type) => [type, counts[type] ?? 0]));
+    };
+
+    const open = async (seen: boolean) => {
+      const context = await browser.newContext({ viewport: DESKTOP });
+      const page = await context.newPage();
+      const errors: string[] = [];
+      page.on('pageerror', (err) => errors.push(err.message));
+      await page.addInitScript(listenerProbe);
+      if (seen) {
+        await page.addInitScript((key) => sessionStorage.setItem(key, '1'), AA_HOME_ENTRY_TOUR_SEEN_KEY);
+      }
+      await gotoHydrated(page, '/');
+      await watchTabs(page);
+      return { context, page, errors };
+    };
+
+    const goToSubpage = async (page: Page) => {
+      await page.evaluate(() => {
+        document.querySelector<HTMLAnchorElement>('.site-footer a[href="/app/online"]')?.click();
+      });
+      await expect(page).toHaveURL(/\/app\/online$/);
+      await page.waitForTimeout(NO_NEXT_STEP_WAIT_MS);
+    };
+
+    type Session = Awaited<ReturnType<typeof open>>;
+    type Counts = Record<string, number>;
+    const sessions: Session[] = [];
+    /** One visit from its own first moment to its end, so no visit waits for another to open. */
+    const visit = async <T,>(seen: boolean, flow: (session: Session) => Promise<T>): Promise<T> => {
+      const session = await open(seen);
+      sessions.push(session);
+      return flow(session);
+    };
+    // A click that was already on its way may still arrive for a moment after the tour has ended.
+    const waitForLateClickGuard = (page: Page) => page.waitForTimeout(ENTRY_TOUR_SETTLE_MS + 400);
+
+    try {
+      const [noTour, finished, stopped, abandoned, subpageOnly] = await Promise.all([
+        // Reference: the same page on which the tour never started.
+        visit(true, async ({ page }) => {
+          const atEntry: Counts = await readCounts(page);
+          await page.waitForTimeout(NO_TOUR_WAIT_MS);
+          expect(await readTabLog(page)).toEqual([]);
+          return { atEntry, atEnd: (await readCounts(page)) as Counts };
+        }),
+        // The tour runs to its end.
+        visit(false, async ({ page }) => {
+          const during: Counts = await readCounts(page);
+          expect(await readTabLog(page), 'the listeners were counted while the tour was still waiting').toEqual([]);
+          for (const [step, tabIndex] of TOUR_ORDER.entries()) await waitForTourStep(page, tabIndex, step === 0);
+          await expect(page.locator('.deck-indicator')).toHaveAttribute('aria-live', 'polite');
+          await waitForLateClickGuard(page);
+          return { during, atEnd: (await readCounts(page)) as Counts };
+        }),
+        // The tour is stopped by the visitor.
+        visit(false, async ({ page }) => {
+          await waitForTourStep(page, 1, true);
+          await page.keyboard.press('Shift');
+          await page.waitForTimeout(NO_NEXT_STEP_WAIT_MS);
+          expect((await readTabLog(page)).map((change) => change.index)).toEqual([1]);
+          return { atEnd: (await readCounts(page)) as Counts };
+        }),
+        // The visitor leaves "/" in the middle of the tour.
+        visit(false, async ({ page }) => {
+          await waitForTourStep(page, 1, true);
+          await goToSubpage(page);
+          return { atEnd: (await readCounts(page)) as Counts };
+        }),
+        // Reference for the abandoned case: the same journey without a tour.
+        visit(true, async ({ page }) => {
+          await goToSubpage(page);
+          return { atEnd: (await readCounts(page)) as Counts };
+        })
+      ]);
+
+      // While it runs, the tour adds exactly its own listeners to those of the same page without a tour.
+      for (const type of WATCHED) {
+        expect(finished.during[type], `${type} listeners while the tour runs`).toBe(
+          noTour.atEntry[type] + TOUR_LISTENERS[type]
+        );
+      }
+      expect(finished.atEnd, 'finished tour vs. no tour').toEqual(noTour.atEnd);
+      expect(stopped.atEnd, 'stopped tour vs. no tour').toEqual(noTour.atEnd);
+      expect(abandoned.atEnd, 'abandoned tour vs. the same journey without a tour').toEqual(subpageOnly.atEnd);
+      for (const session of sessions) {
+        expect(session.errors).toEqual([]);
+      }
+    } finally {
+      await Promise.all(sessions.map((session) => session.context.close()));
+    }
+  });
+
+  test('ET9: a reach for the card right after a step is taken as aimed at the card before it', async ({ browser }) => {
+    test.setTimeout(120_000);
+    const tabsOf = (page: Page) => page.locator('.energy-tabs [role="tab"]');
+    const blockPartners = async (page: Page) => {
+      const requested: string[] = [];
+      await page.context().route(/^https?:\/\/(?!localhost)/, (route) => {
+        requested.push(route.request().url());
+        return route.abort();
+      });
+      return requested;
+    };
+    const savedMode = async (page: Page) => {
+      const raw = (await readHomeState(page)).deckState;
+      return raw ? (JSON.parse(raw) as { energyMode?: string }).energyMode ?? null : null;
+    };
+    const startShownDeed = async (page: Page, press: () => Promise<void>) => {
+      const popupPromise = page.waitForEvent('popup', { timeout: 5000 }).catch(() => null);
+      await press();
+      await (await popupPromise)?.close();
+    };
+
+    await Promise.all([
+      // The pointer crosses into the card a moment after the card under it was swapped.
+      withReachInSettleWindow(browser, { viewport: DESKTOP }, async (page) => {
+        await blockPartners(page);
+        const entry = await readHomeState(page);
+        await watchIndicator(page);
+        const card = page.locator('.instant-card');
+        const box = (await card.boundingBox())!;
+        await card.evaluate((el) => {
+          el.addEventListener('pointerenter', () => {
+            (window as ProbeWindow).__aaReachAt ??= performance.now();
+          });
+        });
+        // Moving about outside the card stops nothing.
+        await page.mouse.move(box.x - 40, box.y + 120);
+        const step = await waitForNextTabChange(page);
+        await page.mouse.move(box.x + 40, box.y + 120);
+        const reachAt = await page.evaluate(() => (window as ProbeWindow).__aaReachAt ?? Infinity);
+        if (reachAt - step.t >= ENTRY_TOUR_SETTLE_MS) return false;
+
+        expect(step.index).toBe(1);
+        await expect(tabsOf(page).nth(0)).toHaveAttribute('aria-selected', 'true');
+        const back = await readHomeState(page);
+        expect(back.title, 'the card the visitor was heading for is back').toBe(entry.title);
+        expect(back.claim).toBe(TOUR_MODES[0].claim);
+        expect(back.deckState, 'stepping back saves nothing').toBeNull();
+        expect(back.funnel, 'stepping back records nothing').toBeNull();
+
+        await page.waitForTimeout(NO_NEXT_STEP_WAIT_MS);
+        expect((await readTabLog(page)).map((change) => change.index), 'one step, one step back, nothing more').toEqual([
+          1, 0
+        ]);
+        for (const change of await readIndicatorLog(page)) {
+          expect(change, 'neither the step nor the step back is announced').toEqual({ live: 'off', liveChanged: false });
+        }
+        await expect(page.locator('.deck-indicator')).toHaveAttribute('aria-live', 'polite');
+
+        // The card they aimed at starts on the first click, as their own choice.
+        await startShownDeed(page, () => page.locator('.instant-card .btn-studio-primary').click());
+        const started = await readHomeState(page);
+        expect(started.title).toBe(entry.title);
+        expect(started.stageMode, 'the entry deed left the preview').not.toBe('preview');
+        expect(await savedMode(page)).toBe('couch');
+        return true;
+      }),
+
+      // A press lands on the primary button a moment after the card under it was swapped: the pointer
+      // arrives and presses in one go, as a quick click or a finger on a touchscreen laptop does.
+      withReachInSettleWindow(browser, { viewport: TABLET_LANDSCAPE }, async (page) => {
+        const requested = await blockPartners(page);
+        const entry = await readHomeState(page);
+        const cta = page.locator('.instant-card .btn-studio-primary');
+        const box = (await cta.boundingBox())!;
+        const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+        await page.evaluate(() => {
+          window.addEventListener(
+            'pointerdown',
+            () => {
+              (window as ProbeWindow).__aaReachAt ??= performance.now();
+            },
+            true
+          );
+        });
+        const popups: Page[] = [];
+        page.on('popup', (popup) => popups.push(popup));
+
+        const step = await waitForNextTabChange(page);
+        await page.mouse.click(point.x, point.y);
+        const reachAt = await page.evaluate(() => (window as ProbeWindow).__aaReachAt ?? Infinity);
+        if (reachAt - step.t >= ENTRY_TOUR_SETTLE_MS) return false;
+
+        expect(step.index).toBe(1);
+        expect(step.ctaHref, 'the swapped-in card has a partner link of its own').toBeTruthy();
+        await expect(tabsOf(page).nth(0)).toHaveAttribute('aria-selected', 'true');
+        await page.waitForTimeout(ENTRY_TOUR_SETTLE_MS);
+        const back = await readHomeState(page);
+        expect(back.title, 'the card the press was heading for is back').toBe(entry.title);
+        // The press either started the deed it was aimed at or started nothing; never the swapped-in one.
+        expect(requested.filter((url) => url.startsWith(step.ctaHref!)), 'the swapped-in partner was never opened').toEqual(
+          []
+        );
+        expect(await savedMode(page), 'the swapped-in mode was never saved as a choice').not.toBe('focus');
+
+        if (back.stageMode === 'preview') {
+          expect(popups, 'a press that started nothing opened nothing').toEqual([]);
+          expect(back.deckState).toBeNull();
+          await startShownDeed(page, () => page.mouse.click(point.x, point.y));
+        }
+        await Promise.all(popups.map((popup) => popup.close().catch(() => {})));
+        const started = await readHomeState(page);
+        expect(started.title).toBe(entry.title);
+        expect(started.stageMode, 'the entry deed left the preview').not.toBe('preview');
+        expect(await savedMode(page)).toBe('couch');
+        expect(requested.filter((url) => url.startsWith(step.ctaHref!))).toEqual([]);
+
+        await page.waitForTimeout(NO_NEXT_STEP_WAIT_MS);
+        expect((await readTabLog(page)).map((change) => change.index)).toEqual([1, 0]);
+        return true;
+      }),
+
+      // An activation that comes with no pointer at all (a screen reader), in the very moment of the swap.
+      withFreshHome(browser, { viewport: DESKTOP }, async (page) => {
+        const requested = await blockPartners(page);
+        const entry = await readHomeState(page);
+        const popups: Page[] = [];
+        page.on('popup', (popup) => popups.push(popup));
+        const activation = await page.evaluate(
+          () =>
+            new Promise<{ index: number; prevented: boolean }>((resolve) => {
+              const tablist = document.querySelector('.energy-tabs');
+              if (!tablist) throw new Error('energy tabs not found');
+              const observer = new MutationObserver(() => {
+                observer.disconnect();
+                const cta = document.querySelector('.instant-card .btn-studio-primary');
+                if (!cta) throw new Error('primary CTA not found');
+                const delivered = cta.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+                resolve({
+                  index: Array.from(tablist.querySelectorAll('[role="tab"]')).findIndex(
+                    (tab) => tab.getAttribute('aria-selected') === 'true'
+                  ),
+                  prevented: !delivered
+                });
+              });
+              observer.observe(tablist, { subtree: true, attributes: true, attributeFilter: ['aria-selected'] });
+            })
+        );
+        expect(activation.index).toBe(1);
+        expect(activation.prevented, 'the freshly swapped-in button does not act yet').toBe(true);
+        await expect(tabsOf(page).nth(0)).toHaveAttribute('aria-selected', 'true');
+        await page.waitForTimeout(NO_NEXT_STEP_WAIT_MS);
+        const after = await readHomeState(page);
+        expect((await readTabLog(page)).map((change) => change.index)).toEqual([1, 0]);
+        expect(after.title).toBe(entry.title);
+        expect(after.stageMode, 'nothing was started').toBe('preview');
+        expect(after.deckState).toBeNull();
+        expect(after.funnel).toBeNull();
+        expect(requested).toEqual([]);
+        expect(popups).toEqual([]);
+      }),
+
+      // Once the step has settled, a reach stays on what is showing.
+      withFreshHome(browser, { viewport: DESKTOP }, async (page) => {
+        await waitForSettledTourStep(page, 1, true);
+        const shown = await readHomeState(page);
+        await page.locator('.instant-card .action-title').hover();
+        await page.waitForTimeout(NO_NEXT_STEP_WAIT_MS);
+        const after = await readHomeState(page);
+        expect((await readTabLog(page)).map((change) => change.index)).toEqual([1]);
+        expect(after.selected).toEqual([1]);
+        expect(after.title).toBe(shown.title);
+      })
+    ]);
+  });
+
+  test('ET10: a running tour offers a named stop control to those whose input sends the page no other signal', async ({
+    browser
+  }) => {
+    test.setTimeout(60_000);
+    const stopControl = (page: Page) => page.getByRole('button', { name: STOP_CONTROL_NAME });
+
+    await Promise.all([
+      // Activated the way a screen reader does it: a click with no pointer and no key behind it.
+      withFreshHome(browser, { viewport: DESKTOP }, async (page) => {
+        await expect(stopControl(page)).toHaveCount(1);
+        expect(
+          await page.locator('.tour-stop').evaluate((el) => {
+            const tablist = document.querySelector('.energy-tabs');
+            return Boolean(tablist && el.compareDocumentPosition(tablist) & Node.DOCUMENT_POSITION_FOLLOWING);
+          }),
+          'the control comes before the content that changes'
+        ).toBe(true);
+        await waitForTourStep(page, 1, true);
+        await page.locator('.tour-stop').evaluate((el) => (el as HTMLElement).click());
+        await expect(stopControl(page)).toHaveCount(0);
+        await page.waitForTimeout(NO_NEXT_STEP_WAIT_MS);
+        const after = await readHomeState(page);
+        expect((await readTabLog(page)).map((change) => change.index), 'it stays on what it was showing').toEqual([1]);
+        expect(after.selected).toEqual([1]);
+        expect(after.indicatorLive).toBe('polite');
+        expect(after.deckState, 'stopping saves nothing').toBeNull();
+        expect(after.funnel, 'stopping records nothing').toBeNull();
+        expect(after.activeTag, 'focus was not moved for a visitor who had none on the control').toBe('BODY');
+      }),
+
+      // With focus on it, it shows itself at full size, and pressing it hands focus to the selected tab.
+      withFreshHome(browser, { viewport: DESKTOP }, async (page) => {
+        await page.locator('.tour-stop').focus();
+        const box = (await page.locator('.tour-stop').boundingBox())!;
+        expect(box.height, 'a focused control is a real target').toBeGreaterThanOrEqual(44);
+        expect(box.width).toBeGreaterThanOrEqual(44);
+        await expect(stopControl(page), 'focus alone stops nothing').toHaveCount(1);
+
+        await page.keyboard.press('Enter');
+        await expect(stopControl(page)).toHaveCount(0);
+        expect(
+          await page.evaluate(() => ({
+            role: document.activeElement?.getAttribute('role') ?? null,
+            selected: document.activeElement?.getAttribute('aria-selected') ?? null
+          })),
+          'focus lands on the selected tab instead of being dropped'
+        ).toEqual({ role: 'tab', selected: 'true' });
+        await page.waitForTimeout(NO_TOUR_WAIT_MS);
+        expect(await readTabLog(page), 'the tour never moved').toEqual([]);
+        expect((await readHomeState(page)).deckState).toBeNull();
+      })
+    ]);
+  });
+
+  test('ET11: while the tour runs, the card holds its own idle lure and Molly holds her guiding whisper', async ({
+    browser
+  }) => {
+    test.setTimeout(90_000);
+    const cardSource = readFileSync(
+      fileURLToPath(new URL('../src/lib/features/actions/components/ActionCard.svelte', import.meta.url)),
+      'utf8'
+    );
+    const idleFirstDelayMs = Number(/const IDLE_FIRST_DELAY_MS = (\d+);/.exec(cardSource)?.[1]);
+    expect(idleFirstDelayMs, 'ActionCard still names its first idle delay').toBeGreaterThan(0);
+    // Makes the card far more eager than a tour step is long, so a lure that was not held would show.
+    const EAGER_LURE_MS = 1500;
+    expect(EAGER_LURE_MS).toBeLessThan(ENTRY_TOUR_STEP_MS);
+    // Packed as "<from>><to>|<session key to preset, if any>".
+    const eagerLure = (packed: string) => {
+      const [pair, presetKey] = packed.split('|');
+      if (presetKey) sessionStorage.setItem(presetKey, '1');
+      const [from, to] = pair.split('>').map(Number);
+      const native = window.setTimeout;
+      window.setTimeout = ((handler: TimerHandler, timeout?: number, ...rest: unknown[]) =>
+        native(handler, timeout === from ? to : timeout, ...rest)) as typeof window.setTimeout;
+    };
+    const remap = `${idleFirstDelayMs}>${EAGER_LURE_MS}`;
+    const stage = (page: Page) => page.locator('.instant-card .deed-stage');
+
+    await Promise.all([
+      // Without a tour both show up while a tour would still be running: the lure after its shortened
+      // delay, the whisper on its own.
+      withFreshHome(
+        browser,
+        { viewport: DESKTOP, init: { fn: eagerLure, arg: `${remap}|${AA_HOME_ENTRY_TOUR_SEEN_KEY}` } },
+        async (page) => {
+          await expect(stage(page), 'the shortened delay bites').toHaveAttribute('data-preview-lure', 'idle', {
+            timeout: EAGER_LURE_MS + ENTRY_TOUR_STEP_MS
+          });
+          await expect(page.locator('.molly-whisper-bubble .whisper-text')).toContainText(MOLLY_HOME_HINT, {
+            timeout: ENTRY_TOUR_DURATION_MS - EAGER_LURE_MS
+          });
+          expect(await readTabLog(page)).toEqual([]);
+        }
+      ),
+
+      withFreshHome(browser, { viewport: DESKTOP, init: { fn: eagerLure, arg: remap } }, async (page) => {
+        await watchStage(page);
+        await watchWhispers(page);
+        for (const [step, tabIndex] of TOUR_ORDER.entries()) await waitForTourStep(page, tabIndex, step === 0);
+        const tabLog = await readTabLog(page);
+        const tourEndedAt = tabLog[tabLog.length - 1].t + ENTRY_TOUR_SETTLE_MS;
+
+        const stageLog = await page.evaluate(() => (window as ProbeWindow).__aaStageLog);
+        expect(stageLog?.lure, 'no card lured on its own during the tour').toEqual(['rest']);
+        expect(
+          (await readWhispers(page)).filter((whisper) => whisper.t <= tourEndedAt),
+          'Molly said nothing during the tour'
+        ).toEqual([]);
+
+        // Both come back once the tour is over.
+        await expect(stage(page)).toHaveAttribute('data-preview-lure', 'idle', { timeout: EAGER_LURE_MS + 4000 });
+        await expect(page.locator('.molly-whisper-bubble .whisper-text')).toContainText(MOLLY_HOME_HINT, {
+          timeout: 8000
+        });
+        expect((await readTabLog(page)).length).toBe(TOUR_ORDER.length);
+      })
+    ]);
   });
 });

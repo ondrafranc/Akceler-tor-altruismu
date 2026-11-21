@@ -5,25 +5,7 @@
   import AppIcon from "$lib/components/AppIcon.svelte";
   import { resolveIconKey } from "$lib/icons/iconRegistry.js";
 
-  /**
-   * @typedef {{
-   *   uid?: string,
-   *   actionId?: string,
-   *   title?: string,
-   *   note?: string,
-   *   concreteImpact?: string,
-   *   orgName?: string,
-   *   minutes?: number,
-   *   url?: string,
-   *   element?: string,
-   *   x?: number,
-   *   y?: number,
-   *   zone?: 'sky' | 'water',
-   *   lightType?: string,
-   *   isMine?: boolean,
-   *   [key: string]: unknown
-   * }} InspectorLight
-   */
+  /** @typedef {import('$lib/types/progress').SanctuaryLight} InspectorLight */
 
   /** @type {InspectorLight | null} */
   export let selectedLight = null;
@@ -50,7 +32,7 @@
   }
 
   function handleDone() {
-    if (onMarkDone) onMarkDone(selectedLight);
+    if (onMarkDone) onMarkDone(/** @type {InspectorLight} */ (selectedLight));
   }
 
   $: selMeta =

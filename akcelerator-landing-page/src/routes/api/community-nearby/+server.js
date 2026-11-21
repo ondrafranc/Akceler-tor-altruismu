@@ -26,7 +26,7 @@ export async function GET({ url, request, getClientAddress }) {
     );
   }
 
-  const payload = await getNearbyCommunityItems({ lat, lon, radiusM });
+  const payload = await getNearbyCommunityItems({ lat, lon: /** @type {number} */ (lon), radiusM });
 
   return json(payload, {
     status: 200,

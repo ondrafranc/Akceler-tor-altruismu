@@ -17,6 +17,9 @@
    * @typedef {import('$lib/server/nearbyService.js').NearbyPlace & Record<string, unknown>} PlaceItem
    */
 
+  /** @typedef {{ icon: string, label: string, color: string }} KindMeta */
+  /** @typedef {{ icon: string, label: string }} ChipMeta */
+
   /**
    * @type {{
    *   p: PlaceItem,
@@ -34,7 +37,7 @@
    *   onMouseLeave?: ((...args: unknown[]) => void) | null,
    *   onStart?: ((place: PlaceItem) => void) | null,
    *   onDone?: ((place: PlaceItem) => void) | null,
-   *   onToggleEffect?: ((place: PlaceItem, event?: Event) => void) | null,
+   *   onToggleEffect?: ((place: PlaceItem, event: MouseEvent & { currentTarget: EventTarget & HTMLButtonElement }) => void) | null,
    *   onToggleSound?: (() => void) | null,
    *   onFocusMap?: ((place: PlaceItem) => void) | null,
    *   onShare?: ((place: PlaceItem) => void) | null,
@@ -68,6 +71,7 @@
 
   let localPlaceMetric = $state(0);
 
+  /** @type {{ ngo: KindMeta, [kind: string]: KindMeta | undefined }} */
   const KIND_META = {
     ngo: { icon: "building", label: "Neziskovka / spolek", color: "#1b5e42" },
     community: {
@@ -79,6 +83,7 @@
     animals: { icon: "paw", label: "Zvířata a útulek", color: "#1d4f5f" },
   };
 
+  /** @type {Record<string, ChipMeta | undefined>} */
   const HELP_WAY_META = {
     food_donation: { icon: "utensils", label: "Darovat potraviny" },
     material_dropoff: { icon: "package", label: "Přinést věci / knihy" },
@@ -86,18 +91,27 @@
     regular_volunteering: { icon: "handshake", label: "Dobrovolnictví" },
   };
 
+  /** @type {{ by_agreement: ChipMeta, [mode: string]: ChipMeta | undefined }} */
   const VISIT_MODE_META = {
     drop_in: { icon: "circle-check", label: "Volně přístupné bez domlouvání" },
     opening_hours: { icon: "clock", label: "Otevírací doba" },
     by_agreement: { icon: "calendar", label: "Po domluvě" },
   };
 
+  /**
+   * @param {number} km
+   * @returns {string}
+   */
   function formatDist(km) {
     if (!Number.isFinite(km)) return "";
     if (km < 1) return `${Math.max(100, Math.round(km * 10) * 100)} m`;
     return `${km < 10 ? km.toFixed(1).replace(".", ",") : Math.round(km)} km`;
   }
 
+  /**
+   * @param {PlaceItem} place
+   * @returns {string}
+   */
   function getPlaceVisitMode(place) {
     if (place?.visitMode) return place.visitMode;
     if (isSelfServicePoint(place)) return "drop_in";
@@ -105,6 +119,10 @@
     return "by_agreement";
   }
 
+  /**
+   * @param {PlaceItem} place
+   * @returns {string[]}
+   */
   function getPlaceHelpWays(place) {
     if (Array.isArray(place?.helpWays) && place.helpWays.length > 0)
       return place.helpWays;
@@ -390,7 +408,7 @@
           use:impactCanvas={{
             action: placeAction,
             climax: false,
-            onProgress: (v) => {
+            onProgress: (/** @type {number} */ v) => {
               localPlaceMetric = v;
             },
           }}

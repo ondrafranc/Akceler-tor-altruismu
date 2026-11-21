@@ -136,7 +136,7 @@ describe('data integrity: EVIDENCE_TIERS & METHODOLOGY', () => {
     expect(EVIDENCE_TIERS.B).toBeDefined();
     expect(EVIDENCE_TIERS.C).toBeDefined();
 
-    for (const tierCode of ['A', 'B', 'C']) {
+    for (const tierCode of /** @type {const} */ (['A', 'B', 'C'])) {
       const tier = EVIDENCE_TIERS[tierCode];
       expect(tier.code).toBe(tierCode);
       expect(tier.tier).toBe(tierCode);

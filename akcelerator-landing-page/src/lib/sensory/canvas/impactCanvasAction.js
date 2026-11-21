@@ -7,6 +7,17 @@ import { resolveActionEffectSpec } from '../catalog/catalogResolver.js';
 import { playPayoffAsmr } from '../../audio/presets.js';
 import { mountImpactCanvas } from './impactCanvasEngine.js';
 
+/**
+ * @typedef {import('../../types/sensory.js').ImpactCanvasElement} ImpactCanvasElement
+ * @typedef {import('../../types/sensory.js').ImpactCanvasHandle} ImpactCanvasHandle
+ * @typedef {import('../../types/sensory.js').ImpactCanvasParams} ImpactCanvasParams
+ * @typedef {import('../../types/sensory.js').ImpactMetricCallback} ImpactMetricCallback
+ */
+
+/**
+ * @param {ImpactCanvasParams | null | undefined} p
+ * @returns {string}
+ */
 export function getActionIdentityKey(p) {
   const action = p?.action !== undefined ? p.action : p;
   const flags = `${Boolean(p?.preview)}:${Boolean(p?.climax)}`;
@@ -18,12 +29,18 @@ export function getActionIdentityKey(p) {
 /**
  * Svelte action pro připojení 2D Canvas scény a ASMR zvuku k elementu <canvas>.
  * Chrání před zbytečným restartováním plátna při reaktivních aktualizacích rodičovské komponenty.
+ * @param {ImpactCanvasElement} node
+ * @param {ImpactCanvasParams} [params]
+ * @returns {{ update: (nextParams: ImpactCanvasParams) => void, destroy: () => void }}
  */
 export function impactCanvas(node, params = {}) {
+  /** @type {ImpactCanvasHandle | null} */
   let destroy = null;
   let currentKey = '';
+  /** @type {ImpactMetricCallback | null} */
   let currentOnMetric = null;
 
+  /** @param {ImpactCanvasParams} p */
   const setup = (p) => {
     destroy?.();
     const action = p?.action !== undefined ? p.action : p;

@@ -296,7 +296,7 @@ export function validateMutationOrigin(request, url) {
  * Clock-skew-safe form timing check (H7 / AUDIT #4).
  * Uses monotonic client elapsed_ms when provided; if only wall-clock started_at is sent,
  * only rejects when delta is strictly between 0ms and 800ms (never when delta < 0 due to mobile clock skew).
- * @param {Record<string, unknown>} body
+ * @param {Record<string, unknown> | null | undefined} body
  * @returns {boolean} true if submission is suspiciously instantaneous (< 800ms)
  */
 export function isSubmissionTooFast(body) {

@@ -2,6 +2,8 @@
  * Procedural Canvas 2D scene renderers for animals and shelter care.
  */
 
+/** @typedef {import('../../types/sensory.js').SceneRenderer} SceneRenderer */
+
 import { clamp01, subP, lerp, easeOut } from '../graphics/math.js';
 import {
   drawGlow,
@@ -14,6 +16,7 @@ import {
   drawFlower
 } from '../graphics/primitives.js';
 
+/** @type {SceneRenderer} */
 export function renderKibble(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
     // Zvířata v útulku: Klidná kameninová miska a čekající pejsek -> Teplý proud granulí, plná miska a radostné vrtění
     const bowlX = cx + 16;
@@ -193,6 +196,7 @@ export function renderKibble(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame,
     }
 }
 
+/** @type {SceneRenderer} */
 export function renderShelterCare(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
     // Donio útulky: Chladný přístřešek se schoulenou kočičkou -> Zářící zlatá střecha bezpečí a plná miska
     const roofPeakY = cy - 26;
@@ -304,6 +308,7 @@ export function renderShelterCare(c, { p, prep, wt, cx, cy, by, w, h, cs, red, f
     }
 }
 
+/** @type {SceneRenderer} */
 export function renderWildlifeRescue(c, { p, prep, wt, cx, by, red }) {
     // Zvire v nouzi (774 155 155): Schoulene klubicko jezka a ptacek v trave -> Ochranna naruc stanice, spokojeny jezek a vzletajici ptacek
     const groundY = by - 3;
@@ -528,6 +533,7 @@ export function renderWildlifeRescue(c, { p, prep, wt, cx, by, red }) {
     }
 }
 
+/** @type {SceneRenderer} */
 export function renderBirdsGlass(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
     // Bezpečná skla pro ptáky: Zrcadlící neoznačené sklo a ohrožený let -> UV ochranný rastr a bezpečný oblouk nad sklem
     const paneX = cx - 4;
@@ -596,6 +602,7 @@ export function renderBirdsGlass(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fr
     }
 }
 
+/** @type {SceneRenderer} */
 export function renderBirdsSong(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
     // Nářečí strnadů: Tichý strnad na větvi -> Zpívající zlatý strnad a harmonický spektrogram „di-di-di-dééé“
     const twigY = by - 8;

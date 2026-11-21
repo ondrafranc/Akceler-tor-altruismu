@@ -7,15 +7,29 @@ import { tone } from '../../audio/synthesizer.js';
 import { getAudioContext } from '../../audio/audioContext.js';
 import { triggerCanvasBurst } from '../canvas/controllerRegistry.js';
 
+/**
+ * @typedef {object} HoldSparkParams
+ * @property {(() => void) | null} [onReady]
+ * @property {string | number | null} [id]
+ * @property {string} [surface]
+ */
+
+/**
+ * @param {HTMLElement | null | undefined} el
+ * @param {(() => void) | null} [cb]
+ * @returns {(rel?: boolean) => void}
+ */
 export function startHoldSpark(el, cb) {
   const t0 = performance.now();
   const red = prefersReducedMotion();
+  /** @param {string} v */
   const sp = (v) => el?.style?.setProperty('--spark-charge', v);
   let id = 0;
   let d = 0;
   vib([10, 20, 40]);
   const g1 = tone(294, 0.68, 'sine', 0, 0.04, 440);
   const g2 = tone(587, 0.68, 'triangle', 0, 0.024, 880);
+  /** @param {number} now */
   const step = (now) => {
     const p = red ? 1 : Math.min(1, (now - t0) / 600);
     sp(p.toFixed(2));
@@ -51,12 +65,17 @@ export function startHoldSpark(el, cb) {
 
 /**
  * Svelte action pro Hold-to-Spark rituál na libovolném primárním tlačítku / odkazu
+ * @param {HTMLElement} node
+ * @param {HoldSparkParams} [params]
+ * @returns {{ update: (nextParams: HoldSparkParams) => void, destroy: () => void }}
  */
 export function holdSpark(node, params = {}) {
+  /** @type {((rel?: boolean) => void) | null} */
   let stopFn = null;
   let currentParams = params;
   node.setAttribute('data-hold-spark', 'true');
 
+  /** @param {PointerEvent} e */
   const onDown = (e) => {
     if (e.button && e.button !== 0) return;
     if (stopFn) stopFn(false);

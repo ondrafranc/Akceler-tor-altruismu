@@ -2,6 +2,8 @@
  * Procedural Canvas 2D scene renderers for knowledge, science, and education.
  */
 
+/** @typedef {import('../../types/sensory.js').SceneRenderer} SceneRenderer */
+
 import { clamp01, subP, lerp, easeOut } from '../graphics/math.js';
 import {
   drawGlow,
@@ -14,6 +16,7 @@ import {
   drawFlower
 } from '../graphics/primitives.js';
 
+/** @type {SceneRenderer} */
 export function renderWikiInk(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
     // Wikipedie: Otevřená encyklopedie s chybějícím faktem [?] -> Zlaté plnicí pero dopisující ověřený řádek a hvězdy poznání
     const bkY = cy - 14;
@@ -102,6 +105,7 @@ export function renderWikiInk(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame
     }
 }
 
+/** @type {SceneRenderer} */
 export function renderCodeNodes(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
     // Česko.Digital: Zřetelné izolované digitální uzly -> Propojená síť pomoci ve tvaru štítu/srdce s datovými pulsy
     const nodes = [
@@ -177,6 +181,7 @@ export function renderCodeNodes(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fra
     });
 }
 
+/** @type {SceneRenderer} */
 export function renderCosmosScience(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
     // Zooniverse: Rozostřený oblak v hledáčku -> Zaostřený zelený zámek, měkká eliptická mlhovina a 3ramenná spirální galaxie se 14 hvězdami
     const focusP = easeOut(p);
@@ -314,6 +319,7 @@ export function renderCosmosScience(c, { p, prep, wt, cx, cy, by, w, h, cs, red,
     }
 }
 
+/** @type {SceneRenderer} */
 export function renderTutoringSpark(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
     // Učíme online: Zašmodrchaná čmáranice a zhasnutá žárovka -> Jasná dráha poznání rozsvěcující žárovku
     const sparkP = easeOut(p);
@@ -362,6 +368,7 @@ export function renderTutoringSpark(c, { p, prep, wt, cx, cy, by, w, h, cs, red,
     c.fillRect(bulbX - 4, bulbY + 9, 8, 4.5);
 }
 
+/** @type {SceneRenderer} */
 export function renderSchoolPencil(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
     // Doučujte.cz: Sešit s otazníky -> Zlatá tužka kreslící vzestupnou křivku a hvězdy porozumění
     const nbX = cx - 44;

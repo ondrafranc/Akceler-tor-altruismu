@@ -5,7 +5,7 @@ test.describe.configure({ retries: 1 });
 test.beforeEach(async ({ page }) => {
   const origGoto = page.goto.bind(page);
   page.goto = async (url, options) => {
-    let res;
+    let res!: Awaited<ReturnType<typeof origGoto>>;
     for (let attempt = 0; attempt < 8; attempt++) {
       try {
         res = await origGoto(url, options);

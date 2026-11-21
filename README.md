@@ -11,7 +11,7 @@
 ### O projektu (Czech)
 **Česká otevřená platforma pro okamžitou pomoc bez přetížení a výčitek.**
 
-Hlavní severka produktu zní: **„Pomáhat pomáhat – a udělat pomáhání tak snadné jako masturbovat.“**
+Hlavní severka produktu zní: **„Pomáhat pomáhat – a udělat pomáhání tak snadné jako masturbovat u porna.“**
 Aplikace je navržená pro chvíle únavy, zahlcení zprávami nebo nejistoty, kde začít. Nabízí okamžitý vstup ke **45 ověřeným českým i světovým dobrým skutkům**, lokální mapě pomoci v ČR i zklidňujícímu prostoru *Krajina dobra* — bez registrace, bez moralizování a bez manipulativního nátlaku.
 
 ### Overview (English)
@@ -128,7 +128,7 @@ Akcelerátor altruismu/
 
 Nové a upravované komponenty používají Svelte 5 Runes; seznam zbývajících komponent se starší syntaxí hlídá `tests/unit/invariants.test.js` a smí se jen zkracovat. Konkrétní E2E specifikaci spustíte z `akcelerator-landing-page/` přes `npm test -- tests/<soubor>.spec.ts` (Playwright si sám spustí vývojový server).
 
-V editoru používejte TypeScript z pracovního prostoru (`akcelerator-landing-page/node_modules/typescript`). `jsconfig.json` má záměrně explicitní `"strict": false`; novější TypeScript přibalený v editoru by jinak hlásil chyby, které CI nevidí.
+V editoru používejte TypeScript z pracovního prostoru (`akcelerator-landing-page/node_modules/typescript`). `jsconfig.json` má explicitní `"strict": true` a kontroluje i JS soubory; typy se v nich píší přes JSDoc.
 
 ---
 

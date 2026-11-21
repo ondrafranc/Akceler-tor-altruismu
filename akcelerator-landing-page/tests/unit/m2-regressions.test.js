@@ -19,9 +19,14 @@ const srcDir = path.resolve(__dirname, '../../src');
 
 const EMOJI_RE = /[\p{Emoji_Presentation}\p{Extended_Pictographic}\u2600-\u27BF]/u;
 
+/** @typedef {import('$lib/types/sensory.js').ImpactCanvasElement} ImpactCanvasElement */
+
 function createMockCanvas(width = 320, height = 118, initialClasses = ['impact-payoff-canvas']) {
+  /** @type {{ op: 'save' | 'restore' }[]} */
   const ops = [];
+  /** @type {Map<string, string>} */
   const attrs = new Map();
+  /** @type {Map<string, EventListener>} */
   const listeners = new Map();
   const classes = new Set(initialClasses);
   const gradientStub = { addColorStop: () => {} };
@@ -67,31 +72,35 @@ function createMockCanvas(width = 320, height = 118, initialClasses = ['impact-p
     createRadialGradient: () => gradientStub
   };
 
-  return {
+  return /** @type {ImpactCanvasElement} */ (/** @type {unknown} */ ({
     width,
     height,
     isConnected: true,
     parentNode: {},
-    getContext: (t) => (t === '2d' ? ctx : null),
+    getContext: (/** @type {string} */ t) => (t === '2d' ? ctx : null),
     getBoundingClientRect: () => ({ left: 0, top: 0, width, height }),
-    setAttribute: (k, v) => attrs.set(k, String(v)),
-    getAttribute: (k) => (attrs.has(k) ? attrs.get(k) : null),
-    hasAttribute: (k) => attrs.has(k),
-    removeAttribute: (k) => attrs.delete(k),
-    addEventListener: (k, fn) => listeners.set(k, fn),
-    removeEventListener: (k) => listeners.delete(k),
+    setAttribute: (/** @type {string} */ k, /** @type {string} */ v) => attrs.set(k, String(v)),
+    getAttribute: (/** @type {string} */ k) => (attrs.has(k) ? attrs.get(k) : null),
+    hasAttribute: (/** @type {string} */ k) => attrs.has(k),
+    removeAttribute: (/** @type {string} */ k) => attrs.delete(k),
+    addEventListener: (/** @type {string} */ k, /** @type {EventListener} */ fn) => listeners.set(k, fn),
+    removeEventListener: (/** @type {string} */ k) => listeners.delete(k),
     classList: {
-      add: (c) => classes.add(c),
-      remove: (c) => classes.delete(c),
-      contains: (c) => classes.has(c)
+      add: (/** @type {string} */ c) => classes.add(c),
+      remove: (/** @type {string} */ c) => classes.delete(c),
+      contains: (/** @type {string} */ c) => classes.has(c)
     }
-  };
+  }));
 }
 
 describe('M2 Regressions (Unit)', () => {
+  /** @type {FrameRequestCallback[]} */
   let rafQueue = [];
+  /** @type {typeof globalThis.window} */
   let origWindow;
+  /** @type {typeof globalThis.requestAnimationFrame} */
   let origRaf;
+  /** @type {typeof globalThis.cancelAnimationFrame} */
   let origCancelRaf;
 
   beforeEach(() => {

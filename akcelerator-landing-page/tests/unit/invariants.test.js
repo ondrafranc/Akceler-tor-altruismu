@@ -172,11 +172,9 @@ describe('Toolchain and deployment invariants', () => {
     }
   });
 
-  it('pins TypeScript strictness explicitly so editor and CI agree', () => {
-    // TypeScript >= 6 defaults to strict. Until the strict migration lands, the
-    // flag must be spelled out; flip it to true as part of that migration.
+  it('keeps TypeScript strict mode on for both TS and JS files', () => {
     const jsconfig = JSON.parse(read(path.join(APP, 'jsconfig.json')));
-    expect(typeof jsconfig.compilerOptions.strict).toBe('boolean');
+    expect(jsconfig.compilerOptions.strict).toBe(true);
     expect(jsconfig.compilerOptions.checkJs).toBe(true);
   });
 
