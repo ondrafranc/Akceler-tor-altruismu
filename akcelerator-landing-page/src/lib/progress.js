@@ -3,8 +3,7 @@ import { getRandomEncouragement, MICRO_ACTIONS } from './data/czech-actions.js';
 import { CLICK_AND_FEED } from './data/impactFacts.js';
 import { trackEvent, trackFunnel, hasActionStarted } from './analytics.js';
 import {
-  feedMollyFromAction,
-  unlockMollyTreat,
+  thankForDeed,
   mollyState,
   MOLLY_STORAGE_KEY
 } from './mollyStore.js';
@@ -418,11 +417,8 @@ export function recordSmallWin(step, options = {}) {
   });
 
   const isSilent = Boolean(step?.silent || options?.silent);
-  // Odložená odměna: skutek odemkne 1 pamlsek pro Molly (delayed gratification)
-  unlockMollyTreat(catalogMatch || step || entry, {
-    reason: 'small_win',
-    source: 'win'
-  });
+  // Molly za skutek poděkuje. Na stránkách s vlastní oslavou a zvukem zůstává potichu.
+  thankForDeed({ silent: isSilent });
 
   trackEvent('aa_small_win', {
     surface: entry.surface,
@@ -542,11 +538,7 @@ export function addSanctuaryWish(item) {
     return next;
   });
 
-  // Odložená odměna: zapsání skutku v Krajině dobra odemkne pamlsek pro Molly
-  unlockMollyTreat(
-    { id: 'sanctuary_wish', element: entry.element, title: entry.title },
-    { reason: 'sanctuary_wish', source: 'sanctuary' }
-  );
+  thankForDeed({ silent: true });
 
   return entry;
 }
@@ -580,7 +572,6 @@ export function closeCelebration() {
 
 /**
  * Vytvoří anonymní přenosný kód pro zálohu postupu mimo In-App prohlížeč (M18 / AUDIT #26).
- * Zahrnuje i dostupné pamlsky pro Molly (delayed gratification).
  * @returns {string}
  */
 export function createProgressBackupCode() {
@@ -590,12 +581,7 @@ export function createProgressBackupCode() {
   return exportProgressPasscode({
     s: steps,
     w: wishes,
-    m: {
-      treatsFedTotal: molly?.treatsFedTotal || 0,
-      petCount: molly?.petCount || 0,
-      giftDeeds: molly?.giftDeeds || 0,
-      availableTreats: molly?.availableTreats || 0
-    }
+    m: { petCount: molly?.petCount || 0 }
   });
 }
 
@@ -771,20 +757,14 @@ export function restoreProgressFromBackupCode(code) {
       const n = Number(v);
       return Number.isFinite(n) ? Math.max(0, Math.min(100_000, Math.trunc(n))) : 0;
     };
+    // Starší kódy nesou i pole, která už neexistují; čte se z nich jen počet pohlazení.
     mollyState.update((prev) => {
-      const next = {
-        ...prev,
-        treatsFedTotal: Math.max(prev.treatsFedTotal || 0, clampCounter(m.treatsFedTotal)),
-        petCount: Math.max(prev.petCount || 0, clampCounter(m.petCount)),
-        availableTreats: Math.max(prev.availableTreats || 0, clampCounter(m.availableTreats)),
-        giftDeeds: Math.max(
-          prev.giftDeeds || 0,
-          clampCounter(m.giftDeeds),
-          // Starší kódy dárky neznaly → aspoň počet obnovených skutků
-          sanitizedSteps.length + sanitizedWishes.length
-        )
-      };
-      safeSetItem(AA_MOLLY_COMPANION_KEY, JSON.stringify(next), 'local');
+      const next = { ...prev, petCount: Math.max(prev.petCount || 0, clampCounter(m.petCount)) };
+      safeSetItem(
+        AA_MOLLY_COMPANION_KEY,
+        JSON.stringify({ mode: next.mode, mood: next.mood, followMouse: next.followMouse, petCount: next.petCount }),
+        'local'
+      );
       return next;
     });
   }

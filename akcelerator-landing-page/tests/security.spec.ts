@@ -870,19 +870,12 @@ test('bespoke 2D Canvas + Web Audio special effects work for all activity types 
   await page.waitForTimeout(700);
   const badgeBefore = await page.locator('.instant-card .card-effect-stage .impact-payoff-badge').innerText();
   const numBefore = Number((badgeBefore.match(/\d+/) || ['0'])[0]);
-  const treatsBeforeImpulse = Number(
-    (await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0'
-  );
   await page.locator('.instant-card .effect-spark-btn').click();
   await expect(page.locator('.instant-card .card-effect-stage')).toBeVisible();
   const badgeAfter = await page.locator('.instant-card .card-effect-stage .impact-payoff-badge').innerText();
   const numAfter = Number((badgeAfter.match(/\d+/) || ['0'])[0]);
   expect(numAfter).toBeGreaterThanOrEqual(numBefore);
   expect(numAfter).toBeLessThanOrEqual(25);
-  const treatsAfterImpulse = Number(
-    (await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0'
-  );
-  expect(treatsAfterImpulse, 'Přehrát sparks visual canvas wave without inflating treats').toBe(treatsBeforeImpulse);
 
   // Rapidly switching .energy-tab while holding .btn-studio-primary cleanly resets --spark-charge to 0
   await page.locator('.instant-card .btn-studio-primary').dispatchEvent('pointerdown');

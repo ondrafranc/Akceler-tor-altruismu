@@ -64,7 +64,6 @@ async function detectMollyAndWhisperOverlaps(page: Page): Promise<string[]> {
           '.instant-card .deed-stage',
           '.instant-card .in-situ-affirmation',
           '.instant-card .molly-celebration-note',
-          '.instant-card .molly-inline-fed-badge',
           '.instant-card h2',
           '.instant-card p',
           '.deck-header-bar',
@@ -108,6 +107,82 @@ async function detectMollyAndWhisperOverlaps(page: Page): Promise<string[]> {
     return hits;
   });
 }
+
+/** How many times Molly has been petted, as saved in the companion record. */
+async function readPetCount(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    try {
+      return Number(JSON.parse(localStorage.getItem('aa_molly_companion_v1') || '{}').petCount) || 0;
+    } catch {
+      return 0;
+    }
+  });
+}
+
+test.describe('Molly dock after an old saved record', () => {
+  for (const vp of [
+    { width: 360, height: 800 },
+    { width: 820, height: 1180 },
+    { width: 1440, height: 900 }
+  ]) {
+    test(`Molly dock carries no numbers and no treat or gift wording (${vp.width}x${vp.height})`, async ({ page }) => {
+      // A record saved by an older version of the app; seeded once, before the app first reads it.
+      await page.addInitScript(() => {
+        if (localStorage.getItem('aa_molly_companion_v1') === null) {
+          localStorage.setItem(
+            'aa_molly_companion_v1',
+            JSON.stringify({ mode: 'roaming', treatsFedTotal: 128, availableTreats: 3, giftDeeds: 27, petCount: 5 })
+          );
+        }
+      });
+      await page.setViewportSize(vp);
+      await gotoHydrated(page, '/');
+
+      // Only one dock is mounted at a time: in the header on narrow screens, floating on desktop.
+      const dock = page.locator('.molly-pelisek-dock:visible');
+      await expect(dock).toHaveCount(1);
+      await expect(page.locator('.molly-companion-layer')).toHaveAttribute('data-molly-mode', 'roaming');
+
+      const wording = await dock.evaluate((root) => {
+        const parts = [root.textContent || ''];
+        for (const el of [root, ...Array.from(root.querySelectorAll('*'))]) {
+          parts.push(el.getAttribute('title') || '', el.getAttribute('aria-label') || '');
+        }
+        return parts.filter(Boolean);
+      });
+      expect(wording.length).toBeGreaterThan(0);
+      for (const text of wording) {
+        expect(text, `dock wording "${text}"`).not.toMatch(/\d|pamls|dár/i);
+      }
+
+      for (const removedId of ['molly-treat-count', 'molly-pending-treat-count', 'molly-gift-meter']) {
+        await expect(page.locator(`[data-testid="${removedId}"]`)).toHaveCount(0);
+      }
+
+      const petBtn = dock.locator('.molly-dock-pet-btn');
+      await expect(petBtn).toBeVisible();
+      const petBox = await petBtn.boundingBox();
+      expect(petBox).not.toBeNull();
+      expect(petBox!.width, 'pet button width >= 44px').toBeGreaterThanOrEqual(44);
+      expect(petBox!.height, 'pet button height >= 44px').toBeGreaterThanOrEqual(44);
+
+      expect(await readPetCount(page)).toBe(5);
+      await petBtn.click();
+      await expect.poll(() => readPetCount(page)).toBe(6);
+
+      // Saving after the pet writes the current shape only; the old fields are dropped.
+      const savedKeys = await page.evaluate(() =>
+        Object.keys(JSON.parse(localStorage.getItem('aa_molly_companion_v1') || '{}')).sort()
+      );
+      expect(savedKeys).toEqual(['followMouse', 'mode', 'mood', 'petCount']);
+
+      const overflows = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+      );
+      expect(overflows, `${vp.width}x${vp.height} no horizontal overflow`).toBe(false);
+    });
+  }
+});
 
 test.describe('Mobile & Tablet Experience Parity Polish (MT1-MT4)', () => {
   test('MT1: Mobile welcome renders flush Czech dawn backdrop, dynamic serif H1, subtitle, single-row glass pills on tall phones, and fold-safe CTA', async ({
@@ -318,13 +393,14 @@ test.describe('Mobile & Tablet Experience Parity Polish (MT1-MT4)', () => {
       // 1. Starts roaming & visible
       await expect(actor).not.toHaveClass(/is-docked/);
 
-      // 2. Direct tap on Molly's rendered position pets her cleanly (without unearned treats)
+      // 2. Direct tap on Molly's rendered position pets her cleanly (one tap, one saved pet)
+      const petsBeforeTap = await readPetCount(page);
       const actorBox = await actor.boundingBox();
       expect(actorBox, `${vp.width}x${vp.height} Molly boundingBox`).not.toBeNull();
       await page.mouse.click(actorBox!.x + actorBox!.width * 0.5, actorBox!.y + actorBox!.height * 0.5);
       await page.waitForTimeout(350);
       await expect(page.locator('.molly-whisper-bubble, .molly-dock-whisper').first()).toBeVisible();
-      expect(await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')).toBe('0');
+      expect(await readPetCount(page), `${vp.width}x${vp.height} direct tap is saved as one pet`).toBe(petsBeforeTap + 1);
       expect(await detectMollyAndWhisperOverlaps(page), `${vp.width}x${vp.height} direct-tap overlaps`).toEqual([]);
 
       // 3. Header dock pet button shows whisper with zero overlaps on mobile AND tablet
@@ -414,7 +490,7 @@ test.describe('Mobile & Tablet Experience Parity Polish (MT1-MT4)', () => {
     });
     expect(tabsFit.ok, `920x650 energy-tabs stay inside pill bar (overflow=${tabsFit.overflow})`).toBe(true);
 
-    // 3. Dynamic 360x800 interactions: details open, deed start -> complete (Before->After payoff), feed Molly, flush hero backdrop with compact inflow whisper
+    // 3. Dynamic 360x800 interactions: details open, deed start -> complete (Before->After payoff), flush hero backdrop with compact inflow whisper
     await page.setViewportSize({ width: 360, height: 800 });
     await gotoHydrated(page, '/');
 
@@ -458,12 +534,10 @@ test.describe('Mobile & Tablet Experience Parity Polish (MT1-MT4)', () => {
     expect(payoffState.bubbleCatOverlap, 'Molly never overlaps compact inflow whisper').toBe(0);
     expect(await detectMollyAndWhisperOverlaps(page), '360x800 deed payoff zero overlap').toEqual([]);
 
-    const feedBtn = page.locator('.btn-inline-feed-molly');
-    if (await feedBtn.isVisible()) {
-      await feedBtn.click();
-      await page.waitForTimeout(450);
-      expect(await detectMollyAndWhisperOverlaps(page), '360x800 after feeding Molly zero overlap').toEqual([]);
-    }
+    await expect(page.locator('.instant-card .molly-celebration-note')).toBeVisible();
+    await expect(page.locator('.instant-card .btn-next-deed')).toBeVisible();
+    await page.waitForTimeout(450);
+    expect(await detectMollyAndWhisperOverlaps(page), '360x800 celebration with Molly thanks zero overlap').toEqual([]);
 
     // 4. Tapping Molly over Bento cards pets her cleanly without navigating away; dragging near Molly does not accidentally pet her
     await gotoHydrated(page, '/');
@@ -775,7 +849,7 @@ test.describe('Mobile & Tablet Experience Parity Polish (MT1-MT4)', () => {
       }
     }
 
-    // 4. 390x844 mobile payoff: cohesive dark emerald .payoff-head, Dát Molly pamlsek well inside viewport
+    // 4. 390x844 mobile payoff: cohesive dark emerald .payoff-head, Molly's thanks note well inside viewport
     await page.setViewportSize({ width: 390, height: 844 });
     await gotoHydrated(page, '/');
     await page.evaluate(() => {
@@ -794,14 +868,14 @@ test.describe('Mobile & Tablet Experience Parity Polish (MT1-MT4)', () => {
     await page.waitForTimeout(450);
     const payoff390 = await page.evaluate(() => {
       const head = document.querySelector('.payoff-head') as HTMLElement;
-      const feed = document.querySelector('.btn-inline-feed-molly')!.getBoundingClientRect();
+      const note = document.querySelector('.instant-card .molly-celebration-note')!.getBoundingClientRect();
       return {
         headBg: getComputedStyle(head).backgroundColor,
-        feedBottom: Math.round(feed.bottom)
+        noteBottom: Math.round(note.bottom)
       };
     });
     expect(payoff390.headBg, '390x844 payoff-head blends smoothly with dark canvas (no stark pale bar)').not.toBe('rgb(237, 242, 238)');
-    expect(payoff390.feedBottom, '390x844 Dát Molly pamlsek sits comfortably above bottom edge').toBeLessThanOrEqual(836);
+    expect(payoff390.noteBottom, "390x844 Molly's thanks note sits comfortably above bottom edge").toBeLessThanOrEqual(836);
 
     // 5. /near @ 1024x768 & 768x1024: 2-row compact controls-card at 1024x768, first PlaceCard primary CTA above 768px fold,
     //    single utility row on 768x1024, and non-hero top-nav has light shield

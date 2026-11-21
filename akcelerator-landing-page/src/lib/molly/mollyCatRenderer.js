@@ -14,15 +14,14 @@
  *   vx: number,
  *   vy: number,
  *   behavior: string,
- *   eatTimer: number,
+ *   catchTimer: number,
  *   petBlissTimer: number,
  *   currentState: { mode: string, mood: string },
  *   facing: number,
  *   walkCycle: number,
- *   flyingTreat?: { p: number } | null,
+ *   flyingSpark?: { p: number } | null,
  *   pouncePhase?: number,
  *   groomPhase: number,
- *   accessories: { collar?: boolean, bell?: boolean, flower?: boolean, star?: boolean },
  *   pointerX: number,
  *   pointerY: number,
  *   posX: number,
@@ -54,7 +53,7 @@ export function drawMollyCat(ctx, w, h, nowSec, state) {
   const speed = Math.hypot(state.vx, state.vy);
   const isWalking = state.behavior === 'WALK_ROAM' && speed > 0.25;
   const isGrooming = state.behavior === 'GROOM';
-  const isEating = state.eatTimer > 0 || state.behavior === 'CATCH_TREAT';
+  const isCatching = state.catchTimer > 0 || state.behavior === 'CATCH_SPARK';
   const isBliss =
     state.petBlissTimer > 0 ||
     state.behavior === 'PET_BLISS' ||
@@ -73,7 +72,7 @@ export function drawMollyCat(ctx, w, h, nowSec, state) {
   );
   shadowGrad.addColorStop(
     0,
-    isEating || isBliss
+    isCatching || isBliss
       ? 'rgba(251, 191, 36, 0.32)'
       : 'rgba(10, 18, 14, 0.42)'
   );
@@ -93,15 +92,15 @@ export function drawMollyCat(ctx, w, h, nowSec, state) {
   const walkBob = isWalking ? Math.abs(Math.sin(state.walkCycle * 2)) * -3.2 : 0;
   const isFollowingMouse = Boolean(state.isFollowingMouse);
   const leapOffset =
-    state.behavior === 'CATCH_TREAT' && state.flyingTreat
-      ? Math.sin(state.flyingTreat.p * Math.PI) * -14
+    state.behavior === 'CATCH_SPARK' && state.flyingSpark
+      ? Math.sin(state.flyingSpark.p * Math.PI) * -14
       : 0;
 
   ctx.translate(0, walkBob + leapOffset);
 
   // 1. 6-Control-Point Harmonic Bézier Tail (Obsidian with amber/rust/honey tortoiseshell rings)
   const tailFreq =
-    isBliss || isEating
+    isBliss || isCatching
       ? 5.2
       : isFollowingMouse
         ? 4.8
@@ -109,7 +108,7 @@ export function drawMollyCat(ctx, w, h, nowSec, state) {
           ? 3.8
           : 2.1;
   const tailAmp =
-    isBliss || isEating
+    isBliss || isCatching
       ? 11
       : isFollowingMouse
         ? 9.5
@@ -262,35 +261,6 @@ export function drawMollyCat(ctx, w, h, nowSec, state) {
   const headX = isWalking ? 13 : 9;
   const headY = isWalking ? -29 : -32;
 
-  // 4B. Dárky za pamlsky: smaragdový obojek + zlatý zvoneček (hlava je kreslí přes horní okraj)
-  if (state.accessories?.collar) {
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = '#10b981';
-    ctx.lineWidth = 3.2;
-    ctx.beginPath();
-    ctx.ellipse(headX - 1, headY + 10.5, 9.5, 3.6, 0, 0.05 * Math.PI, 0.95 * Math.PI);
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(167, 243, 208, 0.85)';
-    ctx.lineWidth = 0.9;
-    ctx.beginPath();
-    ctx.ellipse(headX - 1, headY + 10, 9.5, 3.6, 0, 0.15 * Math.PI, 0.85 * Math.PI);
-    ctx.stroke();
-  }
-  if (state.accessories?.bell) {
-    const bellSwing = isWalking ? Math.sin(state.walkCycle * 2) * 1.2 : Math.sin(nowSec * 2) * 0.4;
-    const bx = headX - 1 + bellSwing;
-    const bellY = headY + 15.6;
-    ctx.fillStyle = '#fbbf24';
-    ctx.beginPath();
-    ctx.arc(bx, bellY, 2.8, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#fef3c7';
-    ctx.beginPath();
-    ctx.arc(bx - 0.9, bellY - 0.9, 0.9, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(bx - 1.4, bellY + 0.9, 2.8, 0.7);
-  }
   const headTilt = isGrooming
     ? 0.16
     : state.behavior === 'CHASE_FIREFLY'
@@ -391,7 +361,7 @@ export function drawMollyCat(ctx, w, h, nowSec, state) {
   const lookDX = Math.cos(gazeAngle) * gazeDist;
   const lookDY = Math.sin(gazeAngle) * gazeDist;
 
-  if (isBliss || isEating || isSleeping || state.blinkProgress > 0.65) {
+  if (isBliss || isCatching || isSleeping || state.blinkProgress > 0.65) {
     // Blissful ^ ^ arcs or peaceful sleeping eyelids
     ctx.strokeStyle = isSleeping ? '#fde68a' : '#bef264';
     ctx.lineWidth = 2.2;
@@ -472,7 +442,7 @@ export function drawMollyCat(ctx, w, h, nowSec, state) {
   ctx.quadraticCurveTo(2.2, 7.4, 4.0, 6.0);
   ctx.stroke();
 
-  if (isEating) {
+  if (isCatching) {
     ctx.fillStyle = '#f43f5e';
     ctx.beginPath();
     ctx.arc(0, 6.6, 2.1 + Math.sin(nowSec * 22) * 0.8, 0, Math.PI);
@@ -496,53 +466,7 @@ export function drawMollyCat(ctx, w, h, nowSec, state) {
     });
   });
 
-  // 8B. Květinová korunka (dárek za 25 pamlsků) mezi oušky
-  if (state.accessories?.flower) {
-    /** @type {Array<[number, number, string]>} */
-    const blossoms = [
-      [-7.5, -11.2, '#f9a8d4'],
-      [-2.6, -13.0, '#fde68a'],
-      [2.6, -13.0, '#c4b5fd'],
-      [7.5, -11.2, '#f9a8d4']
-    ];
-    for (const [fx, fy, col] of blossoms) {
-      ctx.fillStyle = col;
-      for (let pi = 0; pi < 4; pi++) {
-        const pa = pi * (Math.PI / 2) + 0.4;
-        ctx.beginPath();
-        ctx.arc(fx + Math.cos(pa) * 1.5, fy + Math.sin(pa) * 1.5, 1.35, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.fillStyle = '#f59e0b';
-      ctx.beginPath();
-      ctx.arc(fx, fy, 0.95, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
   ctx.restore(); // end head
-
-  // 8C. Zářivá hvězdička (dárek za 50 pamlsků) vznášející se nad hlavou
-  if (state.accessories?.star) {
-    const sx = headX;
-    const sy = headY - 25 + Math.sin(nowSec * 1.8) * 1.6;
-    ctx.fillStyle = 'rgba(253, 224, 71, 0.22)';
-    ctx.beginPath();
-    ctx.arc(sx, sy, 7, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#fde047';
-    ctx.beginPath();
-    for (let si = 0; si < 10; si++) {
-      const rad = si % 2 === 0 ? 4.4 : 1.9;
-      const a = -Math.PI / 2 + (si * Math.PI) / 5 + nowSec * 0.6;
-      const px = sx + Math.cos(a) * rad;
-      const py = sy + Math.sin(a) * rad;
-      if (si === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
-    }
-    ctx.closePath();
-    ctx.fill();
-  }
 
   // 9. Floating Firefly when in CHASE_FIREFLY state
   if (state.firefly) {

@@ -18,7 +18,7 @@ describe('Toolchain & Environment Verification (Challenger Probe)', () => {
     expect(Security.safeText).toBeDefined();
     expect(Actions.VALUES).toBeDefined();
     expect(Utils.isInAppBrowser).toBeDefined();
-    expect(MollyTypes.MOLLY_TREAT_BY_FOOD).toBeDefined();
+    expect(MollyTypes.MOLLY_ROUTE_GUIDES).toBeDefined();
     expect(ImpactFacts.CLICK_AND_FEED).toBeDefined();
   });
 

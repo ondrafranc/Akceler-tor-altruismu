@@ -8,7 +8,7 @@ Hlavním vstupem do produktu je **`/`** (okamžitý 45-kartový balíček skutk�
 1. Uživatel otevře `/` — na desktopu, tabletu i mobilu ho vítá plynulé české lesní svítání (`sanctuary-dawn.*`) za horní lištou s editorial nadpisem *„Pomáhat může být lehké.“* a teplou kurzívou `.hero-serif` (na mobilu doplněnou stručným podtitulkem `.hero-mobile-claim` a na moderních telefonech `min-height: 740 px` i skleněnými odkazy do mapy a Krajiny dobra), bez překážek nad kartou; rovnou vidí kartu skutku v jednotné morphing scéně `.deed-stage`, primární CTA nad ohybem (včetně `375×667`, `360×800`, `768×1024` a `1024×768`) a 4 záložky energie (`45` *Mám 2 min* / `8` *Mám 15 min* / `16` *Osobně* / `9` *Dlouhodobě*). Přepnutí kterékoli záložky nebo otevření `?intent=` / `?action=` dynamicky aktualizuje Hero nadpis i claim (`.hero-serif` / `.hero-mobile-claim`), zatímco Molly zůstává viditelná, hladitelná a toulavá napříč desktopem, tabletem i mobilem podél scrollovaných sekcí bez mizení nebo překrývání ovládacích prvků.
 2. Čerstvá návštěva otevírá 2minutový krok; při listování nebo přepnutí režimu se stav ukládá do `sessionStorage` (`AA_HOME_DECK_STATE_KEY`). Přímý odkaz `/?action=<id>` otevře cílový skutek i nad uzavřenou denní relací s tlačítkem *„Zpět k dnešnímu shrnutí“*.
 3. Jedním kliknutím na hlavní CTA otevře stránku partnera.
-4. Po návratu odemkne potvrzení *„Mám hotovo“*, scéna plynule přejde do dopadu (`payoff`), zobrazí se *„Přehrát“* a tlačítko *„Dát Molly pamlsek“*.
+4. Po návratu odemkne potvrzení *„Mám hotovo“*, scéna plynule přejde do dopadu (`payoff`), zobrazí se *„Přehrát“* a Molly krátce poděkuje.
 
 ## 2. Pomoc v okolí na `/near` (30–90 s)
 1. Uživatel otevře `/near` (z horní navigace, ze skoku podle města na `/` nebo z `/app`).
@@ -27,7 +27,7 @@ Hlavním vstupem do produktu je **`/`** (okamžitý 45-kartový balíček skutk�
 
 ## 5. Klidná reflexe v Krajině dobra `/svet`
 1. Uživatel přejde na `/svet` (z navigace, upoutávky na `/` nebo předáním od kočky Molly).
-2. Prohlédne si rozsvícené dobré skutky v klidné české lesní tůni (`sanctuary-dawn.*` / `sanctuary-twilight.*`), může přepnout do noční atmosféry (líně načítaná noční vrstva), vyzkoušet dechový pacer, rituální lištu, nakrmit Molly v jediném počítadle nebo zapnout doprovodný zvuk (ve výchozím stavu vypnutý).
+2. Prohlédne si rozsvícené dobré skutky v klidné české lesní tůni (`sanctuary-dawn.*` / `sanctuary-twilight.*`), může přepnout do noční atmosféry (líně načítaná noční vrstva), vyzkoušet dechový pacer, rituální lištu, pohladit Molly u břehu nebo zapnout doprovodný zvuk (ve výchozím stavu vypnutý).
 
 ## 6. Přidání komunitního tipu přes `/submit`
 1. Uživatel otevře `/submit` a přepne typ tipu (jednorázová akce vs. stálé místo pomoci) s dynamickým podtitulkem.

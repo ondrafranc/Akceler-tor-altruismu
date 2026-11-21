@@ -23,7 +23,7 @@ Závislosti tečou jedním směrem: `routes` -> `components` / `lib/features` ->
 | `src/lib/server/`, `src/lib/security.js`, `src/lib/validation.js` | Serverová logika a bezpečnost (viz `api-security.md`) |
 | `src/lib/` (volné soubory) | `mollyStore.js`, `progress.js`, `analytics.js`, `storyCard.js`, `utils.js` |
 
-Pozor na jména: `src/lib/mollyTypes.js` je datový modul (katalog pamlsků), ne typy. Typy Molly jsou v `src/lib/types/molly.ts`.
+Pozor na jména: `src/lib/mollyTypes.js` je datový modul (texty a průvodcovské nápovědy Molly), ne typy. Typy Molly jsou v `src/lib/types/molly.ts`.
 
 ## Pravidla modulů
 - Každý soubor v `src/lib/` má aktivního konzumenta. Nevytvářej přeposílací fasády ani druhý katalog skutků.

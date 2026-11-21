@@ -41,8 +41,6 @@
     openBrokenLinkReport,
   } from "../../../../lib/analytics.js";
   import {
-    mollyState,
-    feedMolly,
     notifyMollySpark,
   } from "../../../../lib/mollyStore.js";
   import { cleanTitle, stripLeadingEmoji } from "../../../../lib/utils.js";
@@ -105,7 +103,6 @@
 
   let kibbleGrams = $state(0);
   let sparkBoosted = $state(false);
-  let fedInCelebration = $state(false);
   /** @type {HTMLDetailsElement | null} */
   let detailsEl = $state(null);
   /** @type {HTMLCanvasElement | null} */
@@ -363,7 +360,6 @@
       lastCelebratedActionId = null;
       kibbleGrams = 0;
       sparkBoosted = false;
-      fedInCelebration = false;
       if (hadPreviousAction && detailsEl) {
         detailsEl.open = false;
       }
@@ -490,7 +486,6 @@
     if (completedNow !== prevJustCompleted) {
       prevJustCompleted = completedNow;
       if (completedNow) {
-        fedInCelebration = false;
       } else {
         lastCelebratedActionId = null;
       }
@@ -532,13 +527,6 @@
   /** @param {number} g */
   function handleWeightUpdate(g) {
     kibbleGrams = g;
-  }
-
-  function handleFeedMollyInline() {
-    const res = feedMolly("celebration", { action, silent: false });
-    if (res?.success) {
-      fedInCelebration = true;
-    }
   }
 
   /** @param {string[]} ids */
@@ -1376,29 +1364,8 @@
             size={13}
             class="badge-paw-svg molly-note-paw-svg"
           />
-          <strong>Molly děkuje.</strong> Pamlsek za tvůj skutek už na ni čeká — můžeš jí ho dát tady nebo u tůně v <a href="/svet" class="molly-svet-inline-link">Krajině dobra</a>.
+          <strong>Molly děkuje.</strong> Tvůj skutek teď svítí v <a href="/svet" class="molly-svet-inline-link">Krajině dobra</a>.
         </div>
-        {#if $mollyState.availableTreats > 0 && !fedInCelebration}
-          <div class="molly-inline-feed-row">
-            <button
-              type="button"
-              class="btn-inline-feed-molly"
-              onclick={handleFeedMollyInline}
-            >
-              <AppIcon
-                name={effectMeta?.mollyTreat?.icon || "fish"}
-                size={15}
-                strokeWidth={2.1}
-              />
-              <span>Dát Molly pamlsek</span>
-            </button>
-          </div>
-        {:else if fedInCelebration}
-          <div class="molly-inline-fed-badge" role="status">
-            <AppIcon name="heart" size={14} strokeWidth={2.2} />
-            <span>Molly spokojeně chroupe pamlsek a tiše přede.</span>
-          </div>
-        {/if}
         <div class="return-dopamine-actions in-situ-actions">
           {#if onCloseSession}
             <button
@@ -2413,6 +2380,13 @@
   }
 
   .in-situ-affirmation,
+  .molly-svet-inline-link {
+    color: var(--accent-primary, #1b5e42);
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
   .molly-celebration-note {
     font-size: 0.82rem;
     color: var(--ink-primary, #14281d);
@@ -2434,63 +2408,6 @@
     color: var(--accent-primary, #1b5e42);
     flex-shrink: 0;
     margin-top: 2px;
-  }
-
-  .molly-svet-inline-link {
-    color: var(--accent-primary, #1b5e42);
-    font-weight: 700;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-
-  .molly-inline-feed-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0.2rem 0 0.15rem;
-  }
-
-  .btn-inline-feed-molly {
-    appearance: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.42rem;
-    min-height: 44px;
-    min-width: 44px;
-    padding: 0.48rem 0.95rem;
-    border-radius: 999px;
-    border: 1px solid rgba(184, 101, 27, 0.45);
-    background: var(--accent-warm-tint, #fef6e8);
-    color: var(--accent-warm-ink, #8f4b0e);
-    font-family: inherit;
-    font-size: 0.84rem;
-    font-weight: 800;
-    cursor: pointer;
-    box-sizing: border-box;
-    transition:
-      background-color 0.16s ease,
-      border-color 0.16s ease,
-      transform 0.14s ease;
-  }
-
-  .btn-inline-feed-molly:hover {
-    background: var(--hero-dawn, #fef3c7);
-    border-color: var(--accent-warm, #b8651b);
-    transform: translateY(-1px);
-  }
-
-  .molly-inline-fed-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.42rem 0.78rem;
-    border-radius: 12px;
-    background: var(--bohemian-sage, #eef5f0);
-    border: 1px solid var(--border-forest, #c5d9cd);
-    color: var(--accent-primary, #1b5e42);
-    font-size: 0.81rem;
-    font-weight: 700;
   }
 
   .return-dopamine-actions {
@@ -2875,10 +2792,6 @@
       border-radius: 0 0 12px 12px;
       margin-top: -0.2rem;
       padding-top: 0.22rem;
-    }
-
-    .molly-inline-feed-row {
-      margin: 0.06rem 0 0;
     }
 
     .return-dopamine-actions {

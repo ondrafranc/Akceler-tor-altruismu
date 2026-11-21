@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased] — Molly bez pamlsků a dárků
+
+- Odstraněny pamlsky pro Molly a dárky za počet skutků (obojek, zvoneček, korunka, hvězdička). Návštěvníky mátly a s pomáháním nesouvisely. Zmizelo krmení v kartě skutku, v okně oslavy i u tůně, počítadla a měřák dárku v docku, miska v Krajině dobra a všechny texty, které odměnu slibovaly.
+- Molly se neomezuje: na skutek, přání v Krajině dobra a dokončené dechové zastavení teď reaguje poděkováním (`thankForDeed`) se srdíčky a předením, jiskru z náhledu efektu chytá dál a pohlazení funguje jako dřív. V kartě po dokončení zůstává „Molly děkuje.“ s odkazem do Krajiny dobra.
+- Dock nese jen pohlazení, pelíšek a sledování myši. U tůně je jediné tlačítko „Pohladit Molly“.
+- Uložený stav z dřívějška se načte beze změny chování; pole pamlsků a dárků se tiše zahodí. Starší zálohovací kódy postupu jdou dál obnovit.
+- Pojistka v `invariants.test.js` hlídá, že se pamlsky a dárky do kódu nevrátí; odpadla tím i jediná výjimka pro emoji v kódu.
+
 ## [Unreleased] — Rychlejší a spolehlivější E2E testy
 
 - Playwright běží proti produkčnímu buildu na vlastním portu místo vývojového serveru (`tests/support/serve-build.mjs`): build se znovu sestaví jen po změně zdrojáků, každý běh začíná s prázdnými limity požadavků a běžící `npm run dev` zůstává nedotčený. Jiný server lze zvolit přes `PLAYWRIGHT_BASE_URL`.

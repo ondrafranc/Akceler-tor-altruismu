@@ -2,7 +2,7 @@
   import { onDestroy } from "svelte";
   import { playMollyPurr, playSanctuaryChime } from "../../../audio/presets.js";
   import { isSoundMuted } from "../../../audio/audioContext.js";
-  import { setMollyMood, unlockMollyTreat } from "../../../mollyStore.js";
+  import { setMollyMood, thankForDeed } from "../../../mollyStore.js";
   import { trackEvent } from "../../../analytics.js";
   import AppIcon from "$lib/components/AppIcon.svelte";
   import { resolveIconKey } from "$lib/icons/iconRegistry.js";
@@ -148,14 +148,7 @@
     setMollyMood("curious");
     breathPhase = completed ? "done" : "idle";
     if (completed) {
-      unlockMollyTreat(
-        {
-          id: "mindful_breathing",
-          mode: "breath_lotus",
-          title: "Minuta klidného dechu pro načerpání sil",
-        },
-        { reason: "breathing_completed", source: "dech" },
-      );
+      thankForDeed({ silent: true });
       playSanctuaryChime([329.63, 440.0, 659.25], 0.6);
       trackEvent("aa_world_breathing_complete", {
         pattern: activePattern.id,

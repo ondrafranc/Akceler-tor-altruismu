@@ -33,7 +33,6 @@ import { tone, noiseBurst } from '$lib/audio/synthesizer.js';
 import {
   playSanctuaryChime,
   playMollyPurr,
-  playMollyCrunch,
   playMollyMeow,
   playPayoffAsmr
 } from '$lib/audio/presets.js';
@@ -81,7 +80,6 @@ describe('data modularization: barrel re-export identity equivalence', () => {
     expect(typeof noiseBurst).toBe('function');
     expect(typeof playSanctuaryChime).toBe('function');
     expect(typeof playMollyPurr).toBe('function');
-    expect(typeof playMollyCrunch).toBe('function');
     expect(typeof playMollyMeow).toBe('function');
     expect(typeof playPayoffAsmr).toBe('function');
 

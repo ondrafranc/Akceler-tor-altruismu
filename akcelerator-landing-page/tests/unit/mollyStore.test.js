@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { get } from 'svelte/store';
 import {
   mollyState,
@@ -6,24 +6,20 @@ import {
   toggleMollyFollowMouse,
   setMollyFollowMouse,
   toggleMollyPelisek,
-  unlockMollyTreat,
-  feedMolly,
+  thankForDeed,
+  mollyEvents,
   petMolly,
   notifyMollySpark,
   MOLLY_FOLLOW_MOUSE_KEY,
   MOLLY_STORAGE_KEY
 } from '$lib/mollyStore.js';
 import {
-  MOLLY_TREAT_BY_FOOD,
-  MOLLY_MILESTONES,
   MOLLY_ROUTE_GUIDES,
   MOLLY_PET_WHISPERS,
-  MOLLY_UNEARNED_PET_WHISPERS,
-  pluralPamlsek,
-  describeNextMollyGift,
+  MOLLY_DEED_THANKS,
   getMollyGreeting
 } from '$lib/mollyTypes.js';
-import { safeGetItem, safeSetItem } from '$lib/storage/index.js';
+import { safeGetItem } from '$lib/storage/index.js';
 
 describe('mollyStore Unit Tests (Milestone 3: Follow Mouse & State Transitions)', () => {
   beforeEach(() => {
@@ -94,7 +90,7 @@ describe('mollyStore Unit Tests (Milestone 3: Follow Mouse & State Transitions)'
     });
   });
 
-  describe('Molly state transitions & delayed gratification integrity', () => {
+  describe('Molly state transitions', () => {
     it('toggleMollyPelisek switches mode between roaming and docked', () => {
       const initialState = get(mollyState);
       const startMode = initialState.mode;
@@ -108,46 +104,23 @@ describe('mollyStore Unit Tests (Milestone 3: Follow Mouse & State Transitions)'
       expect(get(mollyState).mode).toBe(startMode);
     });
 
-    it('feedMolly honors delayed gratification: refuses treat if none available', () => {
-      // Ensure availableTreats is 0
-      mollyState.update((s) => ({ ...s, availableTreats: 0, earnedTreatQueue: [] }));
-
-      const res = feedMolly('test_action');
-      expect(res.success).toBe(false);
-      expect(res.treat).toBeNull();
-      expect(get(mollyState).mood).toBe('purring'); // petting fallback
-    });
-
-    it('unlockMollyTreat increments availableTreats and queue, enabling feedMolly', () => {
-      mollyState.update((s) => ({ ...s, availableTreats: 0, earnedTreatQueue: [] }));
-
-      const unlockRes = unlockMollyTreat({ id: 'good_deed_1', title: 'Pomoc sousedovi' });
-      expect(unlockRes.unlocked).toBe(true);
-      expect(unlockRes.treat).toBeDefined();
-
-      const stateAfterUnlock = get(mollyState);
-      expect(stateAfterUnlock.availableTreats).toBeGreaterThanOrEqual(1);
-
-      const feedRes = feedMolly('good_deed_1');
-      expect(feedRes.success).toBe(true);
-      expect(feedRes.treat).toBeDefined();
-      expect(get(mollyState).mood).toBe('eating');
-    });
-
-    it('notifyMollySpark triggers spark animation but NEVER inflates treat counts or gift deeds', () => {
-      const beforeState = get(mollyState);
-      const beforeTreatsTotal = beforeState.treatsFedTotal;
-      const beforeGiftDeeds = beforeState.giftDeeds;
-      const beforeAvailable = beforeState.availableTreats;
+    it('notifyMollySpark gives Molly a spark to catch and changes nothing but her whisper and mood', () => {
+      const before = get(mollyState);
+      /** @type {import('$lib/types').MollyEvent | null} */
+      let seen = null;
+      const stop = mollyEvents.subscribe((ev) => {
+        seen = ev;
+      });
 
       const spark = notifyMollySpark({ id: 'spark_action' }, { surface: 'canvas' });
-      expect(spark).toBeDefined();
+      stop();
 
-      const afterState = get(mollyState);
-      expect(afterState.treatsFedTotal).toBe(beforeTreatsTotal);
-      expect(afterState.giftDeeds).toBe(beforeGiftDeeds);
-      expect(afterState.availableTreats).toBe(beforeAvailable);
-      expect(afterState.whisper?.icon).toBe('sparkles');
+      expect(spark).toMatchObject({ icon: 'sparkles', actionId: 'spark_action' });
+      expect(seen).toMatchObject({ type: 'spark', spark: { icon: 'sparkles' }, surface: 'canvas' });
+      const after = get(mollyState);
+      expect(after.petCount).toBe(before.petCount);
+      expect(after.mode).toBe(before.mode);
+      expect(after.whisper?.icon).toBe('sparkles');
     });
 
     it('petMolly increments petCount and sets purring mood', () => {
@@ -159,84 +132,150 @@ describe('mollyStore Unit Tests (Milestone 3: Follow Mouse & State Transitions)'
       expect(afterState.mood).toBe('purring');
       expect(afterState.whisper?.text).toBe('Laskavé pohlazení');
     });
+
+    it('petMolly always answers from MOLLY_PET_WHISPERS', () => {
+      for (let i = 0; i < 30; i++) {
+        petMolly();
+        const text = get(mollyState).whisper?.text || '';
+        expect(MOLLY_PET_WHISPERS).toContain(text);
+        expect(text).not.toMatch(/pamls|dobrot|odměn/i);
+      }
+    });
   });
 
-  describe('M2 Molly Copy Quality, Czech Grammar & Tone Guardrails', () => {
-    it('MOLLY_TREAT_BY_FOOD defines accusative nameAcc and feedMolly uses it after "za"', () => {
-      for (const [foodKey, treat] of Object.entries(MOLLY_TREAT_BY_FOOD)) {
-        expect(treat.name.length, `${foodKey} has name`).toBeGreaterThan(0);
-        expect(treat.nameAcc?.length || 0, `${foodKey} has nameAcc`).toBeGreaterThan(0);
+  describe('Thanks for a deed', () => {
+    it('thankForDeed shows a thanks whisper from MOLLY_DEED_THANKS and emits a thanks event', () => {
+      /** @type {import('$lib/types').MollyEvent | null} */
+      let seen = null;
+      const stop = mollyEvents.subscribe((ev) => {
+        seen = ev;
+      });
 
-        mollyState.update((s) => ({
-          ...s,
-          availableTreats: 1,
-          earnedTreatQueue: [{ ...treat }],
-          giftDeeds: 0
-        }));
+      thankForDeed({ silent: true });
+      stop();
 
-        const res = feedMolly('grammar_test');
-        expect(res.success).toBe(true);
-        const text = get(mollyState).whisper?.text || '';
-        expect(text.toLowerCase()).toContain('děkuji za');
-        expect(text).toContain(treat.nameAcc);
-        expect(text).not.toContain('za lososová granulka');
-        expect(text).not.toContain('za křupavá hvězdička');
-        expect(text).not.toContain('za teplé kočičí mlíčko v misce');
+      const whisper = get(mollyState).whisper;
+      expect(MOLLY_DEED_THANKS).toContain(whisper?.text);
+      expect(whisper?.fromThanks).toBe(true);
+      expect(whisper?.icon).toBe('heart');
+      expect(seen).toMatchObject({ type: 'thanks' });
+    });
+
+    it('thankForDeed changes no counter and saves nothing', () => {
+      const before = get(mollyState);
+      const savedBefore = safeGetItem(MOLLY_STORAGE_KEY, 'local');
+
+      thankForDeed({ silent: true });
+
+      const after = get(mollyState);
+      expect(after.petCount).toBe(before.petCount);
+      expect(after.mode).toBe(before.mode);
+      expect(after.followMouse).toBe(before.followMouse);
+      expect(safeGetItem(MOLLY_STORAGE_KEY, 'local')).toBe(savedBefore);
+    });
+
+    it('a docked Molly stays asleep while she thanks', () => {
+      if (get(mollyState).mode !== 'docked') toggleMollyPelisek();
+      thankForDeed({ silent: true });
+      expect(get(mollyState).mood).toBe('sleeping');
+      toggleMollyPelisek();
+    });
+
+    it('no thanks text mentions food or rewards', () => {
+      expect(MOLLY_DEED_THANKS.length).toBeGreaterThanOrEqual(3);
+      for (const text of MOLLY_DEED_THANKS) {
+        expect(text).not.toMatch(/pamls|dobrot|odměn|mňam/i);
+        expect(text.length).toBeLessThanOrEqual(95);
       }
     });
+  });
 
-    it('milestone whispers use grammatical nominative phrasing ("mě teď zdobí")', () => {
-      for (const m of MOLLY_MILESTONES) {
-        mollyState.update((s) => ({
-          ...s,
-          availableTreats: 1,
-          earnedTreatQueue: [{ ...MOLLY_TREAT_BY_FOOD.salmon }],
-          giftDeeds: m.at - 1
-        }));
-        feedMolly('milestone_test');
-        const text = get(mollyState).whisper?.text || '';
-        expect(text).toContain(m.name);
-        expect(text).toContain('mě teď zdobí');
-        expect(text).not.toContain(`mám ${m.name}`);
-      }
+  describe('Saved state from before treats and gifts were removed', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      vi.resetModules();
     });
 
-    it('pluralPamlsek and describeNextMollyGift follow Czech declension and calm tone', () => {
-      expect(pluralPamlsek(1)).toBe('pamlsek');
-      expect(pluralPamlsek(2)).toBe('pamlsky');
-      expect(pluralPamlsek(4)).toBe('pamlsky');
-      expect(pluralPamlsek(5)).toBe('pamlsků');
-      expect(pluralPamlsek(0)).toBe('pamlsků');
+    /** @param {string} raw */
+    async function loadStoreWithSavedState(raw) {
+      vi.resetModules();
+      // The store reads saved state only in a browser; a bare window is enough to stand in for one.
+      vi.stubGlobal('window', { addEventListener() {}, removeEventListener() {} });
+      const storage = await import('$lib/storage/index.js');
+      storage.safeSetItem(storage.AA_MOLLY_COMPANION_KEY, raw, 'local');
+      const store = await import('$lib/mollyStore.js');
+      return { storage, store };
+    }
 
-      const allDone = describeNextMollyGift(50);
-      expect(allDone).not.toContain('!');
-      expect(allDone.length).toBeGreaterThan(10);
+    const LEGACY_FIELDS = [
+      'treatsFedTotal',
+      'treatsFedToday',
+      'lastFedIso',
+      'availableTreats',
+      'earnedTreatQueue',
+      'lastTreat',
+      'giftDeeds'
+    ];
+
+    it('loads a legacy saved state: drops treat and gift fields, keeps mode and petCount', async () => {
+      const legacy = {
+        mode: 'docked',
+        mood: 'eating',
+        followMouse: false,
+        petCount: 12,
+        treatsFedTotal: 128,
+        treatsFedToday: 2,
+        lastFedIso: '2026-01-01T10:00:00.000Z',
+        availableTreats: 3,
+        earnedTreatQueue: Array.from({ length: 20 }, (_, i) => ({ icon: '\u{1F41F}', foodType: 'salmon', ts: i })),
+        lastTreat: { icon: '\u{1F41F}', name: 'x', foodType: 'salmon' },
+        giftDeeds: 27
+      };
+      const { storage, store } = await loadStoreWithSavedState(JSON.stringify(legacy));
+
+      const state = get(store.mollyState);
+      expect(state.mode).toBe('docked');
+      expect(state.mood).toBe('sleeping');
+      expect(state.petCount).toBe(12);
+      for (const field of LEGACY_FIELDS) expect(state, field).not.toHaveProperty(field);
+
+      store.petMolly('test');
+      const saved = JSON.parse(storage.safeGetItem(storage.AA_MOLLY_COMPANION_KEY, 'local') || '{}');
+      expect(saved.petCount).toBe(13);
+      expect(saved.mode).toBe('docked');
+      for (const field of LEGACY_FIELDS) expect(saved, field).not.toHaveProperty(field);
     });
 
+    it('survives a corrupted legacy record', async () => {
+      const { store } = await loadStoreWithSavedState(
+        JSON.stringify({ mode: 'roaming', petCount: 'many', earnedTreatQueue: 'x', giftDeeds: null, lastTreat: 7 })
+      );
+      const state = get(store.mollyState);
+      expect(state.mode).toBe('roaming');
+      expect(state.petCount).toBe(0);
+    });
+
+    it('survives a record that is not an object', async () => {
+      const { store } = await loadStoreWithSavedState('[1,2,3]');
+      expect(get(store.mollyState).mode).toBe('roaming');
+    });
+  });
+
+  describe('Molly Copy Quality, Czech Grammar & Tone Guardrails', () => {
     it('all Molly copy has zero Unicode emoji, zero tildes, zero exclamation marks, and zero banned tokens', () => {
       const collected = [];
-      collected.push(...MOLLY_PET_WHISPERS, ...MOLLY_UNEARNED_PET_WHISPERS);
+      collected.push(...MOLLY_PET_WHISPERS, ...MOLLY_DEED_THANKS);
       for (const guide of Object.values(MOLLY_ROUTE_GUIDES)) {
         collected.push(guide.hint, guide.nudge);
-      }
-      for (const treat of Object.values(MOLLY_TREAT_BY_FOOD)) {
-        collected.push(treat.name, treat.nameAcc || '', treat.shortLabel);
-      }
-      for (const m of MOLLY_MILESTONES) {
-        collected.push(m.name);
       }
       for (const h of [0, 7, 13, 20]) {
         collected.push(getMollyGreeting(new Date(2026, 0, 1, h)));
       }
-      collected.push(describeNextMollyGift(0), describeNextMollyGift(3), describeNextMollyGift(50));
 
       // Runtime whispers
-      mollyState.update((s) => ({ ...s, availableTreats: 0, earnedTreatQueue: [], giftDeeds: 0 }));
-      feedMolly('runtime_0');
+      thankForDeed({ silent: true });
       collected.push(get(mollyState).whisper?.text || '');
-      unlockMollyTreat({ id: 'runtime_unlock', title: 'Test' });
-      collected.push(get(mollyState).whisper?.text || '');
-      feedMolly('runtime_1');
+      petMolly();
       collected.push(get(mollyState).whisper?.text || '');
       notifyMollySpark({ id: 'runtime_spark' });
       collected.push(get(mollyState).whisper?.text || '');
@@ -258,9 +297,12 @@ describe('mollyStore Unit Tests (Milestone 3: Follow Mouse & State Transitions)'
         'jezera',
         'jezeru',
         'jistý',
-        'mňamku',
+        'mňamk',
+        'pamls',
         'zamlsám',
-        'odemkla se dobrota',
+        'dobrot',
+        'dárek',
+        'odměn',
         '+1 xp',
         'level'
       ];
@@ -276,12 +318,7 @@ describe('mollyStore Unit Tests (Milestone 3: Follow Mouse & State Transitions)'
         }
       }
 
-      const unearnedWarmRegex = /mrrr|předu|pohlazení|skutek|skutku|pomoc|pomůžeš|laskavost|klid|děkuji/i;
       const petWarmRegex = /mrrr|předu|pohlazení|skutek|skutku|pomoc|pomůžeš|laskavost|klid|děkuji|tůně|den|svět|kousek/i;
-      for (const w of MOLLY_UNEARNED_PET_WHISPERS) {
-        expect(w, `Unearned whisper matches DG-3.1/EC-6 warm token: "${w}"`).toMatch(unearnedWarmRegex);
-        expect(w.length, `Whisper concise: "${w}"`).toBeLessThanOrEqual(95);
-      }
       for (const w of MOLLY_PET_WHISPERS) {
         expect(w, `Pet whisper matches warm token: "${w}"`).toMatch(petWarmRegex);
         expect(w.length, `Whisper concise: "${w}"`).toBeLessThanOrEqual(95);

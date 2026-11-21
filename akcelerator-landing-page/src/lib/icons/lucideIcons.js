@@ -5,11 +5,8 @@ import LucideClock from '@lucide/svelte/icons/clock';
 import LucideMapPin from '@lucide/svelte/icons/map-pin';
 import LucideTrees from '@lucide/svelte/icons/trees';
 import LucidePlus from '@lucide/svelte/icons/plus';
-import LucideFish from '@lucide/svelte/icons/fish';
-import LucideMilk from '@lucide/svelte/icons/milk';
 import LucideLeaf from '@lucide/svelte/icons/leaf';
 import LucideHeart from '@lucide/svelte/icons/heart';
-import LucideBell from '@lucide/svelte/icons/bell';
 import LucideStar from '@lucide/svelte/icons/star';
 import LucideHome from '@lucide/svelte/icons/house';
 import LucideFootprints from '@lucide/svelte/icons/footprints';
@@ -106,11 +103,8 @@ export const LUCIDE_ICON_MAP = {
   'map-pin': LucideMapPin,
   'trees': LucideTrees,
   'plus': LucidePlus,
-  'fish': LucideFish,
-  'milk': LucideMilk,
   'leaf': LucideLeaf,
   'heart': LucideHeart,
-  'bell': LucideBell,
   'star': LucideStar,
   'home': LucideHome,
   'footprints': LucideFootprints,

@@ -25,9 +25,11 @@ import { handle as serverHandle } from '../../src/hooks.server.js';
 import {
   completedSteps,
   sanctuaryWishes,
-  restoreProgressFromBackupCode
+  restoreProgressFromBackupCode,
+  createProgressBackupCode
 } from '$lib/progress.js';
-import { cleanMeta, exportProgressPasscode } from '$lib/utils.js';
+import { mollyState } from '$lib/mollyStore.js';
+import { cleanMeta, exportProgressPasscode, importProgressPasscode } from '$lib/utils.js';
 
 describe('security: text & number sanitization', () => {
   it('safeText handles normal strings, strips control chars and handles invalid inputs', () => {
@@ -633,10 +635,19 @@ describe('security: restoreProgressFromBackupCode schema validation & sanitizati
           timestamp: '2026-11-18T12:00:00.000Z'
         }
       ],
+      // A code created before treats and gifts were removed still carries their fields.
       m: { treatsFedTotal: -5, petCount: 3, availableTreats: 1, giftDeeds: 2 }
     });
 
+    const petCountBefore = get(mollyState).petCount;
     expect(restoreProgressFromBackupCode(dirtyCode)).toBe(true);
+    const mollyAfter = get(mollyState);
+    expect(mollyAfter.petCount).toBe(Math.max(petCountBefore, 3));
+    for (const field of ['treatsFedTotal', 'availableTreats', 'giftDeeds']) {
+      expect(mollyAfter, field).not.toHaveProperty(field);
+    }
+    const freshCode = createProgressBackupCode();
+    expect(Object.keys(/** @type {Record<string, unknown>} */ (importProgressPasscode(freshCode)?.m ?? {}))).toEqual(['petCount']);
     const steps = get(completedSteps);
     expect(steps.length).toBe(1);
     expect(steps[0].title).toBe('Naplnit misku');

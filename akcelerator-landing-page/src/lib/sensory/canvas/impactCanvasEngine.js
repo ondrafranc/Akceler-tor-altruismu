@@ -12,7 +12,6 @@ import {
   ensureSharedOrientation,
   getSharedOrientationGx
 } from '../../core/device.js';
-import { resolveMollyTreat } from '../../mollyTypes.js';
 import { resolveActionEffectSpec } from '../catalog/catalogResolver.js';
 import { easeOut } from '../graphics/math.js';
 import { drawGlow } from '../graphics/primitives.js';
@@ -160,10 +159,8 @@ export function mountImpactCanvas(cv, o = {}) {
   let onDown = null;
 
   if (!isPreview) {
-    const mollyTreat = spec.mollyTreat || resolveMollyTreat(spec);
     if (cv?.setAttribute) {
       cv.setAttribute('data-molly-mini', 'ready');
-      cv.setAttribute('data-molly-treat', mollyTreat?.foodType || 'salmon');
       cv.setAttribute('data-molly-arcs', '0');
     }
 
@@ -455,7 +452,6 @@ export function mountImpactCanvas(cv, o = {}) {
       delete cv.__triggerBurst;
       if (onDown) cv?.removeEventListener?.('pointerdown', onDown);
       cv?.removeAttribute?.('data-molly-mini');
-      cv?.removeAttribute?.('data-molly-treat');
       cv?.removeAttribute?.('data-molly-arcs');
     }
   };

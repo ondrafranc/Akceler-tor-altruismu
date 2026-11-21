@@ -46,7 +46,7 @@ Po chvíli klidu stránka jednou projde záložky `HOME_MODES` a vrátí se na v
 - Všechny tři fáze drží stejný tmavě zelený lesní soumrak. Text ve scéně je čistá typografie bez tmavých pilulek.
 - **`preview` nikdy nespouští vyvrcholení (`climax`), zvuk, metriky ani `data-molly-mini="ready"`.** Hlídá to `preview` příznak v `use:impactCanvas`.
 - Náhled smí jemně naznačit, že scéna po skutku ožije (krátký popisek, anticipační nádech plátna). Spouští ho hover, fokus na CTA, chvíle čtení, ťuknutí do scény, rozbalení `Jak to funguje`, přepnutí karty nebo návrat na záložku prohlížeče. Vždy věcně, bez patosu a bez FOMO.
-- Kliknutí na partnera přepne scénu do `active` / `payoff` a odemkne *„Mám hotovo“*. Po dokončení se nabídne *„Přehrát“*, ztlumení zvuku a *„Dát Molly pamlsek“* přímo v kartě.
-- Oslavný zvuk zazní pro jeden skutek nejvýše jednou. Odměnová čísla jsou všude stejná (`emitProgress(1)`).
+- Kliknutí na partnera přepne scénu do `active` / `payoff` a odemkne *„Mám hotovo“*. Po dokončení se nabídne *„Přehrát“* a ztlumení zvuku; Molly v kartě krátce poděkuje (`.molly-celebration-note`) a nic dalšího po návštěvníkovi nechce.
+- Oslavný zvuk zazní pro jeden skutek nejvýše jednou. Čísla dopadu jsou všude stejná (`emitProgress(1)`).
 - Animace používají `frameStep` a mimo viewport usínají (auto-sleep v `controllerRegistry.js`).
 - Na zařízení s myší se nezobrazuje mobilní pokyn k potažení karty.

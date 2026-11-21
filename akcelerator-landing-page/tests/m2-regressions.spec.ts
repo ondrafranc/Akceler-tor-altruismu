@@ -156,32 +156,6 @@ test.describe('M2 Regressions (E2E)', () => {
     }
   });
 
-  test('4. Inline "Dát Molly pamlsek" on / celebration increments molly-treat-count immediately', async ({ page }) => {
-    await page.setViewportSize({ width: 360, height: 800 });
-    await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-    });
-    await gotoHydrated(page, '/');
-
-    const treatCount = page.locator('[data-testid="molly-treat-count"]');
-    await expect(treatCount).toContainText('0');
-
-    await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
-    await page.locator('.instant-card .btn-studio-done').click();
-
-    const feedBtn = page.locator('.instant-card .btn-inline-feed-molly');
-    await expect(feedBtn).toBeVisible();
-    await expect(feedBtn).toContainText('Dát Molly pamlsek');
-    const feedBox = await feedBtn.boundingBox();
-    expect(feedBox?.height || 0).toBeGreaterThanOrEqual(44);
-
-    await feedBtn.click();
-    await expect(treatCount).toContainText('1');
-    await expect(page.locator('.instant-card .molly-inline-fed-badge')).toBeVisible();
-  });
-
   test('5. Desktop Molly scroll matrix (0..1600) has zero overlap with headings/cards/chips & floating pills never overlap .deck-nav-next', async ({
     page
   }) => {
@@ -385,7 +359,7 @@ test.describe('M2 Regressions (E2E)', () => {
     expect(srcH).toBeGreaterThanOrEqual(43.5);
   });
 
-  test('8. 1440x900 post-done celebration buttons (.btn-inline-feed-molly, .btn-next-deed) have 0 px2 Molly overlap across /, potravinova_banka, charita_dar, remobil_telefon', async ({
+  test('8. 1440x900 post-done celebration controls (.molly-celebration-note, .btn-next-deed) have 0 px2 Molly overlap across /, potravinova_banka, charita_dar, remobil_telefon', async ({
     page
   }) => {
     test.setTimeout(60_000);
@@ -441,7 +415,7 @@ test.describe('M2 Regressions (E2E)', () => {
 
       await doneBtn.click();
       await expect(card.locator('.in-situ-celebration'), `${route}: celebration visible`).toBeVisible();
-      await expect(card.locator('.in-situ-celebration .btn-inline-feed-molly')).toBeVisible();
+      await expect(card.locator('.in-situ-celebration .molly-celebration-note')).toBeVisible();
       await expect(card.locator('.in-situ-celebration .btn-next-deed')).toBeVisible();
 
       // Wait 1200ms post-done AND wait for WALK_ROAM settle
@@ -809,10 +783,9 @@ test.describe('M3 Regressions (E2E)', () => {
     await gotoHydrated(page, '/nonexistent-404-m3-check');
     await expect(page.locator('.page-header-title .serif-accent')).toContainText('naděje nekončí.');
 
-    // 6. Molly counter suppressed on /svet while dock & sanctuary pill stay visible
+    // 6. On /svet the dock & sanctuary pill stay visible
     await gotoHydrated(page, '/svet');
     await expect(page.locator('.molly-pelisek-dock')).toBeVisible();
-    await expect(page.locator('.molly-pelisek-dock [data-testid="molly-treat-count"]')).toHaveCount(0);
     await expect(page.locator('.molly-sanctuary-pill')).toBeVisible();
   });
 });

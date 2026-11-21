@@ -8,7 +8,6 @@
   import { impactCanvas } from "../lib/sensory/canvas/impactCanvasAction.js";
   import { getActionEffectMeta } from "../lib/sensory/catalog/catalogResolver.js";
   import { playPayoffAsmr } from "../lib/audio/presets.js";
-  import { feedMolly, mollyState } from "../lib/mollyStore.js";
   import { cleanTitle } from "../lib/utils.js";
   import AppIcon from "$lib/components/AppIcon.svelte";
 
@@ -16,7 +15,6 @@
   let sharedCopied = false;
   let impactMetricValue = 0;
   let lastCelebratedKey = "";
-  let fedThisCelebration = false;
 
   $: if ($activeCelebration) {
     restingMode = false;
@@ -25,12 +23,10 @@
     if (key !== lastCelebratedKey) {
       lastCelebratedKey = key;
       impactMetricValue = 0;
-      fedThisCelebration = false;
       playPayoffAsmr($activeCelebration);
     }
   } else {
     lastCelebratedKey = "";
-    fedThisCelebration = false;
   }
 
   $: activeElementMeta = $activeCelebration
@@ -50,20 +46,6 @@
   function handleContinue() {
     trackEvent("aa_after_done_choice", { choice: "one_more" });
     closeCelebration();
-  }
-
-  function handleFeedMolly() {
-    if (!$activeCelebration || fedThisCelebration) return;
-    const res = feedMolly("celebration", {
-      action: $activeCelebration,
-      silent: false,
-    });
-    if (res?.success) {
-      fedThisCelebration = true;
-      trackEvent("aa_molly_celebration_fed", {
-        actionId: $activeCelebration.id,
-      });
-    }
   }
 
   function handleGoToWorld() {
@@ -168,44 +150,12 @@
             }}
           ></canvas>
         </div>
-        {#if effectMeta?.mollyTreat}
-          <div class="molly-celebration-note">
-            <span class="molly-treat-icon" aria-hidden="true">
-              <AppIcon
-                name={effectMeta.mollyTreat.icon}
-                size={18}
-                strokeWidth={1.9}
-              />
-            </span>
-            <span>
-              Patronka <strong>Molly</strong> ti děkuje za dobrotu (<strong
-                >{effectMeta.mollyTreat.nameAcc || effectMeta.mollyTreat.name}</strong
-              >) a klidně čeká u lesní tůně v Krajině dobra.
-            </span>
-          </div>
-          {#if !fedThisCelebration && $mollyState.availableTreats > 0}
-            <button
-              type="button"
-              class="btn-celebration-feed"
-              on:click={handleFeedMolly}
-            >
-              <AppIcon name="paw" size={16} />
-              <span>Dát Molly zasloužený pamlsek</span>
-              <AppIcon
-                name={effectMeta.mollyTreat.icon}
-                size={16}
-                strokeWidth={1.9}
-              />
-            </button>
-          {:else if fedThisCelebration}
-            <div class="molly-fed-badge" role="status">
-              <AppIcon name="sparkles" size={16} strokeWidth={2} />
-              <span>
-                Molly spokojeně chroupe svůj pamlsek a tiše přede.
-              </span>
-            </div>
-          {/if}
-        {/if}
+        <div class="molly-celebration-note">
+          <span class="molly-note-icon" aria-hidden="true">
+            <AppIcon name="paw" size={18} strokeWidth={1.9} />
+          </span>
+          <span><strong>Molly ti děkuje.</strong></span>
+        </div>
         <p class="win-rest-reassurance">
           Dnes se ti povedlo něco dobrého. Nemusíš dělat nic dalšího. Můžeš si
           chvíli odpočinout.
@@ -359,54 +309,11 @@
     text-align: left;
   }
 
-  .molly-treat-icon {
+  .molly-note-icon {
     display: inline-flex;
     align-items: center;
     color: #8f4b0e;
     flex-shrink: 0;
-  }
-
-  .btn-celebration-feed {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.45rem;
-    width: 100%;
-    min-height: 44px;
-    min-width: 44px;
-    box-sizing: border-box;
-    margin: 0 0 0.85rem 0;
-    padding: 0.7rem 1.1rem;
-    border-radius: 14px;
-    border: 1px solid rgba(143, 75, 14, 0.35);
-    background: var(--accent-warm-tint, #fef6e8);
-    color: #8f4b0e;
-    font-family: inherit;
-    font-size: 0.88rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background-color 0.15s ease, border-color 0.15s ease;
-  }
-
-  .btn-celebration-feed:hover {
-    background: #fdead1;
-    border-color: #8f4b0e;
-  }
-
-  .molly-fed-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.45rem;
-    width: 100%;
-    box-sizing: border-box;
-    margin: 0 0 0.85rem 0;
-    padding: 0.55rem 0.85rem;
-    border-radius: 12px;
-    background: var(--bg-subtle, #edf2ee);
-    color: var(--accent-primary, #1b5e42);
-    font-size: 0.84rem;
-    font-weight: 700;
   }
 
   .win-rest-reassurance {

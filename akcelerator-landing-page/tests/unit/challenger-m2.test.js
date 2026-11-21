@@ -27,7 +27,6 @@ import { tone, noiseBurst } from '$lib/audio/synthesizer.js';
 import {
   playSanctuaryChime,
   playMollyPurr,
-  playMollyCrunch,
   playMollyMeow,
   playPayoffAsmr
 } from '$lib/audio/presets.js';
@@ -88,7 +87,6 @@ describe('CHALLENGER M2: Barrel Re-Export Strict Reference Identity (===)', () =
     // Audio Presets
     expect(typeof playSanctuaryChime).toBe('function');
     expect(typeof playMollyPurr).toBe('function');
-    expect(typeof playMollyCrunch).toBe('function');
     expect(typeof playMollyMeow).toBe('function');
     expect(typeof playPayoffAsmr).toBe('function');
 

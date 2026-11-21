@@ -648,7 +648,7 @@ test.describe('Tier 5 Adversarial Stress: Mobile UX, Viewport Rotations & Tone I
     // Verify tone invariants inside modal
     await verifyToneInvariants(page, 'SmallWinCelebration modal');
 
-    // Verify Molly celebration note inside modal if treat awarded
+    // Verify Molly's thanks note inside the modal
     const mollyNote = modal.locator('.molly-celebration-note');
     if (await mollyNote.isVisible()) {
       const text = await mollyNote.innerText();

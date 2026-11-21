@@ -15,7 +15,7 @@ import {
 import { isValidLatLon, isCzLatLon, sanitizeHttpUrl } from '$lib/security.js';
 import { isValidIconKey } from '$lib/icons/iconRegistry.js';
 import { ACTION_EFFECT_CATALOG, VOLUNTEER_EFFECT_SPEC } from '$lib/sensory/catalog/actionCatalog.js';
-import { MOLLY_TREAT_BY_FOOD, MOLLY_MILESTONES, MOLLY_ROUTE_GUIDES } from '$lib/mollyTypes.js';
+import { MOLLY_ROUTE_GUIDES } from '$lib/mollyTypes.js';
 import { LIGHT_TYPES, SANCTUARY_ELEMENTS } from '$lib/progress.js';
 import { recommendActions } from '$lib/features/actions/services/recommendationEngine.js';
 import { GET as pulseGet } from '../../src/routes/api/pulse/+server.js';
@@ -185,12 +185,6 @@ describe('M1 Feature 3: zero-emoji, valid IconKey, and zero-FOMO invariants', ()
       expect(EMOJI_OR_GLYPH_RE.test(formatted)).toBe(false);
     }
 
-    for (const treat of Object.values(MOLLY_TREAT_BY_FOOD)) {
-      expect(isValidIconKey(treat.icon)).toBe(true);
-    }
-    for (const milestone of MOLLY_MILESTONES) {
-      expect(isValidIconKey(milestone.icon)).toBe(true);
-    }
     for (const guide of Object.values(MOLLY_ROUTE_GUIDES)) {
       expect(isValidIconKey(guide.icon)).toBe(true);
     }

@@ -2166,7 +2166,7 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
     assertZeroRuntimeErrors(errors, 'T3-13');
   });
 
-  test('T3-14: (Header Brand BVA 320px..1024px) Zero ellipsis, zero clipping & zero collision with 3-digit treats + tip dot + docked/follow state', async ({
+  test('T3-14: (Header Brand BVA 320px..1024px) Zero ellipsis, zero clipping & zero collision with a dock restored from an old saved record + tip dot + docked/follow state', async ({
     page
   }) => {
     test.setTimeout(90_000);
@@ -2174,6 +2174,7 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
 
     await page.setViewportSize({ width: 360, height: 800 });
     await gotoHydrated(page, '/');
+    // A record saved by an older version of the app: its extra fields must still load and are ignored.
     await page.evaluate(() => {
       localStorage.setItem(
         'aa_molly_companion_v1',
@@ -2202,7 +2203,10 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
     await page.locator('.molly-dock-toggle-btn').click();
     await page.waitForTimeout(100);
     await expect(page.locator('[data-testid="molly-tip-dot"]')).toBeVisible();
-    await expect(page.locator('[data-testid="molly-treat-count"]')).toContainText('128');
+    // The old record still loads: what it shares with the current shape survives.
+    expect(
+      await page.evaluate(() => JSON.parse(localStorage.getItem('aa_molly_companion_v1') || '{}').petCount)
+    ).toBe(5);
 
     for (const width of [320, 360, 375, 480, 481, 680, 681, 768, 821, 1024]) {
       await page.setViewportSize({ width, height: 800 });
@@ -3461,7 +3465,7 @@ test.describe('Tier 3: Pairwise Interactive State & Component Matrix', () => {
 // ============================================================================
 
 test.describe('Tier 4: End-to-End Mobile Journey & Visual Judge Screenshot Capture', () => {
-  test('T4-1: First-visit mobile journey (360x800): / deed -> earn treat -> /svet feed Molly', async ({
+  test('T4-1: First-visit mobile journey (360x800): / deed -> Molly thanks -> /svet pet Molly', async ({
     page
   }) => {
     await page.setViewportSize({ width: 360, height: 800 });
@@ -3490,28 +3494,25 @@ test.describe('Tier 4: End-to-End Mobile Journey & Visual Judge Screenshot Captu
     await expect(card.locator('.btn-studio-done')).toBeVisible();
     await card.locator('.btn-studio-done').click();
     await page.waitForTimeout(300);
+    await expect(card.locator('.molly-celebration-note')).toContainText('Molly děkuje.');
 
-    const treatsBeforeFeed = Number(
-      (await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0'
-    );
-
-    // Navigate via mobile top nav drawer to /svet and feed Molly
+    // Navigate via mobile top nav drawer to /svet and pet Molly
     await page.locator('button.mobile-nav-toggle').click();
     await page.locator('#mobile-top-nav-drawer a[href="/svet"]').click();
     await page.waitForURL('**/svet');
     await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 20_000 });
     await page.waitForTimeout(450);
 
+    const readPetCount = () =>
+      page.evaluate(() => Number(JSON.parse(localStorage.getItem('aa_molly_companion_v1') || '{}').petCount) || 0);
+    const petsBefore = await readPetCount();
     const mollyPill = page.locator('.molly-sanctuary-pill');
     await expect(mollyPill).toBeVisible();
     await mollyPill.click();
     await page.waitForTimeout(250);
 
-    const treatsAfterFeed = Number(
-      (await page.locator('.molly-companion-layer').getAttribute('data-molly-treats')) || '0'
-    );
-    expect(treatsAfterFeed).toBeGreaterThan(treatsBeforeFeed);
-    expect(treatsAfterFeed).toBeGreaterThan(0);
+    expect(await readPetCount()).toBe(petsBefore + 1);
+    await expect(page.locator('.gentle-toast')).toContainText('Molly');
 
     expect(await scanForbiddenEmojis(page)).toEqual([]);
     expect(await detectHeaderAndMollyCollisions(page)).toEqual([]);

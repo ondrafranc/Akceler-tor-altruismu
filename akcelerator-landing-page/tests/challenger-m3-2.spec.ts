@@ -480,7 +480,7 @@ test.describe('Challenger M3-2: Guided Help State Stress, Filter Combinations & 
 
       // Verify tone is supportive, warm and empathetic (with SVG paw icon, no native emoji)
       expect(noteText).not.toContain('🐾');
-      expect(noteText).toMatch(/děkuje|odměna|krok|pamlsek/i);
+      expect(noteText).toMatch(/děkuje/i);
       await expect(celebrationNote.locator('svg')).toBeVisible();
 
       // Reset for next mode by clicking next idea

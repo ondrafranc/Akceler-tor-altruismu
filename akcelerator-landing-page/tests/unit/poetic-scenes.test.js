@@ -321,7 +321,6 @@ describe('Poetic 2-Phase Deed Transformations & Preview Diorama', () => {
       });
       expect(previewCv.ops.length).toBeGreaterThan(10);
       expect(previewCv.getAttribute('data-molly-mini')).toBeNull();
-      expect(previewCv.getAttribute('data-molly-treat')).toBeNull();
       expect(previewCv.getAttribute('data-molly-arcs')).toBeNull();
       expect(previewCv.listeners.has('pointerdown')).toBe(false);
 

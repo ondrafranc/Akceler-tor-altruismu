@@ -6,12 +6,9 @@
     mollyEvents,
     mollyGuideHold,
     petMolly,
-    feedMolly,
     mollyWhisper
   } from '$lib/mollyStore.js';
   import {
-    getMollyAccessories,
-    describeNextMollyGift,
     MOLLY_ROUTE_GUIDES,
     getMollyGreeting
   } from '$lib/mollyTypes.js';
@@ -36,7 +33,7 @@
   /** @type {HTMLDivElement | null} */
   let actorEl = $state(null);
   /** @type {HTMLDivElement | null} */
-  let treatEl = $state(null);
+  let sparkEl = $state(null);
   let rafId = 0;
   let mounted = false;
   const LOGICAL_W = 94;
@@ -79,11 +76,9 @@
   let lastRenderTs = 0;
   // Krok snímku vůči 60 fps — částice (srdíčka, světluška) běží stejně rychle na 60/120 Hz i při poklesu FPS
   let frameK = 1;
-  // Dárky za pamlsky vykreslené přímo na kočce (obojek, zvoneček, korunka, hvězdička)
-  let accessories = getMollyAccessories(0);
 
   // Roaming actor state
-  let behavior = 'IDLE_SIT'; // 'WALK_ROAM' | 'IDLE_SIT' | 'GROOM' | 'CHASE_FIREFLY' | 'CATCH_TREAT' | 'PET_BLISS'
+  let behavior = 'IDLE_SIT'; // 'WALK_ROAM' | 'IDLE_SIT' | 'GROOM' | 'CHASE_FIREFLY' | 'CATCH_SPARK' | 'PET_BLISS'
   let behaviorTimer = 4.2;
   let posX = 240;
   let posY = 620;
@@ -94,7 +89,7 @@
   let facing = 1; // 1 = right, -1 = left
   let walkCycle = 0;
   let groomPhase = 0;
-  let eatTimer = 0;
+  let catchTimer = 0;
   let petBlissTimer = 0;
   let lastAvoidTriggerTs = 0;
   let scrolledOnCurrentRoute = false;
@@ -115,11 +110,11 @@
   let firefly = null; // { x, y, vx, vy, phase, alpha }
   /** @type {Array<{ x: number, y: number, vx: number, vy: number, scale: number, alpha: number, color: string }>} */
   let hearts = []; // { x, y, vy, scale, alpha, color }
-  /** @type {{ x0: number, y0: number, cx: number, cy: number, x1: number, y1: number, p: number, follow: boolean, icon: import('$lib/icons/iconRegistry.js').IconKey, color: string, name: string } | null} */
-  let flyingTreat = null; // { x0, y0, cx, cy, x1, y1, p, icon, color, name }
-  /** @type {{ icon: string, color: string, x0: number, y0: number } | null} */
-  let flyingTreatView = $state(null); // { icon, color } — jediná reaktivní část letící dobroty
-  let lastTreatTransform = '';
+  /** @type {{ x0: number, y0: number, cx: number, cy: number, x1: number, y1: number, p: number, follow: boolean, icon: import('$lib/icons/iconRegistry.js').IconKey, color: string } | null} */
+  let flyingSpark = null;
+  /** @type {{ icon: import('$lib/icons/iconRegistry.js').IconKey, color: string, x0: number, y0: number } | null} */
+  let flyingSparkView = $state(null); // { icon, color } — jediná reaktivní část letící jiskry
+  let lastSparkTransform = '';
 
   // Whisper bubble visibility
   /** @type {MollyWhisper | null} */
@@ -149,14 +144,10 @@
   let unsubState = null;
   /** @type {import('svelte/store').Unsubscriber | null} */
   let unsubGuideHold = null;
-  /** @type {Pick<MollyState, 'mode' | 'mood' | 'treatsFedTotal' | 'treatsFedToday' | 'availableTreats' | 'lastTreat' | 'petCount' | 'whisper'>} */
+  /** @type {Pick<MollyState, 'mode' | 'mood' | 'petCount' | 'whisper'>} */
   let currentState = {
     mode: 'roaming',
     mood: 'curious',
-    treatsFedTotal: 0,
-    treatsFedToday: 0,
-    availableTreats: 0,
-    lastTreat: null,
     petCount: 0,
     whisper: null
   };
@@ -284,12 +275,12 @@
   }
 
   /**
-   * Odměnová šeptanda (pamlsek čeká, díky za pamlsek) opakuje to, co už říká oslava přímo v kartě.
+   * Poděkování za skutek opakuje to, co už říká oslava přímo v kartě.
    * Volá se jen z placeWhisperBubble, nikdy z rAF smyčky.
    * @param {MollyWhisper} w
    */
   function repeatsInlineCelebration(w) {
-    return Boolean((w.fromUnlock || w.fromCelebration) && document.querySelector('.in-situ-celebration'));
+    return Boolean(w.fromThanks && document.querySelector('.in-situ-celebration'));
   }
 
   /**
@@ -482,8 +473,13 @@
     }
   }
 
-  /** @param {import('$lib/types/molly.js').MollyTreat | null | undefined} treat */
-  function launchViewportTreatToMolly(treat) {
+  /** @returns {import('$lib/icons/iconRegistry.js').IconKey} */
+  function resolveSparkIcon() {
+    return normalizeMollyIcon('sparkles', 'paw');
+  }
+
+  /** Jiskra z náhledu efektu nebo ze scény doletí obloukem k Molly, která ji chytí. */
+  function launchViewportSparkToMolly() {
     if (typeof window === 'undefined') return;
     const vw = window.innerWidth || 1280;
     const vh = window.innerHeight || 800;
@@ -516,7 +512,7 @@
         : vh - 85
       : posY - 22;
 
-    flyingTreat = {
+    flyingSpark = {
       x0: startX,
       y0: startY,
       cx: (startX + destX) * 0.5,
@@ -525,22 +521,21 @@
       y1: destY,
       p: 0,
       follow: !toDock,
-      icon: normalizeMollyIcon(treat?.icon, 'fish'),
-      color: treat?.color || '#f59e0b',
-      name: treat?.name || 'lososová granulka'
+      icon: resolveSparkIcon(),
+      color: '#f59e0b'
     };
     // Reaktivní je jen viditelnost a vzhled; poloha se zapisuje přímo do DOM v každém snímku
-    flyingTreatView = {
-      icon: flyingTreat.icon,
-      color: flyingTreat.color,
+    flyingSparkView = {
+      icon: flyingSpark.icon,
+      color: flyingSpark.color,
       x0: Number(startX.toFixed(1)),
       y0: Number(startY.toFixed(1))
     };
-    lastTreatTransform = '';
+    lastSparkTransform = '';
 
-    behavior = 'CATCH_TREAT';
+    behavior = 'CATCH_SPARK';
     behaviorTimer = 2.8;
-    eatTimer = 1.8;
+    catchTimer = 1.8;
     spawnHeartBurst(7);
   }
 
@@ -548,7 +543,7 @@
   // Molly i její bublina jsou pevně umístěné nad stránkou. Vybírá si místo podle toho,
   // co je zrovna pod ní: tlačítka, odkazy, pole formuláře, nadpisy, odstavce ani mapu nikdy nepřekrývá.
   const OBSTACLE_SELECTOR =
-    'a[href], button, input, select, textarea, label, summary, [role="button"], [data-molly-guide], h1, h2, h3, h4, p, .hero-overline, .hero-lead, .hero-mobile-claim, .page-header-kicker, .section-overline, .smart-nearest-banner, .count-heading, .deed-stage, .deed-preview-stage, .card-effect-stage, .how-details-content, .in-situ-affirmation, .molly-inline-fed-badge, .action-impact-summary, .stage-kicker, .feature-tag, .sanctuary-preview-window, .bento-icon-wrap, .bento-cta, .card-cta, .card-title, .card-overline, .pc-meta-top, .pc-addr, .pc-decision-box, .chip, .pill, .cat-pill, .city-chip, .q-pill, .preset-pill, .topic-pill, .filter-chip, .source-chip, .radius-pill, .energy-tab, .mobile-guided-preview-bar, .feedback-pill, .deck-header-bar, .deck-indicator, .deck-nav-btn, .instant-card, .action-card, .place-card, .bento-card, .portal-card, .portal-mini, .nav-capsule, .top-nav, .card, .compass-shell, .highlight-card, .alt-card, .local-card, .side-note, .empty-box, .calm-drawer, .footer-col, .footer-brand, .footer-desc, .footer-heading, .footer-trust, .map-frame, .leaflet-container, .quick-tags-pill, .category-aura-chip, .molly-celebration-note, .legend-chip, .qd-chip';
+    'a[href], button, input, select, textarea, label, summary, [role="button"], [data-molly-guide], h1, h2, h3, h4, p, .hero-overline, .hero-lead, .hero-mobile-claim, .page-header-kicker, .section-overline, .smart-nearest-banner, .count-heading, .deed-stage, .deed-preview-stage, .card-effect-stage, .how-details-content, .in-situ-affirmation, .action-impact-summary, .stage-kicker, .feature-tag, .sanctuary-preview-window, .bento-icon-wrap, .bento-cta, .card-cta, .card-title, .card-overline, .pc-meta-top, .pc-addr, .pc-decision-box, .chip, .pill, .cat-pill, .city-chip, .q-pill, .preset-pill, .topic-pill, .filter-chip, .source-chip, .radius-pill, .energy-tab, .mobile-guided-preview-bar, .feedback-pill, .deck-header-bar, .deck-indicator, .deck-nav-btn, .instant-card, .action-card, .place-card, .bento-card, .portal-card, .portal-mini, .nav-capsule, .top-nav, .card, .compass-shell, .highlight-card, .alt-card, .local-card, .side-note, .empty-box, .calm-drawer, .footer-col, .footer-brand, .footer-desc, .footer-heading, .footer-trust, .map-frame, .leaflet-container, .quick-tags-pill, .category-aura-chip, .molly-celebration-note, .legend-chip, .qd-chip';
   const MOBILE_MAX_W = 680;
 
   function viewportSize() {
@@ -1546,7 +1541,7 @@
         (el.matches('a[href]') && (!isMobile || !isBlockCardLink)) ||
         (inInstantCard && el.matches('h1, h2, p, summary')) ||
         el.matches(
-          '.hero-lead, .hero-mobile-claim, .action-impact-summary, .how-details-content, .in-situ-affirmation, .molly-inline-fed-badge, .stage-kicker, .feature-tag, .sanctuary-preview-window, .bento-icon-wrap, .pc-meta-top, .pc-addr, .pc-decision-box, .deck-header-bar, .deck-indicator, .deck-nav-btn, .energy-tab, .filter-chip, .source-chip, .radius-pill, .preset-pill, .topic-pill, .chip, .pill, .cat-pill, .city-chip, .q-pill, .mobile-guided-preview-bar, .map-frame, .leaflet-container, .deed-stage, .deed-preview-stage, .card-effect-stage, .footer-brand, .footer-desc, .footer-heading, .quick-tags-pill, .category-aura-chip, .molly-celebration-note, .legend-chip, .qd-chip'
+          '.hero-lead, .hero-mobile-claim, .action-impact-summary, .how-details-content, .in-situ-affirmation, .stage-kicker, .feature-tag, .sanctuary-preview-window, .bento-icon-wrap, .pc-meta-top, .pc-addr, .pc-decision-box, .deck-header-bar, .deck-indicator, .deck-nav-btn, .energy-tab, .filter-chip, .source-chip, .radius-pill, .preset-pill, .topic-pill, .chip, .pill, .cat-pill, .city-chip, .q-pill, .mobile-guided-preview-bar, .map-frame, .leaflet-container, .deed-stage, .deed-preview-stage, .card-effect-stage, .footer-brand, .footer-desc, .footer-heading, .quick-tags-pill, .category-aura-chip, .molly-celebration-note, .legend-chip, .qd-chip'
         );
       const isMobileCardContainer =
         isBlockCardLink ||
@@ -2845,16 +2840,16 @@
     }
   }
 
-  function applyTreatTransform() {
-    if (!treatEl || !flyingTreat) return;
-    const u = 1 - flyingTreat.p;
-    const p = flyingTreat.p;
-    const x = u * u * flyingTreat.x0 + 2 * u * p * flyingTreat.cx + p * p * flyingTreat.x1;
-    const y = u * u * flyingTreat.y0 + 2 * u * p * flyingTreat.cy + p * p * flyingTreat.y1;
+  function applySparkTransform() {
+    if (!sparkEl || !flyingSpark) return;
+    const u = 1 - flyingSpark.p;
+    const p = flyingSpark.p;
+    const x = u * u * flyingSpark.x0 + 2 * u * p * flyingSpark.cx + p * p * flyingSpark.x1;
+    const y = u * u * flyingSpark.y0 + 2 * u * p * flyingSpark.cy + p * p * flyingSpark.y1;
     const tf = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
-    if (tf !== lastTreatTransform) {
-      lastTreatTransform = tf;
-      treatEl.style.transform = tf;
+    if (tf !== lastSparkTransform) {
+      lastSparkTransform = tf;
+      sparkEl.style.transform = tf;
     }
   }
 
@@ -3051,18 +3046,12 @@
       const tip = pendingTip;
       pendingTip = null;
       petMolly(tip.text, { fromDock: true, icon: normalizeMollyIcon(tip.icon, 'paw') });
-    } else if ((currentState.availableTreats || 0) > 0) {
-      feedMolly(fromDock ? 'dock' : 'companion', { fromDock });
     } else {
       petBlissTimer = 2.6;
       behavior = 'PET_BLISS';
       behaviorTimer = 2.8;
       spawnHeartBurst(8);
-      const isCompact = typeof window !== 'undefined' && window.innerWidth <= MOBILE_MAX_W;
-      petMolly(
-        undefined,
-        fromDock ? { fromDock: true, suffix: isCompact ? '' : nextGiftText } : {}
-      );
+      petMolly(undefined, fromDock ? { fromDock: true } : {});
     }
     ensureLoopRunning();
   }
@@ -3186,7 +3175,7 @@
 
   /** @param {number} ms */
   function whisperRecentlyShown(ms) {
-    // Čerstvá je i odměna, kterou místo bubliny řekla oslava v kartě.
+    // Čerstvé je i poděkování, které místo bubliny řekla oslava v kartě.
     if (Date.now() - celebrationSpokeTs < ms) return true;
     return Boolean(activeWhisper && Date.now() - (activeWhisper.ts || 0) < ms);
   }
@@ -3253,7 +3242,7 @@
         pendingTip ||
         activeWhisper ||
         whisperRecentlyShown(2500) ||
-        flyingTreat ||
+        flyingSpark ||
         isAnyModalOpen()
       ) {
         nudgeTimer = setTimeout(check, 6000);
@@ -3463,14 +3452,13 @@
           vx,
           vy,
           behavior,
-          eatTimer,
+          catchTimer,
           petBlissTimer,
           currentState,
           facing,
           walkCycle,
-          flyingTreat,
+          flyingSpark,
           groomPhase,
-          accessories,
           pointerX,
           pointerY,
           posX,
@@ -3496,7 +3484,7 @@
       frameK = frameStep(rawDtMs);
       const nowSec = now * 0.001;
 
-      if (eatTimer > 0) eatTimer = Math.max(0, eatTimer - dt);
+      if (catchTimer > 0) catchTimer = Math.max(0, catchTimer - dt);
       if (petBlissTimer > 0) petBlissTimer = Math.max(0, petBlissTimer - dt);
 
       // Natural eye blink every 3.2 - 5.2s
@@ -3509,23 +3497,23 @@
         }
       }
 
-      // Flying treat arc update
-      if (flyingTreat) {
-        flyingTreat.p = Math.min(
+      // Flying spark arc update
+      if (flyingSpark) {
+        flyingSpark.p = Math.min(
           1,
-          flyingTreat.p + dt * (reduced ? 3.5 : 1.85)
+          flyingSpark.p + dt * (reduced ? 3.5 : 1.85)
         );
-        // Molly mezitím mohla popojít na volné místo — dobrota letí za ní
-        if (flyingTreat.follow) {
-          flyingTreat.x1 = posX;
-          flyingTreat.y1 = posY - 22;
+        // Molly mezitím mohla popojít na volné místo — jiskra letí za ní
+        if (flyingSpark.follow) {
+          flyingSpark.x1 = posX;
+          flyingSpark.y1 = posY - 22;
         }
-        applyTreatTransform();
-        if (flyingTreat.p >= 1) {
-          eatTimer = 1.4;
+        applySparkTransform();
+        if (flyingSpark.p >= 1) {
+          catchTimer = 1.4;
           spawnHeartBurst(6);
-          flyingTreat = null;
-          flyingTreatView = null;
+          flyingSpark = null;
+          flyingSparkView = null;
         }
       }
 
@@ -3562,7 +3550,7 @@
           }
         }
 
-        if ($mollyState.followMouse && hasFinePointer && behavior !== 'CATCH_TREAT' && behavior !== 'PET_BLISS' && !activeWhisper) {
+        if ($mollyState.followMouse && hasFinePointer && behavior !== 'CATCH_SPARK' && behavior !== 'PET_BLISS' && !activeWhisper) {
           // Optional Mouse-Follow Mode (R2): gentle spring physics along floor, sitting after 3s idle
           const pointerIdle = now - lastPointerMoveTs > 3000;
           if (pointerIdle) {
@@ -3677,8 +3665,8 @@
 
       const hasActiveTransient =
         isScalingNow ||
-        Boolean(flyingTreat) ||
-        eatTimer > 0 ||
+        Boolean(flyingSpark) ||
+        catchTimer > 0 ||
         petBlissTimer > 0 ||
         hearts.length > 0;
 
@@ -3707,15 +3695,8 @@
       }
     };
 
-    /** @type {number | null} */
-    let prevAvailableTreats = null;
     unsubState = mollyState.subscribe((val) => {
       currentState = val;
-      accessories = getMollyAccessories(val.giftDeeds);
-      const nextTreats = Number(val.availableTreats) || 0;
-      const treatsIncreased =
-        prevAvailableTreats !== null && nextTreats > prevAvailableTreats;
-      prevAvailableTreats = nextTreats;
       // Porovnáváme s naposledy ukázanou zprávou (ne s aktivní bublinou) — jinak by každá
       // jiná změna stavu (např. nálada při dýchání) znovu vytáhla už skrytou starou zprávu.
       if (val.whisper && val.whisper.ts !== lastSeenWhisperTs) {
@@ -3723,23 +3704,7 @@
         if (!val.whisper.guide) {
           clearDeferredGuide();
         }
-        // Nový dárek si zaslouží delší chvilku na přečtení
-        showWhisperBubble(val.whisper, val.whisper.milestone ? 6000 : 4200);
-        if (val.whisper.milestone) spawnHeartBurst(10);
-      }
-      if (treatsIncreased && mounted && !atHome && val.mode === 'roaming') {
-        svelteTick().then(() => {
-          if (!mounted || atHome || currentState.mode !== 'roaming') return;
-          measureLayoutAndObstacles();
-          relocateToFreeSpot(Boolean(activeWhisper && bubbleW));
-          if (activeWhisper && bubbleW) {
-            updateBubbleAnchorMode(targetX, targetY);
-            evaluateDockWhisperFallback(targetX, targetY);
-            refreshWhisperAnchorAfterLayout(targetX, targetY);
-            applyActorTransform();
-          }
-        });
-        schedulePostAnimationRemeasure(320);
+        showWhisperBubble(val.whisper, 4200);
       }
       if (val.mode === 'docked') clearGuideGlow();
       ensureLoopRunning();
@@ -3749,10 +3714,28 @@
 
     unsubEvents = mollyEvents.subscribe((ev) => {
       if (!ev) return;
-      if (ev.type === 'feed') {
-        launchViewportTreatToMolly(ev.treat);
+      if (ev.type === 'thanks') {
+        // Radost ze skutku: srdíčka a blažený výraz. Po skutku se v kartě objeví oslava,
+        // takže se Molly přeměří a uhne jí z cesty.
+        petBlissTimer = 2.2;
+        spawnHeartBurst(7);
+        if (mounted && !atHome && currentState.mode === 'roaming') {
+          svelteTick().then(() => {
+            if (!mounted || atHome || currentState.mode !== 'roaming') return;
+            measureLayoutAndObstacles();
+            relocateToFreeSpot(Boolean(activeWhisper && bubbleW));
+            if (activeWhisper && bubbleW) {
+              updateBubbleAnchorMode(targetX, targetY);
+              evaluateDockWhisperFallback(targetX, targetY);
+              refreshWhisperAnchorAfterLayout(targetX, targetY);
+              applyActorTransform();
+            }
+          });
+          schedulePostAnimationRemeasure(320);
+        }
+        ensureLoopRunning();
       } else if (ev.type === 'spark') {
-        launchViewportTreatToMolly(ev.treat);
+        launchViewportSparkToMolly();
       } else if (ev.type === 'pet') {
         petBlissTimer = 2.6;
         spawnHeartBurst(7);
@@ -3982,7 +3965,6 @@
     }
   });
 
-  const nextGiftText = $derived(describeNextMollyGift($mollyState.giftDeeds));
   function wakeFromAutoPark() {
     if (typeof window === 'undefined' || atHome) return;
     measureLayoutAndObstacles();
@@ -4049,25 +4031,22 @@
   class="molly-companion-layer"
   data-molly-mode={$mollyState.mode}
   data-molly-mood={$mollyState.mood}
-  data-molly-treats={$mollyState.treatsFedTotal}
-  data-molly-available-treats={$mollyState.availableTreats}
-  data-molly-gift-deeds={$mollyState.giftDeeds || 0}
   data-molly-home={atHome ? 'lake' : undefined}
   data-molly-settled={placementSettled ? 'true' : 'false'}
 >
   <div class="sr-only" aria-live="polite" aria-atomic="true">
     {activeWhisper ? activeWhisper.text : ''}
   </div>
-  <!-- Letící dobrota přes obrazovku přímo k Molly (poloha se zapisuje přímo v rAF smyčce) -->
-  {#if flyingTreatView}
+  <!-- Letící jiskra přes obrazovku přímo k Molly (poloha se zapisuje přímo v rAF smyčce) -->
+  {#if flyingSparkView}
     <div
-      bind:this={treatEl}
-      class="molly-flying-treat"
-      style="--treat-color: {flyingTreatView.color}; transform: translate3d({flyingTreatView.x0}px, {flyingTreatView.y0}px, 0);"
+      bind:this={sparkEl}
+      class="molly-flying-spark"
+      style="--spark-color: {flyingSparkView.color}; transform: translate3d({flyingSparkView.x0}px, {flyingSparkView.y0}px, 0);"
       aria-hidden="true"
     >
-      <span class="treat-icon-wrap">
-        <AppIcon name={normalizeMollyIcon(flyingTreatView.icon, 'fish')} size={15} strokeWidth={2} />
+      <span class="spark-icon-wrap">
+        <AppIcon name={flyingSparkView.icon} size={15} strokeWidth={2} />
       </span>
     </div>
   {/if}
@@ -4242,7 +4221,7 @@
     overflow-wrap: anywhere;
   }
 
-  .molly-flying-treat {
+  .molly-flying-spark {
     position: fixed;
     top: -14px;
     left: -14px;
@@ -4260,7 +4239,7 @@
     z-index: 945;
   }
 
-  .treat-icon-wrap {
+  .spark-icon-wrap {
     display: inline-flex;
     align-items: center;
     justify-content: center;

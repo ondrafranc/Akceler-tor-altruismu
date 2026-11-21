@@ -15,8 +15,8 @@ const EMOJI_RE = /[\p{Emoji_Presentation}\p{Extended_Pictographic}\u2600-\u27BF]
 
 /** @type {import('$lib/icons/iconRegistry.js').IconKey[]} */
 const PROJECT_CONTRACT_KEYS = [
-  'zap', 'compass', 'clock', 'map-pin', 'trees', 'plus', 'paw', 'fish', 'milk',
-  'leaf', 'heart', 'bell', 'star', 'home', 'footprints', 'mouse-pointer',
+  'zap', 'compass', 'clock', 'map-pin', 'trees', 'plus', 'paw',
+  'leaf', 'heart', 'star', 'home', 'footprints', 'mouse-pointer',
   'message-circle', 'life-buoy', 'phone', 'alert-triangle', 'x', 'check',
   'share-2', 'coffee', 'info', 'sparkles', 'sun', 'moon', 'waves', 'volume-2',
   'volume-x', 'menu', 'chevron-left', 'chevron-right', 'chevron-down',
@@ -26,14 +26,14 @@ const PROJECT_CONTRACT_KEYS = [
 ];
 
 describe('M1 Feature 1: iconRegistry, AppIcon, PageHeader & package.json guardrails', () => {
-  it('exports all 50 PROJECT.md contract icon keys plus custom paw and circle-dot fallback', () => {
+  it('exports all PROJECT.md contract icon keys plus custom paw and circle-dot fallback', () => {
     for (const key of PROJECT_CONTRACT_KEYS) {
       expect(ICON_KEYS).toContain(key);
       expect(isValidIconKey(key)).toBe(true);
       expect(typeof ICON_SVG_INNER[key]).toBe('string');
       expect(ICON_SVG_INNER[key].length).toBeGreaterThan(10);
     }
-    expect(ICON_KEYS.length).toBeGreaterThanOrEqual(96);
+    expect(ICON_KEYS.length).toBeGreaterThanOrEqual(PROJECT_CONTRACT_KEYS.length);
   });
 
   it('resolves unknown, null, and whitespace-padded keys safely', () => {

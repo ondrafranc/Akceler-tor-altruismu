@@ -2,7 +2,6 @@
  * Action effect spec resolver and metadata provider.
  */
 
-import { resolveMollyTreat } from '../../mollyTypes.js';
 import { registerActionSpecResolver } from '../../audio/presets.js';
 import {
   ACTION_EFFECT_CATALOG,
@@ -101,14 +100,12 @@ export function getActionEffectMeta(action, currentVal, opts = {}) {
   const badge = spec.format(val);
   const isKibble = spec.mode === 'kibble' || spec.mode === 'shelter_care';
   const returnBadge = isKibble ? badge : `${badge} · Světelná stopa`;
-  const mollyTreat = spec.mollyTreat || resolveMollyTreat(spec);
   return {
     ...spec,
     scene: spec.mode,
     value: val,
     badge: opts.isReturnStrip ? returnBadge : badge,
-    returnBadge,
-    mollyTreat
+    returnBadge
   };
 }
 

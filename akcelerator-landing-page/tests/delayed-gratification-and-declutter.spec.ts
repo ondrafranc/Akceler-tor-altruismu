@@ -1,12 +1,11 @@
 import { test, expect, type Page } from '@playwright/test';
 
 /**
- * Delayed Gratification (R2) & UI Declutter / Progressive Disclosure (R1) Test Suite
+ * UI Declutter / Progressive Disclosure (R1) & Molly's calm voice (R2) Test Suite
  *
  * Covers:
- * - DG-1: Empty clicking immunity across all entry points (Přehrát button, canvas Molly, sanctuary pill, place effect toggle)
- * - DG-2: Altruistic deed unlocks treat (recordSmallWin, recordSanctuaryWish, submit deed)
- * - DG-3: Molly supportive waiting prompts (Czech empathetic tone, zero punitive tone, zero arcade tokens)
+ * - Deed celebration on /: Molly thanks, asks for nothing more and never covers the next-step buttons
+ * - DG-3: Molly's petting whispers (Czech empathetic tone, zero punitive tone, zero arcade tokens)
  * - PD-1: Landing Page (/) decluttering, collapsed steps by default, fold budget
  * - PD-2: Guided Wizard (/app/guided) progressive disclosure, collapsed filter/methodology drawers
  * - PD-3: Online Catalog (/app/online) card simplicity, inline steps collapsed
@@ -74,7 +73,7 @@ const TOUCH_TARGET_VIEWPORTS = [
   { width: 360, height: 800, label: '360x800 (Standard Android viewport)' }
 ];
 
-test.describe('R2: Delayed Gratification (Molly Treat Economics)', () => {
+test.describe('R2: Molly thanks for a deed and answers petting in a calm voice', () => {
 
   test.beforeEach(async ({ page }) => {
     // Reset local storage for clean companion state
@@ -87,316 +86,92 @@ test.describe('R2: Delayed Gratification (Molly Treat Economics)', () => {
   });
 
   // =========================================================================
-  // DG-1: Empty clicking immunity
+  // Deed celebration: Molly thanks and asks for nothing more
   // =========================================================================
 
-  test('DG-1.1: Clicking "Přehrát" button on / does NOT increment treats', async ({ page }) => {
-    await page.goto('/');
-    const companion = page.locator('.molly-companion-layer');
-    await expect(companion).toBeAttached();
+  for (const vp of [
+    { width: 360, height: 800 },
+    { width: 375, height: 667 },
+    { width: 1440, height: 900 }
+  ]) {
+    test(`Deed celebration: Molly thanks, offers no feeding and nothing covers the next-step buttons (${vp.width}x${vp.height})`, async ({ page }) => {
+      await page.setViewportSize(vp);
+      await gotoHydrated(page, '/');
 
-    const initialTreats = Number((await companion.getAttribute('data-molly-treats')) || '0');
+      const card = page.locator('.instant-card');
+      const doneBtn = card.locator('.btn-studio-done');
+      await expect(doneBtn).toHaveCount(0);
+      await card.locator('.btn-studio-primary').dispatchEvent('click');
+      await expect(doneBtn).toBeVisible();
+      await doneBtn.click();
 
-    const sparkBtn = page.locator('.instant-card .effect-spark-btn');
-    if (await sparkBtn.isVisible()) {
-      for (let i = 0; i < 5; i++) {
-        await sparkBtn.click();
-        await page.waitForTimeout(100);
-      }
-    }
+      const note = card.locator('.in-situ-celebration .molly-celebration-note');
+      await expect(note).toBeVisible();
+      await expect(note).toHaveText(/^\s*Molly děkuje\./);
+      await expect(note.locator('a[href="/svet"]')).toBeVisible();
 
-    const treatsAfterSparks = Number((await companion.getAttribute('data-molly-treats')) || '0');
-    expect(treatsAfterSparks, 'Přehrát clicks must not award treats on empty clicking').toBe(initialTreats);
-  });
+      // The card must not keep growing or shrinking once the celebration is on screen.
+      const readCardHeight = () => card.evaluate((el) => el.getBoundingClientRect().height);
+      const heightFirst = await readCardHeight();
+      await page.waitForTimeout(600);
+      const heightSecond = await readCardHeight();
+      expect(
+        Math.abs(heightSecond - heightFirst),
+        `.instant-card height must stay put after the celebration appears (${heightFirst}px -> ${heightSecond}px)`
+      ).toBeLessThanOrEqual(1);
 
-  test('DG-1.2: Direct canvas click on Molly at (0.24w, 0.72h) on /svet does NOT increment treats', async ({ page }) => {
-    await page.goto('/svet');
-    const canvas = page.locator('canvas.sanctuary-canvas');
-    await expect(canvas).toHaveAttribute('data-sanctuary-molly', 'ready');
+      await expect(page.locator('.btn-inline-feed-molly')).toHaveCount(0);
+      await expect(page.locator('.molly-inline-fed-badge')).toHaveCount(0);
+      expect((await card.evaluate((el) => el.textContent)) || '').not.toMatch(/pamls/i);
 
-    const companion = page.locator('.molly-companion-layer');
-    const initialTreats = Number((await companion.getAttribute('data-molly-treats')) || '0');
+      const nextBtn = card.locator('.in-situ-celebration .btn-next-deed');
+      await expect(nextBtn).toBeVisible();
+      await expect(card.locator('.in-situ-celebration button')).toHaveCount(2);
 
-    const viewport = page.locator('.sanctuary-viewport');
-    const vpBox = await viewport.boundingBox();
-    expect(vpBox).not.toBeNull();
+      // Molly steps aside first; a thanks whisper, if she shows one, is revealed only where she rests.
+      const layer = page.locator('.molly-companion-layer');
+      await expect(layer).toHaveAttribute('data-molly-settled', 'true', { timeout: 10_000 });
+      await page.waitForTimeout(1200);
+      await expect(layer).toHaveAttribute('data-molly-settled', 'true', { timeout: 10_000 });
 
-    // Click directly at Molly's sanctuary coordinate 5 times
-    for (let i = 0; i < 5; i++) {
-      await viewport.click({
-        position: { x: Math.round(vpBox!.width * 0.24), y: Math.round(vpBox!.height * 0.72) }
+      const overlaps = await page.evaluate(() => {
+        const isShown = (el: Element | null): el is HTMLElement => {
+          if (!el) return false;
+          const cs = getComputedStyle(el);
+          if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) <= 0.01) return false;
+          const r = el.getBoundingClientRect();
+          return r.width >= 1 && r.height >= 1;
+        };
+        const movers: Array<{ label: string; rect: DOMRect }> = [];
+        const actor = document.querySelector('.molly-roaming-actor');
+        if (actor && !actor.classList.contains('is-docked') && isShown(actor)) {
+          movers.push({ label: 'molly-roaming-actor', rect: actor.getBoundingClientRect() });
+        }
+        for (const bubble of document.querySelectorAll('.molly-whisper-bubble')) {
+          if (isShown(bubble)) movers.push({ label: 'molly-whisper-bubble', rect: bubble.getBoundingClientRect() });
+        }
+        const hits: string[] = [];
+        for (const btn of document.querySelectorAll('.instant-card .in-situ-celebration button')) {
+          const br = btn.getBoundingClientRect();
+          for (const mover of movers) {
+            const w = Math.min(mover.rect.right, br.right) - Math.max(mover.rect.left, br.left);
+            const h = Math.min(mover.rect.bottom, br.bottom) - Math.max(mover.rect.top, br.top);
+            if (w > 0 && h > 0) {
+              hits.push(`${mover.label}<->${String(btn.className).split(/\s+/).slice(0, 2).join('.')}(${Math.round(w * h)}px2)`);
+            }
+          }
+        }
+        return hits;
       });
-      await page.waitForTimeout(150);
-    }
-
-    const treatsAfterClicks = Number((await companion.getAttribute('data-molly-treats')) || '0');
-    expect(treatsAfterClicks, 'Direct canvas clicks on Molly must not increment treats without an earned deed').toBe(initialTreats);
-  });
-
-  test('DG-1.3: Clicking .molly-sanctuary-pill on /svet does NOT increment treats', async ({ page }) => {
-    await page.goto('/svet');
-    const pill = page.locator('.molly-sanctuary-pill');
-    await expect(pill).toBeVisible();
-
-    const companion = page.locator('.molly-companion-layer');
-    const initialTreats = Number((await companion.getAttribute('data-molly-treats')) || '0');
-
-    for (let i = 0; i < 4; i++) {
-      await pill.click();
-      await page.waitForTimeout(120);
-    }
-
-    const treatsAfterPill = Number((await companion.getAttribute('data-molly-treats')) || '0');
-    expect(treatsAfterPill, 'Sanctuary pill clicks must not award unearned treats').toBe(initialTreats);
-  });
-
-  test('DG-1.4: Place effect toggles and quick triggers do NOT increment treats', async ({ page }) => {
-    await page.goto('/app/online');
-    const companion = page.locator('.molly-companion-layer');
-    const initialTreats = Number((await companion.getAttribute('data-molly-treats')) || '0');
-
-    // Click filter chips and quick triggers
-    const chips = page.locator('.filter-chip');
-    const count = await chips.count();
-    for (let i = 0; i < Math.min(count, 4); i++) {
-      await chips.nth(i).click();
-      await page.waitForTimeout(100);
-    }
-
-    const treatsAfterFilters = Number((await companion.getAttribute('data-molly-treats')) || '0');
-    expect(treatsAfterFilters, 'Catalog filter selections must not award treats').toBe(initialTreats);
-  });
-
-  test('DG-1.5: Rapid click storm (15 clicks) on floating companion does NOT increment treats', async ({ page }) => {
-    await page.goto('/');
-    const companion = page.locator('.molly-companion-layer');
-    const initialTreats = Number((await companion.getAttribute('data-molly-treats')) || '0');
-
-    const petBtn = page.locator('.molly-pelisek-dock .molly-dock-pet-btn');
-    if (await petBtn.isVisible()) {
-      for (let i = 0; i < 15; i++) {
-        await petBtn.click();
-      }
-    }
-
-    const treatsAfterSpam = Number((await companion.getAttribute('data-molly-treats')) || '0');
-    expect(treatsAfterSpam, 'Rapid petting clicks must not award treats').toBe(initialTreats);
-  });
-
-  test('Molly treats: a 50-click petting storm leaves available treats at 0 and stores only the pet count', async ({ page }) => {
-    const companion = page.locator('.molly-companion-layer');
-    await expect(companion).toBeAttached();
-    expect(Number((await companion.getAttribute('data-molly-treats')) || '0')).toBe(0);
-    expect(Number((await companion.getAttribute('data-molly-available-treats')) || '0')).toBe(0);
-
-    const petBtn = page.locator('.molly-pelisek-dock .molly-dock-pet-btn');
-    await expect(petBtn).toBeVisible();
-    for (let i = 0; i < 50; i++) {
-      await petBtn.click({ delay: 10 });
-    }
-    await page.waitForTimeout(500);
-
-    expect(
-      Number((await companion.getAttribute('data-molly-available-treats')) || '0'),
-      'Petting must never unlock an unearned treat'
-    ).toBe(0);
-
-    const storageRaw = await page.evaluate(() => localStorage.getItem('aa_molly_companion_v1'));
-    expect(storageRaw).not.toBeNull();
-    const parsed = JSON.parse(storageRaw!);
-    expect(parsed.treatsFedTotal).toBe(0);
-    expect(parsed.availableTreats).toBe(0);
-    expect(parsed.petCount).toBeGreaterThanOrEqual(50);
-  });
-
-  // =========================================================================
-  // DG-2: Altruistic deed unlocks treat
-  // =========================================================================
-
-  test('DG-2.1: Completing instant deed on / via .btn-studio-done unlocks treat and celebration feeding increments treats by 1', async ({ page }) => {
-    await gotoHydrated(page, '/');
-    const companion = page.locator('.molly-companion-layer');
-    const initialAvailable = Number((await companion.getAttribute('data-molly-available-treats')) || '0');
-    const initialTreats = Number((await companion.getAttribute('data-molly-treats')) || '0');
-
-    // Initiate action first (Delayed Gratification #1.3: Hotovo appears only after starting deed)
-    const doneBtn = page.locator('.instant-card .btn-studio-done');
-    await expect(doneBtn).toHaveCount(0);
-    await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
-    await expect(doneBtn).toBeVisible();
-    await doneBtn.click();
-    await page.waitForTimeout(500);
-
-    // Verify celebration note appears with Molly mention
-    const celebrationNote = page.locator('.instant-card .molly-celebration-note');
-    await expect(celebrationNote).toBeVisible();
-    await expect(celebrationNote).toContainText('Molly');
-
-    // Verify treat was unlocked
-    const availableAfterDeed = Number((await companion.getAttribute('data-molly-available-treats')) || '0');
-    expect(availableAfterDeed, 'Completing an altruistic deed must unlock an available treat for Molly').toBe(initialAvailable + 1);
-
-    // Follow optional inline link to Krajina dobra to feed Molly the earned treat
-    const svetLink = page.locator('.instant-card a[href*="/svet"]').first();
-    await expect(svetLink).toBeVisible();
-    await svetLink.click();
-    await gotoHydrated(page, '/svet');
-
-    // In Krajina dobra, feed the earned treat
-    const pill = page.locator('.molly-sanctuary-pill');
-    await pill.click();
-    await page.waitForTimeout(500);
-
-    const treatsAfterFeed = Number((await companion.getAttribute('data-molly-treats')) || '0');
-    expect(treatsAfterFeed, 'Feeding the earned treat in Krajina dobra increments treatsFedTotal by 1').toBe(initialTreats + 1);
-  });
-
-  test('DG-2.2: Submitting altruistic deed ritual on /svet via #ritual-deed-input unlocks treat and feeding increments treats by 1', async ({ page }) => {
-    await gotoHydrated(page, '/svet');
-    const companion = page.locator('.molly-companion-layer');
-    const initialTreats = Number((await companion.getAttribute('data-molly-treats')) || '0');
-
-    const deedInput = page.locator('#ritual-deed-input');
-    await expect(deedInput).toBeVisible();
-    await deedInput.fill('Pomohl jsem sousedovi odnést těžký nákup');
-
-    const submitBtn = page.locator('.ritual-bar button[type="submit"]');
-    await submitBtn.click();
-    await page.waitForTimeout(600);
-
-    // After submitting deed, availableTreats > 0, so clicking sanctuary pill feeds Molly
-    const pill = page.locator('.molly-sanctuary-pill');
-    await pill.click();
-    await page.waitForTimeout(400);
-
-    const treatsAfterRitual = Number((await companion.getAttribute('data-molly-treats')) || '0');
-    expect(treatsAfterRitual, 'Submitting a deed in Krajina dobra and feeding Molly must increment Molly treats by 1').toBe(initialTreats + 1);
-  });
-
-  test('DG-2.3: Submitting community deed on /submit unlocks and feeds a treat', async ({ page }) => {
-    await gotoHydrated(page, '/submit');
-
-    // Fill form using exact field IDs
-    await page.locator('#name').fill('Sousedská knihobudka na návsi');
-    await page.locator('#loc').fill('Praha');
-
-    // Click quick city
-    const quickCity = page.locator('button.q-pill').first();
-    if (await quickCity.isVisible()) {
-      await quickCity.click();
-    }
-
-    const companion = page.locator('.molly-companion-layer');
-    const initialAvailable = Number((await companion.getAttribute('data-molly-available-treats')) || '0');
-
-    // Wait at least 1100ms to satisfy anti-bot elapsed_ms requirement
-    await page.waitForTimeout(1100);
-
-    // Submit
-    const submitBtn = page.locator('button.submit-btn');
-    await submitBtn.click();
-
-    // Verify submission succeeds and unlocks a treat
-    await expect(page.locator('.banner.success')).toBeVisible({ timeout: 10000 });
-    const availableAfterSubmit = Number((await companion.getAttribute('data-molly-available-treats')) || '0');
-    expect(availableAfterSubmit, 'Submitting a community deed should unlock an available treat').toBeGreaterThanOrEqual(initialAvailable + 1);
-  });
-
-  test('DG-2.4: Online catalog action completion unlocks an earned treat', async ({ page }) => {
-    await gotoHydrated(page, '/app/online');
-    const companion = page.locator('.molly-companion-layer');
-    const initialAvailable = Number((await companion.getAttribute('data-molly-available-treats')) || '0');
-
-    const primaryBtn = page.locator('.grid .card .actions-row .cta.primary').first();
-    await expect(primaryBtn).toBeVisible();
-    await primaryBtn.dispatchEvent('click');
-
-    const doneBtn = page.locator('.grid .card .actions-row .cta.secondary').first();
-    await expect(doneBtn).toBeVisible();
-    await doneBtn.click();
-    await page.waitForTimeout(600);
-
-    const availableAfterCatalog = Number((await companion.getAttribute('data-molly-available-treats')) || '0');
-    expect(availableAfterCatalog, 'Completing an online catalog action must unlock an earned treat').toBeGreaterThanOrEqual(initialAvailable + 1);
-  });
-
-  test('Molly treats: one finished deed unlocks exactly one treat, and it cannot be spent twice', async ({ page }) => {
-    const companion = page.locator('.molly-companion-layer');
-
-    const doneBtn = page.locator('.instant-card .btn-studio-done');
-    await expect(doneBtn).toHaveCount(0);
-    await page.locator('.instant-card .btn-studio-primary').dispatchEvent('click');
-    await expect(doneBtn).toBeVisible();
-    await doneBtn.click();
-    await page.waitForTimeout(500);
-
-    expect(Number((await companion.getAttribute('data-molly-available-treats')) || '0')).toBe(1);
-    expect(Number((await companion.getAttribute('data-molly-treats')) || '0')).toBe(0);
-
-    await gotoHydrated(page, '/svet');
-    const pill = page.locator('.molly-sanctuary-pill');
-    await pill.click();
-    await page.waitForTimeout(500);
-
-    expect(
-      Number((await companion.getAttribute('data-molly-treats')) || '0'),
-      'Feeding the earned treat must increment treats by exactly 1'
-    ).toBe(1);
-    expect(
-      Number((await companion.getAttribute('data-molly-available-treats')) || '0'),
-      'Feeding the earned treat must bring available treats back to 0'
-    ).toBe(0);
-
-    for (let i = 0; i < 10; i++) {
-      await pill.click();
-    }
-    await page.waitForTimeout(500);
-
-    expect(
-      Number((await companion.getAttribute('data-molly-treats')) || '0'),
-      'Treats must stay at 1 once the earned treat is spent'
-    ).toBe(1);
-  });
-
-  test('Molly treats: two deeds on /svet accumulate two treats that are spent one click at a time', async ({ page }) => {
-    await gotoHydrated(page, '/svet');
-    const companion = page.locator('.molly-companion-layer');
-    const readTreats = async () => ({
-      fed: Number((await companion.getAttribute('data-molly-treats')) || '0'),
-      available: Number((await companion.getAttribute('data-molly-available-treats')) || '0')
+      expect(overlaps, 'Neither Molly nor her whisper may cover a celebration button').toEqual([]);
     });
-
-    const deedInput = page.locator('#ritual-deed-input');
-    const submitBtn = page.locator('.ritual-bar button[type="submit"]');
-    await expect(deedInput).toBeVisible();
-    await deedInput.fill('První skutek: darování teplého oblečení');
-    await submitBtn.click();
-    await page.waitForTimeout(500);
-    await deedInput.fill('Druhý skutek: pomoc sousedce s nákupem');
-    await submitBtn.click();
-    await page.waitForTimeout(500);
-
-    expect((await readTreats()).available, 'Two submitted deeds should unlock 2 available treats').toBe(2);
-
-    const pill = page.locator('.molly-sanctuary-pill');
-    await pill.click();
-    await page.waitForTimeout(400);
-    expect(await readTreats()).toEqual({ fed: 1, available: 1 });
-
-    await pill.click();
-    await page.waitForTimeout(400);
-    expect(await readTreats()).toEqual({ fed: 2, available: 0 });
-
-    await pill.click();
-    await page.waitForTimeout(400);
-    expect(await readTreats()).toEqual({ fed: 2, available: 0 });
-  });
+  }
 
   // =========================================================================
-  // DG-3: Molly supportive waiting prompts
+  // DG-3: Molly's petting whispers
   // =========================================================================
 
-  test('DG-3.1: Clicking Molly with 0 earned treats displays loving Czech whisper or toast', async ({ page }) => {
+  test('DG-3.1: Petting Molly displays loving Czech whisper or toast', async ({ page }) => {
     await gotoHydrated(page, '/');
     const petBtn = page.locator('.molly-pelisek-dock .molly-dock-pet-btn');
     await expect(petBtn).toBeVisible();
@@ -408,7 +183,8 @@ test.describe('R2: Delayed Gratification (Molly Treat Economics)', () => {
 
     const whisperText = await whisper.innerText();
     // Warm Czech text check: contains comforting calm words without tildes or Unicode emoji
-    const warmWords = ['mrrr', 'předu', 'laskavost', 'pomoc', 'pomůžeš', 'hřeje', 'svět', 'kousek', 'klid', 'šetřím', 'dobrot', 'skutek', 'skutku', 'pohlazení', 'děkuji', 'blízkost', 'pamlsek', 'tichounce'];
+    const warmWords = ['mrrr', 'předu', 'laskavost', 'pomoc', 'pomůžeš', 'hřeje', 'svět', 'kousek', 'klid', 'skutek', 'skutku', 'pohlazení', 'děkuji', 'blízkost', 'tichounce'];
+    expect(whisperText, 'Petting whispers never speak of treats or rewards').not.toMatch(/pamls|dobrot|odměn/i);
     const hasWarmTone = warmWords.some(w => whisperText.toLowerCase().includes(w));
     expect(hasWarmTone, `Molly whisper text should be warm and supportive. Got: "${whisperText}"`).toBe(true);
     expect(whisperText).not.toContain('~');

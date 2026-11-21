@@ -64,22 +64,12 @@ const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B50}]/u;
 
 describe('UI and copy invariants', () => {
   it('ships no native Unicode emoji (icons go through AppIcon / iconRegistry)', () => {
-    // Intentional exceptions: the legacy emoji -> icon-name translation table and
-    // two comments documenting the emoji stripper with real examples.
+    // Intentional exceptions: two comments documenting the emoji stripper with real examples.
     const allowed = new Set([
-      'akcelerator-landing-page/src/components/MollyDock.svelte',
       'akcelerator-landing-page/src/lib/progress.js',
       'akcelerator-landing-page/src/lib/utils.js'
     ]);
     expect(hits(SHIPPED_FILES, EMOJI, (r) => allowed.has(r))).toEqual([]);
-  });
-
-  it('keeps emoji in MollyDock confined to LEGACY_MOLLY_ICON_MAP keys', () => {
-    const src = read(path.join(APP, 'src/components/MollyDock.svelte'));
-    const outsideMap = src
-      .split('\n')
-      .filter((line) => EMOJI.test(line) && !/^\s*'[^']+':\s*'[a-z0-9-]+',?\s*$/.test(line));
-    expect(outsideMap).toEqual([]);
   });
 
   it('keeps project docs and agent rules free of emoji', () => {
@@ -100,6 +90,27 @@ describe('UI and copy invariants', () => {
       'Udělal/a'
     ];
     expect(hits(SHIPPED_FILES, new RegExp(banned.join('|')))).toEqual([]);
+  });
+
+  it('never brings back Molly\'s treats or the gifts for a number of deeds', () => {
+    const retired = [
+      'pamls',
+      'mňamk',
+      'Dát Molly',
+      'availableTreats',
+      'treatsFedTotal',
+      'giftDeeds',
+      'unlockMollyTreat',
+      'feedMolly',
+      'MOLLY_MILESTONES',
+      'molly-gift-meter',
+      'LEGACY_MOLLY_ICON_MAP'
+    ];
+    // The places catalogue speaks about treats for dogs in real shelters.
+    const offenders = hits(SRC_FILES, new RegExp(retired.join('|'), 'i'), (r) =>
+      r.endsWith('src/lib/data/fallback-places.js')
+    );
+    expect(offenders).toEqual([]);
   });
 
   it('imports @lucide/svelte only through the icon registry', () => {

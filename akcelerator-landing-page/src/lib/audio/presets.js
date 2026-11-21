@@ -128,20 +128,6 @@ export function playMollyPurr(dur = 1.1, intensity = 0.8) {
 }
 
 /**
- * Křupnutí pamlsku pro Molly (3 křupavé mikro-impulsy + spokojené vrknutí).
- */
-export function playMollyCrunch() {
-  if (isSoundMuted()) return;
-  try {
-    [0, 0.075, 0.155].forEach((d, i) => {
-      noiseBurst(0.022, 1280 + i * 240, 6.2, d, 0.042);
-      tone(380 + i * 90, 0.06, 'triangle', d, 0.02);
-    });
-    tone(587.33, 0.18, 'sine', 0.21, 0.024, 783.99);
-  } catch { }
-}
-
-/**
  * Melodické mňouknutí Molly (formantová kontura 440 Hz -> 690 Hz -> 590 Hz).
  */
 export function playMollyMeow() {

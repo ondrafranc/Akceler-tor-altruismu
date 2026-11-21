@@ -1,4 +1,15 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+/** How many times Molly has been petted, as saved in the companion record. */
+async function readPetCount(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    try {
+      return Number(JSON.parse(localStorage.getItem('aa_molly_companion_v1') || '{}').petCount) || 0;
+    } catch {
+      return 0;
+    }
+  });
+}
 
 /**
  * TIER 5 WHITE-BOX ADVERSARIAL STRESS SUITE: Krajina Dobra & Walking Molly
@@ -6,13 +17,13 @@ import { test, expect } from '@playwright/test';
  * Targeted modules:
  * - src/routes/svet/+page.svelte (Canvas diorama, 5-state walking Molly machine, deed lights,
  *   audio engine chime synthesis, atmosphere god-rays & northern lights, breathing lotus)
- * - src/lib/mollyStore.js (Molly companion state, treat arcs, whispers, feeding triggers)
- * - src/lib/mollyTypes.js (Molly treat types & milestones)
+ * - src/lib/mollyStore.js (Molly companion state, spark arcs, whispers, petting)
+ * - src/lib/mollyTypes.js (Molly whispers & route guides)
  *
  * Adversarial Stress Vectors:
  * 1. Rapid asynchronous resize oscillation during active walking animation cycle.
  * 2. Extended multi-cycle continuous patrol without state deadlock or particle memory leak.
- * 3. Click-to-feed accuracy at extreme patrol boundaries vs home base with dual-hit precision.
+ * 3. Click-to-pet accuracy at extreme patrol boundaries vs home base with dual-hit precision.
  * 4. High-frequency audio toggle and atmosphere switching while deeds and comets are actively floating.
  * 5. Rapid random deed cycling & quick offline deed bombardment stress.
  * 6. Deep-link URL seed fallback ceremony & breathing exercise state machine integration.
@@ -91,7 +102,7 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
       CanvasRenderingContext2D.prototype.arc = function (cx, cy, r, sa, ea) {
         g.__t5Telemetry.drawCalls++;
         if (r === 44 && sa === 0) {
-          // Joy halo drawn around Molly during EAT_TREAT
+          // Joy halo drawn around Molly while she enjoys being petted (JOY)
           g.__t5Telemetry.eatHaloCount++;
         }
         return origArc.apply(this, arguments as any);
@@ -222,12 +233,12 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
     const sampleDurationMs = 15000;
     const startTime = Date.now();
 
-    // Trigger feeding halfway through to exercise the 5th state (EAT_TREAT)
-    let feedTriggered = false;
+    // Pet Molly halfway through to exercise the 5th state (JOY)
+    let petTriggered = false;
     while (Date.now() - startTime < sampleDurationMs) {
       await page.waitForTimeout(1000);
-      if (!feedTriggered && Date.now() - startTime > 7000) {
-        feedTriggered = true;
+      if (!petTriggered && Date.now() - startTime > 7000) {
+        petTriggered = true;
         const viewport = page.locator('.sanctuary-viewport');
         const vpBox = (await viewport.boundingBox())!;
         await viewport.click({ position: { x: Math.round(vpBox.width * 0.24), y: Math.round(vpBox.height * 0.72) } });
@@ -245,7 +256,7 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
     const fps = 1000 / avgDt;
     expect(fps).toBeGreaterThan(35);
 
-    // Trajectory analysis: verify Molly moved away from home base and returned or ate
+    // Trajectory analysis: verify Molly moved away from home base and returned or was petted
     const xCoordinates = telemetry.mollyPositions.map((p: any) => p.x);
     const minX = Math.min(...xCoordinates);
     const maxX = Math.max(...xCoordinates);
@@ -265,14 +276,14 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
     // A single frame should draw between 20 and 300 primitive arcs/paths (zero unbounded particle leak)
     expect(avgDrawCallsPerFrame).toBeLessThan(350);
 
-    // Verify EAT_TREAT state was activated by feed
+    // Verify the JOY state was activated by the petting click
     expect(telemetry.eatHaloCount).toBeGreaterThan(0);
   });
 
   // =========================================================================
-  // TEST 3: Click-to-feed accuracy at extreme patrol boundaries vs home base
+  // TEST 3: Click-to-pet accuracy at extreme patrol boundaries vs home base
   // =========================================================================
-  test('T5-3: Click-to-feed accuracy at extreme patrol boundaries vs home base with dual-hit precision', async ({ page }) => {
+  test('T5-3: Click-to-pet accuracy at extreme patrol boundaries vs home base with dual-hit precision', async ({ page }) => {
     test.setTimeout(60000);
     const pageErrors: string[] = [];
     page.on('pageerror', err => pageErrors.push(err.message));
@@ -281,7 +292,6 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
     await page.goto('/svet');
     await expect(page.locator('canvas.sanctuary-canvas')).toHaveAttribute('data-sanctuary-molly', 'ready');
 
-    const companion = page.locator('.molly-companion-layer');
     const viewport = page.locator('.sanctuary-viewport');
     const vpBox = (await viewport.boundingBox())!;
     const w = vpBox.width;
@@ -295,7 +305,7 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
     }
 
     // 1. Initial baseline
-    const initialTreats = Number(await companion.getAttribute('data-molly-treats') || '0');
+    const initialPets = await readPetCount(page);
 
     // 2. Wait for Molly to patrol toward lakeshore (nx >= 0.32)
     await page.waitForFunction(() => {
@@ -323,8 +333,7 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
       await viewport.click({ position: { x: homePxX, y: homePxY } });
       await page.waitForTimeout(400);
 
-      const treatsAfterHome = Number(await companion.getAttribute('data-molly-treats') || '0');
-      expect(treatsAfterHome, 'Click on home base pets Molly without incrementing treats on empty clicks').toBe(initialTreats);
+      expect(await readPetCount(page), 'Click on home base pets Molly while she patrols away').toBe(initialPets + 1);
 
       // Check gentle toast appears
       const toast = page.locator('.gentle-toast');
@@ -346,18 +355,16 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
       await viewport.click({ position: { x: clickTargetX, y: clickTargetY } });
       await page.waitForTimeout(400);
 
-      const treatsAfterDynamic = Number(await companion.getAttribute('data-molly-treats') || '0');
-      expect(treatsAfterDynamic, 'Click on moving Molly actor pets Molly without unearned treats').toBe(initialTreats);
+      expect(await readPetCount(page), 'Click on moving Molly actor pets Molly').toBe(initialPets + 2);
 
       // Wait for petting to settle
       await page.waitForTimeout(1000);
 
-      // C. Boundary evasion: Clicking an existing deed light at (0.79w, 0.18h) far outside 48px radius selects the deed without feeding Molly
+      // C. Boundary evasion: Clicking an existing deed light at (0.79w, 0.18h) far outside 48px radius selects the deed without petting Molly
       await viewport.click({ position: { x: Math.round(0.79 * w), y: Math.round(0.18 * h) } });
       await page.waitForTimeout(300);
 
-      const treatsAfterDeedSelect = Number(await companion.getAttribute('data-molly-treats') || '0');
-      expect(treatsAfterDeedSelect, 'Click on distant deed light must select deed without feeding Molly').toBe(initialTreats);
+      expect(await readPetCount(page), 'Click on distant deed light must select deed without petting Molly').toBe(initialPets + 2);
 
       // Verify deed detail opened
       const openedModal = page.locator('.memory-whisper');
@@ -371,8 +378,7 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
       // Direct hit at home base fallback
       await viewport.click({ position: { x: Math.round(0.24 * w), y: Math.round(0.72 * h) } });
       await page.waitForTimeout(400);
-      const treatsNow = Number(await companion.getAttribute('data-molly-treats') || '0');
-      expect(treatsNow, 'Direct hit at home base pets Molly without unearned treats').toBe(initialTreats);
+      expect(await readPetCount(page), 'Direct hit at home base pets Molly').toBe(initialPets + 1);
     }
 
     // D. Modal occlusion priority test:
@@ -391,22 +397,64 @@ test.describe('Tier 5 Adversarial Hardening: Krajina Dobra & Walking Molly', () 
     const whisperDialog = page.locator('.memory-whisper');
     await expect(whisperDialog).toBeVisible();
 
-    const treatsBeforeModalClick = Number(await companion.getAttribute('data-molly-treats') || '0');
+    const petsBeforeModalClick = await readPetCount(page);
 
-    // Click home base while modal is open: first click dismisses modal without feeding
+    // Click home base while modal is open: first click dismisses modal without petting
     // Use force: true to ensure click reaches viewport despite absolute positioned dialog in container
     await viewport.click({ position: { x: Math.round(w * 0.24), y: Math.round(h * 0.72) }, force: true });
     await page.waitForTimeout(300);
 
     await expect(whisperDialog).not.toBeVisible();
-    const treatsAfterModalDismiss = Number(await companion.getAttribute('data-molly-treats') || '0');
-    expect(treatsAfterModalDismiss, 'First click when modal is open should dismiss modal without feeding').toBe(treatsBeforeModalClick);
+    expect(await readPetCount(page), 'First click when modal is open should dismiss modal without petting').toBe(petsBeforeModalClick);
 
-    // Second click on clean stage pets Molly without unearned treats
+    // Second click on clean stage pets Molly
     await viewport.click({ position: { x: Math.round(w * 0.24), y: Math.round(h * 0.72) } });
     await page.waitForTimeout(400);
-    const treatsAfterSecondClick = Number(await companion.getAttribute('data-molly-treats') || '0');
-    expect(treatsAfterSecondClick, 'Second click after modal dismiss pets Molly without unearned treats').toBe(treatsBeforeModalClick);
+    expect(await readPetCount(page), 'Second click after modal dismiss pets Molly').toBe(petsBeforeModalClick + 1);
+
+    expect(pageErrors).toHaveLength(0);
+  });
+
+  test('Sanctuary Molly is ready for a first-time visitor and can be petted repeatedly without any treat wording', async ({ page }) => {
+    const pageErrors: string[] = [];
+    page.on('pageerror', err => pageErrors.push(err.message));
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    // First visit: a fresh browser context has nothing saved yet
+    await page.goto('/svet');
+
+    const canvas = page.locator('canvas.sanctuary-canvas');
+    await expect(canvas).toHaveAttribute('data-sanctuary-molly', 'ready');
+    expect(await canvas.getAttribute('data-molly-treats')).toBeNull();
+
+    const pill = page.locator('.molly-sanctuary-pill');
+    await expect(pill).toBeVisible();
+    expect(((await pill.textContent()) || '').replace(/\s+/g, ' ').trim()).toBe('Pohladit Molly');
+
+    const before = await readPetCount(page);
+    for (let i = 1; i <= 3; i++) {
+      await pill.click();
+      expect(await readPetCount(page), `pet #${i} is saved`).toBe(before + i);
+    }
+    await expect(page.locator('.gentle-toast')).toContainText('Molly');
+
+    const legendMolly = page.locator('.legend-chip.legend-molly');
+    await expect(legendMolly).toBeVisible();
+    // The quick-deed chips offer real shelter deeds ("Miska útulku"); they are not about Molly, so they are left out.
+    const mainText = await page.locator('main').evaluate((main) => {
+      const copy = main.cloneNode(true) as HTMLElement;
+      for (const chip of copy.querySelectorAll('.qd-chip')) chip.remove();
+      return copy.textContent || '';
+    });
+    expect(mainText).toContain('Pohladit Molly');
+    const wording = [
+      mainText,
+      (await legendMolly.getAttribute('title')) || '',
+      (await legendMolly.getAttribute('aria-label')) || '',
+      (await pill.getAttribute('title')) || '',
+      (await pill.getAttribute('aria-label')) || ''
+    ].join(' | ');
+    expect(wording).not.toMatch(/pamls|misk|granul/i);
 
     expect(pageErrors).toHaveLength(0);
   });

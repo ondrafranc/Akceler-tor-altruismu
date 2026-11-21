@@ -26,7 +26,7 @@ Ověření: `tests/e2e-requirements.spec.ts`, `tests/m4-regressions.spec.ts`, `t
 - Tiché útočiště: obraz české lesní tůně za svítání a v noci se shodnou kompozicí. Hladina podle `resolveSanctuaryZone()` musí lícovat s obrazem.
 - Noční vrstva se připojuje líně, až po prvním přepnutí.
 - Zvuk je ve výchozím stavu ztlumený.
-- Počítadlo pamlsků je na stránce jediné (`.molly-sanctuary-pill`).
+- Molly u tůně se dá jen pohladit, jediným tlačítkem `.molly-sanctuary-pill` nebo kliknutím přímo na ni; nic se nepočítá.
 - `RitualBar` je `tablist`, `BreathingPacer` je `radiogroup`.
 
 ## Průvodce `/app/guided` a katalog `/app/online`

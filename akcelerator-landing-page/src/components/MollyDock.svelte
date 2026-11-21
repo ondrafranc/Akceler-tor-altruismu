@@ -31,26 +31,8 @@
     onWakeFromPark: () => {}
   });
 
-  /** @type {Record<string, string>} */
-  const LEGACY_MOLLY_ICON_MAP = {
-    '🐾': 'paw',
-    '🐟': 'fish',
-    '🥛': 'milk',
-    '🌿': 'leaf',
-    '🩷': 'heart',
-    '❤️': 'heart',
-    '✨': 'sparkles',
-    '🌟': 'star',
-    '🔔': 'bell',
-    '🌸': 'flower-2',
-    '💬': 'message-circle',
-    '🏡': 'home',
-    '🧺': 'armchair',
-    '🖱️': 'mouse-pointer'
-  };
-
   /**
-   * Normalizes legacy emoji strings or semantic icon keys to a verified IconKey.
+   * Returns a verified IconKey for an icon name carried by a whisper or a tip.
    * @param {string | null | undefined} rawIcon
    * @param {import('$lib/icons/iconRegistry.js').IconKey} [fallback='paw']
    * @returns {import('$lib/icons/iconRegistry.js').IconKey}
@@ -58,8 +40,7 @@
   export function normalizeMollyIcon(rawIcon, fallback = 'paw') {
     const safeFallback = resolveIconKey(fallback);
     if (typeof rawIcon !== 'string' || !rawIcon.trim()) return safeFallback;
-    const mapped = LEGACY_MOLLY_ICON_MAP[rawIcon.trim()] || rawIcon;
-    return resolveIconKey(mapped);
+    return resolveIconKey(rawIcon.trim());
   }
 </script>
 
@@ -69,11 +50,6 @@
     toggleMollyPelisek,
     toggleMollyFollowMouse
   } from '$lib/mollyStore.js';
-  import {
-    describeNextMollyGift,
-    getNextMollyGiftProgress,
-    pluralPamlsek
-  } from '$lib/mollyTypes.js';
   import AppIcon from '$lib/components/AppIcon.svelte';
 
   /**
@@ -84,8 +60,6 @@
    */
   let { variant = 'floating', compact = false } = $props();
 
-  const nextGiftText = $derived(describeNextMollyGift($mollyState.giftDeeds));
-  const giftProgress = $derived(getNextMollyGiftProgress($mollyState.giftDeeds));
   const isUserDocked = $derived($mollyState.mode === 'docked');
   const isAutoParked = $derived(!isUserDocked && Boolean($mollyDockBridge.isParked));
   const isDockedVisual = $derived(
@@ -109,15 +83,7 @@
         $mollyDockBridge.isParked ||
         Boolean($mollyDockBridge.forceDockWhisper))
   );
-  const treatIconKey = $derived(normalizeMollyIcon($mollyState.lastTreat?.icon, 'fish'));
-  const giftIconKey = $derived(normalizeMollyIcon(giftProgress.icon, 'star'));
   const whisperIconKey = $derived(normalizeMollyIcon($mollyDockBridge.activeWhisper?.icon, 'paw'));
-  const pendingTreatCount = $derived(Math.max(0, Number($mollyState.availableTreats) || 0));
-  const pendingTreatHint = $derived(
-    pendingTreatCount > 0
-      ? `${pendingTreatCount >= 2 && pendingTreatCount <= 4 ? 'Čekají' : 'Čeká'} ${pendingTreatCount} ${pluralPamlsek(pendingTreatCount)} pro Molly — kliknutím ji nakrmíš. `
-      : ''
-  );
 </script>
 
 <div
@@ -141,14 +107,13 @@
     type="button"
     class="molly-dock-pet-btn"
     class:has-tip={Boolean($mollyDockBridge.pendingTip)}
-    class:has-pending-treat={pendingTreatCount > 0}
     onpointerdown={(e) => e.stopPropagation()}
     onclick={(e) => {
       e.stopPropagation();
       $mollyDockBridge.onPet?.();
     }}
-    title={`${pendingTreatHint}${$mollyDockBridge.pendingTip ? 'Molly má pro tebe laskavý tip. ' : ''}Pohladit kočičku Molly. ${nextGiftText}`}
-    aria-label={`${pendingTreatHint}${$mollyDockBridge.pendingTip ? 'Molly má pro tebe laskavý tip. ' : ''}Pohladit Molly. Darované pamlsky: ${$mollyState.treatsFedTotal}. ${nextGiftText}`}
+    title={`${$mollyDockBridge.pendingTip ? 'Molly má pro tebe laskavý tip. ' : ''}Pohladit kočičku Molly.`}
+    aria-label={`${$mollyDockBridge.pendingTip ? 'Molly má pro tebe laskavý tip. ' : ''}Pohladit Molly.`}
   >
     {#if $mollyDockBridge.pendingTip}
       <span class="molly-tip-dot" aria-hidden="true" data-testid="molly-tip-dot">
@@ -165,33 +130,7 @@
     </span>
     <span class="molly-dock-label">
       <span class="molly-dock-name">Molly</span>
-      {#if !$mollyDockBridge.atHome}
-        <strong class="molly-treat-counter" data-testid="molly-treat-count">
-          <span>{$mollyState.treatsFedTotal}</span>
-          <AppIcon name={treatIconKey} size={12} strokeWidth={2} />
-        </strong>
-        {#if pendingTreatCount > 0}
-          <span class="molly-pending-treat-pill" data-testid="molly-pending-treat-count">
-            +{pendingTreatCount}
-          </span>
-        {/if}
-      {/if}
     </span>
-    {#if !$mollyDockBridge.atHome}
-      <span
-        class="molly-gift-meter"
-        class:is-complete={giftProgress.complete}
-        aria-hidden="true"
-        data-testid="molly-gift-meter"
-      >
-        <span class="molly-gift-icon">
-          <AppIcon name={giftIconKey} size={12} strokeWidth={2} />
-        </span>
-        <span class="molly-gift-track">
-          <span class="molly-gift-fill" style="width: {giftProgress.pct}%"></span>
-        </span>
-      </span>
-    {/if}
   </button>
 
   {#if !$mollyDockBridge.atHome}
@@ -451,70 +390,6 @@
     font-weight: 700;
   }
 
-  .molly-treat-counter {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    color: var(--accent-warm-ink, #8f4b0e);
-    font-weight: 800;
-    background: var(--accent-warm-tint, #fef6e8);
-    border: 1px solid rgba(143, 75, 14, 0.24);
-    padding: 1px 6px;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    line-height: 1.25;
-  }
-
-  .molly-dock-pet-btn.has-pending-treat .molly-treat-counter {
-    background: var(--hero-dawn, #fef3c7);
-    border-color: var(--accent-warm, #b8651b);
-    color: var(--accent-warm-ink, #8f4b0e);
-    box-shadow: 0 0 0 2px rgba(184, 101, 27, 0.22);
-  }
-
-  .molly-pending-treat-pill {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1px 5px;
-    border-radius: 999px;
-    background: var(--accent-primary, #1b5e42);
-    color: #ffffff;
-    font-size: 0.68rem;
-    font-weight: 800;
-    line-height: 1.25;
-  }
-
-  .molly-gift-meter {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    margin-left: 2px;
-  }
-
-  .molly-gift-icon {
-    display: inline-flex;
-    align-items: center;
-    color: var(--accent-warm-ink, #8f4b0e);
-  }
-
-  .molly-gift-track {
-    width: 24px;
-    height: 5px;
-    border-radius: 999px;
-    background: var(--border-subtle, #dce3dd);
-    overflow: hidden;
-    display: inline-block;
-  }
-
-  .molly-gift-fill {
-    display: block;
-    height: 100%;
-    border-radius: 999px;
-    background: var(--accent-primary, #1b5e42);
-    transition: width 0.25s ease;
-  }
-
   .molly-dock-toggle-btn,
   .molly-dock-follow-btn {
     display: inline-flex;
@@ -579,7 +454,6 @@
   }
 
   .molly-pelisek-dock.is-compact .molly-dock-name,
-  .molly-pelisek-dock.is-compact .molly-gift-meter,
   .molly-pelisek-dock.is-compact .molly-toggle-text,
   .molly-pelisek-dock.is-compact .molly-follow-text,
   .molly-pelisek-dock.is-compact .molly-dock-follow-btn {
@@ -587,7 +461,6 @@
   }
 
   @media (max-width: 820px) {
-    .molly-pelisek-dock.is-header-dock .molly-gift-meter,
     .molly-pelisek-dock.is-header-dock .molly-dock-follow-btn {
       display: none !important;
     }
@@ -602,7 +475,6 @@
     }
 
     .molly-dock-name,
-    .molly-gift-meter,
     .molly-toggle-text,
     .molly-follow-text,
     .molly-dock-follow-btn {
@@ -611,10 +483,6 @@
   }
 
   @media (max-width: 480px) {
-    .molly-pending-treat-pill {
-      display: none !important;
-    }
-
     .molly-pelisek-dock.is-header-dock {
       padding: 1px;
       gap: 2px;
@@ -639,12 +507,6 @@
       width: 16px;
       height: 16px;
     }
-
-    .molly-pelisek-dock.is-header-dock .molly-treat-counter {
-      padding: 1px 5px;
-      gap: 2px;
-      font-size: 0.7rem;
-    }
   }
 
   @media (max-width: 359px) {
@@ -661,12 +523,6 @@
     .molly-pelisek-dock.is-header-dock .molly-tip-dot {
       width: 15px;
       height: 15px;
-    }
-
-    .molly-pelisek-dock.is-header-dock .molly-treat-counter {
-      padding: 1px 4px;
-      gap: 1.5px;
-      font-size: 0.66rem;
     }
   }
 
@@ -702,23 +558,12 @@
       gap: 0;
     }
 
-    .molly-pelisek-dock:not(.is-header-dock) .molly-treat-counter {
-      padding: 0 1px;
-      gap: 3px;
-      font-size: 0.65rem;
-      border: none;
-    }
-
     .molly-pelisek-dock:not(.is-header-dock) .molly-tip-dot {
       position: absolute;
       top: 1px;
       right: 1px;
       width: 14px;
       height: 14px;
-    }
-
-    .molly-pelisek-dock:not(.is-header-dock) .molly-gift-meter {
-      display: none;
     }
 
     .molly-pelisek-dock:not(.is-header-dock) .molly-dock-name,

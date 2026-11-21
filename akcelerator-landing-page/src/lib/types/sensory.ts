@@ -2,8 +2,6 @@
  * Canonical Sensory Engine and Canvas Type Definitions.
  */
 
-import type { MollyTreat } from './molly.js';
-
 /** One entry of the action effect catalog: scene mode, sound profile and reward metric. */
 export interface ActionEffectSpec {
   mode: string;
@@ -15,8 +13,6 @@ export interface ActionEffectSpec {
   format: (value: number) => string;
   /** The metric is a fixed fact (for example a percentage), not a value that grows with progress. */
   staticMetric?: boolean;
-  /** Attached to every catalog entry when the catalog module loads. */
-  mollyTreat?: MollyTreat;
 }
 
 /** Effect specs keyed by micro-action id (`ACTION_EFFECT_CATALOG`) or by scene mode (`MODE_LOOKUP`). */
@@ -51,7 +47,6 @@ export interface ResolvedActionEffectMeta extends ActionEffectSpec {
   value: number;
   badge: string;
   returnBadge: string;
-  mollyTreat: MollyTreat;
 }
 
 /** Reports the reward metric: raw value, formatted badge text and the spec it belongs to. */

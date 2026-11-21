@@ -3,7 +3,6 @@
  */
 
 import { CLICK_AND_FEED, FREERICE, czPlural as pl } from '../../data/impactFacts.js';
-import { resolveMollyTreat } from '../../mollyTypes.js';
 
 /**
  * @typedef {import('../../types/sensory.js').ActionEffectSpec} ActionEffectSpec
@@ -427,10 +426,6 @@ export const ACTION_EFFECT_CATALOG = {
   }
 };
 
-Object.values(ACTION_EFFECT_CATALOG).forEach((spec) => {
-  spec.mollyTreat = resolveMollyTreat(spec);
-});
-
 /**
  * Obecné dobrovolnictví u místní organizace. Sdílí scénu `solidarity_bridge`, ale není v katalogu,
  * aby nepřepsalo vyhledávání podle režimu (MODE_LOOKUP).
@@ -445,7 +440,6 @@ export const VOLUNTEER_EFFECT_SPEC = {
   colors: ['#2dd4bf', '#34d399', '#fbbf24', '#fb7185'],
   format: () => '+1 nabídnutá pomocná ruka'
 };
-VOLUNTEER_EFFECT_SPEC.mollyTreat = resolveMollyTreat(VOLUNTEER_EFFECT_SPEC);
 
 export const MODE_LOOKUP = Object.values(ACTION_EFFECT_CATALOG).reduce((acc, spec) => {
   acc[spec.mode] = spec;

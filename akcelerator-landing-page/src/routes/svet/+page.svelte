@@ -20,7 +20,6 @@
   import { trackEvent } from "../../lib/analytics.js";
   import {
     playMollyPurr,
-    playMollyCrunch,
     playMollyMeow,
     playSanctuaryChime,
   } from "../../lib/audio/presets.js";
@@ -35,10 +34,6 @@
     frameStep,
   } from "../../lib/core/device.js";
   import {
-    mollyState,
-    feedMolly,
-    feedMollyFromAction,
-    unlockMollyTreat,
     petMolly,
     setMollyMood,
   } from "../../lib/mollyStore.js";
@@ -555,9 +550,8 @@
   /** @type {Record<string, number>} */
   let hoverScales = {};
 
-  // Patronka Molly u lesní tůně v Krajině dobra (nx = 0.24, ny = 0.72) a její mistička hojnosti (nx = 0.19, ny = 0.73)
+  // Patronka Molly u lesní tůně v Krajině dobra (nx = 0.24, ny = 0.72)
   const MOLLY_SANCTUARY_POS = { x: 0.24, y: 0.72 };
-  const MOLLY_BOWL_POS = { x: 0.19, y: 0.73 };
 
   // Trajektorie břehu tůně: nx ≈ 0.20 až 0.44, ny ≈ 0.72 + (nx - 0.24) * 0.04
   /**
@@ -568,31 +562,31 @@
     return 0.72 + (nx - 0.24) * 0.04;
   }
 
-  // Stavový automat chodící Molly: 'SIT_HOME' | 'WALK_PATROL' | 'WATCH_LAKE' | 'GROOM' | 'EAT_TREAT'
+  // Stavový automat chodící Molly: 'SIT_HOME' | 'WALK_PATROL' | 'WATCH_LAKE' | 'GROOM' | 'JOY'
   let mollyPos = { x: 0.24, y: 0.72 };
   let mollyTargetX = 0.24;
   let mollyBehavior = "SIT_HOME";
   let mollyStateTimer = 1.6;
-  let mollyFacing = -1; // -1 = doleva k mističce / domů, 1 = doprava k tůni
+  let mollyFacing = -1; // -1 = doleva domů, 1 = doprava k tůni
   let mollyWalkCycle = 0;
 
   /** @type {Array<{ sx: number, sy: number, cx: number, cy: number, tx: number, ty: number, progress: number, color: string }>} */
-  let mollyTreatArcs = [];
+  let mollyLightArcs = [];
   /** @type {Array<{ x: number, y: number, vx: number, vy: number, alpha: number, color: string }>} */
   let mollyLakeHearts = [];
   let mollyJoyTimer = 0;
 
-  function launchSanctuaryTreatArc(
+  function launchSanctuaryLightArc(
     fromNx = 0.48,
     fromNy = 0.34,
     color = "#fbbf24",
   ) {
     const tx = mollyPos.x;
     const ty = mollyPos.y - 0.02;
-    if (mollyTreatArcs.length >= 12) {
-      mollyTreatArcs.shift();
+    if (mollyLightArcs.length >= 12) {
+      mollyLightArcs.shift();
     }
-    mollyTreatArcs.push({
+    mollyLightArcs.push({
       sx: fromNx,
       sy: fromNy,
       cx: (fromNx + tx) * 0.5,
@@ -604,68 +598,35 @@
     });
   }
 
-  function feedSanctuaryMolly(fromNx = 0.36, fromNy = 0.42) {
-    if ($mollyState.availableTreats > 0) {
-      const res = feedMolly("sanctuary_molly", {
-        action: {
-          id: "zvirata_utulek_online",
-          element: "animals",
-          title: "Pamlsek pro patronku Molly u lesní tůně",
-        },
+  /** Pohlazení Molly u tůně: radostný poskok, srdíčka a vlnka na hladině. */
+  function petSanctuaryMolly() {
+    petMolly("Mrrr… u lesní tůně v Krajině dobra je s tebou klidně a hezky.");
+    mollyJoyTimer = 1.8;
+    mollyBehavior = "JOY";
+    for (let i = 0; i < 7; i++) {
+      mollyLakeHearts.push({
+        x: mollyPos.x + (Math.random() - 0.5) * 0.04,
+        y: mollyPos.y - 0.03 - Math.random() * 0.02,
+        vx: (Math.random() - 0.5) * 0.001,
+        vy: -0.0012 - Math.random() * 0.001,
+        alpha: 1,
+        color: i % 2 === 0 ? "#fbbf24" : "#f472b6",
       });
-      petMolly("Mrrr… u lesní tůně v Krajině dobra je s tebou klidně a hezky.");
-      launchSanctuaryTreatArc(fromNx, fromNy, res?.treat?.color || "#fbbf24");
-      mollyJoyTimer = 2.4;
-      mollyBehavior = "EAT_TREAT";
-      for (let i = 0; i < 8; i++) {
-        mollyLakeHearts.push({
-          x: mollyPos.x + (Math.random() - 0.5) * 0.04,
-          y: mollyPos.y - 0.03 - Math.random() * 0.02,
-          vx: (Math.random() - 0.5) * 0.001,
-          vy: -0.0012 - Math.random() * 0.001,
-          alpha: 1,
-          color: i % 2 === 0 ? "#fbbf24" : "#f472b6",
-        });
-      }
-      if (mollyLakeHearts.length > 32) {
-        mollyLakeHearts.splice(0, mollyLakeHearts.length - 32);
-      }
-      waterRipples.push({
-        x: mollyPos.x,
-        y: mollyPos.y + 0.03,
-        rx: 6,
-        maxRx: 95,
-        speed: 1.15,
-        alpha: 0.72,
-        color: "#fde68a",
-        lineWidth: 2.0,
-      });
-      showGentleToast(
-        "Patronka Molly spokojeně přede u břehu tůně a chroupe zasloužený pamlsek.",
-        true,
-      );
-    } else {
-      petMolly();
-      mollyJoyTimer = 1.8;
-      mollyBehavior = "PET_BLISS";
-      for (let i = 0; i < 6; i++) {
-        mollyLakeHearts.push({
-          x: mollyPos.x + (Math.random() - 0.5) * 0.04,
-          y: mollyPos.y - 0.03 - Math.random() * 0.02,
-          vx: (Math.random() - 0.5) * 0.001,
-          vy: -0.0012 - Math.random() * 0.001,
-          alpha: 1,
-          color: "#f472b6",
-        });
-      }
-      if (mollyLakeHearts.length > 32) {
-        mollyLakeHearts.splice(0, mollyLakeHearts.length - 32);
-      }
-      showGentleToast(
-        "Patronka Molly spokojeně přede. Za každý dokončený dobrý skutek v aplikaci dostane do mističky pamlsek.",
-        true,
-      );
     }
+    if (mollyLakeHearts.length > 32) {
+      mollyLakeHearts.splice(0, mollyLakeHearts.length - 32);
+    }
+    waterRipples.push({
+      x: mollyPos.x,
+      y: mollyPos.y + 0.03,
+      rx: 6,
+      maxRx: 95,
+      speed: 1.15,
+      alpha: 0.72,
+      color: "#fde68a",
+      lineWidth: 2.0,
+    });
+    showGentleToast("Patronka Molly spokojeně přede u břehu tůně.", true);
   }
 
   /**
@@ -731,7 +692,7 @@
         color,
         isWater,
       });
-      launchSanctuaryTreatArc(nx, ny, color || "#fbbf24");
+      launchSanctuaryLightArc(nx, ny, color || "#fbbf24");
     }
 
     detonateBloomAt(nx, ny, color, isWater, withLaunchArc ? 0.55 : 1);
@@ -1083,7 +1044,7 @@
     const distHome = Math.hypot(clickPxX - homePxX, clickPxY - homePxY);
     const distCur = Math.hypot(clickPxX - curPxX, clickPxY - curPxY);
     if (!selectedLight && (distHome < 48 || distCur < 48)) {
-      feedSanctuaryMolly(nx, Math.max(0.24, ny - 0.16));
+      petSanctuaryMolly();
       return;
     }
 
@@ -1259,7 +1220,7 @@
     /** @type {CanvasRenderingContext2D | null} */
     let ctxCache = null;
     let lastParallax = "";
-    let lastTreatsAttr = "";
+    let sanctuaryMollyMarked = false;
 
     // Předrenderované sprity světlušek: 1× gradient místo 54 nových gradientů v každém snímku
     /**
@@ -2043,7 +2004,7 @@
 
           // 12B. Sanctuary Molly — Stavový automat a animace chodící patronky po břehu tůně
           if (mollyJoyTimer > 0) {
-            mollyBehavior = "EAT_TREAT";
+            mollyBehavior = "JOY";
             mollyJoyTimer = Math.max(0, mollyJoyTimer - 0.02 * k);
             if (mollyJoyTimer === 0) {
               mollyBehavior =
@@ -2132,17 +2093,11 @@
           const my = mollyPos.y * height;
           const homeX = MOLLY_SANCTUARY_POS.x * width;
           const homeY = MOLLY_SANCTUARY_POS.y * height;
-          const bx = MOLLY_BOWL_POS.x * width;
-          const by = MOLLY_BOWL_POS.y * height;
-          const treatsTotal = Math.max(
-            1,
-            Number($mollyState?.treatsFedTotal) || 1,
-          );
           const mollyScale = Math.min(1.18, Math.max(0.88, width / 800));
 
-          // Letící pamlskové oblouky (Treat Firefly Arcs) ke břehu k Molly
-          for (let a = mollyTreatArcs.length - 1; a >= 0; a--) {
-            const arc = mollyTreatArcs[a];
+          // Světelné oblouky, které po rozsvícení skutku doletí ke břehu k Molly
+          for (let a = mollyLightArcs.length - 1; a >= 0; a--) {
+            const arc = mollyLightArcs[a];
             arc.progress = Math.min(
               1,
               arc.progress + (reducedMotion ? 0.25 : 0.032) * k,
@@ -2177,7 +2132,6 @@
 
             if (p >= 1) {
               mollyJoyTimer = Math.max(mollyJoyTimer, 1.5);
-              playMollyCrunch();
               waterRipples.push({
                 x: arc.tx,
                 y: arc.ty + 0.035,
@@ -2188,28 +2142,9 @@
                 color: "#fde68a",
                 lineWidth: 1.8,
               });
-              mollyTreatArcs.splice(a, 1);
+              mollyLightArcs.splice(a, 1);
             }
           }
-
-          // Stálý odlesk mističky u kamene
-          ctx.save();
-          ctx.globalCompositeOperation = "screen";
-          const bowlRefl = ctx.createRadialGradient(
-            bx,
-            by + 10,
-            1,
-            bx,
-            by + 10,
-            16,
-          );
-          bowlRefl.addColorStop(0, "rgba(254, 243, 199, 0.28)");
-          bowlRefl.addColorStop(1, "rgba(251, 191, 36, 0)");
-          ctx.fillStyle = bowlRefl;
-          ctx.beginPath();
-          ctx.ellipse(bx, by + 10, 14, 5, 0, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
 
           // Dynamický vodní odraz chodící Molly v hladině tůně
           ctx.save();
@@ -2247,7 +2182,8 @@
           }
           ctx.restore();
 
-          // Mechový pobřežní kámen / molo pod Molly a mističkou
+          // Mechový pobřežní kámen pod Molly; jeho levý okraj sahá kousek za její místo
+          const bx = (MOLLY_SANCTUARY_POS.x - 0.05) * width;
           ctx.save();
           const stoneGrad = ctx.createLinearGradient(
             bx - 18,
@@ -2275,56 +2211,18 @@
           ctx.stroke();
           ctx.restore();
 
-          // Zářící porcelánová mistička hojnosti (nx = 0.19, ny = 0.73)
-          const bowlGlow = ctx.createRadialGradient(
-            bx,
-            by - 2,
-            1,
-            bx,
-            by - 2,
-            20,
-          );
-          bowlGlow.addColorStop(0, "rgba(254, 243, 199, 0.65)");
-          bowlGlow.addColorStop(1, "rgba(251, 191, 36, 0)");
-          ctx.fillStyle = bowlGlow;
-          ctx.beginPath();
-          ctx.arc(bx, by - 2, 20, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.fillStyle = "#29201b";
-          ctx.strokeStyle = "#fbbf24";
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.moveTo(bx - 11, by - 4);
-          ctx.lineTo(bx + 11, by - 4);
-          ctx.lineTo(bx + 8, by + 3.5);
-          ctx.lineTo(bx - 8, by + 3.5);
-          ctx.closePath();
-          ctx.fill();
-          ctx.stroke();
-
-          const visibleTreats = Math.min(7, Math.max(2, treatsTotal));
-          for (let ti = 0; ti < visibleTreats; ti++) {
-            const tx = bx - 6.5 + ti * 2.2;
-            const ty = by - 5.2 - (ti % 2) * 1.6;
-            ctx.fillStyle = ti % 2 === 0 ? "#f59e0b" : "#fde68a";
-            ctx.beginPath();
-            ctx.arc(tx, ty, 2.1, 0, Math.PI * 2);
-            ctx.fill();
-          }
-
           // Animace a proporce těla Molly
           const isWalking = mollyBehavior === "WALK_PATROL" && !reducedMotion;
           const isGrooming = mollyBehavior === "GROOM" && !reducedMotion;
-          const isEating = mollyBehavior === "EAT_TREAT" || mollyJoyTimer > 0;
+          const isJoyful = mollyBehavior === "JOY" || mollyJoyTimer > 0;
           const isWatching = mollyBehavior === "WATCH_LAKE";
 
-          const joyJump = isEating ? Math.abs(Math.sin(t * 9)) * -6.5 : 0;
+          const joyJump = isJoyful ? Math.abs(Math.sin(t * 9)) * -6.5 : 0;
           const walkBob = isWalking
             ? Math.abs(Math.sin(mollyWalkCycle * 2)) * -2.2
             : 0;
           const idleBreathe =
-            !isWalking && !isEating ? Math.sin(t * 1.8) * 0.8 : 0;
+            !isWalking && !isJoyful ? Math.sin(t * 1.8) * 0.8 : 0;
           const mcy = my + joyJump + walkBob + idleBreathe;
 
           const legSwingA = isWalking ? Math.sin(mollyWalkCycle) * 4.5 : 0;
@@ -2340,7 +2238,7 @@
           const headTilt = isGrooming ? Math.sin(t * 3.2) * 0.12 : 0;
           const watchHeadNod = isWatching ? Math.sin(t * 1.4) * 0.05 : 0;
 
-          if (isEating) {
+          if (isJoyful) {
             const joyHalo = ctx.createRadialGradient(
               mx,
               mcy - 10,
@@ -2364,8 +2262,8 @@
           ctx.scale(mollyFacing * mollyScale, mollyScale);
 
           // Želvovinový ocas (vychází zezadu z -x)
-          const tailSpeed = isEating ? 5.8 : isWalking ? 3.4 : 2.2;
-          const tailAmp = isEating ? 8.5 : isWalking ? 5.0 : 6.5;
+          const tailSpeed = isJoyful ? 5.8 : isWalking ? 3.4 : 2.2;
+          const tailAmp = isJoyful ? 8.5 : isWalking ? 5.0 : 6.5;
           const tailSway = Math.sin(t * tailSpeed) * tailAmp;
 
           ctx.lineCap = "round";
@@ -2499,7 +2397,7 @@
           ctx.restore();
 
           // Smaragdové oči nebo blažené ^ ^ obloučky
-          if (isEating || breathingActive) {
+          if (isJoyful || breathingActive) {
             ctx.strokeStyle = "#bef264";
             ctx.lineWidth = 2.0;
             [-4.1, 4.1].forEach((ex) => {
@@ -2600,10 +2498,9 @@
           }
 
           // DOM atributy jen při změně — zápis v každém snímku vynucoval přepočet stylů
-          if (canvasEl && lastTreatsAttr !== String(treatsTotal)) {
-            lastTreatsAttr = String(treatsTotal);
+          if (canvasEl && !sanctuaryMollyMarked) {
+            sanctuaryMollyMarked = true;
             canvasEl.dataset.sanctuaryMolly = "ready";
-            canvasEl.dataset.mollyTreats = lastTreatsAttr;
           }
 
           // 13. Cascading Stardust, Lantern Embers & Cursor Wake Particles
@@ -2758,15 +2655,13 @@
             </span>
             <span
               class="legend-chip legend-molly"
-              title="Patronka Molly na břehu dostane za každý skutek pamlsek"
+              title="Patronka Molly na břehu tůně"
             >
               <span class="chip-symbol chip-symbol-svg" aria-hidden="true">
                 <AppIcon name="paw" size={13} class="sanctuary-paw-svg" />
               </span>
               <span class="chip-text"
-                ><strong>Molly</strong><span class="chip-sub">
-                  · Pamlsek</span
-                ></span
+                ><strong>Molly</strong></span
               >
             </span>
 
@@ -2810,10 +2705,10 @@
               <div class="guide-step">
                 <span class="guide-num">3</span>
                 <div>
-                  <strong>Rozsviť světlo a potěš Molly</strong>
+                  <strong>Rozsviť světlo</strong>
                   <p>
-                    Tvé světlo zůstane svítit v krajině a patronka Molly dostane
-                    zasloužený pamlsek.
+                    Každý skutek přidá do krajiny jedno světlo, které tu zůstane
+                    svítit.
                   </p>
                 </div>
               </div>
@@ -2993,33 +2888,13 @@
             class="molly-sanctuary-pill"
             onclick={(e) => {
               e.stopPropagation();
-              feedSanctuaryMolly(0.24, 0.72);
+              petSanctuaryMolly();
             }}
-            title={$mollyState.availableTreats > 0
-              ? "Dát patronce Molly zasloužený pamlsek do mističky u tůně"
-              : "Pohladit patronku Molly u lesní tůně"}
-            aria-label={$mollyState.availableTreats > 0
-              ? "Dát patronce Molly pamlsek"
-              : "Pohladit patronku Molly"}
+            title="Pohladit patronku Molly u lesní tůně"
+            aria-label="Pohladit patronku Molly"
           >
             <AppIcon name="paw" size={14} class="sanctuary-paw-svg" />
-            {#if $mollyState.availableTreats > 0}
-              <span class="molly-pill-label"
-                >Dát Molly pamlsek ({$mollyState.availableTreats}&nbsp;<AppIcon
-                  name={resolveIconKey($mollyState.lastTreat?.icon || "fish")}
-                  size={13}
-                  strokeWidth={2}
-                />)</span
-              >
-            {:else}
-              <span class="molly-pill-label"
-                >Pohladit Molly ({$mollyState.treatsFedTotal}&nbsp;<AppIcon
-                  name={resolveIconKey($mollyState.lastTreat?.icon || "fish")}
-                  size={13}
-                  strokeWidth={2}
-                />)</span
-              >
-            {/if}
+            <span class="molly-pill-label">Pohladit Molly</span>
           </button>
         </div>
 

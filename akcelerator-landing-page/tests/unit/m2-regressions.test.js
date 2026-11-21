@@ -11,7 +11,6 @@ import {
   consumePendingPartnerReturn,
   getPendingPartnerReturnRemainingMs
 } from '$lib/features/actions/services/partnerReturnService.js';
-import { feedMolly, unlockMollyTreat, mollyState } from '$lib/mollyStore.js';
 import { get } from 'svelte/store';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -209,23 +208,14 @@ describe('M2 Regressions (Unit)', () => {
     }
   });
 
-  it('ActionCard.svelte keeps milestone3 string guardrails while supporting inline Molly feeding and new button labels', () => {
+  it('ActionCard.svelte keeps its completion labels and thanks from Molly without any feeding', () => {
     const actionCardSrc = readFileSync(
       path.resolve(srcDir, 'lib/features/actions/components/ActionCard.svelte'),
       'utf8'
     );
-    expect(actionCardSrc).toContain('Dát Molly pamlsek');
+    expect(actionCardSrc).toContain('Molly děkuje.');
     expect(actionCardSrc).toContain('Mám hotovo');
     expect(actionCardSrc).toContain('Přehrát');
-    expect(actionCardSrc).not.toContain('lososová granulka');
-    expect(actionCardSrc).not.toContain('Molly ti děkuje');
-  });
-
-  it('feedMolly propagates fromDock on whisper when unlocked treat is fed from dock', () => {
-    unlockMollyTreat('zvirata_utulek_online');
-    const res = feedMolly('dock', { fromDock: true, silent: true });
-    expect(res.success).toBe(true);
-    const current = get(mollyState);
-    expect(current?.whisper?.fromDock).toBe(true);
+    expect(actionCardSrc).not.toContain('btn-inline-feed-molly');
   });
 });
