@@ -116,7 +116,7 @@ describe('mollyStore Unit Tests (Milestone 3: Follow Mouse & State Transitions)'
       stop();
 
       expect(spark).toMatchObject({ icon: 'sparkles', actionId: 'spark_action' });
-      expect(seen).toMatchObject({ type: 'spark', spark: { icon: 'sparkles' }, surface: 'canvas' });
+      expect(seen).toMatchObject({ type: 'spark', surface: 'canvas' });
       const after = get(mollyState);
       expect(after.petCount).toBe(before.petCount);
       expect(after.mode).toBe(before.mode);
@@ -151,7 +151,7 @@ describe('mollyStore Unit Tests (Milestone 3: Follow Mouse & State Transitions)'
         seen = ev;
       });
 
-      thankForDeed({ silent: true });
+      thankForDeed();
       stop();
 
       const whisper = get(mollyState).whisper;
@@ -165,7 +165,7 @@ describe('mollyStore Unit Tests (Milestone 3: Follow Mouse & State Transitions)'
       const before = get(mollyState);
       const savedBefore = safeGetItem(MOLLY_STORAGE_KEY, 'local');
 
-      thankForDeed({ silent: true });
+      thankForDeed();
 
       const after = get(mollyState);
       expect(after.petCount).toBe(before.petCount);
@@ -176,9 +176,17 @@ describe('mollyStore Unit Tests (Milestone 3: Follow Mouse & State Transitions)'
 
     it('a docked Molly stays asleep while she thanks', () => {
       if (get(mollyState).mode !== 'docked') toggleMollyPelisek();
-      thankForDeed({ silent: true });
+      thankForDeed();
       expect(get(mollyState).mood).toBe('sleeping');
       toggleMollyPelisek();
+    });
+
+    it('thanks during a breathing pause leave the breathing mood alone', () => {
+      if (get(mollyState).mode === 'docked') toggleMollyPelisek();
+      mollyState.update((s) => ({ ...s, mood: 'breathing' }));
+      thankForDeed();
+      expect(get(mollyState).mood).toBe('breathing');
+      mollyState.update((s) => ({ ...s, mood: 'curious' }));
     });
 
     it('no thanks text mentions food or rewards', () => {
@@ -273,7 +281,7 @@ describe('mollyStore Unit Tests (Milestone 3: Follow Mouse & State Transitions)'
       }
 
       // Runtime whispers
-      thankForDeed({ silent: true });
+      thankForDeed();
       collected.push(get(mollyState).whisper?.text || '');
       petMolly();
       collected.push(get(mollyState).whisper?.text || '');

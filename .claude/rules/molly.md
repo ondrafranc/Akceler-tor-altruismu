@@ -26,7 +26,7 @@ Ověření: `tests/molly-stress.spec.ts`, `tests/mobile-tablet-polish.spec.ts`, 
 - Pohlazení je ťuknutí bez posunu; scrollovací tah pohlazením není. Pohlazení na ploše blokového odkazu nespustí navigaci.
 - Na `/svet` předává `$mollyDockBridge.atHome` kočku tůni; dock pak skrývá přepínače, které tam nedávají smysl.
 - Molly nic nepočítá a nic nerozdává: žádné jídlo, počítadla, dárky ani odměny za počet skutků. Dock nese jen pohlazení, pelíšek a sledování myši. Pojistka je v `invariants.test.js`.
-- Na skutek, přání v Krajině dobra a dokončené dechové zastavení reaguje poděkováním (`thankForDeed`): krátká šeptanda, srdíčka, předení. Jiskru z náhledu efektu chytá jako dřív.
+- Na skutek, přání v Krajině dobra a dokončené dechové zastavení reaguje poděkováním (`thankForDeed`): krátká šeptanda, srdíčka a blažený výraz, bez zvuku navíc. Jiskru z náhledu efektu chytá jako dřív.
 
 ## Šeptandy (bubliny)
 - Bublina je vždy ukotvená těsně vedle Molly nebo nad jejíma ušima; nikdy odtržená uprostřed obrazovky. Strana ukotvení (`data-bubble-anchor`) se po dobu jedné šeptandy nemění, aby bublina neskákala.

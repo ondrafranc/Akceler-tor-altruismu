@@ -148,7 +148,7 @@
     setMollyMood("curious");
     breathPhase = completed ? "done" : "idle";
     if (completed) {
-      thankForDeed({ silent: true });
+      thankForDeed();
       playSanctuaryChime([329.63, 440.0, 659.25], 0.6);
       trackEvent("aa_world_breathing_complete", {
         pattern: activePattern.id,

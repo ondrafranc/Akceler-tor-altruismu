@@ -1,6 +1,6 @@
 /**
  * High-level procedural Web Audio presets and ASMR auditory payoffs.
- * Includes Molly purring/crunching/meowing, sanctuary chimes, and 18 distinct civic payoffs.
+ * Includes Molly purring/meowing, sanctuary chimes, and 18 distinct civic payoffs.
  */
 
 import { getAudioContext, isSoundMuted } from './audioContext.js';

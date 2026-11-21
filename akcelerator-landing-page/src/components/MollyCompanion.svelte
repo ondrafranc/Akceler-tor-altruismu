@@ -127,7 +127,7 @@
   // Nová šeptanda čeká na placeWhisperBubble. Do té doby ji žádné jiné přeměření nezměří,
   // takže o místě pro ni (nebo o jejím potlačení) rozhodne jako první právě placeWhisperBubble.
   let bubblePlacementPending = false;
-  // Kdy naposledy místo Molly promluvila oslava v kartě (potlačená odměnová šeptanda).
+  // Kdy naposledy místo Molly promluvila oslava v kartě (potlačené poděkování za skutek).
   let celebrationSpokeTs = 0;
   let bubbleTravelling = $state(false);
   let forceDockWhisper = $state(false);
@@ -375,6 +375,7 @@
       const curScale = actorScale(vw);
       const { obsCost } = findBestWhisperRectWithCost(posX, posY, curScale, vw, vh);
       if (obsCost > 0 && repeatsInlineCelebration(activeWhisper)) {
+        celebrationSpokeTs = Date.now();
         hideWhisperBubble();
         return;
       }
@@ -473,11 +474,6 @@
     }
   }
 
-  /** @returns {import('$lib/icons/iconRegistry.js').IconKey} */
-  function resolveSparkIcon() {
-    return normalizeMollyIcon('sparkles', 'paw');
-  }
-
   /** Jiskra z náhledu efektu nebo ze scény doletí obloukem k Molly, která ji chytí. */
   function launchViewportSparkToMolly() {
     if (typeof window === 'undefined') return;
@@ -521,7 +517,7 @@
       y1: destY,
       p: 0,
       follow: !toDock,
-      icon: resolveSparkIcon(),
+      icon: normalizeMollyIcon('sparkles', 'paw'),
       color: '#f59e0b'
     };
     // Reaktivní je jen viditelnost a vzhled; poloha se zapisuje přímo do DOM v každém snímku
@@ -3191,7 +3187,7 @@
     hintTimer = setTimeout(() => {
       hintTimer = null;
       if (path !== currentPath || document.hidden) return;
-      // V pelíšku Molly spí — nevyrušujeme. Nepřebíjíme čerstvou zprávu (krmení, pohlazení).
+      // V pelíšku Molly spí — nevyrušujeme. Nepřebíjíme čerstvou zprávu (poděkování, pohlazení).
       if (currentState.mode !== 'roaming' || whisperRecentlyShown(3000) || isAnyModalOpen()) {
         return;
       }
@@ -3533,7 +3529,7 @@
           isScalingNow = true;
         }
       }
-      // Chůzi na volné místo přerušilo pohlazení / krmení -> bublinu ukážeme hned
+      // Chůzi na volné místo přerušilo pohlazení -> bublinu ukážeme hned
       if (hurry && behavior !== 'WALK_ROAM') onArrived();
       if (currentState.mode === 'roaming' && !reduced && !atHome && !crowdedPark) {
         behaviorTimer -= dt;
@@ -3671,7 +3667,7 @@
         hearts.length > 0;
 
       // Úspora baterie: když Molly jen sedí/myje se, stačí ~30 fps (pomalé sinusové pohyby
-      // vypadají stejně). Chůze, krmení a srdíčka běží na plnou obnovovací frekvenci.
+      // vypadají stejně). Chůze, chytání jiskry a srdíčka běží na plnou obnovovací frekvenci.
       const canThrottle = !isWalkingNow && !hasActiveTransient && !firefly;
       if (!canThrottle || now - lastRenderTs >= 31) {
         lastRenderTs = now;

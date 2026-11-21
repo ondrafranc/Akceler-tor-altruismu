@@ -62,7 +62,7 @@ function loadMollyState() {
 }
 
 /** @param {MollyState} state */
-function saveMollyState(state) {
+export function saveMollyState(state) {
   try {
     const toPersist = {
       mode: state.mode,
@@ -120,22 +120,22 @@ function scheduleMoodReset(delayMs = 3600) {
 
 /**
  * Molly poděkuje za dokončený skutek, zapsané přání nebo dechové zastavení: krátká šeptanda,
- * spokojené předení a událost `thanks`, na kterou reaguje toulavá Molly. Nic nepočítá a nic neukládá.
- * @param {{ silent?: boolean }} [opts] `silent` vynechá zvuk předení.
+ * spokojená nálada a událost `thanks`, na kterou reaguje toulavá Molly. Nic nepočítá a nic neukládá.
+ * Zvuk nepřidává: skutek, přání i dech mají vlastní.
  */
-export function thankForDeed(opts = {}) {
+export function thankForDeed() {
   const ts = Date.now();
   const text = MOLLY_DEED_THANKS[Math.floor(Math.random() * MOLLY_DEED_THANKS.length)];
 
   mollyState.update((prev) => ({
     ...prev,
-    mood: prev.mode === 'docked' ? 'sleeping' : 'purring',
+    // Dechové zastavení si svou náladu drží, dokud samo neskončí.
+    mood: prev.mood === 'breathing' ? prev.mood : prev.mode === 'docked' ? 'sleeping' : 'purring',
     whisper: { icon: 'heart', text, ts, fromThanks: true }
   }));
 
   mollyEvents.set({ type: 'thanks', action: null, ts });
 
-  if (!opts?.silent) playMollyPurr(0.95, 0.75);
   scheduleMoodReset(4200);
 }
 
@@ -156,7 +156,7 @@ export function notifyMollySpark(action, opts = {}) {
   const actionId =
     (typeof action === 'string' ? action : action?.id) || 'spark_impulse';
 
-  const sparkRecord = { icon: 'sparkles', name: 'světelná jiskra', actionId, ts };
+  const sparkRecord = { icon: 'sparkles', actionId, ts };
 
   const whisper = {
     icon: 'sparkles',
@@ -172,7 +172,6 @@ export function notifyMollySpark(action, opts = {}) {
 
   mollyEvents.set({
     type: 'spark',
-    spark: sparkRecord,
     action,
     surface: opts?.surface || 'canvas',
     ts

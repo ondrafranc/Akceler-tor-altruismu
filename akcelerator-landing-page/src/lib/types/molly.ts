@@ -27,20 +27,11 @@ export type MollyActionLike =
   | MicroAction
   | { id?: string; title?: string; category?: string; mode?: string; [key: string]: unknown };
 
-/** The spark Molly catches after an effect preview or a tap on a scene. */
-export interface MollySpark {
-  icon: string;
-  name: string;
-  actionId: string;
-  ts: number;
-}
-
 /** Payload of the `mollyEvents` store. */
 export interface MollyEvent {
   type: 'thanks' | 'spark' | 'pet' | 'wake';
   action: MollyActionLike | string | null | undefined;
   ts: number;
-  spark?: MollySpark;
   surface?: string;
   whisper?: string;
 }

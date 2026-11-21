@@ -600,7 +600,7 @@
 
   /** Pohlazení Molly u tůně: radostný poskok, srdíčka a vlnka na hladině. */
   function petSanctuaryMolly() {
-    petMolly("Mrrr… u lesní tůně v Krajině dobra je s tebou klidně a hezky.");
+    petMolly();
     mollyJoyTimer = 1.8;
     mollyBehavior = "JOY";
     for (let i = 0; i < 7; i++) {
@@ -1032,7 +1032,7 @@
       Math.min(0.88, (e.clientY - rect.top) / rect.height),
     );
 
-    // Přímé pohlazení / nakrmení patronky Molly na břehu tůně:
+    // Přímé pohlazení patronky Molly na břehu tůně:
     // Podporuje jak stálou domovskou zónu (0.24 * w, 0.72 * h) pro 100% testovací kompatibilitu,
     // tak dynamickou polohu Molly při procházce podél břehu
     const homePxX = MOLLY_SANCTUARY_POS.x * rect.width;
@@ -2183,10 +2183,10 @@
           ctx.restore();
 
           // Mechový pobřežní kámen pod Molly; jeho levý okraj sahá kousek za její místo
-          const bx = (MOLLY_SANCTUARY_POS.x - 0.05) * width;
+          const stoneLeftX = (MOLLY_SANCTUARY_POS.x - 0.05) * width;
           ctx.save();
           const stoneGrad = ctx.createLinearGradient(
-            bx - 18,
+            stoneLeftX - 18,
             homeY - 4,
             homeX + 28,
             homeY + 14,
@@ -2199,9 +2199,9 @@
           ctx.lineWidth = 1.2;
           ctx.beginPath();
           ctx.ellipse(
-            (homeX + bx) * 0.5 + 4,
+            (homeX + stoneLeftX) * 0.5 + 4,
             homeY + 5,
-            Math.abs(homeX - bx) * 0.65 + 24,
+            Math.abs(homeX - stoneLeftX) * 0.65 + 24,
             9.5,
             -0.04,
             0,

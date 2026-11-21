@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { MOLLY_DEED_THANKS } from '../src/lib/mollyTypes.js';
 
 /**
  * UI Declutter / Progressive Disclosure (R1) & Molly's calm voice (R2) Test Suite
@@ -959,4 +960,43 @@ test.describe('R1: Progressive Disclosure & UI Declutter', () => {
     await checkZeroHorizontalOverflow(page, 'svet-guide-open-375x667');
   });
 
+});
+
+test.describe('Molly reacts to a finished deed', () => {
+  test('Finished deed on desktop: Molly purrs and anything she says beside the celebration is thanks, never a guide tip', async ({
+    page
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await gotoHydrated(page, '/');
+    const card = page.locator('.instant-card').first();
+    await card.locator('.btn-studio-primary').dispatchEvent('click');
+    const doneBtn = card.locator('.btn-studio-done');
+    await expect(doneBtn).toBeVisible();
+
+    // Every whisper Molly shows from now on, roaming bubble or dock bubble.
+    await page.evaluate(() => {
+      const seen: string[] = [];
+      (window as unknown as { __aaWhispersAfterDeed: string[] }).__aaWhispersAfterDeed = seen;
+      const note = () => {
+        for (const el of document.querySelectorAll('.molly-whisper-bubble .whisper-text, .molly-dock-whisper .dock-whisper-text')) {
+          const text = el.textContent?.trim();
+          if (text && !seen.includes(text)) seen.push(text);
+        }
+      };
+      new MutationObserver(note).observe(document.body, { subtree: true, childList: true, characterData: true });
+    });
+
+    await doneBtn.click();
+    await expect(card.locator('.in-situ-celebration')).toBeVisible();
+    await expect(page.locator('.molly-companion-layer')).toHaveAttribute('data-molly-mood', 'purring');
+
+    // Longer than the delay after which a page tip or a nudge to the main button would otherwise come.
+    await page.waitForTimeout(3500);
+    const whispers = await page.evaluate(
+      () => (window as unknown as { __aaWhispersAfterDeed: string[] }).__aaWhispersAfterDeed
+    );
+    for (const text of whispers) {
+      expect(MOLLY_DEED_THANKS, `whisper beside the celebration: "${text}"`).toContain(text);
+    }
+  });
 });

@@ -4,6 +4,7 @@ import { CLICK_AND_FEED } from './data/impactFacts.js';
 import { trackEvent, trackFunnel, hasActionStarted } from './analytics.js';
 import {
   thankForDeed,
+  saveMollyState,
   mollyState,
   MOLLY_STORAGE_KEY
 } from './mollyStore.js';
@@ -417,8 +418,7 @@ export function recordSmallWin(step, options = {}) {
   });
 
   const isSilent = Boolean(step?.silent || options?.silent);
-  // Molly za skutek poděkuje. Na stránkách s vlastní oslavou a zvukem zůstává potichu.
-  thankForDeed({ silent: isSilent });
+  thankForDeed();
 
   trackEvent('aa_small_win', {
     surface: entry.surface,
@@ -538,7 +538,7 @@ export function addSanctuaryWish(item) {
     return next;
   });
 
-  thankForDeed({ silent: true });
+  thankForDeed();
 
   return entry;
 }
@@ -760,11 +760,7 @@ export function restoreProgressFromBackupCode(code) {
     // Starší kódy nesou i pole, která už neexistují; čte se z nich jen počet pohlazení.
     mollyState.update((prev) => {
       const next = { ...prev, petCount: Math.max(prev.petCount || 0, clampCounter(m.petCount)) };
-      safeSetItem(
-        AA_MOLLY_COMPANION_KEY,
-        JSON.stringify({ mode: next.mode, mood: next.mood, followMouse: next.followMouse, petCount: next.petCount }),
-        'local'
-      );
+      saveMollyState(next);
       return next;
     });
   }

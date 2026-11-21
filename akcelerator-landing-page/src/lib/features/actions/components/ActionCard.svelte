@@ -1364,7 +1364,7 @@
             size={13}
             class="badge-paw-svg molly-note-paw-svg"
           />
-          <strong>Molly děkuje.</strong> Tvůj skutek teď svítí v <a href="/svet" class="molly-svet-inline-link">Krajině dobra</a>.
+          <strong>Molly děkuje.</strong> Svůj skutek můžeš rozsvítit v <a href="/svet" class="molly-svet-inline-link">Krajině dobra</a>.
         </div>
         <div class="return-dopamine-actions in-situ-actions">
           {#if onCloseSession}
@@ -2379,7 +2379,6 @@
     margin-right: 0.2rem;
   }
 
-  .in-situ-affirmation,
   .molly-svet-inline-link {
     color: var(--accent-primary, #1b5e42);
     font-weight: 700;
@@ -2387,6 +2386,7 @@
     text-underline-offset: 2px;
   }
 
+  .in-situ-affirmation,
   .molly-celebration-note {
     font-size: 0.82rem;
     color: var(--ink-primary, #14281d);

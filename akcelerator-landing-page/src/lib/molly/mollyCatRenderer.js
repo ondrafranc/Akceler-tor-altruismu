@@ -487,7 +487,7 @@ export function drawMollyCat(ctx, w, h, nowSec, state) {
     ctx.fill();
   }
 
-  // 10. Rising Golden & Pink Hearts when petted or fed
+  // 10. Rising Golden & Pink Hearts when petted or thanking
   if (Array.isArray(state.hearts)) {
     for (let i = state.hearts.length - 1; i >= 0; i--) {
       const hItem = state.hearts[i];
