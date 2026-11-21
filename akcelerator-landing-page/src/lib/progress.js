@@ -286,6 +286,9 @@ function loadSteps() {
   }
 }
 
+/**
+ * @param {CompletedStep[]} steps
+ */
 function saveSteps(steps) {
   if (typeof window === 'undefined') return;
   try {
@@ -309,6 +312,9 @@ function loadWishes() {
   }
 }
 
+/**
+ * @param {SanctuaryWish[]} list
+ */
 function saveWishes(list) {
   if (typeof window === 'undefined') return;
   try {
@@ -373,6 +379,7 @@ export const activeCelebration = writable(null);
 /**
  * Zaznamená dokončený malý krok a otevře klidné, nenátlakové poděkování.
  * @param {{ id?: string, title: string, surface?: string, category?: string, element?: string, concreteImpact?: string, lightType?: 'lantern' | 'star' | 'wave', silent?: boolean }} step
+ * @param {{ silent?: boolean }} [options]
  */
 export function recordSmallWin(step, options = {}) {
   const catalogMatch = Array.isArray(MICRO_ACTIONS)
@@ -549,6 +556,10 @@ export function clearSanctuaryWishes() {
   saveWishes([]);
 }
 
+/**
+ * @param {string} uid
+ * @param {string | null | undefined} note
+ */
 export function saveStepReflection(uid, note) {
   const cleaned = String(note || '').slice(0, 240);
   completedSteps.update((list) => {

@@ -3,6 +3,12 @@
  * Extracted to eliminate circular dependency between mollyStore.js and sensory catalog/resolvers (M13 / AUDIT #3).
  */
 
+/**
+ * @typedef {import('./types/molly.js').MollyFoodType} MollyFoodType
+ * @typedef {import('./types/molly.js').MollyTreat} MollyTreat
+ */
+
+/** @type {Record<MollyFoodType, MollyTreat>} */
 export const MOLLY_TREAT_BY_FOOD = {
   salmon: {
     icon: 'fish',
@@ -54,6 +60,7 @@ export const MOLLY_TREAT_BY_FOOD = {
   }
 };
 
+/** @type {Record<string, MollyFoodType>} */
 export const MODE_TO_MOLLY_FOOD = {
   // Animals
   kibble: 'salmon',
@@ -108,6 +115,10 @@ export const MODE_TO_MOLLY_FOOD = {
   kinetic_steps: 'star_treat'
 };
 
+/**
+ * @param {string | { mode?: string | null } | null | undefined} specOrMode
+ * @returns {MollyTreat}
+ */
 export function resolveMollyTreat(specOrMode) {
   const mode =
     typeof specOrMode === 'string'
@@ -121,6 +132,7 @@ export function resolveMollyTreat(specOrMode) {
  * Dárky pro Molly za skutečné skutky (ne za klepání do plátna). Každý dárek se natrvalo vykreslí na kočce
  * (obojek → zvoneček → květinová korunka → hvězdička), aby návrat ke skutkům měl viditelnou stopu.
  * Záměrně bez „levelů“ — jde o vděčnost, ne o soutěž.
+ * @type {import('./types/molly.js').MollyMilestone[]}
  */
 export const MOLLY_MILESTONES = [
   { at: 3, key: 'collar', icon: 'heart', name: 'smaragdový obojek' },

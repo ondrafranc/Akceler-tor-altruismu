@@ -12,8 +12,21 @@
   import AppIcon from '$lib/components/AppIcon.svelte';
   import { resolveIconKey } from '$lib/icons/iconRegistry.js';
 
+  /** @typedef {import('$lib/types/progress').CompletedStep} CompletedStep */
+  /**
+   * @typedef {{
+   *   x: number,
+   *   y: number,
+   *   zone: 'sky' | 'water',
+   *   element: string,
+   *   lightType?: string
+   * }} DashboardLight
+   */
+
+  /** @type {DashboardLight[]} */
   export let activeLights = [];
   export let myDeedsCount = 0;
+  /** @type {CompletedStep | null} */
   export let latestStep = null;
   export let inAppBrowserDetected = false;
 
@@ -22,10 +35,12 @@
   let storyDrawerOpen = false;
   let storyMode = 'quiet'; // 'quiet' | 'tip'
   let storyDataUrl = '';
+  /** @type {Blob | null} */
   let storyBlob = null;
   let storyBusy = false;
   let storyCopiedMsg = '';
 
+  /** @type {string | null} */
   let editingUid = null;
   let draftNote = '';
   let backupCodeInput = '';
@@ -95,11 +110,17 @@
     setTimeout(() => (storyCopiedMsg = ''), 4500);
   }
 
+  /**
+   * @param {CompletedStep} step
+   */
   function startEditNote(step) {
     editingUid = step.uid;
     draftNote = step.note || '';
   }
 
+  /**
+   * @param {string} uid
+   */
   function saveNote(uid) {
     saveStepReflection(uid, draftNote.trim());
     editingUid = null;

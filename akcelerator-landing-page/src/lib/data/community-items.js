@@ -1,6 +1,28 @@
 /**
+ * @typedef {{
+ *   id: string,
+ *   kind: string,
+ *   name: string,
+ *   category: string,
+ *   description: string,
+ *   quickMission: string,
+ *   helpWays: string[],
+ *   visitMode: string,
+ *   website: string,
+ *   address_label: string,
+ *   lat: number,
+ *   lon: number,
+ *   city?: string,
+ *   email?: string,
+ *   phone?: string,
+ *   status?: string,
+ *   [key: string]: unknown
+ * }} LocalCommunityItem
+ */
+
+/**
  * In-memory úložiště pro komunitní tipy (slouží jako okamžitý fallback, když není připojená DB)
- * @type {Array<{ id: string, kind: string, name: string, category: string, description: string, lat: number, lon: number, [key: string]: unknown }>}
+ * @type {LocalCommunityItem[]}
  */
 export const LOCAL_COMMUNITY_ITEMS = [
   {

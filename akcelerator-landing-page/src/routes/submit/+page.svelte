@@ -48,8 +48,8 @@
   let geoMessage = $state("");
   /** @type {Array<{label: string, lat: number, lon: number}>} */
   let geoResults = $state([]);
-  let lat = $state(null);
-  let lon = $state(null);
+  let lat = $state(/** @type {number | null} */ (null));
+  let lon = $state(/** @type {number | null} */ (null));
   let addressLabel = $state("");
 
   // Spam protection (honeypot + monotonic elapsed time)
@@ -60,7 +60,7 @@
   let draftReady = $state(false);
 
   let isSubmitting = $state(false);
-  let submitStatus = $state(null); // null | success | error
+  let submitStatus = $state(/** @type {'success' | 'error' | null} */ (null)); // null | success | error
   let submitMessage = $state("");
   let submittedMapUrl = $state("/near");
   let optionalFieldsOpen = $state(false);
@@ -120,6 +120,7 @@
     }
   });
 
+  /** @param {{ name: string, lat: number, lon: number }} city */
   function pickQuickCity(city) {
     lat = city.lat;
     lon = city.lon;
@@ -165,6 +166,7 @@
     }
   }
 
+  /** @param {{ label: string, lat: number, lon: number } | null | undefined} r */
   function pickLocation(r) {
     lat = typeof r?.lat === "number" ? r.lat : null;
     lon = typeof r?.lon === "number" ? r.lon : null;
@@ -175,6 +177,10 @@
     geoStatus = "ok";
   }
 
+  /**
+   * @param {string} dtLocal
+   * @returns {string | null}
+   */
   function toIsoOrNull(dtLocal) {
     const s = safeText(dtLocal);
     if (!s) return null;

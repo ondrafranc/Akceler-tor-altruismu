@@ -73,7 +73,7 @@ export function isValidLatLon(lat, lon) {
  */
 export function isCzLatLon(lat, lon) {
   if (!isValidLatLon(lat, lon)) return false;
-  return lat >= 48.0 && lat <= 51.5 && lon >= 11.5 && lon <= 19.5;
+  return lat >= 48.0 && lat <= 51.5 && /** @type {number} */ (lon) >= 11.5 && /** @type {number} */ (lon) <= 19.5;
 }
 
 /**

@@ -50,6 +50,8 @@
   import AppIcon from "$lib/components/AppIcon.svelte";
   import EvidenceBadge from "./EvidenceBadge.svelte";
 
+  /** @typedef {(typeof VALUES)[number] & { id?: string }} ValueTopic */
+
   /**
    * @type {{
    *   action?: (import('$lib/types').MicroAction & Record<string, unknown>) | null,
@@ -63,11 +65,12 @@
    *   usePersonalValues?: boolean,
    *   variant?: 'instant' | 'directory' | 'compact',
    *   spotlight?: boolean,
+   *   idleLure?: boolean,
    *   className?: string,
-   *   onStart?: ((action?: import('$lib/types').MicroAction) => void) | null,
-   *   onComplete?: ((action?: import('$lib/types').MicroAction) => void) | null,
-   *   onShare?: ((action?: import('$lib/types').MicroAction) => void) | null,
-   *   onReportBroken?: ((action?: import('$lib/types').MicroAction) => void) | null,
+   *   onStart?: ((action: import('$lib/types').MicroAction) => void) | null,
+   *   onComplete?: ((action: import('$lib/types').MicroAction) => void) | null,
+   *   onShare?: ((action: import('$lib/types').MicroAction) => void) | null,
+   *   onReportBroken?: ((action: import('$lib/types').MicroAction) => void) | null,
    *   onToggleSound?: (() => void) | null,
    *   onTogglePersonalValues?: (() => void) | null,
    *   onNextIdea?: (() => void) | null,
@@ -87,6 +90,7 @@
     usePersonalValues = false,
     variant = "instant",
     spotlight = false,
+    idleLure = true,
     className = "",
     onStart = null,
     onComplete = null,
@@ -443,6 +447,8 @@
     const direct = previewHovered || ctaHovered || ctaFocused || previewNudged;
     const teased = previewTeased;
     const visible = stageVisible;
+    // Rodič smí samovolnou pobídku podržet, dokud sám kartami listuje (vstupní prohlídka na `/`).
+    const lureAllowed = idleLure;
 
     if (!activePreview) {
       clearIdleTimer();
@@ -470,11 +476,11 @@
       return;
     }
 
-    if (!teased && visible) {
+    if (!teased && visible && lureAllowed) {
       scheduleIdleTease(
         hasIdleTeasedOnce ? IDLE_REPEAT_DELAY_MS : IDLE_FIRST_DELAY_MS,
       );
-    } else if (!visible) {
+    } else if (!visible || !lureAllowed) {
       clearIdleTimer();
     }
   });
@@ -538,7 +544,9 @@
   /** @param {string[]} ids */
   function getSavedValueLabels(ids) {
     if (!ids || !ids.length) return "";
-    return VALUES.filter((v) => ids.includes(v.key || v.id))
+    return VALUES.filter((/** @type {ValueTopic} */ v) =>
+      ids.includes(/** @type {string} */ (v.key || v.id)),
+    )
       .map((v) => stripLeadingEmoji(v.label))
       .slice(0, 2)
       .join(", ");
@@ -560,6 +568,11 @@
     });
   }
 
+  /**
+   * @param {import('$lib/types').MicroAction | null | undefined} act
+   * @param {string} [scene]
+   * @returns {{ label: string, shortLabel: string, theme: string } | null}
+   */
   function getCategoryAura(act, scene = "") {
     if (!act) return null;
     const element = act.element || "";
@@ -690,6 +703,7 @@
     return { label: "Dobrý skutek", shortLabel: "Skutek", theme: "default" };
   }
 
+  /** @type {Record<string, { promise: string, status: string }>} */
   const PREVIEW_CUE_BY_ID = {
     zvirata_utulek_online: {
       promise: "Zdarma · přes 1 068 tun krmiva útulkům",
@@ -873,6 +887,11 @@
     },
   };
 
+  /**
+   * @param {import('$lib/types').MicroAction | null | undefined} act
+   * @param {{ label?: string } | null | undefined} meta
+   * @returns {{ promise: string, status: string }}
+   */
   function buildPreviewCue(act, meta) {
     if (!act) return { promise: "", status: "" };
     const id = act.id || "";
@@ -889,6 +908,7 @@
     return { promise, status };
   }
 
+  /** @param {string | undefined} theme */
   function getCategoryIcon(theme) {
     switch (theme) {
       case "animals":
@@ -906,6 +926,7 @@
     }
   }
 
+  /** @param {string | undefined} theme */
   function getCtaIcon(theme) {
     switch (theme) {
       case "animals":
@@ -1023,11 +1044,12 @@
       </div>
     {/if}
 
-    <!-- 2. Název příležitosti -->
-    <h2 class="action-title card-title rec-title">{actionTitle}</h2>
-
-    <!-- 3. Jasné vysvětlení jednoho konkrétního skutku -->
-    <p class="action-desc card-desc rec-desc">{action.desc}</p>
+    <!-- 2.–3. Název příležitosti a jasné vysvětlení jednoho konkrétního skutku.
+         Obal drží na `/` stálou výšku textu, aby scéna a CTA pod ním neskákaly mezi kartami. -->
+    <div class="action-copy">
+      <h2 class="action-title card-title rec-title">{actionTitle}</h2>
+      <p class="action-desc card-desc rec-desc">{action.desc}</p>
+    </div>
 
     <!-- 3b. Jednotná živá scéna proměny Před -> Po (preview -> active -> payoff bez skoku layoutu) -->
     {#if showStage}
@@ -1910,20 +1932,43 @@
     border-color: var(--accent-primary, #1b5e42);
   }
 
+  .action-copy {
+    --copy-title-size: 1.28rem;
+    --copy-title-leading: 1.24;
+    --copy-title-gap: 0.4rem;
+    --copy-desc-size: 0.93rem;
+    --copy-desc-leading: 1.54;
+    --copy-desc-gap: 0.5rem;
+    display: flow-root;
+    min-width: 0;
+  }
+
   .action-title {
     font-weight: 800;
-    font-size: 1.28rem;
-    line-height: 1.24;
+    font-size: var(--copy-title-size);
+    line-height: var(--copy-title-leading);
     letter-spacing: -0.022em;
     color: var(--ink-primary, #14281d);
-    margin: 0 0 0.4rem 0;
+    margin: 0 0 var(--copy-title-gap) 0;
   }
 
   .action-desc {
     color: var(--ink-secondary, #3f574a);
-    font-size: 0.93rem;
-    line-height: 1.54;
-    margin: 0 0 0.5rem 0;
+    font-size: var(--copy-desc-size);
+    line-height: var(--copy-desc-leading);
+    margin: 0 0 var(--copy-desc-gap) 0;
+  }
+
+  /* Karta vedle hero textu (desktop, tablet na šířku): text karty má na `/` vyhrazené
+     místo pro dvouřádkový nadpis a třířádkový popis. Scéna, CTA i stránkování pod ním
+     tak stojí na místě, ať se karta vymění ručně, nebo při vstupní prohlídce režimů. */
+  @media (min-width: 920px) {
+    :global(.instant-card) .action-copy {
+      min-height: calc(
+        2 * var(--copy-title-leading) * var(--copy-title-size) + var(--copy-title-gap) + 3 *
+          var(--copy-desc-leading) * var(--copy-desc-size) + var(--copy-desc-gap)
+      );
+    }
   }
 
   .action-impact-summary {

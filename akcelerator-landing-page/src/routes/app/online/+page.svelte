@@ -35,6 +35,8 @@
   import AppIcon from "$lib/components/AppIcon.svelte";
   import PageHeader from "$lib/components/PageHeader.svelte";
 
+  /** @typedef {import('$lib/types').MicroAction} MicroAction */
+
   let activeFilter = $state("all");
   let searchQuery = $state("");
   /** @type {string[]} */
@@ -43,8 +45,9 @@
   let spotlightId = $state("");
   let visibleLimit = $state(3);
   let soundMuted = $state(false);
-  let returnPromptAction = $state(null);
+  let returnPromptAction = $state(/** @type {MicroAction | null} */ (null));
   let returnMetric = $state(0);
+  /** @type {MicroAction | null} */
   let awaitingReturnAction = null;
   let leaveTimestamp = 0;
 
@@ -61,6 +64,7 @@
   ];
 
   onMount(() => {
+    /** @type {ReturnType<typeof setTimeout> | null} */
     let onlineReturnTimer = null;
     soundMuted = isSoundMuted();
     try {
@@ -160,6 +164,7 @@
     trackEvent("aa_sound_toggle", { surface: "online", muted: soundMuted });
   }
 
+  /** @param {MicroAction} action */
   function handleStartOnlineAction(action) {
     awaitingReturnAction = action;
     leaveTimestamp = Date.now();
@@ -169,6 +174,7 @@
     trackEvent("aa_clickout", { surface: "online", id: action.id });
   }
 
+  /** @param {MicroAction} action */
   async function shareAction(action) {
     const directUrl =
       typeof window !== "undefined"
@@ -193,11 +199,13 @@
     } catch {}
   }
 
+  /** @param {MicroAction} action */
   function matchesSavedValues(action) {
     if (!savedValues.length) return false;
     return action.values.some((v) => savedValues.includes(v));
   }
 
+  /** @param {string} id */
   function isCompleted(id) {
     return ($completedSteps || []).some((s) => s.id === id);
   }
@@ -333,7 +341,7 @@
         use:impactCanvas={{
           action: returnPromptAction,
           climax: true,
-          onProgress: (v) => {
+          onProgress: (/** @type {number} */ v) => {
             returnMetric = v;
           },
         }}
@@ -343,7 +351,7 @@
           type="button"
           class="btn-return-complete"
           onclick={() => {
-            const doneAction = returnPromptAction;
+            const doneAction = /** @type {MicroAction} */ (returnPromptAction);
             returnPromptAction = null;
             recordSmallWin({
               id: doneAction.id,

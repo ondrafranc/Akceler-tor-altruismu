@@ -25,10 +25,14 @@ import {
   AA_MOLLY_HINT_PREFIX,
   AA_MOLLY_HINTS_KEY,
   AA_MOLLY_NUDGES_KEY,
-  AA_HOME_DECK_STATE_KEY
+  AA_HOME_DECK_STATE_KEY,
+  AA_HOME_ENTRY_TOUR_SEEN_KEY
 } from '../../src/lib/storage/index.js';
 
+/** @typedef {{ window?: typeof globalThis.window }} GlobalWithOptionalWindow */
+
 describe('Storage Subsystem Unit Tests (src/lib/storage/)', () => {
+  /** @type {typeof globalThis.window | undefined} */
   let prevWindow;
 
   beforeEach(() => {
@@ -37,7 +41,7 @@ describe('Storage Subsystem Unit Tests (src/lib/storage/)', () => {
 
   afterEach(() => {
     if (prevWindow === undefined) {
-      delete globalThis.window;
+      delete /** @type {GlobalWithOptionalWindow} */ (globalThis).window;
     } else {
       globalThis.window = prevWindow;
     }
@@ -45,7 +49,7 @@ describe('Storage Subsystem Unit Tests (src/lib/storage/)', () => {
   });
 
   describe('1. Canonical Key Registry Integrity', () => {
-    it('exports all 18 canonical keys as non-empty strings', () => {
+    it('exports all canonical keys as non-empty strings', () => {
       const keys = [
         AA_COMPLETED_STEPS_KEY,
         AA_SANCTUARY_WISHES_KEY,
@@ -63,7 +67,8 @@ describe('Storage Subsystem Unit Tests (src/lib/storage/)', () => {
         AA_PARTNER_RETURN_KEY,
         AA_MOLLY_HINTS_KEY,
         AA_MOLLY_NUDGES_KEY,
-        AA_HOME_DECK_STATE_KEY
+        AA_HOME_DECK_STATE_KEY,
+        AA_HOME_ENTRY_TOUR_SEEN_KEY
       ];
       for (const k of keys) {
         expect(typeof k).toBe('string');
@@ -86,13 +91,13 @@ describe('Storage Subsystem Unit Tests (src/lib/storage/)', () => {
 
   describe('2. SSR & Headless Node Safety (window === undefined)', () => {
     it('resolveNativeStorage safely returns null when window is undefined', () => {
-      delete globalThis.window;
+      delete /** @type {GlobalWithOptionalWindow} */ (globalThis).window;
       expect(resolveNativeStorage('local')).toBeNull();
       expect(resolveNativeStorage('session')).toBeNull();
     });
 
     it('persists and retrieves in-memory without throwing', () => {
-      delete globalThis.window;
+      delete /** @type {GlobalWithOptionalWindow} */ (globalThis).window;
       const testKey = AA_COMPLETED_STEPS_KEY;
       setStoredItem(testKey, JSON.stringify([{ id: 'step-1' }]), 'local');
       expect(getStoredItem(testKey, 'local')).toBe(JSON.stringify([{ id: 'step-1' }]));
@@ -102,12 +107,12 @@ describe('Storage Subsystem Unit Tests (src/lib/storage/)', () => {
     });
 
     it('returns null for non-existent keys in memory', () => {
-      delete globalThis.window;
+      delete /** @type {GlobalWithOptionalWindow} */ (globalThis).window;
       expect(getStoredItem('non_existent_key_xyz', 'local')).toBeNull();
     });
 
     it('coerces non-string values to string', () => {
-      delete globalThis.window;
+      delete /** @type {GlobalWithOptionalWindow} */ (globalThis).window;
       setStoredItem(AA_SOUND_MUTED_KEY, 1, 'local');
       expect(getStoredItem(AA_SOUND_MUTED_KEY, 'local')).toBe('1');
     });
@@ -115,7 +120,7 @@ describe('Storage Subsystem Unit Tests (src/lib/storage/)', () => {
 
   describe('3. Storage Domain Isolation (local vs session)', () => {
     it('isolates local and session storage values', () => {
-      delete globalThis.window;
+      delete /** @type {GlobalWithOptionalWindow} */ (globalThis).window;
       setStoredItem(AA_VALUES_KEY, 'local_data', 'local');
       setStoredItem(AA_VALUES_KEY, 'session_data', 'session');
 
@@ -128,7 +133,7 @@ describe('Storage Subsystem Unit Tests (src/lib/storage/)', () => {
     });
 
     it('defaults kind to local when omitted', () => {
-      delete globalThis.window;
+      delete /** @type {GlobalWithOptionalWindow} */ (globalThis).window;
       setStoredItem(AA_USER_TOPICS_KEY, 'default_local');
       expect(getStoredItem(AA_USER_TOPICS_KEY)).toBe('default_local');
       expect(getStoredItem(AA_USER_TOPICS_KEY, 'local')).toBe('default_local');
@@ -222,7 +227,7 @@ describe('Storage Subsystem Unit Tests (src/lib/storage/)', () => {
 
   describe('7. Home Deck State Persistence Key (AA_HOME_DECK_STATE_KEY)', () => {
     it('round-trips serialized HomeDeckState safely in SSR and browser storage', () => {
-      delete globalThis.window;
+      delete /** @type {GlobalWithOptionalWindow} */ (globalThis).window;
       const payload = JSON.stringify({
         energyMode: 'focus',
         actionId: 'zvire_v_nouzi',

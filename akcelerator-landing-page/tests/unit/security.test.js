@@ -765,8 +765,7 @@ describe('security: M1 iteration 2 boundary & error-handling regressions', () =>
     process.env.PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
     process.env.PUBLIC_SUPABASE_ANON_KEY = 'anon-key-test';
 
-    /** @type {Record<string, unknown> | null} */
-    let insertedRow = null;
+    let insertedRow = /** @type {Record<string, unknown> | null} */ (null);
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
       const bodyStr = typeof init?.body === 'string' ? init.body : '';
       const parsed = bodyStr ? JSON.parse(bodyStr) : null;
@@ -961,8 +960,7 @@ describe('security: M1 iteration 2 boundary & error-handling regressions', () =>
     process.env.PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
     process.env.PUBLIC_SUPABASE_ANON_KEY = 'anon-key-test';
 
-    /** @type {Record<string, unknown> | null} */
-    let insertedRow = null;
+    let insertedRow = /** @type {Record<string, unknown> | null} */ (null);
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
       const bodyStr = typeof init?.body === 'string' ? init.body : '';
       const parsed = bodyStr ? JSON.parse(bodyStr) : null;

@@ -2,6 +2,8 @@
  * Procedural Canvas 2D scene renderers for nature and ecology.
  */
 
+/** @typedef {import('../../types/sensory.js').SceneRenderer} SceneRenderer */
+
 import { clamp01, subP, lerp, easeOut } from '../graphics/math.js';
 import {
   drawGlow,
@@ -14,6 +16,7 @@ import {
   drawFlower
 } from '../graphics/primitives.js';
 
+/** @type {SceneRenderer} */
 export function renderForestBloom(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // Sázíme budoucnost: Drobná sazenička na holině mezi pařezy -> Mohutný rozvětvený smaragdový dub
   const groundY = by - 2;
@@ -69,6 +72,7 @@ export function renderForestBloom(c, { p, prep, wt, cx, cy, by, w, h, cs, red, f
   }
 }
 
+/** @type {SceneRenderer} */
 export function renderFruitTree(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // Na ovoce: Holé jarní větve a prázdný špendlík -> Zelená koruna s 6 červenými jablky a zlatým mapovým špendlíkem
   const groundY = by - 2;
@@ -133,6 +137,7 @@ export function renderFruitTree(c, { p, prep, wt, cx, cy, by, w, h, cs, red, fra
   c.stroke();
 }
 
+/** @type {SceneRenderer} */
 export function renderButterflyLens(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // iNaturalist: Kulatá přírodovědecká lupa nad složenou siluetou -> Zaostřený otakárek s prokreslenými křídly a ostruhami
   const lensP = easeOut(p);
@@ -230,6 +235,7 @@ export function renderButterflyLens(c, { p, prep, wt, cx, cy, by, w, h, cs, red,
   c.stroke();
 }
 
+/** @type {SceneRenderer} */
 export function renderWaterSpring(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // eSTUDÁNKY: Lesní studánka pod šindelovou stříškou zanesená listím -> Křišťálový pramen, kruhy na vodě a kapradí
   const cleanP = easeOut(p);
@@ -240,6 +246,12 @@ export function renderWaterSpring(c, { p, prep, wt, cx, cy, by, w, h, cs, red, f
   const postHalfX = 36.5;
   const eaveHalfX = 46.5;
 
+  /**
+   * @param {number} mx
+   * @param {number} my
+   * @param {number} scaleM
+   * @param {boolean} lit
+   */
   const drawMossTuft = (mx, my, scaleM, lit) => {
     c.save();
     c.fillStyle = lit ? '#16a34a' : '#14532d';
@@ -267,6 +279,21 @@ export function renderWaterSpring(c, { p, prep, wt, cx, cy, by, w, h, cs, red, f
   };
 
   // Pomocník pro vykreslení pravého lesního kapradí (zakřivený stonek s 5–6 páry lístků pinnae plynule se zužujícími až ke špičce)
+  /**
+   * @param {number} dir
+   * @param {number} baseX
+   * @param {number} baseY
+   * @param {number} spanF
+   * @param {number} riseF
+   * @param {number} ctrlXF
+   * @param {number} ctrlYF
+   * @param {number} pairs
+   * @param {number} unfurlF
+   * @param {string} stemCol
+   * @param {string} leafColA
+   * @param {string} leafColB
+   * @param {number} swayX
+   */
   const drawFernFrond = (dir, baseX, baseY, spanF, riseF, ctrlXF, ctrlYF, pairs, unfurlF, stemCol, leafColA, leafColB, swayX) => {
     const x0 = baseX;
     const y0 = baseY;
@@ -695,6 +722,7 @@ export function renderWaterSpring(c, { p, prep, wt, cx, cy, by, w, h, cs, red, f
   }
 }
 
+/** @type {SceneRenderer} */
 export function renderCompostSprout(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // Kompost Mapko: Kopeček živé hlíny se slupkami a semínkem -> Kořínky živin a vyrůstající zlatá slunečnice
   const moundY = by + 1;
@@ -778,6 +806,7 @@ export function renderCompostSprout(c, { p, prep, wt, cx, cy, by, w, h, cs, red,
   }
 }
 
+/** @type {SceneRenderer} */
 export function renderEcoCleanup(c, { p, prep, wt, cx, cy, by, w, h, cs, red, frame, gx, py, spanX }) {
   // Trash Hero / Ukliďme Česko: Zřetelné odpadky na holé pěšině -> Čistá rozkvetlá louka s vlčími máky, chrpami a motýlkem
   const groundY = by - 3;

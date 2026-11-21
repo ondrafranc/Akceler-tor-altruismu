@@ -13,6 +13,7 @@ import {
 const ROOT = resolve(process.cwd());
 const EMOJI_RE = /[\p{Emoji_Presentation}\p{Extended_Pictographic}\u2600-\u27BF]/u;
 
+/** @type {import('$lib/icons/iconRegistry.js').IconKey[]} */
 const PROJECT_CONTRACT_KEYS = [
   'zap', 'compass', 'clock', 'map-pin', 'trees', 'plus', 'paw', 'fish', 'milk',
   'leaf', 'heart', 'bell', 'star', 'home', 'footprints', 'mouse-pointer',

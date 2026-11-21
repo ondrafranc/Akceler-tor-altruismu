@@ -28,6 +28,16 @@ export const MOLLY_STORAGE_KEY = AA_MOLLY_COMPANION_KEY;
 export const MOLLY_FOLLOW_MOUSE_KEY = AA_MOLLY_FOLLOW_MOUSE_KEY;
 export { MOLLY_PET_WHISPERS, MOLLY_UNEARNED_PET_WHISPERS };
 
+/**
+ * @typedef {import('./types/molly.js').MollyTreat} MollyTreat
+ * @typedef {import('./types/molly.js').MollyMode} MollyMode
+ * @typedef {import('./types/molly.js').MollyWhisper} MollyWhisper
+ * @typedef {import('./types/molly.js').MollyState} MollyState
+ * @typedef {import('./types/molly.js').MollyActionLike} MollyActionLike
+ * @typedef {import('./types/molly.js').MollyEvent} MollyEvent
+ */
+
+/** @type {MollyState} */
 const DEFAULT_MOLLY_STATE = {
   mode: 'roaming', // 'roaming' | 'docked'
   mood: 'curious', // 'curious' | 'purring' | 'eating' | 'playful' | 'sleeping' | 'breathing'
@@ -63,6 +73,7 @@ function countStoredDeeds() {
   return n;
 }
 
+/** @param {Date} d */
 function localDayKey(d) {
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }
@@ -83,7 +94,8 @@ function isSameDayIso(isoStr) {
  * Pokud přírůstek pamlsku odemkl nový dárek, vrátí oslavnou šeptandu místo běžné.
  * @param {number} prevTotal
  * @param {number} nextTotal
- * @param {{ icon: string, text: string, ts: number }} fallback
+ * @param {MollyWhisper} fallback
+ * @returns {MollyWhisper}
  */
 function milestoneWhisperOr(prevTotal, nextTotal, fallback) {
   const m = getUnlockedMilestone(prevTotal, nextTotal);
@@ -96,6 +108,7 @@ function milestoneWhisperOr(prevTotal, nextTotal, fallback) {
   };
 }
 
+/** @returns {MollyState} */
 function loadMollyState() {
   const followFromKey = safeGetItem(MOLLY_FOLLOW_MOUSE_KEY, 'local');
   const initialFollow = followFromKey !== null ? followFromKey === 'true' : false;
@@ -103,6 +116,7 @@ function loadMollyState() {
   try {
     const raw = safeGetItem(MOLLY_STORAGE_KEY, 'local');
     if (!raw) return { ...DEFAULT_MOLLY_STATE, followMouse: initialFollow, giftDeeds: countStoredDeeds() };
+    /** @type {Partial<MollyState> | null} */
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
       return { ...DEFAULT_MOLLY_STATE, followMouse: initialFollow };
@@ -155,6 +169,7 @@ function loadMollyState() {
   }
 }
 
+/** @param {MollyState} state */
 function saveMollyState(state) {
   try {
     const toPersist = {
@@ -177,12 +192,33 @@ function saveMollyState(state) {
 
 export const mollyState = writable({ ...DEFAULT_MOLLY_STATE });
 export const followMouse = writable(false);
-export const mollyEvents = writable(null);
+export const mollyEvents = writable(/** @type {MollyEvent | null} */ (null));
+
+/**
+ * Průvodcovské šeptandy Molly (uvítací tip stránky a dovedení k hlavnímu tlačítku) smí stránka
+ * na chvíli podržet, když sama něco předvádí. `dropNudge` platí pro okamžik uvolnění.
+ */
+export const mollyGuideHold = writable({ held: false, dropNudge: false });
+
+/** Podrží průvodcovské šeptandy Molly, dokud je stránka neuvolní. */
+export function holdMollyGuide() {
+  mollyGuideHold.set({ held: true, dropNudge: false });
+}
+
+/**
+ * Uvolní průvodcovské šeptandy; Molly začne počítat klid od této chvíle.
+ * @param {{ dropNudge?: boolean }} [opts] `dropNudge` vynechá na této stránce dovedení k hlavnímu
+ *   tlačítku (na obrazovce zůstalo něco, co si návštěvník nevybral a k čemu text pobídky nesedí).
+ */
+export function releaseMollyGuide(opts = {}) {
+  mollyGuideHold.set({ held: false, dropNudge: opts.dropNudge === true });
+}
 
 const initialLoadedMolly = loadMollyState();
 mollyState.set(initialLoadedMolly);
 followMouse.set(initialLoadedMolly.followMouse);
 
+/** @type {ReturnType<typeof setTimeout> | null} */
 let moodResetTimer = null;
 let lastSparkNotifyTs = 0;
 
@@ -200,12 +236,13 @@ function scheduleMoodReset(delayMs = 3600) {
 /**
  * Odemkne 1 zasloužený pamlsek pro Molly za skutečný altruistický skutek (delayed gratification).
  * Pamlsek se přidá do dostupné zásoby (availableTreats) a zařadí do fronty earnedTreatQueue.
- * @param {import('./types').MicroAction | { id?: string, title?: string, category?: string, [key: string]: unknown } | string | null | undefined} action
+ * @param {MollyActionLike | string | null | undefined} action
  * @param {{ reason?: string, source?: string }} [opts]
- * @returns {{ unlocked: boolean, treat: import('./types').MollyTreat | Record<string, unknown> }}
+ * @returns {{ unlocked: boolean, treat: MollyTreat }}
  */
 export function unlockMollyTreat(action, opts = {}) {
   const meta = getActionEffectMeta(action);
+  /** @type {MollyTreat} */
   const treat = meta?.mollyTreat || resolveMollyTreat(action);
   const actionId = (typeof action === 'string' ? action : action?.id) || 'altruism_step';
   const ts = Date.now();
@@ -252,9 +289,9 @@ export function unlockMollyTreat(action, opts = {}) {
  * Pokud uživatel nemá žádný odemčený pamlsek (availableTreats <= 0), pamlsek se nevydá,
  * čítač pamlsků se nezvýší a Molly se místo toho nechá s láskou pohladit.
  *
- * @param {string | import('./types').MicroAction | Record<string, unknown> | null | undefined} [sourceOrAction]
- * @param {{ silent?: boolean, source?: string, action?: import('./types').MicroAction | Record<string, unknown> | null, unearnedWhisper?: string, fromDock?: boolean }} [opts]
- * @returns {{ success: boolean, treat: import('./types').MollyTreat | null }}
+ * @param {string | MollyActionLike | null | undefined} [sourceOrAction]
+ * @param {{ silent?: boolean, source?: string, action?: MollyActionLike | null, unearnedWhisper?: string, fromDock?: boolean }} [opts]
+ * @returns {{ success: boolean, treat: MollyTreat | null }}
  */
 export function feedMolly(sourceOrAction = 'action', opts = {}) {
   const action =
@@ -267,6 +304,7 @@ export function feedMolly(sourceOrAction = 'action', opts = {}) {
       : opts?.source || 'action';
 
   let currentAvailable = 0;
+  /** @type {MollyTreat[]} */
   let earnedQueue = [];
   let prevTotal = 0;
   let prevDeeds = 0;
@@ -291,6 +329,7 @@ export function feedMolly(sourceOrAction = 'action', opts = {}) {
   // Spotřebování 1 zaslouženého pamlsku
   const poppedTreat = earnedQueue.shift() || null;
   const meta = action ? getActionEffectMeta(action) : null;
+  /** @type {MollyTreat} */
   const treat = poppedTreat || meta?.mollyTreat || {
     icon: 'fish',
     name: 'lososová granulka',
@@ -326,6 +365,7 @@ export function feedMolly(sourceOrAction = 'action', opts = {}) {
   mollyState.update((prev) => {
     const sameDay = isSameDayIso(prev.lastFedIso);
     const nextQueue = Array.isArray(prev.earnedTreatQueue) ? prev.earnedTreatQueue.slice(1) : [];
+    /** @type {MollyState} */
     const next = {
       ...prev,
       mood: 'eating',
@@ -365,7 +405,7 @@ export function feedMolly(sourceOrAction = 'action', opts = {}) {
 
 /**
  * Zpětně kompatibilní delegace na feedMolly.
- * @param {import('./types').MicroAction | Record<string, unknown> | string | null | undefined} action
+ * @param {MollyActionLike | string | null | undefined} action
  * @param {{ silent?: boolean, source?: string }} [opts]
  */
 export function feedMollyFromAction(action, opts = {}) {
@@ -377,7 +417,7 @@ export function feedMollyFromAction(action, opts = {}) {
  * Spustí vizuální a zvukový vjem zvídavosti Molly, ale STRIKTNĚ NEZVYŠUJE počet pamlsků
  * ani dárků (delayed gratification — pamlsky se získávají jen skutečnými skutky).
  *
- * @param {import('./types').MicroAction | Record<string, unknown> | string | null | undefined} action
+ * @param {MollyActionLike | string | null | undefined} action
  * @param {{ surface?: string, silentSound?: boolean, fromCanvas?: boolean }} [opts]
  */
 export function notifyMollySpark(action, opts = {}) {
@@ -387,6 +427,7 @@ export function notifyMollySpark(action, opts = {}) {
   }
   lastSparkNotifyTs = nowTs;
   const meta = getActionEffectMeta(action);
+  /** @type {MollyTreat} */
   const treat = meta?.mollyTreat || resolveMollyTreat(action);
   const ts = Date.now();
   const actionId =
@@ -453,6 +494,7 @@ export function petMolly(customWhisper, opts = {}) {
       }
     }
     if (opts?.suffix) chosenText = `${chosenText} ${opts.suffix}`;
+    /** @type {MollyState} */
     const next = {
       ...prev,
       mood: 'purring',
@@ -487,13 +529,15 @@ export function petMolly(customWhisper, opts = {}) {
 
 /**
  * Přepne Molly mezi volným touláním po stránce ('roaming') a klidovým pelíškem ('docked').
+ * @returns {MollyMode}
  */
 export function toggleMollyPelisek() {
   const ts = Date.now();
-  let nextMode = 'roaming';
+  let nextMode = /** @type {MollyMode} */ ('roaming');
 
   mollyState.update((prev) => {
     nextMode = prev.mode === 'docked' ? 'roaming' : 'docked';
+    /** @type {MollyState} */
     const next = {
       ...prev,
       mode: nextMode,

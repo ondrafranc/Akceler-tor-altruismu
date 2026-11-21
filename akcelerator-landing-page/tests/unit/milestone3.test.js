@@ -18,6 +18,7 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const srcLib = path.resolve(__dirname, '../../src/lib');
 
+/** @param {string} subpath */
 function loadSource(subpath) {
   const fullPath = path.resolve(srcLib, subpath);
   return readFileSync(fullPath, 'utf8');

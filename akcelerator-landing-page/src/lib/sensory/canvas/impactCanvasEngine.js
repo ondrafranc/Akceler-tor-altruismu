@@ -21,6 +21,28 @@ import { activeControllers } from './controllerRegistry.js';
 
 const win = () => typeof window !== 'undefined';
 
+/**
+ * @typedef {import('../../types/sensory.js').CanvasBurstTrigger} CanvasBurstTrigger
+ * @typedef {import('../../types/sensory.js').ImpactCanvasController} ImpactCanvasController
+ * @typedef {import('../../types/sensory.js').ImpactCanvasElement} ImpactCanvasElement
+ * @typedef {import('../../types/sensory.js').ImpactCanvasHandle} ImpactCanvasHandle
+ * @typedef {import('../../types/sensory.js').MountImpactCanvasOptions} MountImpactCanvasOptions
+ */
+
+/**
+ * @typedef {object} TouchRipple
+ * @property {number} x
+ * @property {number} y
+ * @property {number} r
+ * @property {number} maxR
+ * @property {number} alpha
+ */
+
+/**
+ * @param {ImpactCanvasElement} cv
+ * @param {MountImpactCanvasOptions | null} [o]
+ * @returns {ImpactCanvasHandle}
+ */
 export function mountImpactCanvas(cv, o = {}) {
   o = o || {};
   const c = optimizeCanvasContext(cv?.getContext?.('2d'));
@@ -71,6 +93,7 @@ export function mountImpactCanvas(cv, o = {}) {
         : 0.0;
   let previewP = isPrimed ? 0.14 : 0.0;
   let burstEnergy = isPreview ? 0.0 : isClimax ? 0.9 : 0.35;
+  /** @type {TouchRipple[]} */
   const ripples = [];
 
   if (!isPreview) {
@@ -119,6 +142,7 @@ export function mountImpactCanvas(cv, o = {}) {
     col: i % 2 === 0 ? '#f6e7c1' : '#c5d9cd'
   }));
 
+  /** @param {number} ratio */
   const emitProgress = (ratio) => {
     if (isPreview) return;
     peakRatio = spec.staticMetric ? 1 : Math.max(peakRatio, Math.min(1, ratio || 0));
@@ -130,7 +154,9 @@ export function mountImpactCanvas(cv, o = {}) {
   };
 
   let arcsCount = 0;
+  /** @type {ImpactCanvasController | null} */
   let controller = null;
+  /** @type {((e: PointerEvent) => void) | null} */
   let onDown = null;
 
   if (!isPreview) {
@@ -141,6 +167,7 @@ export function mountImpactCanvas(cv, o = {}) {
       cv.setAttribute('data-molly-arcs', '0');
     }
 
+    /** @type {CanvasBurstTrigger} */
     const triggerBurst = (rx, ry) => {
       transitionProgress = red ? 1.0 : 0.0;
       lastNow = -1;
@@ -150,8 +177,8 @@ export function mountImpactCanvas(cv, o = {}) {
       if (cv?.setAttribute) {
         cv.setAttribute('data-molly-arcs', String(arcsCount));
       }
-      const ripX = Number.isFinite(rx) ? rx : currentW / 2;
-      const ripY = Number.isFinite(ry) ? ry : cy;
+      const ripX = Number.isFinite(rx) ? /** @type {number} */ (rx) : currentW / 2;
+      const ripY = Number.isFinite(ry) ? /** @type {number} */ (ry) : cy;
       ripples.push({ x: ripX, y: ripY, r: 4, maxR: 54, alpha: 0.82 });
       emitProgress(1);
       wakeUpLoop();
@@ -186,14 +213,20 @@ export function mountImpactCanvas(cv, o = {}) {
     cv?.addEventListener?.('pointerdown', onDown);
   }
 
+  /** @param {FrameRequestCallback} cb */
   const scheduleFrame = (cb) =>
     typeof requestAnimationFrame === 'function' ? requestAnimationFrame(cb) : 0;
+  /** @param {number} handle */
   const cancelFrame = (handle) => {
     if (handle && typeof cancelAnimationFrame === 'function') {
       cancelAnimationFrame(handle);
     }
   };
 
+  /**
+   * @param {boolean} [force]
+   * @param {number} [now]
+   */
   const fn = (force = false, now = undefined) => {
     if (!force && (!isVisible || (!cv.isConnected && cv.parentNode === null))) {
       isRunning = false;
@@ -427,6 +460,7 @@ export function mountImpactCanvas(cv, o = {}) {
     }
   };
 
+  /** @param {boolean} val */
   cleanup.setPrimed = (val) => {
     const next = Boolean(val);
     if (next !== isPrimed) {
@@ -438,6 +472,7 @@ export function mountImpactCanvas(cv, o = {}) {
     }
   };
 
+  /** @param {boolean} val */
   cleanup.setTeased = (val) => {
     const next = Boolean(val);
     if (next !== isTeased) {

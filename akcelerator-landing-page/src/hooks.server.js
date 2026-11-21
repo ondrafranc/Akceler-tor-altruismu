@@ -2,6 +2,8 @@
  * Global security headers for all SSR and API responses.
  * HTML responses with per-request CSP nonces are marked private/no-store so shared CDNs
  * never serve a static reusable nonce across visitors (H1).
+ *
+ * @type {import('@sveltejs/kit').Handle}
  */
 export async function handle({ event, resolve }) {
   const response = await resolve(event, {

@@ -438,6 +438,10 @@ test.describe('Whisper Bubble Anchoring & Anti-Jump Stability', () => {
       await page.reload();
       await page.locator('.app-shell[data-hydrated="true"]').waitFor({ state: 'attached', timeout: 20_000 });
       await page.evaluate(() => document.fonts.ready);
+      // Usazení po načtení (odložená přeměření layoutu) musí doběhnout dřív, než se měří klid bubliny
+      await page
+        .locator('.molly-companion-layer[data-molly-settled="true"]')
+        .waitFor({ state: 'attached', timeout: 10_000 });
 
       await page
         .waitForFunction(
@@ -582,7 +586,7 @@ test.describe('Molly companion geometry, tips and guardian across viewports', ()
   test.beforeEach(async ({ page }) => {
     const origGoto = page.goto.bind(page);
     page.goto = async (url, options) => {
-      let res;
+      let res!: Awaited<ReturnType<typeof origGoto>>;
       for (let attempt = 1; attempt <= 7; attempt++) {
         try {
           res = await origGoto(url, options);
@@ -1052,5 +1056,164 @@ test.describe('Molly companion geometry, tips and guardian across viewports', ()
     expect(submitHintState.marked).toBe(true);
     expect(submitHintState.shownOrParked).toBe(true);
     expect(submitHintState.controlOverlap).toBeLessThanOrEqual(80);
+  });
+
+  test('Desktop Molly stays on the ground line when a whisper is still showing while the page settles on /near', async ({ page }) => {
+    // Na /near (1280x900) se vedle Molly na podlaze bublina čistě nevejde. Usazení po změně stránky
+    // proto nesmí kvůli bublině přenést kočku doprostřed obrazovky; bublina si má najít místo sama.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/');
+    const actor = page.locator('.molly-roaming-actor');
+    await expect.poll(async () => (await actor.boundingBox())?.y ?? -1).toBeGreaterThanOrEqual(900 - 170);
+
+    // Zaznamená každou zapsanou polohu Molly (bez vzorkovacích mezer), od teď až do konce šeptandy
+    await page.evaluate(() => {
+      const el = document.querySelector('.molly-roaming-actor');
+      if (!el) return;
+      const store = window as unknown as { __mollyMinTop: number };
+      const record = () => {
+        if (el.classList.contains('is-docked')) return;
+        store.__mollyMinTop = Math.min(store.__mollyMinTop, el.getBoundingClientRect().top);
+      };
+      store.__mollyMinTop = Infinity;
+      record();
+      new MutationObserver(record).observe(el, { attributes: true, attributeFilter: ['style', 'class'] });
+    });
+
+    const whisper = page.locator('.molly-whisper-bubble, .molly-dock-whisper');
+    await page.locator('.molly-pelisek-dock .molly-dock-pet-btn').click();
+    await expect(whisper.first()).toBeVisible();
+    await page.locator('.top-nav a[href="/near"]').first().click();
+    await expect(page).toHaveURL(/\/near(\?|$)/);
+    // Šeptanda přechod přežije a zhasne sama; do té doby proběhne celé usazení po změně stránky
+    await expect(whisper).toHaveCount(0, { timeout: 10_000 });
+
+    const minTop = await page.evaluate(() => (window as unknown as { __mollyMinTop: number }).__mollyMinTop);
+    const finalTop = (await actor.boundingBox())?.y ?? -1;
+    expect(Math.round(minTop), 'Molly must stay on groundLine during the whisper on /near (desktop-1280)').toBeGreaterThanOrEqual(900 - 170);
+    expect(Math.round(finalTop), 'Molly must rest on groundLine on /near (desktop-1280)').toBeGreaterThanOrEqual(900 - 170);
+  });
+
+  test('Desktop whisper that waits for Molly to arrive stays hidden for the whole walk and never crosses the celebration buttons', async ({
+    page
+  }) => {
+    // Po chvíli klidu dojde Molly pod hlavní tlačítko. Když člověk během té chůze klikne na „Mám hotovo“,
+    // odměnová šeptanda čeká, až Molly dojde. Nesmí se odhalit dřív: za chůze by jela s Molly přes tlačítka oslavy.
+    test.setTimeout(60_000);
+    const pageErrors: Error[] = [];
+    page.on('pageerror', (err) => pageErrors.push(err));
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+    });
+    await page.goto('/?action=remobil_telefon');
+
+    const card = page.locator('.instant-card').first();
+    await card.locator('.btn-studio-primary').dispatchEvent('click');
+    const doneBtn = card.locator('.btn-studio-done');
+    await expect(doneBtn).toBeVisible();
+
+    // Molly vyráží k hlavnímu tlačítku (pobídka po delším klidu) a tlačítko se rozzáří
+    await expect(page.locator('.molly-guide-glow')).toBeAttached({ timeout: 30_000 });
+
+    // Každý vykreslený snímek: kde je Molly a jestli viditelná bublina něco zakrývá
+    await page.evaluate(() => {
+      type WalkSample = { actorX: number; walking: boolean; bubbleVisible: boolean; bubbleLeft: number };
+      const store = window as unknown as {
+        __walkSamples: WalkSample[];
+        __walkOverlaps: Array<{ target: string; area: number; actorX: number }>;
+        __walkSampling: boolean;
+      };
+      store.__walkSamples = [];
+      store.__walkOverlaps = [];
+      store.__walkSampling = true;
+      const targetSelector =
+        '.in-situ-celebration button, .in-situ-celebration .molly-celebration-note, .in-situ-celebration a, .deck-nav-next, main h1, main h2, main h3, main button';
+      const sample = () => {
+        if (!store.__walkSampling) return;
+        const actor = document.querySelector('.molly-roaming-actor');
+        const bubble = document.querySelector('.molly-whisper-bubble');
+        const ar = actor?.getBoundingClientRect();
+        const actorX = ar ? Math.round(ar.left + ar.width / 2) : -1;
+        let bubbleVisible = false;
+        let bubbleLeft = -1;
+        if (bubble) {
+          const cs = getComputedStyle(bubble);
+          const br = bubble.getBoundingClientRect();
+          bubbleVisible =
+            cs.display !== 'none' && cs.visibility !== 'hidden' && parseFloat(cs.opacity) > 0.01 && br.width >= 1;
+          bubbleLeft = Math.round(br.left);
+          if (bubbleVisible) {
+            for (const t of document.querySelectorAll(targetSelector)) {
+              if (t.closest('.molly-companion-layer')) continue;
+              const tcs = getComputedStyle(t);
+              if (tcs.display === 'none' || tcs.visibility === 'hidden') continue;
+              const tr = t.getBoundingClientRect();
+              if (tr.width < 1 || tr.height < 1) continue;
+              const w = Math.min(br.right, tr.right) - Math.max(br.left, tr.left);
+              const h = Math.min(br.bottom, tr.bottom) - Math.max(br.top, tr.top);
+              if (w > 0 && h > 0) {
+                store.__walkOverlaps.push({
+                  target: `${t.tagName.toLowerCase()}.${typeof t.className === 'string' ? t.className.split(/\s+/).slice(0, 2).join('.') : ''}`,
+                  area: Math.round(w * h),
+                  actorX
+                });
+              }
+            }
+          }
+        }
+        store.__walkSamples.push({
+          actorX,
+          walking: actor?.getAttribute('data-molly-behavior') === 'WALK_ROAM',
+          bubbleVisible,
+          bubbleLeft
+        });
+        requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    });
+
+    await doneBtn.click();
+    await expect(card.locator('.in-situ-celebration .btn-inline-feed-molly')).toBeVisible();
+    await expect(card.locator('.in-situ-celebration .btn-next-deed')).toBeVisible();
+
+    // Molly dojde a teprve potom promluví
+    const bubble = page.locator('.molly-whisper-bubble.is-ready:not(.is-travelling)');
+    await expect(bubble).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('.molly-roaming-actor')).not.toHaveAttribute('data-molly-behavior', 'WALK_ROAM');
+    await page.waitForTimeout(500);
+
+    const walk = await page.evaluate(() => {
+      const store = window as unknown as {
+        __walkSamples: Array<{ actorX: number; walking: boolean; bubbleVisible: boolean; bubbleLeft: number }>;
+        __walkOverlaps: Array<{ target: string; area: number; actorX: number }>;
+        __walkSampling: boolean;
+      };
+      store.__walkSampling = false;
+      const samples = store.__walkSamples;
+      const restX = samples.length ? samples[samples.length - 1].actorX : -1;
+      const visible = samples.filter((s) => s.bubbleVisible);
+      const lefts = visible.map((s) => s.bubbleLeft);
+      return {
+        frames: samples.length,
+        walkedPx: samples.length ? Math.abs(samples[0].actorX - restX) : 0,
+        visibleFrames: visible.length,
+        // Jak daleko od místa odpočinku byla Molly, když už byla bublina vidět
+        maxDistWhileVisible: visible.reduce((m, s) => Math.max(m, Math.abs(s.actorX - restX)), 0),
+        // O kolik se viditelná bublina posunula
+        bubbleDrift: lefts.length ? Math.max(...lefts) - Math.min(...lefts) : 0,
+        overlaps: store.__walkOverlaps.slice(0, 8)
+      };
+    });
+
+    expect(walk.frames, 'walk was sampled').toBeGreaterThan(30);
+    expect(walk.walkedPx, 'scenario needs a walk much longer than the 850 ms safety timer covers').toBeGreaterThan(300);
+    expect(walk.visibleFrames, 'whisper shows once Molly has arrived').toBeGreaterThan(0);
+    expect(walk.overlaps, 'visible whisper never covers a celebration control, not even mid-walk').toEqual([]);
+    expect(walk.maxDistWhileVisible, 'whisper is revealed only where Molly comes to rest').toBeLessThanOrEqual(24);
+    expect(walk.bubbleDrift, 'revealed whisper stays put instead of travelling with Molly').toBeLessThanOrEqual(24);
+    expect(pageErrors, 'Zero pageerrors during the walk').toEqual([]);
   });
 });

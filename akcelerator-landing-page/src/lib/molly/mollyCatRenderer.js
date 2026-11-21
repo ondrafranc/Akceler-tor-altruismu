@@ -38,10 +38,10 @@
 /**
  * Procedurally draws the tortoiseshell cat Molly onto a 2D canvas context.
  *
- * @param {CanvasRenderingContext2D | null} [ctx]
- * @param {number} [w] Logical canvas width
- * @param {number} [h] Logical canvas height
- * @param {number} [nowSec] Current animation timestamp in seconds
+ * @param {CanvasRenderingContext2D | null | undefined} ctx
+ * @param {number} w Logical canvas width
+ * @param {number} h Logical canvas height
+ * @param {number} nowSec Current animation timestamp in seconds
  * @param {MollyCatRenderState | null} [state] Dynamic physics & interaction state
  */
 export function drawMollyCat(ctx, w, h, nowSec, state) {

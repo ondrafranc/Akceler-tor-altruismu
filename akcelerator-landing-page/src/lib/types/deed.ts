@@ -65,13 +65,3 @@ export interface MicroAction {
   reasons?: string[];
   [key: string]: unknown;
 }
-
-export interface ActionEffectMeta {
-  mode: string;
-  asmr: string;
-  icon: string;
-  target: number;
-  label: string;
-  colors: string[];
-  cue?: string;
-}

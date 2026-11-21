@@ -137,6 +137,11 @@ export function calculateMatchScore(rawAction, prefsOrCapacity = {}, situation, 
   ).filter((v) => typeof v === 'string');
   const selectedValues = cleanValues;
 
+  /**
+   * @param {unknown} v
+   * @param {string} [fallback]
+   * @returns {string}
+   */
   const safeStr = (v, fallback = 'any') =>
     typeof v === 'string' ? v : typeof v === 'number' ? String(v) : fallback;
   const timeBucket = safeStr(prefs.timeBucket); // 'any' | '5' | '15' | '45'
@@ -391,7 +396,7 @@ export function calculateMatchScore(rawAction, prefsOrCapacity = {}, situation, 
  * @param {string} [situation]
  * @param {string} [topic]
  * @param {string} [city]
- * @returns {import('$lib/types').MicroAction[]}
+ * @returns {Array<import('$lib/types').MicroAction & { description: string, score: number, reasons: string[] }>}
  */
 export function recommendActions(prefsOrCapacity = {}, situation, topic, city) {
   const prefs = normalizePrefs(prefsOrCapacity, situation, topic, city);

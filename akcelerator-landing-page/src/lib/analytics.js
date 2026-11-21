@@ -11,8 +11,11 @@ import {
   AA_FUNNEL_COUNTS_KEY
 } from './storage/index.js';
 
+/** @typedef {(name: string, data?: Record<string, unknown>) => void} TrackFn */
+
+/** @type {TrackFn | null} */
 let _track = null;
-/** @type {Promise<null | ((name: string, data?: Record<string, unknown>) => void)> | null} */
+/** @type {Promise<TrackFn | null> | null} */
 let _trackPromise = null;
 
 async function getTrack() {
@@ -20,7 +23,7 @@ async function getTrack() {
   if (_trackPromise) return _trackPromise;
 
   _trackPromise = import('@vercel/analytics')
-    .then((m) => m.track)
+    .then((m) => /** @type {TrackFn} */ (m.track))
     .catch(() => null)
     .then((t) => {
       _track = t;
@@ -65,6 +68,7 @@ export function trackEvent(name, data = undefined) {
 const STARTED_STORAGE_KEY = AA_STARTED_ACTIONS_KEY;
 const FUNNEL_STORAGE_KEY = AA_FUNNEL_COUNTS_KEY;
 
+/** @returns {string[]} */
 function loadStartedIds() {
   if (!browser) return [];
   try {
@@ -77,6 +81,7 @@ function loadStartedIds() {
   }
 }
 
+/** @param {string[]} ids */
 function saveStartedIds(ids) {
   if (!browser) return;
   try {

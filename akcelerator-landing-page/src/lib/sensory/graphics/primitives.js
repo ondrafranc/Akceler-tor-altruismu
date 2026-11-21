@@ -2,6 +2,14 @@
  * Procedural Canvas 2D vector drawing primitives for poetic deed transformations.
  */
 
+/**
+ * @param {CanvasRenderingContext2D} c
+ * @param {number} x
+ * @param {number} y
+ * @param {number} r
+ * @param {string} color
+ * @param {number} [alpha=0.35]
+ */
 export function drawGlow(c, x, y, r, color, alpha = 0.35) {
   c.save();
   c.globalCompositeOperation = 'lighter';
@@ -17,6 +25,13 @@ export function drawGlow(c, x, y, r, color, alpha = 0.35) {
   c.restore();
 }
 
+/**
+ * @param {CanvasRenderingContext2D} c
+ * @param {number} x
+ * @param {number} y
+ * @param {number} r
+ * @param {string} color
+ */
 export function drawHeart(c, x, y, r, color) {
   c.save();
   c.fillStyle = color;
@@ -30,6 +45,14 @@ export function drawHeart(c, x, y, r, color) {
   c.restore();
 }
 
+/**
+ * @param {CanvasRenderingContext2D} c
+ * @param {number} x
+ * @param {number} y
+ * @param {number} wing
+ * @param {number} size
+ * @param {string} color
+ */
 export function drawBird(c, x, y, wing, size, color) {
   c.save();
   c.strokeStyle = color;
@@ -45,6 +68,13 @@ export function drawBird(c, x, y, wing, size, color) {
   c.restore();
 }
 
+/**
+ * @param {CanvasRenderingContext2D} c
+ * @param {number} x
+ * @param {number} y
+ * @param {number} r
+ * @param {string} color
+ */
 export function drawStar(c, x, y, r, color) {
   c.save();
   c.fillStyle = color;
@@ -64,6 +94,13 @@ export function drawStar(c, x, y, r, color) {
   c.restore();
 }
 
+/**
+ * @param {CanvasRenderingContext2D} c
+ * @param {number} x
+ * @param {number} y
+ * @param {number} s
+ * @param {string} color
+ */
 export function drawPaw(c, x, y, s, color) {
   c.save();
   c.fillStyle = color;
@@ -85,6 +122,14 @@ export function drawPaw(c, x, y, s, color) {
   c.restore();
 }
 
+/**
+ * @param {CanvasRenderingContext2D} c
+ * @param {number} x
+ * @param {number} y
+ * @param {number} rw
+ * @param {number} rh
+ * @param {number} r
+ */
 export function drawRoundRect(c, x, y, rw, rh, r) {
   c.beginPath();
   if (typeof c.roundRect === 'function') {
@@ -94,6 +139,14 @@ export function drawRoundRect(c, x, y, rw, rh, r) {
   }
 }
 
+/**
+ * @param {CanvasRenderingContext2D} c
+ * @param {number} x
+ * @param {number} y
+ * @param {number} h
+ * @param {number} t
+ * @param {string} [col='rgba(254, 243, 199, 0.45)']
+ */
 export function drawSteam(c, x, y, h, t, col = 'rgba(254, 243, 199, 0.45)') {
   c.save();
   c.strokeStyle = col;
@@ -110,6 +163,14 @@ export function drawSteam(c, x, y, h, t, col = 'rgba(254, 243, 199, 0.45)') {
   c.restore();
 }
 
+/**
+ * @param {CanvasRenderingContext2D} c
+ * @param {number} x
+ * @param {number} y
+ * @param {number} r
+ * @param {string} colPetal
+ * @param {string} colCenter
+ */
 export function drawFlower(c, x, y, r, colPetal, colCenter) {
   c.save();
   c.fillStyle = colPetal;

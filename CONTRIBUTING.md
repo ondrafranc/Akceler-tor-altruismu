@@ -72,7 +72,7 @@ Databázové migrace a bezpečnostní nastavení jsou popsány v [DEPLOYMENT_INS
 - Nové ikony přidejte do `src/lib/icons/lucideIcons.js` a `src/lib/icons/iconRegistry.js` — `vite.config.js` si je do `optimizeDeps.include` načítá automaticky.
 - Nevytvářejte duplicitní katalogy karet ani přechodové forwarder moduly.
 - Pravidlo, které lze ověřit strojově, patří do `tests/unit/invariants.test.js`, ne do textu.
-- V editoru používejte TypeScript z pracovního prostoru; `jsconfig.json` má záměrně explicitní `"strict": false`.
+- V editoru používejte TypeScript z pracovního prostoru. `jsconfig.json` má `"strict": true` a kontroluje i JS soubory; nový kód typujte přes JSDoc nebo kanonické typy z `src/lib/types/`.
 
 ---
 

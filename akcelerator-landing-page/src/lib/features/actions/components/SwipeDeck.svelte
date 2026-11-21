@@ -2,8 +2,9 @@
   import { onMount, onDestroy } from 'svelte';
   import AppIcon from '$lib/components/AppIcon.svelte';
   import ActionCard from './ActionCard.svelte';
-  import { safeGetItem, safeSetItem, AA_DONE_FOR_TODAY_PREFIX } from '../../../../lib/storage/index.js';
+  import { safeSetItem, AA_DONE_FOR_TODAY_PREFIX } from '../../../../lib/storage/index.js';
   import { trackEvent } from '../../../../lib/analytics.js';
+  import { getTodayKey, isDayClosedToday } from '../services/dayClosure.js';
 
   // Psychological session closure key prefix: 'aa_done_for_today_'
   const DONE_FOR_TODAY_PREFIX = AA_DONE_FOR_TODAY_PREFIX;
@@ -24,10 +25,12 @@
    *   usePersonalValues?: boolean,
    *   variant?: 'instant' | 'directory' | 'compact',
    *   ignoreClosedSession?: boolean,
-   *   onStart?: ((action?: import('$lib/types').MicroAction) => void) | null,
-   *   onComplete?: ((action?: import('$lib/types').MicroAction) => void) | null,
-   *   onShare?: ((action?: import('$lib/types').MicroAction) => void) | null,
-   *   onReportBroken?: ((action?: import('$lib/types').MicroAction) => void) | null,
+   *   announceChanges?: boolean,
+   *   idleLure?: boolean,
+   *   onStart?: ((action: import('$lib/types').MicroAction) => void) | null,
+   *   onComplete?: ((action: import('$lib/types').MicroAction) => void) | null,
+   *   onShare?: ((action: import('$lib/types').MicroAction) => void) | null,
+   *   onReportBroken?: ((action: import('$lib/types').MicroAction) => void) | null,
    *   onToggleSound?: (() => void) | null,
    *   onTogglePersonalValues?: (() => void) | null,
    *   onNextIdea?: (() => void) | null,
@@ -49,6 +52,8 @@
     usePersonalValues = false,
     variant = 'instant',
     ignoreClosedSession = false,
+    announceChanges = true,
+    idleLure = true,
     onStart = null,
     onComplete = null,
     onShare = null,
@@ -73,11 +78,6 @@
   let startY = 0;
   let startTime = 0;
 
-  function getTodayKey() {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  }
-
   const showClosedSummary = $derived(isSessionClosed && !ignoreClosedSession);
   const todayCount = $derived($todayCompletedCount ?? 0);
 
@@ -93,12 +93,9 @@
   );
 
   onMount(() => {
-    try {
-      const todayKey = getTodayKey();
-      if (safeGetItem(`${DONE_FOR_TODAY_PREFIX}${todayKey}`, 'local') === '1') {
-        isSessionClosed = true;
-      }
-    } catch {}
+    if (isDayClosedToday()) {
+      isSessionClosed = true;
+    }
   });
 
   function handleCloseSession() {
@@ -309,6 +306,7 @@
               {savedValues}
               {usePersonalValues}
               {variant}
+              {idleLure}
               {onStart}
               {onComplete}
               {onShare}
@@ -334,8 +332,12 @@
           <AppIcon name="chevron-left" size={18} strokeWidth={2.3} />
         </button>
 
-        <div class="deck-indicator" aria-live="polite">
-          <span class="deck-step-text">{displayIndex + 1} / {totalCards || 1}</span>
+        <div class="deck-indicator" aria-live={announceChanges ? 'polite' : 'off'}>
+          <span class="deck-step-text">
+            <span class="deck-step-num deck-step-current">{displayIndex + 1}</span>
+            /
+            <span class="deck-step-num deck-step-total">{totalCards || 1}</span>
+          </span>
           <span class="deck-dot-sep" aria-hidden="true">·</span>
           <span class="deck-swipe-hint">
             <AppIcon name="arrow-left" size={12} strokeWidth={2.1} />
@@ -466,6 +468,22 @@
     color: var(--ink-primary, #14281d);
     letter-spacing: 0.03em;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* Obě čísla mají vyhrazené místo na dvě cifry a lomítko mezi nimi stojí na místě:
+     když se mění počet karet v balíčku, počítadlo ani šipky vedle něj se nepohnou. */
+  .deck-step-num {
+    display: inline-block;
+    min-width: 2ch;
+  }
+
+  .deck-step-current {
+    text-align: right;
+  }
+
+  .deck-step-total {
+    text-align: left;
   }
 
   .deck-dot-sep {

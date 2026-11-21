@@ -8,12 +8,18 @@ import { tone, noiseBurst } from './synthesizer.js';
 
 let lastAsmrTs = 0;
 
-/** @type {((action: unknown) => { asmr?: string }) | null} */
+/**
+ * @typedef {import('../types/sensory.js').EffectActionInput} EffectActionInput
+ * @typedef {import('../types/sensory.js').EffectActionLike} EffectActionLike
+ * @typedef {(action: EffectActionInput) => { asmr?: string }} ActionSpecResolver
+ */
+
+/** @type {ActionSpecResolver | null} */
 let actionSpecResolver = null;
 
 /**
  * Registers an action-effect spec resolver to resolve rich action objects into ASMR audio profiles.
- * @param {(action: unknown) => { asmr?: string }} fn
+ * @param {ActionSpecResolver} fn
  */
 export function registerActionSpecResolver(fn) {
   actionSpecResolver = typeof fn === 'function' ? fn : null;
@@ -173,7 +179,7 @@ export function playMollyMeow() {
 
 /**
  * Procedurální Web Audio ASMR syntéza přizpůsobená každému z 18 zvukových profilů.
- * @param {string | { asmr?: string, mode?: string, [key: string]: unknown } | null | undefined} [actionOrMode='kibble']
+ * @param {string | (EffectActionLike & { asmr?: string | null }) | null | undefined} [actionOrMode='kibble']
  */
 export function playPayoffAsmr(actionOrMode = 'kibble') {
   const now = typeof performance !== 'undefined' ? performance.now() : Date.now();

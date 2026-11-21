@@ -1,6 +1,6 @@
 <script>
-  import { onMount } from "svelte";
-  import { goto } from "$app/navigation";
+  import { onMount, tick } from "svelte";
+  import { afterNavigate, goto } from "$app/navigation";
   import { page } from "$app/state";
   import {
     MICRO_ACTIONS,
@@ -27,7 +27,17 @@
     safeSetItem,
     AA_USER_TOPICS_KEY,
     AA_HOME_DECK_STATE_KEY,
+    AA_HOME_ENTRY_TOUR_SEEN_KEY,
   } from "../lib/storage/index.js";
+  import {
+    createEntryTour,
+    ENTRY_TOUR_INPUT_EVENTS,
+    ENTRY_TOUR_REDUCED_MOTION_QUERY,
+    ENTRY_TOUR_SETTLE_MS,
+    ENTRY_TOUR_VIEWPORT_QUERY,
+  } from "../lib/features/home/entryTour.js";
+  import { holdMollyGuide, releaseMollyGuide } from "../lib/mollyStore.js";
+  import { isDayClosedToday } from "../lib/features/actions/services/dayClosure.js";
   import AppIcon from "$lib/components/AppIcon.svelte";
   import HeroSection from "../lib/features/home/HeroSection.svelte";
   import QuickStartSection from "../lib/features/home/QuickStartSection.svelte";
@@ -119,6 +129,228 @@
   /** @type {ReturnType<typeof setTimeout> | null} */
   let copyLinkTimer = null;
   let soundMuted = $state(false);
+
+  // Vstupní prohlídka režimů. Pravidla (kdy smí začít, pořadí, tempo, zastavení) drží
+  // `entryTour.js`; stránka jen dodá vstupy, pasivní přepnutí režimu a posluchače.
+  /** @type {import('../lib/features/home/entryTour.js').EntryTour | null} */
+  let entryTour = null;
+  /** @type {{ hasDeepLink: boolean, restoredDeckState: boolean } | null} */
+  let pendingTourEntry = null;
+  /** @type {(() => void) | null} */
+  let detachEntryTourGuards = null;
+  /** @type {(() => void) | null} */
+  let detachSettleGuard = null;
+  /** @type {number | null} */
+  let settleGuardTimer = null;
+  let entryTourRunning = $state(false);
+  // Pasivní výměna karty, která se ještě nevykreslila.
+  let passiveSwapPending = false;
+  /** @type {HTMLDivElement | null} */
+  let instantCardEl = $state(null);
+
+  /**
+   * Přepnutí režimu bez účasti uživatele: nic neukládá a nic neměří.
+   * @param {import('$lib/types').HomeEnergyMode} mode
+   */
+  function showModePassively(mode) {
+    energyMode = mode;
+    suggestionIndex = 0;
+    passiveSwapPending = true;
+    tick().then(() => {
+      passiveSwapPending = false;
+    });
+  }
+
+  /**
+   * Těsně po kroku prohlídky hlavní tlačítko nové karty nespustí nic: kliknutí, které už bylo
+   * na cestě, mířilo na kartu před ním. Prohlídka se k ní vrátí a další kliknutí už platí.
+   * @param {MouseEvent} event
+   */
+  function handleCardClickCapture(event) {
+    if (!entryTour?.isSettling()) return;
+    if (!(event.target instanceof Element) || !event.target.closest(".btn-studio-primary")) return;
+    event.preventDefault();
+    event.stopPropagation();
+    entryTour.stopAtCard();
+  }
+
+  function releaseSettleGuard() {
+    if (settleGuardTimer !== null) window.clearTimeout(settleGuardTimer);
+    settleGuardTimer = null;
+    detachSettleGuard?.();
+    detachSettleGuard = null;
+  }
+
+  /**
+   * Zastavení pro ty, jejichž ovládání stránce žádný jiný signál nepošle (čtečka obrazovky
+   * v režimu procházení). Fokus nezůstane na tlačítku, které mizí: přejde na zvolenou záložku.
+   */
+  async function stopEntryTourFromControl() {
+    const hadFocus = document.activeElement?.classList.contains("tour-stop") === true;
+    entryTour?.stop("interaction");
+    if (!hadFocus) return;
+    await tick();
+    const selectedTab = instantCardEl?.querySelector('.energy-tab[aria-selected="true"]');
+    if (selectedTab instanceof HTMLElement) selectedTab.focus();
+  }
+
+  /**
+   * Uživatel (nebo příchozí odkaz) přebírá balíček. Prohlídka tím končí; vrací režim,
+   * který po sobě nechala na obrazovce a který si uživatel ještě sám nezvolil.
+   * @returns {import('$lib/types').HomeEnergyMode | null}
+   */
+  function claimDeckFromTour() {
+    return entryTour ? entryTour.claim() : null;
+  }
+
+  /** @returns {() => void} */
+  function attachEntryTourGuards() {
+    const motionQuery = window.matchMedia(ENTRY_TOUR_REDUCED_MOTION_QUERY);
+    const viewportQuery = window.matchMedia(ENTRY_TOUR_VIEWPORT_QUERY);
+    const card = instantCardEl;
+    // Sáhnutí po kartě může kartu vrátit o krok zpět. Výměna nesmí proběhnout uprostřed doručování
+    // události, která na kartu míří (obsluhy staré karty by doběhly na zrušené komponentě),
+    // proto přijde až po ní.
+    const stopAtCardSoon = () => {
+      window.setTimeout(() => entryTour?.stopAtCard(), 0);
+    };
+    /** @param {Event} event */
+    const stopOnInput = (event) => {
+      // Stisk tlačítka zastavení obslouží jeho vlastní kliknutí, i když přijde z klávesnice.
+      if (event.target instanceof Element && event.target.closest(".tour-stop")) return;
+      const pressesCard =
+        (event.type === "pointerdown" || event.type === "touchstart") &&
+        event.target instanceof Node &&
+        card?.contains(event.target) === true;
+      if (pressesCard) {
+        stopAtCardSoon();
+      } else {
+        entryTour?.stop("interaction");
+      }
+    };
+    // Zastaví jen scroll směrem od začátku stránky. Dojezd plynulého návratu nahoru,
+    // kterým SvelteKit končí přechod z odscrollované podstránky, prohlídku neruší.
+    let lastScrollY = window.scrollY;
+    const stopOnScroll = () => {
+      const y = window.scrollY;
+      if (y > lastScrollY) entryTour?.stop("scroll");
+      lastScrollY = y;
+    };
+    const stopOnHidden = () => {
+      if (document.hidden) entryTour?.stop("visibility");
+    };
+    const stopOnMedia = () => {
+      if (motionQuery.matches || !viewportQuery.matches) entryTour?.stop("media");
+    };
+    /** @param {FocusEvent} event */
+    const stopOnFocus = (event) => {
+      if (!(event.target instanceof Element)) return;
+      // Fokus na tlačítku zastavení ještě nic nezastavuje; to udělá až jeho stisk.
+      if (event.target.closest(".tour-stop")) return;
+      if (event.target.closest(".instant-card")) {
+        stopAtCardSoon();
+      } else if (event.target.closest(".hero-copy")) {
+        entryTour?.stop("interaction");
+      }
+    };
+
+    for (const type of ENTRY_TOUR_INPUT_EVENTS) {
+      window.addEventListener(type, stopOnInput, { capture: true, passive: true });
+    }
+    card?.addEventListener("pointerenter", stopAtCardSoon);
+    window.addEventListener("scroll", stopOnScroll, { passive: true });
+    window.addEventListener("focusin", stopOnFocus, true);
+    document.addEventListener("visibilitychange", stopOnHidden);
+    motionQuery.addEventListener("change", stopOnMedia);
+    viewportQuery.addEventListener("change", stopOnMedia);
+
+    return () => {
+      for (const type of ENTRY_TOUR_INPUT_EVENTS) {
+        window.removeEventListener(type, stopOnInput, true);
+      }
+      card?.removeEventListener("pointerenter", stopAtCardSoon);
+      window.removeEventListener("scroll", stopOnScroll);
+      window.removeEventListener("focusin", stopOnFocus, true);
+      document.removeEventListener("visibilitychange", stopOnHidden);
+      motionQuery.removeEventListener("change", stopOnMedia);
+      viewportQuery.removeEventListener("change", stopOnMedia);
+    };
+  }
+
+  /**
+   * Jediný pokus o prohlídku za život stránky. Volá se po dokončení navigace, kdy už je
+   * rozhodnuto o deep linku, obnoveném balíčku i o pozici scrollu.
+   * @param {{ hasDeepLink: boolean, restoredDeckState: boolean }} entry
+   * @param {boolean} scrollResetsToTop Přechod uvnitř aplikace, po kterém stránka sama vyjíždí nahoru.
+   */
+  function startEntryTour(entry, scrollResetsToTop) {
+    if (typeof window === "undefined" || entryTour) return;
+    entryTour = createEntryTour({
+      setMode: showModePassively,
+      // Ukazatel, který na kartě spočíval už při načtení, žádnou událost vstupu nevyvolá.
+      isHeld: () => Boolean(instantCardEl?.matches(":hover")),
+      setTimer: (fn, ms) => window.setTimeout(fn, ms),
+      clearTimer: (handle) => window.clearTimeout(handle),
+      onStart: () => {
+        safeSetItem(AA_HOME_ENTRY_TOUR_SEEN_KEY, "1", "session");
+        detachEntryTourGuards = attachEntryTourGuards();
+        const card = instantCardEl;
+        card?.addEventListener("click", handleCardClickCapture, true);
+        detachSettleGuard = () => card?.removeEventListener("click", handleCardClickCapture, true);
+        holdMollyGuide();
+        entryTourRunning = true;
+      },
+      onEnd: (reason) => {
+        detachEntryTourGuards?.();
+        detachEntryTourGuards = null;
+        if (reason === "destroy") {
+          releaseSettleGuard();
+        } else {
+          // Kliknutí, které bylo na cestě už před zastavením, ještě dorazí.
+          settleGuardTimer = window.setTimeout(releaseSettleGuard, ENTRY_TOUR_SETTLE_MS);
+        }
+        // Zůstala-li po zastavení na obrazovce karta, kterou si návštěvník nevybral, Molly k jejímu
+        // tlačítku nevodí: její pobídka mluví o krátkém kroku.
+        const leftOnUnchosenMode =
+          reason !== "finished" && reason !== "deck" && reason !== "destroy" && energyMode !== "couch";
+        releaseMollyGuide({ dropNudge: leftOnUnchosenMode });
+        if (passiveSwapPending) {
+          // Krok zpět ještě proběhne potichu; hlášení změn se vrací až po jeho vykreslení.
+          tick().then(() => {
+            entryTourRunning = false;
+          });
+        } else {
+          entryTourRunning = false;
+        }
+      },
+    });
+    entryTour.start({
+      viewportEligible: window.matchMedia(ENTRY_TOUR_VIEWPORT_QUERY).matches,
+      reducedMotion: window.matchMedia(ENTRY_TOUR_REDUCED_MOTION_QUERY).matches,
+      hasDeepLink: entry.hasDeepLink || isDeepLinkedSession,
+      restoredDeckState: entry.restoredDeckState,
+      dayClosed: isDayClosedToday(),
+      completionShowing:
+        justCompleted ||
+        partnerReturnPromptVisible ||
+        awaitingPartnerReturn ||
+        Boolean(pinnedActionId),
+      documentHidden: document.hidden,
+      scrolled: !scrollResetsToTop && window.scrollY > 0,
+      alreadySeen: safeGetItem(AA_HOME_ENTRY_TOUR_SEEN_KEY, "session") === "1",
+    });
+  }
+
+  afterNavigate((navigation) => {
+    const entry = pendingTourEntry;
+    pendingTourEntry = null;
+    if (!entry) return;
+    const arrivedInApp =
+      navigation.type === "link" ||
+      navigation.type === "goto" ||
+      navigation.type === "form";
+    startEntryTour(entry, arrivedInApp && !navigation.to?.url.hash);
+  });
 
   /**
    * @param {unknown} val
@@ -439,6 +671,7 @@
       : "";
     if (pageUrl && urlKey !== lastAppliedUrlKey) {
       lastAppliedUrlKey = urlKey;
+      if (hasMountedHome) claimDeckFromTour();
       const hadDeepLink = applyUrlDeepLink(pageUrl);
       if (!hadDeepLink && hasMountedHome) {
         if (!restoreHomeDeckState()) {
@@ -473,15 +706,17 @@
     } catch {}
 
     const hasExplicitUrlTarget = applyUrlDeepLink();
-    if (!hasExplicitUrlTarget) {
-      restoreHomeDeckState();
-    }
+    const restoredDeckState = hasExplicitUrlTarget
+      ? false
+      : restoreHomeDeckState();
+    pendingTourEntry = { hasDeepLink: hasExplicitUrlTarget, restoredDeckState };
     hasMountedHome = true;
     soundMuted = isSoundMuted();
 
     /** @type {ReturnType<typeof setTimeout> | null} */
     let returnDelayTimer = null;
     const handleHashChange = () => {
+      claimDeckFromTour();
       const hadHashTarget = applyUrlDeepLink(undefined, true);
       if (!hadHashTarget && hasMountedHome) {
         if (!restoreHomeDeckState()) {
@@ -506,6 +741,7 @@
         allowEmptySurface: true,
       });
       if (elapsedMem >= 3000 || persisted) {
+        claimDeckFromTour();
         if (awaitingPartnerReturn && !persisted) {
           consumePendingPartnerReturn(0, {
             surfacePrefix: "home",
@@ -555,6 +791,9 @@
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handleWindowFocus);
       window.removeEventListener("pageshow", handleWindowFocus);
+      pendingTourEntry = null;
+      entryTour?.stop("destroy");
+      releaseSettleGuard();
       if (returnDelayTimer) clearTimeout(returnDelayTimer);
       if (copyLinkTimer) clearTimeout(copyLinkTimer);
     };
@@ -625,7 +864,8 @@
    * @param {import('$lib/types').HomeEnergyMode} mode
    */
   function setEnergyMode(mode) {
-    if (energyMode === mode) {
+    const shownByTour = claimDeckFromTour();
+    if (energyMode === mode && shownByTour !== mode) {
       nextQuickIdea();
       return;
     }
@@ -634,9 +874,12 @@
     awaitingPartnerReturn = false;
     partnerReturnPromptVisible = false;
     justCompleted = false;
-    excludeQuickId = lastQuickActionId;
-    energyMode = mode;
-    suggestionIndex = 0;
+    // Záložku, kterou právě ukazovala prohlídka, si uživatel tímto volí: karta zůstává.
+    if (energyMode !== mode) {
+      excludeQuickId = lastQuickActionId;
+      energyMode = mode;
+      suggestionIndex = 0;
+    }
     syncDeckPersistence();
     trackEvent("aa_home_energy_mode", { mode });
     trackFunnel("intent_selected", { surface: "home_instant", mode });
@@ -648,6 +891,7 @@
   }
 
   function nextQuickIdea() {
+    claimDeckFromTour();
     clearDeepLinkUrlParam();
     const prevId = currentQuickAction?.id || lastQuickActionId;
     const wasPinned = Boolean(pinnedActionId);
@@ -684,6 +928,7 @@
   }
 
   function prevQuickIdea() {
+    claimDeckFromTour();
     clearDeepLinkUrlParam();
     const wasPinned = Boolean(pinnedActionId);
     pinnedActionId = "";
@@ -705,6 +950,7 @@
   }
 
   function reopenQuickSession() {
+    claimDeckFromTour();
     clearDeepLinkUrlParam();
     const prevId = currentQuickAction?.id || lastQuickActionId;
     const wasPinned = Boolean(pinnedActionId);
@@ -755,6 +1001,7 @@
   }
 
   function handleTogglePersonalValues() {
+    claimDeckFromTour();
     const wasDeepLinked = isDeepLinkedSession;
     clearDeepLinkUrlParam();
     pinnedActionId = "";
@@ -781,6 +1028,7 @@
    */
   function handleStartQuickAction(action) {
     if (!action) return;
+    claimDeckFromTour();
     awaitingPartnerReturn = true;
     partnerLeaveTimestamp = Date.now();
     partnerReturnPromptVisible = false;
@@ -798,6 +1046,7 @@
    */
   function completeQuickAction(action) {
     if (!action) return;
+    claimDeckFromTour();
     pinnedActionId = action.id;
     suggestionIndex = 0;
     justCompleted = true;
@@ -870,7 +1119,12 @@
     mobileClaim={HOME_MODES[energyMode].mobileClaim}
   >
     <QuickStartSection id="quick-start-area">
-      <div class="instant-card" id="dnesni-skutek">
+      <div class="instant-card" id="dnesni-skutek" bind:this={instantCardEl}>
+        {#if entryTourRunning}
+          <button type="button" class="tour-stop" onclick={stopEntryTourFromControl}>
+            Zastavit automatickou ukázku
+          </button>
+        {/if}
         <div class="studio-head">
           <span class="studio-label">
             <span>Chci pomoct právě teď:</span>
@@ -957,6 +1211,8 @@
             {savedValues}
             {usePersonalValues}
             ignoreClosedSession={Boolean(pinnedAction)}
+            announceChanges={!entryTourRunning}
+            idleLure={!entryTourRunning}
             onStart={handleStartQuickAction}
             onComplete={completeQuickAction}
             onShare={shareDirectActionLink}
@@ -972,12 +1228,14 @@
             onNextIdea={nextQuickIdea}
             onPrevIdea={prevQuickIdea}
             onCloseSession={() => {
+              claimDeckFromTour();
               clearDeepLinkUrlParam();
               pinnedActionId = "";
               justCompleted = false;
               trackEvent("aa_home_session_closed", {});
             }}
             onExitDeepLink={() => {
+              claimDeckFromTour();
               clearDeepLinkUrlParam();
               pinnedActionId = "";
               awaitingPartnerReturn = false;
@@ -1054,6 +1312,39 @@
       max-width: 660px;
       margin-inline: auto;
     }
+  }
+
+  /* Zastavení vstupní prohlídky: mimo tok, vidět je až s fokusem (jako odkaz „přeskočit“). */
+  .tour-stop {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 2;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+    font-family: var(--font-sans);
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  .tour-stop:focus {
+    width: auto;
+    height: auto;
+    min-height: 44px;
+    margin: 0;
+    padding: 0.36rem 0.9rem;
+    clip-path: none;
+    border: 1px solid var(--border-forest-strong, #a7c4b3);
+    border-radius: 999px;
+    background: var(--bg-surface, #ffffff);
+    color: var(--accent-primary, #1b5e42);
+    cursor: pointer;
   }
 
   .studio-head {

@@ -8,6 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '../../');
 const srcDir = path.resolve(rootDir, 'src');
 
+/** @param {string} relativeSubpath */
 function readSource(relativeSubpath) {
   const fullPath = path.resolve(srcDir, relativeSubpath);
   return readFileSync(fullPath, 'utf8');

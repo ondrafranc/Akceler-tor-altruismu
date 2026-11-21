@@ -192,7 +192,7 @@ describe('CHALLENGER M2: Boundary Stress Testing of recommendActions', () => {
     const pos3 = recommendActions('45', 'unknown_sit', 'unknown_topic', 'unknown_city');
     expect(pos3.length).toBe(MICRO_ACTIONS.length);
 
-    const pos4 = recommendActions('2', 'couch', 'all', null);
+    const pos4 = recommendActions('2', 'couch', 'all', /** @type {string} */ (/** @type {unknown} */ (null)));
     expect(pos4.length).toBe(MICRO_ACTIONS.length);
   });
 

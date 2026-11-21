@@ -1,5 +1,27 @@
 # Changelog
 
+## [Unreleased] — Vstupní prohlídka režimů na `/`
+
+- Na zařízení s myší stránka `/` po chvíli klidu jednou projde čtyři záložky energie (`couch` -> `focus` -> `walk` -> `people`) a vrátí se na výchozí `couch`. S každým krokem se mění kurzíva `.hero-serif` i scéna `.deed-stage` na kartě. Tempo je klidné: 3,5 s po vstupu a 3,5 s na krok (`ENTRY_TOUR_INITIAL_PAUSE_MS`, `ENTRY_TOUR_STEP_MS`). Po dobu prohlídky karta sama nepobízí náhledem scény (nový prop `idleLure` na `SwipeDeck` a `ActionCard`) a Molly drží uvítací tip i dovedení k hlavnímu tlačítku (`holdMollyGuide` / `releaseMollyGuide` v `mollyStore.js`); obojí se vrací po skončení, takže se pohyby nepotkají bez ohledu na prodlevy jednotlivých komponent.
+- Prohlídka nezačne na dotykovém zařízení (telefon ani tablet, v žádné orientaci; první ťuknutí by tam bylo jediným způsobem, jak ji zastavit), v úzkém nebo nízkém okně, při `prefers-reduced-motion`, s deep linkem (`?action=`, `#action=`, `?intent=`), po obnovení uloženého stavu balíčku, při uzavřeném dni, při dokončení nebo návratu od partnera, ve skryté záložce prohlížeče ani na odscrollované stránce. V jedné relaci prohlížeče proběhne nejvýše jednou (nový klíč `AA_HOME_ENTRY_TOUR_SEEN_KEY` v `sessionStorage`).
+- Natrvalo ji zastaví jakákoli interakce (stisk ukazatele, klávesa, kolečko, dotyk, fokus v kartě nebo v hero, ukazatel na kartě, scroll, skrytí záložky prohlížeče, změna na omezený pohyb nebo na nezpůsobilý viewport) a každá obsluha, která mění balíček. Stránka zůstane na tom, co právě ukazuje. Klik na záložku, kterou prohlídka právě ukazuje, kartu ponechá a uloží ji jako volbu uživatele. Kartu, na které ukazatel spočíval už při načtení stránky, prohlídka nevymění.
+- Sáhnutí po kartě těsně po kroku (`ENTRY_TOUR_SETTLE_MS`) se bere jako mířené na kartu před ním: prohlídka se na ni vrátí a hlavní tlačítko čerstvě vyměněné karty nic nespustí. Ťuknutí ani kliknutí, které už bylo na cestě, tak neotevře partnera, o kterém návštěvník nečetl.
+- Po dobu prohlídky je v kartě tlačítko `Zastavit automatickou ukázku` (viditelné až s fokusem) pro čtečky obrazovky, které stránce nepošlou klávesu, ukazatel ani fokus. Po zastavení na režimu, který si návštěvník nevybral, Molly k hlavnímu tlačítku nevodí.
+- Prohlídka je pasivní: neukládá `AA_HOME_DECK_STATE_KEY`, neposílá analytiku ani funnel, nehýbe fokusem a počítadlo karet po dobu prohlídky nehlásí změny asistivním technologiím (nový prop `announceChanges` na `SwipeDeck`).
+- Nulový layoutový posun při přepínání režimů: název a popis karty vedle hero mají vyhrazené místo (obal `.action-copy` v `ActionCard`), číslice počítadla `.deck-indicator` mají pevnou šířku. Platí to i pro ruční přepnutí záložky.
+- Logika je v novém modulu `src/lib/features/home/entryTour.js` (bez DOM, s vloženými časovači); `+page.svelte` ji jen zapojuje. Zjištění uzavřeného dne se přesunulo ze `SwipeDeck` do `src/lib/features/actions/services/dayClosure.js`, aby ho stránka i balíček četly stejně.
+- Testy: unit `tests/unit/entryTour.test.js`, E2E `ET1`–`ET11` v `tests/desktop-polish.spec.ts` (průchod na `1440×900`, `1024×768` a `920×650` s `CLS = 0` a nehybnou scénou i CTA, klid na telefonu a tabletu, všechny podmínky startu a zastavení, úklid posluchačů, krok zpět po sáhnutí na kartu, tlačítko zastavení, podržení pobídky karty a šeptand Molly). Pravidla prohlídky jsou v `.claude/rules/home-and-deed-stage.md`.
+
+## [Unreleased] — TypeScript strict
+
+- `jsconfig.json` má `"strict": true` a platí i pro JS soubory. Typy jsou doplněné přes JSDoc a kanonické typy v `src/lib/types/` (`sensory.ts`, `molly.ts`, `progress.ts`, `deed.ts`) odpovídají tomu, co kód skutečně staví; nepoužitý `ActionEffectMeta` byl odstraněn. Migrace nemění chování: spustitelný kód je beze změny až na jednu redundantní podmínku v šabloně `MollyCompanion.svelte`.
+- `tests/unit/invariants.test.js` vyžaduje zapnutý `strict`.
+
+## [Unreleased] — Molly: umístění a šeptandy
+
+- Molly: usazení po načtení a po změně stránky rozhoduje o místě i o auto-parku jen podle kočky. Rozsvícená šeptanda ji už nepřenese doprostřed obrazovky (desktop, `/near`) ani neuklidí do pelíšku (úzký mobil). Vrstva `.molly-companion-layer` nese `data-molly-settled`; test klidu bubliny na něj čeká místo spoléhání na časování a přibyl regresní test pro přechod na `/near` s rozsvícenou šeptandou.
+- Molly na desktopu: odměnová šeptanda, která jen opakuje oslavu v kartě, se neukáže, když se nevejde tam, kde Molly právě je; Molly kvůli ní už nepřechází přes obrazovku a bublina neskončí na tlačítku `Dát Molly pamlsek`. O nové šeptandě rozhoduje jako první `placeWhisperBubble` (jiné přeměření ji nepředběhne). Bublina, která čeká, až Molly dojde na volné místo, se ukáže až tam: pojistný časovač ji už neodhalí uprostřed chůze, kdy by s Molly jela přes tlačítka pod kartou. Hlídá to nový test v `tests/molly-stress.spec.ts`, který bublinu sleduje po celou dobu chůze.
+
 ## [Unreleased] — Úklid agentních pravidel a vývojářské infrastruktury
 
 - `AGENTS.md` zkrácen na severku, globální invarianty, příkazy a rozcestník; `CLAUDE.md` ho importuje. Pravidla oblastí přesunuta z `.agents/rules/` do path-scoped souborů `.claude/rules/` (`architecture`, `api-security`, `ui-core`, `home-and-deed-stage`, `molly`, `subpages`) bez pixelových hodnot, počtů a historie.

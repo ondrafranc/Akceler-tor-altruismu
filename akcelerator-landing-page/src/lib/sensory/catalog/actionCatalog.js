@@ -5,6 +5,12 @@
 import { CLICK_AND_FEED, FREERICE, czPlural as pl } from '../../data/impactFacts.js';
 import { resolveMollyTreat } from '../../mollyTypes.js';
 
+/**
+ * @typedef {import('../../types/sensory.js').ActionEffectSpec} ActionEffectSpec
+ * @typedef {import('../../types/sensory.js').ActionEffectCatalog} ActionEffectCatalog
+ */
+
+/** @type {ActionEffectCatalog} */
 export const ACTION_EFFECT_CATALOG = {
   zvirata_utulek_online: {
     mode: 'kibble',
@@ -428,6 +434,7 @@ Object.values(ACTION_EFFECT_CATALOG).forEach((spec) => {
 /**
  * Obecné dobrovolnictví u místní organizace. Sdílí scénu `solidarity_bridge`, ale není v katalogu,
  * aby nepřepsalo vyhledávání podle režimu (MODE_LOOKUP).
+ * @type {ActionEffectSpec}
  */
 export const VOLUNTEER_EFFECT_SPEC = {
   mode: 'solidarity_bridge',
@@ -443,4 +450,4 @@ VOLUNTEER_EFFECT_SPEC.mollyTreat = resolveMollyTreat(VOLUNTEER_EFFECT_SPEC);
 export const MODE_LOOKUP = Object.values(ACTION_EFFECT_CATALOG).reduce((acc, spec) => {
   acc[spec.mode] = spec;
   return acc;
-}, {});
+}, /** @type {ActionEffectCatalog} */ ({}));

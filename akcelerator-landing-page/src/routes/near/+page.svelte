@@ -39,6 +39,164 @@
   import PageHeader from '$lib/components/PageHeader.svelte';
   import { getSvgIconHtml } from '$lib/icons/iconRegistry.js';
 
+  /** @typedef {import('$lib/server/nearbyService.js').NearbyPlace} NearbyPlace */
+  /** @typedef {import('$lib/server/nearbyService.js').NearbyPlacesPayload} NearbyPlacesPayload */
+  /** @typedef {import('$lib/types').GeocodePlaceItem} GeocodePlaceItem */
+  /** @typedef {{ icon: string, label: string, color: string }} KindMeta */
+  /** @typedef {{ id?: string, title: string, category: string, subcategory?: string }} NearPlaceAction */
+  /** @typedef {ReturnType<typeof setTimeout>} TimerHandle */
+
+  /**
+   * @typedef {{
+   *   id?: string | null,
+   *   kind?: string | null,
+   *   name?: string | null,
+   *   category?: string | null,
+   *   description?: string | null,
+   *   lat?: number | null,
+   *   lon?: number | null,
+   *   website?: string | null,
+   *   event_url?: string | null,
+   *   address_label?: string | null,
+   *   city?: string | null,
+   *   phone?: string | null,
+   *   email?: string | null,
+   *   quickMission?: string | null,
+   *   helpWays?: string[] | null,
+   *   visitMode?: string | null,
+   *   status?: string | null,
+   *   pendingModeration?: boolean
+   * }} CommunityItemSource
+   */
+
+  /**
+   * @typedef {[number, number]} LatLngTuple
+   * @typedef {{ lat: number, lng: number }} LeafletLatLng
+   * @typedef {{ x: number, y: number }} LeafletPoint
+   * @typedef {{ getCenter: () => LeafletLatLng, getWest: () => number, getEast: () => number }} LeafletBounds
+   * @typedef {{ enable: () => unknown, disable: () => unknown }} LeafletHandler
+   * @typedef {{ originalEvent?: KeyboardEvent }} LeafletKeyboardEvent
+   * @typedef {{ animate?: boolean }} LeafletPanOptions
+   */
+
+  /**
+   * @typedef {{
+   *   maxWidth?: number,
+   *   minWidth?: number,
+   *   offset?: LatLngTuple,
+   *   autoPan?: boolean,
+   *   autoPanPaddingTopLeft?: LatLngTuple,
+   *   autoPanPaddingBottomRight?: LatLngTuple
+   * }} LeafletPopupOptions
+   */
+
+  /**
+   * @typedef {{
+   *   radius?: number,
+   *   color?: string,
+   *   weight?: number,
+   *   opacity?: number,
+   *   fillColor?: string,
+   *   fillOpacity?: number,
+   *   interactive?: boolean
+   * }} LeafletPathOptions
+   */
+
+  /**
+   * @typedef {{
+   *   maxZoom?: number,
+   *   subdomains?: string[],
+   *   detectRetina?: boolean,
+   *   keepBuffer?: number,
+   *   updateWhenZooming?: boolean,
+   *   updateWhenIdle?: boolean,
+   *   attribution?: string
+   * }} LeafletTileLayerOptions
+   */
+
+  /**
+   * @typedef {{
+   *   on: (type: string, handler: () => void) => unknown,
+   *   setView: (center: LatLngTuple | LeafletLatLng, zoom: number, options?: LeafletPanOptions) => unknown,
+   *   panTo: (center: LatLngTuple, options?: LeafletPanOptions) => unknown,
+   *   fitBounds: (bounds: LeafletBounds, options?: { padding?: LatLngTuple, maxZoom?: number, animate?: boolean }) => unknown,
+   *   getZoom: () => number,
+   *   getCenter: () => LeafletLatLng,
+   *   getBounds: () => LeafletBounds,
+   *   getBoundsZoom: (bounds: LeafletBounds, inside?: boolean, padding?: LeafletPoint) => number,
+   *   project: (latlng: LatLngTuple, zoom: number) => LeafletPoint,
+   *   unproject: (point: LeafletPoint, zoom: number) => LeafletLatLng,
+   *   closePopup: () => unknown,
+   *   invalidateSize: () => unknown,
+   *   stop: () => unknown,
+   *   remove: () => unknown,
+   *   scrollWheelZoom: LeafletHandler,
+   *   dragging: LeafletHandler
+   * }} LeafletMap
+   */
+
+  /**
+   * @typedef {{
+   *   on: (type: string, handler: () => void) => unknown,
+   *   setUrl: (url: string) => unknown,
+   *   addTo: (map: LeafletMap) => unknown
+   * }} LeafletTileLayer
+   */
+
+  /**
+   * @typedef {{
+   *   addTo: (map: LeafletMap) => LeafletCircle,
+   *   setLatLng: (center: LatLngTuple) => unknown,
+   *   setRadius: (meters: number) => unknown
+   * }} LeafletCircle
+   */
+
+  /**
+   * @typedef {{
+   *   bindTooltip: (content: string, options?: { direction?: string }) => LeafletCircleMarker,
+   *   addTo: (map: LeafletMap) => LeafletCircleMarker,
+   *   remove: () => unknown
+   * }} LeafletCircleMarker
+   */
+
+  /**
+   * @typedef {{
+   *   addTo: (map: LeafletMap) => LeafletLayerGroup,
+   *   removeLayer: (layer: LeafletMarker) => unknown
+   * }} LeafletLayerGroup
+   */
+
+  /** @typedef {{ options: { className?: string, html?: string } }} LeafletDivIcon */
+
+  /**
+   * @typedef {{
+   *   on: ((type: 'keypress', handler: (event: LeafletKeyboardEvent) => void) => unknown) &
+   *     ((type: string, handler: () => void) => unknown),
+   *   off: (type: string) => unknown,
+   *   bindPopup: (content: string, options?: LeafletPopupOptions) => unknown,
+   *   setPopupContent: (content: string) => unknown,
+   *   setZIndexOffset: (offset: number) => unknown,
+   *   getElement: () => HTMLElement | undefined,
+   *   openPopup: () => unknown,
+   *   addTo: (target: LeafletLayerGroup) => unknown,
+   *   _aaPopupHtml?: string
+   * }} LeafletMarker
+   */
+
+  /**
+   * @typedef {{
+   *   map: (element: HTMLElement, options?: { zoomControl?: boolean, scrollWheelZoom?: boolean, preferCanvas?: boolean }) => LeafletMap,
+   *   tileLayer: (urlTemplate: string, options?: LeafletTileLayerOptions) => LeafletTileLayer,
+   *   circle: (center: LatLngTuple, options?: LeafletPathOptions) => LeafletCircle,
+   *   circleMarker: (center: LatLngTuple, options?: LeafletPathOptions) => LeafletCircleMarker,
+   *   layerGroup: () => LeafletLayerGroup,
+   *   divIcon: (options: { className?: string, html?: string, iconSize?: LatLngTuple, iconAnchor?: LatLngTuple }) => LeafletDivIcon,
+   *   marker: (center: LatLngTuple, options?: { icon?: LeafletDivIcon, title?: string, alt?: string, riseOnHover?: boolean, zIndexOffset?: number }) => LeafletMarker,
+   *   latLngBounds: (points: LatLngTuple[]) => LeafletBounds,
+   *   point: (x: number, y: number) => LeafletPoint
+   * }} LeafletApi
+   */
+
   const CATEGORY_PRESETS = [
     { id: 'all', icon: 'sparkles', label: 'Vše smysluplné v okolí', kinds: ['ngo', 'community', 'food', 'animals'], onlyWeb: false },
     { id: 'animals', icon: 'paw', label: 'Útulky a zvířata', kinds: ['animals'], onlyWeb: false },
@@ -56,6 +214,7 @@
 
   const RADIUS_PRESETS = [2, 5, 8, 15, 25];
 
+  /** @type {{ ngo: KindMeta, [kind: string]: KindMeta | undefined }} */
   const KIND_META = {
     ngo: { icon: 'building', label: 'Neziskovka / spolek', color: '#1b5e42' },
     community: { icon: 'handshake', label: 'Komunita / knihobudka', color: '#2b5938' },
@@ -112,12 +271,20 @@
   let query = $state('');
   let sortBy = $state('easy'); // easy | distance | name
 
+  /**
+   * @param {number} km
+   * @returns {string}
+   */
   function formatDist(km) {
     if (!Number.isFinite(km)) return '';
     if (km < 1) return `${Math.max(100, Math.round(km * 10) * 100)} m`;
     return `${km < 10 ? km.toFixed(1).replace('.', ',') : Math.round(km)} km`;
   }
 
+  /**
+   * @param {NearbyPlace | null | undefined} p
+   * @returns {boolean}
+   */
   function isFoodOrClothingPlace(p) {
     if (!p) return false;
     if (p.kind === 'food') return true;
@@ -128,11 +295,21 @@
     );
   }
 
+  /**
+   * @param {NearbyPlace} p
+   * @returns {boolean}
+   */
   function isCommunityNeighborhoodBoosted(p) {
     const text = `${p?.name || ''} ${p?.subcategory || ''} ${p?.description || ''}`.toLowerCase();
     return /knihobudka|knihovnička|reuse|zahrada|soused|dílna|swap|kompost/.test(text);
   }
 
+  /**
+   * @param {CommunityItemSource | null | undefined} ci
+   * @param {number} lat
+   * @param {number} lon
+   * @returns {NearbyPlace | null}
+   */
   function normalizeCommunityItemToPlace(ci, lat, lon) {
     if (!ci || typeof ci.lat !== 'number' || typeof ci.lon !== 'number') return null;
     const text = `${ci.name || ''} ${ci.category || ''} ${ci.description || ''}`.toLowerCase();
@@ -168,6 +345,9 @@
     };
   }
 
+  /**
+   * @returns {Array<import('$lib/types').PendingSubmissionItem>}
+   */
   function getMyPendingCommunityItems() {
     try {
       const raw = safeGetItem(AA_MY_PENDING_SUBMISSIONS_KEY, 'local');
@@ -179,6 +359,12 @@
     }
   }
 
+  /**
+   * @param {number} lat
+   * @param {number} lon
+   * @param {string[]} [activeKinds]
+   * @returns {NearbyPlace[]}
+   */
   function getInstantCurated(lat, lon, activeKinds = ALL_KINDS) {
     const kList = activeKinds?.length ? activeKinds : ALL_KINDS;
     const allCurated = CURATED_FALLBACK_PLACES.filter((p) => kList.includes(p.kind)).map((p) => {
@@ -194,10 +380,13 @@
     });
 
     const myPending = getMyPendingCommunityItems();
-    const localComm = [...myPending, ...LOCAL_COMMUNITY_ITEMS]
-      .map((ci) => normalizeCommunityItemToPlace(ci, lat, lon))
-      .filter((item) => item && kList.includes(item.kind));
+    const localComm = /** @type {NearbyPlace[]} */ (
+      [...myPending, ...LOCAL_COMMUNITY_ITEMS]
+        .map((ci) => normalizeCommunityItemToPlace(ci, lat, lon))
+        .filter((item) => item && kList.includes(item.kind))
+    );
 
+    /** @type {NearbyPlace[]} */
     const combined = [...allCurated];
     const seenNames = new Set(combined.map((p) => normSearchStr(p.name)));
     for (const comm of localComm) {
@@ -234,19 +423,25 @@
   });
 
   // Map state
+  /** @type {HTMLDivElement | undefined} */
   let mapEl = $state();
-  let map = $state.raw(null);
-  let leaflet = $state.raw(null);
+  let map = $state.raw(/** @type {LeafletMap | null} */ (null));
+  let leaflet = $state.raw(/** @type {LeafletApi | null} */ (null));
+  /** @type {LeafletTileLayer | null} */
   let tileLayer = null;
   let tileStyle = $state('calm'); // 'calm' | 'crisp'
   let tileFallbackUsed = false;
   let touchGestureHint = $state(false);
+  /** @type {TimerHandle | null} */
   let touchHintTimer = null;
+  /** @type {LeafletLayerGroup | null} */
   let markersLayer = null;
+  /** @type {LeafletCircleMarker | null} */
   let userMarker = null;
+  /** @type {LeafletCircle | null} */
   let radiusCircle = null;
   let userGestureActive = false;
-  /** @type {Map<string, { setPopupContent: (c: string) => void, setZIndexOffset: (z: number) => void, getElement?: () => HTMLElement | null, openPopup: () => void, closePopup?: () => void, _aaPopupHtml?: string, [key: string]: unknown }>} */
+  /** @type {Map<string, LeafletMarker>} */
   let markerById = new Map();
   /** @type {{ lat: number, lon: number } | null} */
   let pannedCenter = $state(null);
@@ -262,30 +457,35 @@
   /**
    * Seed verified & community places immediately at initialization (including SSR)
    * using module constants to avoid state_referenced_locally warnings.
-   * @type {Array<import('$lib/server/nearbyService.js').NearbyPlace>}
+   * @type {Array<NearbyPlace>}
    */
   let places = $state(getInstantCurated(INITIAL_CITY.lat, INITIAL_CITY.lon, ALL_KINDS));
-  /** @type {Array<import('$lib/server/nearbyService.js').NearbyPlace>} */
+  /** @type {Array<NearbyPlace>} */
   let communityItems = $state([]);
-  let activePlaceId = $state(null);
-  let hoveredPlaceId = $state(null);
+  let activePlaceId = $state(/** @type {string | null} */ (null));
+  let hoveredPlaceId = $state(/** @type {string | null} */ (null));
   let visibleCount = $state(3);
   let mobileView = $state('list'); // 'list' | 'map'
   let filtersOpen = $state(false);
 
   // First-contact template
-  let openTemplateId = $state(null);
-  let copiedTemplateId = $state(null);
-  let copiedPlaceLinkId = $state(null);
+  let openTemplateId = $state(/** @type {string | null} */ (null));
+  let copiedTemplateId = $state(/** @type {string | null} */ (null));
+  let copiedPlaceLinkId = $state(/** @type {string | null} */ (null));
   let soundMuted = $state(false);
-  let activeEffectPlaceId = $state(null);
+  let activeEffectPlaceId = $state(/** @type {string | null} */ (null));
   /** @type {Record<string, number>} */
   let placeMetrics = $state({});
-  let nearReturnPlace = $state(null);
+  let nearReturnPlace = $state(/** @type {NearPlaceAction | null} */ (null));
   let nearReturnMetric = $state(0);
+  /** @type {NearPlaceAction | null} */
   let awaitingNearPlace = null;
   let nearLeaveTimestamp = 0;
 
+  /**
+   * @param {NearbyPlace | null | undefined} p
+   * @returns {NearPlaceAction | null}
+   */
   function toPlaceAction(p) {
     if (!p) return null;
     return {
@@ -301,6 +501,10 @@
     trackEvent('aa_sound_toggle', { surface: 'near', muted: soundMuted });
   }
 
+  /**
+   * @param {NearbyPlace} p
+   * @param {Event & { currentTarget: EventTarget & Element }} [event]
+   */
   function togglePlaceEffect(p, event) {
     activeEffectPlaceId = p.id;
     const act = toPlaceAction(p);
@@ -315,6 +519,9 @@
     trackEvent('aa_effect_preview_toggle', { surface: 'near', id: p.id });
   }
 
+  /**
+   * @param {NearbyPlace} p
+   */
   function handleStartNearPlace(p) {
     const act = toPlaceAction(p);
     awaitingNearPlace = act;
@@ -336,6 +543,11 @@
       .slice(0, 3)
   );
 
+  /**
+   * @param {NearbyPlace} p
+   * @param {string} [currentPreset]
+   * @returns {number}
+   */
   function placeEaseScore(p, currentPreset = activePresetId) {
     let score = (Number.isFinite(p?.distanceKm) ? p.distanceKm : 50) * 0.1;
     if (p?.curated || p?.sourceType === 'verified_org') score -= 0.45;
@@ -352,6 +564,12 @@
     return score;
   }
 
+  /**
+   * @param {NearbyPlace[]} list
+   * @param {string} [mode]
+   * @param {string} [preset]
+   * @returns {NearbyPlace[]}
+   */
   function sortPlaceList(list, mode = sortBy, preset = activePresetId) {
     if (mode === 'distance') {
       return [...list].sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999));
@@ -457,6 +675,10 @@
     trackEvent('aa_map_tile_style', { style: tileStyle });
   }
 
+  /**
+   * @param {number} lat
+   * @param {number} lon
+   */
   function updateRadiusOverlay(lat, lon) {
     if (!map || !leaflet) return;
     if (!radiusCircle) {
@@ -477,6 +699,10 @@
     }
   }
 
+  /**
+   * @param {number} lat
+   * @param {number} lon
+   */
   function updateUserSearchOverlays(lat, lon) {
     if (!map || !leaflet) return;
     if (userMarker) userMarker.remove();
@@ -493,6 +719,11 @@
     updateRadiusOverlay(lat, lon);
   }
 
+  /**
+   * @param {number} lat
+   * @param {number} lon
+   * @param {number} [zoom]
+   */
   function moveMapCenter(lat, lon, zoom = 13) {
     centerLat = lat;
     centerLon = lon;
@@ -506,6 +737,7 @@
   function fitMapToFilteredPlaces(animate = true) {
     if (!map || !leaflet) return;
     if (mapEl && (mapEl.clientWidth <= 0 || mapEl.clientHeight <= 0)) return;
+    /** @type {LatLngTuple[]} */
     const pts = [[centerLat, centerLon]];
     const topForBounds = filteredPlaces.slice(0, Math.max(visibleCount, 3));
     for (const p of topForBounds) {
@@ -531,6 +763,10 @@
     }
   }
 
+  /**
+   * @param {unknown} s
+   * @returns {string}
+   */
   function escapeHtml(s) {
     return String(s || '')
       .replace(/&/g, '&amp;')
@@ -540,6 +776,11 @@
       .replace(/'/g, '&#39;');
   }
 
+  /**
+   * @param {NearbyPlace} p
+   * @param {boolean} isHighlighted
+   * @returns {string}
+   */
   function buildPinHtml(p, isHighlighted) {
     const meta = KIND_META[p.kind] || KIND_META.ngo;
     const isCurated = !!p.curated || p.sourceType === 'verified_org';
@@ -552,6 +793,7 @@
     return `<div class="pin-bubble ${isCurated ? 'is-curated' : ''} ${isComm ? 'is-community' : ''} ${isHighlighted ? 'is-active' : ''}" style="--pin-color:${meta.color}"><span class="pin-glyph">${getSvgIconHtml(meta.icon, 16, 2)}</span>${badgeHtml}</div>`;
   }
 
+  /** @type {LeafletPopupOptions} */
   const POPUP_OPTIONS = {
     maxWidth: 256,
     minWidth: 196,
@@ -561,6 +803,10 @@
     autoPanPaddingBottomRight: [20, 76]
   };
 
+  /**
+   * @param {NearbyPlace} p
+   * @returns {string}
+   */
   function buildPopupHtml(p) {
     const meta = KIND_META[p.kind] || KIND_META.ngo;
     const safeWeb = normalizeUrl(p.website);
@@ -614,7 +860,7 @@
       const popupHtml = buildPopupHtml(p);
 
       if (markerById.has(p.id)) {
-        const existing = markerById.get(p.id);
+        const existing = /** @type {LeafletMarker} */ (markerById.get(p.id));
         if (existing._aaPopupHtml !== popupHtml) {
           existing.setPopupContent(popupHtml);
           existing._aaPopupHtml = popupHtml;
@@ -677,7 +923,7 @@
       };
 
       marker.on('click', handleMarkerActivate);
-      marker.on('keypress', (/** @type {{ originalEvent?: KeyboardEvent }} */ e) => {
+      marker.on('keypress', (/** @type {LeafletKeyboardEvent} */ e) => {
         const key = e?.originalEvent?.key;
         if (!key || key === 'Enter' || key === ' ') {
           e?.originalEvent?.preventDefault?.();
@@ -694,6 +940,9 @@
     }
   }
 
+  /**
+   * @param {string | null} id
+   */
   function setHoveredPlace(id) {
     hoveredPlaceId = id;
     if (!map || !leaflet) return;
@@ -715,14 +964,24 @@
     }
   });
 
+  /**
+   * @param {NearbyPlace[]} curatedList
+   * @param {NearbyPlace[]} apiList
+   * @param {CommunityItemSource[]} [commList]
+   * @param {number} [lat]
+   * @param {number} [lon]
+   * @returns {NearbyPlace[]}
+   */
   function mergeCuratedAndApiPlaces(curatedList, apiList, commList = [], lat = centerLat, lon = centerLon) {
     const out = [...curatedList];
     const seenIds = new Set(out.map((c) => c.id));
     const seenNames = new Set(out.map((c) => normSearchStr(c.name)));
 
-    const normalizedComm = (commList || [])
-      .map((ci) => normalizeCommunityItemToPlace(ci, lat, lon))
-      .filter(Boolean);
+    const normalizedComm = /** @type {NearbyPlace[]} */ (
+      (commList || [])
+        .map((ci) => normalizeCommunityItemToPlace(ci, lat, lon))
+        .filter(Boolean)
+    );
 
     for (const comm of normalizedComm) {
       const normName = normSearchStr(comm.name);
@@ -754,6 +1013,10 @@
     return out;
   }
 
+  /**
+   * @param {number} lat
+   * @param {number} lon
+   */
   async function fetchNearby(lat, lon) {
     if (nearbyAbortController) {
       nearbyAbortController.abort();
@@ -771,6 +1034,7 @@
     const qLat = Number(lat).toFixed(4);
     const qLon = Number(lon).toFixed(4);
 
+    /** @type {NearbyPlace[]} */
     let fetchedComm = [];
     const communityPromise = fetch(
       `/api/community-nearby?lat=${encodeURIComponent(qLat)}&lon=${encodeURIComponent(qLon)}&radius_m=${encodeURIComponent(radiusKm * 1000)}`,
@@ -787,6 +1051,7 @@
         if (!controller.signal.aborted) communityItems = [];
       });
 
+    /** @type {NearbyPlace[]} */
     let fetchedApiPlaces = [];
     try {
       const resp = await fetch(
@@ -796,6 +1061,7 @@
         { signal: controller.signal }
       );
       if (resp.ok && !controller.signal.aborted) {
+        /** @type {NearbyPlacesPayload} */
         const data = await resp.json();
         isFallbackData = !!data?.fallback;
         isExpandedToNearest = !!data?.expandedToNearest;
@@ -809,7 +1075,7 @@
         });
       }
     } catch (err) {
-      if (err?.name !== 'AbortError') {
+      if (/** @type {{ name?: string } | null | undefined} */ (err)?.name !== 'AbortError') {
         isFallbackData = true;
       }
     } finally {
@@ -835,6 +1101,10 @@
     }
   }
 
+  /**
+   * @param {number} lat
+   * @param {number} lon
+   */
   function syncUrlState(lat, lon) {
     if (typeof window === 'undefined') return;
     try {
@@ -847,6 +1117,9 @@
     } catch {}
   }
 
+  /**
+   * @param {(typeof CZECH_CITIES)[number]} city
+   */
   async function selectQuickCity(city) {
     selectedCity = city;
     activePlaceId = null;
@@ -861,12 +1134,18 @@
     trackFunnel('intent_selected', { surface: 'near_city', city: city.id });
   }
 
+  /**
+   * @param {number} nextRadius
+   */
   async function setRadiusKm(nextRadius) {
     radiusKm = nextRadius;
     updateRadiusOverlay(centerLat, centerLon);
     await fetchNearby(centerLat, centerLon);
   }
 
+  /**
+   * @param {(typeof CATEGORY_PRESETS)[number]} preset
+   */
   async function applyPreset(preset) {
     // 0ms instant in-memory filter — no network call or map wipe needed!
     activePresetId = preset.id;
@@ -882,6 +1161,9 @@
     fitMapToFilteredPlaces();
   }
 
+  /**
+   * @param {string} nextSource
+   */
   async function setSourceFilter(nextSource) {
     sourceFilter = nextSource;
     activePlaceId = null;
@@ -953,6 +1235,9 @@
     }
   }
 
+  /**
+   * @param {GeocodePlaceItem | null | undefined} r
+   */
   async function pickGeocodeResult(r) {
     if (!r || typeof r.lat !== 'number' || typeof r.lon !== 'number') return;
     activePlaceId = null;
@@ -992,6 +1277,9 @@
     );
   }
 
+  /**
+   * @param {NearbyPlace | null | undefined} p
+   */
   function centerMapOnMobilePlace(p) {
     if (!map || !p || typeof p.lat !== 'number' || typeof p.lon !== 'number') return;
     if (resizeTimer) {
@@ -1007,6 +1295,9 @@
     map.setView([p.lat, p.lon], targetZoom, { animate: false });
   }
 
+  /**
+   * @param {NearbyPlace | null | undefined} p
+   */
   function openPlacePopupCenteredOnDesktop(p) {
     if (!map || !leaflet || !p || typeof p.lat !== 'number' || typeof p.lon !== 'number') return;
     if (resizeTimer) {
@@ -1048,6 +1339,9 @@
     fitMapToFilteredPlaces(animate);
   }
 
+  /**
+   * @param {NearbyPlace | null | undefined} p
+   */
   async function focusPlaceOnMap(p) {
     if (!p) return;
     activePlaceId = p.id;
@@ -1080,6 +1374,9 @@
     }
   }
 
+  /**
+   * @param {NearbyPlace | null | undefined} p
+   */
   async function focusPlaceInList(p) {
     if (!p) return;
     activePlaceId = p.id;
@@ -1093,6 +1390,9 @@
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
+  /**
+   * @param {NearbyPlace} place
+   */
   async function copyTemplateText(place) {
     markActionStarted(place.id, 'near_place_copy');
     try {
@@ -1114,6 +1414,9 @@
     } catch {}
   }
 
+  /**
+   * @param {NearbyPlace | null | undefined} p
+   */
   async function sharePlaceLink(p) {
     if (!p || typeof window === 'undefined') return;
     const shareUrl = `${window.location.origin}/near?place=${encodeURIComponent(p.id)}&lat=${encodeURIComponent(Number(p.lat || centerLat).toFixed(4))}&lon=${encodeURIComponent(Number(p.lon || centerLon).toFixed(4))}`;
@@ -1137,6 +1440,9 @@
     trackEvent('aa_share_direct_action', { surface: 'near', id: p.id });
   }
 
+  /**
+   * @param {'list' | 'map'} mode
+   */
   async function setMobileMode(mode) {
     mobileView = mode;
     await tick();
@@ -1152,6 +1458,7 @@
 
   let destroyed = false;
   let mapInitializing = false;
+  /** @type {TimerHandle | null} */
   let resizeTimer = null;
 
   async function initMap() {
@@ -1164,7 +1471,7 @@
         mapInitializing = false;
         return;
       }
-      leaflet = mod.default || mod;
+      leaflet = /** @type {LeafletApi} */ (mod.default || mod);
       await tick();
       if (destroyed || !mapEl) {
         mapInitializing = false;
@@ -1193,7 +1500,7 @@
       const onMapWheel = () => {
         userGestureActive = true;
       };
-      const onMapTouchStart = (e) => {
+      const onMapTouchStart = (/** @type {TouchEvent} */ e) => {
         if (!map || mobileView === 'map') return;
         if (e.touches && e.touches.length === 1) {
           map.dragging?.disable();
@@ -1232,6 +1539,7 @@
           map.setView(offsetCenter, targetZoom, { animate: false });
         }
       } else {
+        /** @type {LatLngTuple[]} */
         const pts = [[centerLat, centerLon]];
         const topForBounds = filteredPlaces.slice(0, Math.max(visibleCount, 3));
         for (const p of topForBounds) {
@@ -1306,6 +1614,7 @@
 
   onMount(() => {
     destroyed = false;
+    /** @type {TimerHandle | null} */
     let nearReturnTimer = null;
     soundMuted = isSoundMuted();
 
@@ -1873,7 +2182,7 @@
             use:impactCanvas={{
               action: nearReturnPlace,
               climax: true,
-              onProgress: (v) => {
+              onProgress: (/** @type {number} */ v) => {
                 nearReturnMetric = v;
               }
             }}
@@ -1883,7 +2192,7 @@
               type="button"
               class="btn-return-complete"
               onclick={() => {
-                const done = nearReturnPlace;
+                const done = /** @type {NearPlaceAction} */ (nearReturnPlace);
                 nearReturnPlace = null;
                 recordSmallWin({
                   id: done.id,

@@ -3,6 +3,8 @@
   import AppIcon from "$lib/components/AppIcon.svelte";
   import { resolveIconKey } from "$lib/icons/iconRegistry.js";
 
+  /** @typedef {import('$lib/types/progress').QuickDeed} QuickDeed */
+
   /**
    * @type {{
    *   ritualMode?: string,
@@ -11,7 +13,7 @@
    *   wishesCount?: number,
    *   onSubmit?: ((payload: { ritualMode: string, ritualInput: string }) => void) | null,
    *   onSelectMode?: ((mode: string) => void) | null,
-   *   onQuickDeed?: ((deed: { icon?: string, label: string, title: string, element: string, lightType: string }) => void) | null,
+   *   onQuickDeed?: ((deed: QuickDeed) => void) | null,
    *   onClearWishes?: (() => void) | null
    * }}
    */
@@ -32,6 +34,7 @@
     quickIdeasOpen = true;
   });
 
+  /** @type {QuickDeed[]} */
   export const QUICK_OFFLINE_DEEDS = [
     {
       icon: "paw",
@@ -63,11 +66,17 @@
     },
   ];
 
+  /**
+   * @param {SubmitEvent} event
+   */
   function handleSubmit(event) {
     event?.preventDefault?.();
     if (onSubmit) onSubmit({ ritualMode, ritualInput });
   }
 
+  /**
+   * @param {string} mode
+   */
   function handleModeChange(mode) {
     ritualMode = mode;
     if (onSelectMode) onSelectMode(mode);

@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { getNearbyPlaces, getNearbyCommunityItems } from '$lib/server/nearbyService.js';
 
+/** @typedef {import('$lib/server/nearbyService.js').NearbyPlace} NearbyPlace */
+
 describe('Nearby Service Unit Tests (Static GeoJSON & In-Memory Nearest Search)', () => {
   it('responds in < 50ms without external network calls', async () => {
     const t0 = performance.now();
@@ -75,8 +77,12 @@ describe('Nearby Service Unit Tests (Static GeoJSON & In-Memory Nearest Search)'
     expect(ids).toContain('curated:praha-knihobudka-jzp');
     expect(ids).toContain('curated:praha-knihobudka-dejvice');
 
-    const jzp = prahaResult.places.find((p) => p.id === 'curated:praha-knihobudka-jzp');
-    const dejvice = prahaResult.places.find((p) => p.id === 'curated:praha-knihobudka-dejvice');
+    const jzp = /** @type {NearbyPlace} */ (
+      prahaResult.places.find((p) => p.id === 'curated:praha-knihobudka-jzp')
+    );
+    const dejvice = /** @type {NearbyPlace} */ (
+      prahaResult.places.find((p) => p.id === 'curated:praha-knihobudka-dejvice')
+    );
     expect(jzp.distanceKm).toBeLessThanOrEqual(dejvice.distanceKm);
   });
 });
